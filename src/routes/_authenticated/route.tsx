@@ -46,8 +46,8 @@ const NAV_ITEMS: Array<NavItem> = [
   { label: "Net Worth", icon: TrendingUp, to: "/" },
   { label: "Transactions", icon: Receipt, to: "/transactions" },
   { label: "Subscriptions", icon: Repeat, to: "/subscriptions" },
-  { label: "Spending", icon: PieChart, soon: true },
-  { label: "Income vs Expenses", icon: ArrowLeftRight, soon: true },
+  { label: "Spending", icon: PieChart, to: "/spending" },
+  { label: "Income vs Expenses", icon: ArrowLeftRight, to: "/income-expenses" },
   { label: "Portfolio", icon: Briefcase, soon: true },
 ];
 
