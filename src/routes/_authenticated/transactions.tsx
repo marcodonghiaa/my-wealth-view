@@ -46,6 +46,7 @@ interface TransactionRow {
   account_uid: string | null;
   booking_date: string | null;
   category: string | null;
+  transaction_type: string | null;
   creditor_name: string | null;
   currency: string | null;
   amount: number | null;
@@ -65,7 +66,7 @@ async function fetchTransactionsPage(
   const { data, error } = await getSupabase()
     .from("v_transactions_eur")
     .select(
-      "entry_reference,account_uid,booking_date,category,creditor_name,currency,amount,signed_amount_eur",
+      "entry_reference,account_uid,booking_date,category,transaction_type,creditor_name,currency,amount,signed_amount_eur",
     )
     .order("booking_date", { ascending: false })
     .range(from, from + PAGE_SIZE - 1);
