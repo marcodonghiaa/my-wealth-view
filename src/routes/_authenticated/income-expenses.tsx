@@ -238,7 +238,7 @@ function HeadlineCard({
 }: {
   icon: React.ReactNode;
   label: string;
-  sublabel?: string;
+  sublabel: string | undefined;
   value: number;
   pending: boolean;
   tone: "positive" | "negative";

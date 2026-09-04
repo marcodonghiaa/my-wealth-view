@@ -12,6 +12,8 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
+import { Route as AuthenticatedIncomeExpensesRouteImport } from './routes/_authenticated/income-expenses'
+import { Route as AuthenticatedSpendingRouteImport } from './routes/_authenticated/spending'
 import { Route as AuthenticatedSubscriptionsRouteImport } from './routes/_authenticated/subscriptions'
 import { Route as AuthenticatedTransactionsRouteImport } from './routes/_authenticated/transactions'
 
@@ -27,6 +29,17 @@ const AuthRoute = AuthRouteImport.update({
 const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedIncomeExpensesRoute =
+  AuthenticatedIncomeExpensesRouteImport.update({
+    id: '/income-expenses',
+    path: '/income-expenses',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedSpendingRoute = AuthenticatedSpendingRouteImport.update({
+  id: '/spending',
+  path: '/spending',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedSubscriptionsRoute =
@@ -45,11 +58,15 @@ const AuthenticatedTransactionsRoute =
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
   '/auth': typeof AuthRoute
+  '/income-expenses': typeof AuthenticatedIncomeExpensesRoute
+  '/spending': typeof AuthenticatedSpendingRoute
   '/subscriptions': typeof AuthenticatedSubscriptionsRoute
   '/transactions': typeof AuthenticatedTransactionsRoute
 }
 export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
+  '/income-expenses': typeof AuthenticatedIncomeExpensesRoute
+  '/spending': typeof AuthenticatedSpendingRoute
   '/subscriptions': typeof AuthenticatedSubscriptionsRoute
   '/transactions': typeof AuthenticatedTransactionsRoute
   '/': typeof AuthenticatedIndexRoute
@@ -58,19 +75,35 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/_authenticated/income-expenses': typeof AuthenticatedIncomeExpensesRoute
+  '/_authenticated/spending': typeof AuthenticatedSpendingRoute
   '/_authenticated/subscriptions': typeof AuthenticatedSubscriptionsRoute
   '/_authenticated/transactions': typeof AuthenticatedTransactionsRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/subscriptions' | '/transactions'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/income-expenses'
+    | '/spending'
+    | '/subscriptions'
+    | '/transactions'
   fileRoutesByTo: FileRoutesByTo
-  to: '/auth' | '/subscriptions' | '/transactions' | '/'
+  to:
+    | '/auth'
+    | '/income-expenses'
+    | '/spending'
+    | '/subscriptions'
+    | '/transactions'
+    | '/'
   id:
     | '__root__'
     | '/_authenticated'
     | '/auth'
+    | '/_authenticated/income-expenses'
+    | '/_authenticated/spending'
     | '/_authenticated/subscriptions'
     | '/_authenticated/transactions'
     | '/_authenticated/'
@@ -104,6 +137,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/income-expenses': {
+      id: '/_authenticated/income-expenses'
+      path: '/income-expenses'
+      fullPath: '/income-expenses'
+      preLoaderRoute: typeof AuthenticatedIncomeExpensesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/spending': {
+      id: '/_authenticated/spending'
+      path: '/spending'
+      fullPath: '/spending'
+      preLoaderRoute: typeof AuthenticatedSpendingRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/subscriptions': {
       id: '/_authenticated/subscriptions'
       path: '/subscriptions'
@@ -122,12 +169,16 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedIncomeExpensesRoute: typeof AuthenticatedIncomeExpensesRoute
+  AuthenticatedSpendingRoute: typeof AuthenticatedSpendingRoute
   AuthenticatedSubscriptionsRoute: typeof AuthenticatedSubscriptionsRoute
   AuthenticatedTransactionsRoute: typeof AuthenticatedTransactionsRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedIncomeExpensesRoute: AuthenticatedIncomeExpensesRoute,
+  AuthenticatedSpendingRoute: AuthenticatedSpendingRoute,
   AuthenticatedSubscriptionsRoute: AuthenticatedSubscriptionsRoute,
   AuthenticatedTransactionsRoute: AuthenticatedTransactionsRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
