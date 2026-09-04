@@ -215,6 +215,19 @@ export type Database = {
         }
         Relationships: []
       }
+      v_subscriptions: {
+        Row: {
+          amount: number | null
+          category: string | null
+          charge_count: number | null
+          creditor_name: string | null
+          currency: string | null
+          last_charged: string | null
+          signed_amount_eur: number | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
       v_transactions_eur: {
         Row: {
           account_uid: string | null
