@@ -79,6 +79,7 @@ async function fetchTransactionsForMonth(
     )
     .gte("booking_date", start)
     .lt("booking_date", end)
+    .neq("amount", 0)
     .order("booking_date", { ascending: false })
     .order("entry_reference", { ascending: false });
   if (error) throw error;
