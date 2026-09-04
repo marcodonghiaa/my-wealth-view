@@ -470,16 +470,78 @@ function CategoryPicker({
   );
 }
 
+const TYPES = ["Subscription", "One-time"] as const;
+
+function TypePicker({
+  tx,
+  onSelect,
+  saving,
+}: {
+  tx: TransactionRow;
+  onSelect: (type: string) => void;
+  saving: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          aria-label={`Change type for ${tx.creditor_name ?? "transaction"}`}
+          disabled={saving}
+          className="cursor-pointer disabled:opacity-60"
+        >
+          {tx.transaction_type ? (
+            <span className="inline-flex rounded-full border border-border bg-card px-2.5 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-accent">
+              {tx.transaction_type}
+            </span>
+          ) : (
+            <span className="inline-flex rounded-full border border-dashed px-2.5 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-accent">
+              —
+            </span>
+          )}
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-48 p-1">
+        <div className="max-h-72 overflow-y-auto">
+          {TYPES.map((t) => (
+            <button
+              key={t}
+              type="button"
+              onClick={() => {
+                setOpen(false);
+                if (t !== tx.transaction_type) onSelect(t);
+              }}
+              className={`block w-full rounded-md px-2.5 py-1.5 text-left text-sm transition-colors hover:bg-accent ${
+                t === tx.transaction_type
+                  ? "font-medium text-primary"
+                  : "text-foreground"
+              }`}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 function TransactionRowView({
   tx,
   accountLabel,
   onSelectCategory,
-  saving,
+  savingCategory,
+  onSelectType,
+  savingType,
 }: {
   tx: TransactionRow;
   accountLabel: string;
   onSelectCategory: (category: string) => void;
-  saving: boolean;
+  savingCategory: boolean;
+  onSelectType: (type: string) => void;
+  savingType: boolean;
 }) {
   const native = nativeSignedAmount(tx);
   const currency = tx.currency ?? "EUR";
@@ -501,16 +563,10 @@ function TransactionRowView({
         {tx.creditor_name ?? "—"}
       </td>
       <td className="px-4 py-3">
-        <CategoryPicker tx={tx} onSelect={onSelectCategory} saving={saving} />
+        <CategoryPicker tx={tx} onSelect={onSelectCategory} saving={savingCategory} />
       </td>
       <td className="px-4 py-3">
-        {tx.transaction_type ? (
-          <span className="inline-flex rounded-full border border-border bg-card px-2.5 py-0.5 text-xs text-muted-foreground">
-            {tx.transaction_type}
-          </span>
-        ) : (
-          <span className="text-sm text-muted-foreground">—</span>
-        )}
+        <TypePicker tx={tx} onSelect={onSelectType} saving={savingType} />
       </td>
       <td className="max-w-36 truncate px-4 py-3 text-muted-foreground">
         {accountLabel}
