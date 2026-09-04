@@ -1,13 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
-import {
-  useInfiniteQuery,
-  useMutation,
-  useQuery,
-  useQueryClient,
-  type InfiniteData,
-} from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { ArrowDownLeft, ArrowUpRight, Search } from "lucide-react";
+import {
+  ArrowDownLeft,
+  ArrowUpRight,
+  ChevronLeft,
+  ChevronRight,
+  Search,
+} from "lucide-react";
 import { toast } from "sonner";
 import {
   Popover,
@@ -24,13 +24,13 @@ export const Route = createFileRoute("/_authenticated/transactions")({
       {
         name: "description",
         content:
-          "Browse and search all transactions across your accounts, newest first.",
+          "Browse and search transactions month by month, newest first.",
       },
       { property: "og:title", content: "Transactions — Finance Dashboard" },
       {
         property: "og:description",
         content:
-          "Browse and search all transactions across your accounts, newest first.",
+          "Browse and search transactions month by month, newest first.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -38,8 +38,6 @@ export const Route = createFileRoute("/_authenticated/transactions")({
   }),
   component: TransactionsPage,
 });
-
-const PAGE_SIZE = 50;
 
 interface TransactionRow {
   entry_reference: string;
@@ -59,17 +57,30 @@ interface AccountRow {
   currency: string;
 }
 
-async function fetchTransactionsPage(
-  page: number,
+function startOfMonth(date: Date): Date {
+  return new Date(date.getFullYear(), date.getMonth(), 1);
+}
+
+function formatISODate(date: Date): string {
+  return date.toISOString().slice(0, 10);
+}
+
+async function fetchTransactionsForMonth(
+  month: Date,
 ): Promise<Array<TransactionRow>> {
-  const from = page * PAGE_SIZE;
+  const start = formatISODate(startOfMonth(month));
+  const end = formatISODate(
+    new Date(month.getFullYear(), month.getMonth() + 1, 1),
+  );
   const { data, error } = await getSupabase()
     .from("v_transactions_eur")
     .select(
       "entry_reference,account_uid,booking_date,category,transaction_type,creditor_name,currency,amount,signed_amount_eur",
     )
+    .gte("booking_date", start)
+    .lt("booking_date", end)
     .order("booking_date", { ascending: false })
-    .range(from, from + PAGE_SIZE - 1);
+    .order("entry_reference", { ascending: false });
   if (error) throw error;
   return (data ?? []) as Array<TransactionRow>;
 }
@@ -121,6 +132,8 @@ const UNCATEGORIZED = "__uncategorized__";
 function TransactionsPage() {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<string>("all");
+  const [month, setMonth] = useState(() => startOfMonth(new Date()));
+  const monthKey = useMemo(() => formatISODate(month), [month]);
   const queryClient = useQueryClient();
 
   const updateCategory = useMutation({
@@ -138,31 +151,27 @@ function TransactionsPage() {
       if (error) throw error;
     },
     onMutate: async ({ entryReference, category: next }) => {
-      await queryClient.cancelQueries({ queryKey: ["transactions"] });
-      const previous = queryClient.getQueryData<
-        InfiniteData<Array<TransactionRow>>
-      >(["transactions"]);
-      queryClient.setQueryData<InfiniteData<Array<TransactionRow>>>(
-        ["transactions"],
+      await queryClient.cancelQueries({ queryKey: ["transactions", monthKey] });
+      const previous = queryClient.getQueryData<Array<TransactionRow>>([
+        "transactions",
+        monthKey,
+      ]);
+      queryClient.setQueryData<Array<TransactionRow>>(
+        ["transactions", monthKey],
         (old) =>
           old
-            ? {
-                ...old,
-                pages: old.pages.map((page) =>
-                  page.map((row) =>
-                    row.entry_reference === entryReference
-                      ? { ...row, category: next }
-                      : row,
-                  ),
-                ),
-              }
+            ? old.map((row) =>
+                row.entry_reference === entryReference
+                  ? { ...row, category: next }
+                  : row,
+              )
             : old,
       );
       return { previous };
     },
     onError: (error, _vars, context) => {
       if (context?.previous)
-        queryClient.setQueryData(["transactions"], context.previous);
+        queryClient.setQueryData(["transactions", monthKey], context.previous);
       toast.error("Couldn't save category", {
         description: (error as Error).message,
       });
@@ -187,31 +196,27 @@ function TransactionsPage() {
       if (error) throw error;
     },
     onMutate: async ({ entryReference, transactionType: next }) => {
-      await queryClient.cancelQueries({ queryKey: ["transactions"] });
-      const previous = queryClient.getQueryData<
-        InfiniteData<Array<TransactionRow>>
-      >(["transactions"]);
-      queryClient.setQueryData<InfiniteData<Array<TransactionRow>>>(
-        ["transactions"],
+      await queryClient.cancelQueries({ queryKey: ["transactions", monthKey] });
+      const previous = queryClient.getQueryData<Array<TransactionRow>>([
+        "transactions",
+        monthKey,
+      ]);
+      queryClient.setQueryData<Array<TransactionRow>>(
+        ["transactions", monthKey],
         (old) =>
           old
-            ? {
-                ...old,
-                pages: old.pages.map((page) =>
-                  page.map((row) =>
-                    row.entry_reference === entryReference
-                      ? { ...row, transaction_type: next }
-                      : row,
-                  ),
-                ),
-              }
+            ? old.map((row) =>
+                row.entry_reference === entryReference
+                  ? { ...row, transaction_type: next }
+                  : row,
+              )
             : old,
       );
       return { previous };
     },
     onError: (error, _vars, context) => {
       if (context?.previous)
-        queryClient.setQueryData(["transactions"], context.previous);
+        queryClient.setQueryData(["transactions", monthKey], context.previous);
       toast.error("Couldn't save type", {
         description: (error as Error).message,
       });
@@ -228,18 +233,13 @@ function TransactionsPage() {
     staleTime: 5 * 60_000,
   });
 
-  const txQuery = useInfiniteQuery({
-    queryKey: ["transactions"],
-    queryFn: ({ pageParam }) => fetchTransactionsPage(pageParam),
-    initialPageParam: 0,
-    getNextPageParam: (lastPage, pages) =>
-      lastPage.length === PAGE_SIZE ? pages.length : undefined,
+  const txQuery = useQuery({
+    queryKey: ["transactions", monthKey],
+    queryFn: () => fetchTransactionsForMonth(month),
+    staleTime: 60_000,
   });
 
-  const transactions = useMemo(
-    () => txQuery.data?.pages.flat() ?? [],
-    [txQuery.data],
-  );
+  const transactions = txQuery.data ?? [];
 
   const categories = useMemo(() => {
     const set = new Set<string>();
@@ -272,6 +272,23 @@ function TransactionsPage() {
 
   const accounts = accountsQuery.data ?? {};
 
+  const monthLabel = month.toLocaleDateString("en-GB", {
+    month: "long",
+    year: "numeric",
+  });
+
+  const currentMonthStart = startOfMonth(new Date());
+  const canGoNext = month < currentMonthStart;
+
+  function goToPrevMonth() {
+    setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1));
+  }
+
+  function goToNextMonth() {
+    if (!canGoNext) return;
+    setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1));
+  }
+
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-8 md:py-12">
       <header className="mb-8">
@@ -279,7 +296,7 @@ function TransactionsPage() {
           Transactions
         </h1>
         <p className="mt-0.5 text-sm text-muted-foreground">
-          Every transaction across your accounts, newest first.
+          Every transaction for the selected month, newest first.
         </p>
       </header>
 
@@ -291,6 +308,30 @@ function TransactionsPage() {
           Couldn't load transactions: {txQuery.error.message}
         </div>
       )}
+
+      {/* Month selector */}
+      <div className="mb-4 flex items-center justify-between rounded-xl border bg-card p-2 card-ring">
+        <button
+          type="button"
+          onClick={goToPrevMonth}
+          aria-label="Previous month"
+          className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+        >
+          <ChevronLeft className="size-5" />
+        </button>
+        <span className="text-sm font-medium text-foreground">
+          {monthLabel}
+        </span>
+        <button
+          type="button"
+          onClick={goToNextMonth}
+          disabled={!canGoNext}
+          aria-label="Next month"
+          className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-40"
+        >
+          <ChevronRight className="size-5" />
+        </button>
+      </div>
 
       {/* Filters */}
       <div className="mb-4 flex flex-col gap-3 sm:flex-row">
@@ -353,7 +394,7 @@ function TransactionsPage() {
                     className="px-4 py-12 text-center text-sm text-muted-foreground"
                   >
                     {transactions.length === 0
-                      ? "No transactions yet."
+                      ? `No transactions for ${monthLabel}.`
                       : "No transactions match your filters."}
                   </td>
                 </tr>
@@ -391,24 +432,10 @@ function TransactionsPage() {
                     }
                   />
                 ))
-
               )}
             </tbody>
           </table>
         </div>
-
-        {txQuery.hasNextPage && (
-          <div className="border-t p-3 text-center">
-            <button
-              type="button"
-              onClick={() => void txQuery.fetchNextPage()}
-              disabled={txQuery.isFetchingNextPage}
-              className="rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-50"
-            >
-              {txQuery.isFetchingNextPage ? "Loading…" : "Load more"}
-            </button>
-          </div>
-        )}
       </section>
     </div>
   );
