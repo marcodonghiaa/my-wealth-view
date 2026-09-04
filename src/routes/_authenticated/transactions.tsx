@@ -445,6 +445,15 @@ function TransactionRowView({
       <td className="px-4 py-3">
         <CategoryPicker tx={tx} onSelect={onSelectCategory} saving={saving} />
       </td>
+      <td className="px-4 py-3">
+        {tx.transaction_type ? (
+          <span className="inline-flex rounded-full border border-border bg-card px-2.5 py-0.5 text-xs text-muted-foreground">
+            {tx.transaction_type}
+          </span>
+        ) : (
+          <span className="text-sm text-muted-foreground">—</span>
+        )}
+      </td>
       <td className="max-w-36 truncate px-4 py-3 text-muted-foreground">
         {accountLabel}
       </td>
@@ -463,15 +472,14 @@ function TransactionRowView({
               <ArrowDownLeft className="size-3.5" />
             )}
             {formatMoney(native, currency)}
+            {showEur && (
+              <span className="ml-0.5 text-sm opacity-80">
+                ({formatMoney(eur as number, "EUR")})
+              </span>
+            )}
           </span>
-        )}
-        {showEur && (
-          <div className="text-xs text-muted-foreground">
-            {formatMoney(eur as number, "EUR")}
-          </div>
         )}
       </td>
     </tr>
-
   );
 }
