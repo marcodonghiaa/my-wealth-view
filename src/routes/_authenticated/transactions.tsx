@@ -101,20 +101,18 @@ function nativeSignedAmount(tx: TransactionRow): number | null {
 }
 
 const CATEGORIES = [
-  "Groceries",
-  "Dining",
-  "Transport",
-  "Housing",
-  "Utilities",
-  "Subscriptions",
   "Shopping",
-  "Health",
   "Entertainment",
-  "Travel",
+  "Groceries",
+  "Dine Out",
+  "Services",
+  "Housing",
+  "Transports",
+  "Experiences",
   "Income",
-  "Transfers",
-  "Fees",
-  "Other",
+  "Health",
+  "Transfer",
+  "Others",
 ] as const;
 
 const UNCATEGORIZED = "__uncategorized__";
