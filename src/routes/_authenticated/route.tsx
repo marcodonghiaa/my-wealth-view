@@ -8,6 +8,7 @@ import {
 import { useEffect, useState } from "react";
 import {
   TrendingUp,
+  Receipt,
   PieChart,
   ArrowLeftRight,
   Briefcase,
@@ -42,6 +43,7 @@ interface NavItem {
 
 const NAV_ITEMS: Array<NavItem> = [
   { label: "Net Worth", icon: TrendingUp, to: "/" },
+  { label: "Transactions", icon: Receipt, to: "/transactions" },
   { label: "Spending", icon: PieChart, soon: true },
   { label: "Income vs Expenses", icon: ArrowLeftRight, soon: true },
   { label: "Portfolio", icon: Briefcase, soon: true },

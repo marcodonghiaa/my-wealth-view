@@ -1,0 +1,332 @@
+import { createFileRoute } from "@tanstack/react-router";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
+import { ArrowDownLeft, ArrowUpRight, Search } from "lucide-react";
+import { getSupabase } from "@/integrations/supabase/client";
+
+export const Route = createFileRoute("/_authenticated/transactions")({
+  head: () => ({
+    meta: [
+      { title: "Transactions — Finance Dashboard" },
+      {
+        name: "description",
+        content:
+          "Browse and search all transactions across your accounts, newest first.",
+      },
+      { property: "og:title", content: "Transactions — Finance Dashboard" },
+      {
+        property: "og:description",
+        content:
+          "Browse and search all transactions across your accounts, newest first.",
+      },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+    ],
+  }),
+  component: TransactionsPage,
+});
+
+const PAGE_SIZE = 50;
+
+interface TransactionRow {
+  entry_reference: string;
+  account_uid: string | null;
+  booking_date: string | null;
+  category: string | null;
+  creditor_name: string | null;
+  currency: string | null;
+  amount: number | null;
+  signed_amount_eur: number | null;
+}
+
+interface AccountRow {
+  uid: string;
+  label: string | null;
+  currency: string;
+}
+
+async function fetchTransactionsPage(
+  page: number,
+): Promise<Array<TransactionRow>> {
+  const from = page * PAGE_SIZE;
+  const { data, error } = await getSupabase()
+    .from("v_transactions_eur")
+    .select(
+      "entry_reference,account_uid,booking_date,category,creditor_name,currency,amount,signed_amount_eur",
+    )
+    .order("booking_date", { ascending: false })
+    .range(from, from + PAGE_SIZE - 1);
+  if (error) throw error;
+  return (data ?? []) as Array<TransactionRow>;
+}
+
+async function fetchAccounts(): Promise<Record<string, AccountRow>> {
+  const { data, error } = await getSupabase()
+    .from("accounts")
+    .select("uid,label,currency");
+  if (error) throw error;
+  const map: Record<string, AccountRow> = {};
+  for (const row of (data ?? []) as Array<AccountRow>) map[row.uid] = row;
+  return map;
+}
+
+function formatEur(value: number): string {
+  return new Intl.NumberFormat("en-IE", {
+    style: "currency",
+    currency: "EUR",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value);
+}
+
+function formatOriginal(value: number, currency: string): string {
+  return new Intl.NumberFormat("en-IE", {
+    style: "currency",
+    currency,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value);
+}
+
+const UNCATEGORIZED = "__uncategorized__";
+
+function TransactionsPage() {
+  const [search, setSearch] = useState("");
+  const [category, setCategory] = useState<string>("all");
+
+  const accountsQuery = useQuery({
+    queryKey: ["accounts"],
+    queryFn: fetchAccounts,
+    staleTime: 5 * 60_000,
+  });
+
+  const txQuery = useInfiniteQuery({
+    queryKey: ["transactions"],
+    queryFn: ({ pageParam }) => fetchTransactionsPage(pageParam),
+    initialPageParam: 0,
+    getNextPageParam: (lastPage, pages) =>
+      lastPage.length === PAGE_SIZE ? pages.length : undefined,
+  });
+
+  const transactions = useMemo(
+    () => txQuery.data?.pages.flat() ?? [],
+    [txQuery.data],
+  );
+
+  const categories = useMemo(() => {
+    const set = new Set<string>();
+    let hasUncategorized = false;
+    for (const tx of transactions) {
+      if (tx.category) set.add(tx.category);
+      else hasUncategorized = true;
+    }
+    return {
+      list: Array.from(set).sort((a, b) => a.localeCompare(b)),
+      hasUncategorized,
+    };
+  }, [transactions]);
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return transactions.filter((tx) => {
+      if (category === UNCATEGORIZED && tx.category != null) return false;
+      if (
+        category !== "all" &&
+        category !== UNCATEGORIZED &&
+        tx.category !== category
+      )
+        return false;
+      if (q && !(tx.creditor_name ?? "").toLowerCase().includes(q))
+        return false;
+      return true;
+    });
+  }, [transactions, search, category]);
+
+  const accounts = accountsQuery.data ?? {};
+
+  return (
+    <div className="mx-auto max-w-5xl px-4 py-8 sm:px-8 md:py-12">
+      <header className="mb-8">
+        <h1 className="text-xl font-semibold tracking-tight text-foreground">
+          Transactions
+        </h1>
+        <p className="mt-0.5 text-sm text-muted-foreground">
+          Every transaction across your accounts, newest first.
+        </p>
+      </header>
+
+      {txQuery.isError && (
+        <div
+          role="alert"
+          className="mb-6 rounded-xl border border-negative/30 bg-negative/10 px-4 py-3 text-sm text-negative"
+        >
+          Couldn't load transactions: {txQuery.error.message}
+        </div>
+      )}
+
+      {/* Filters */}
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row">
+        <div className="relative flex-1">
+          <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+          <input
+            type="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search by merchant…"
+            aria-label="Search by merchant"
+            className="h-10 w-full rounded-lg border bg-card pr-3 pl-9 text-sm text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-ring focus:outline-none"
+          />
+        </div>
+        <select
+          value={category}
+          onChange={(e) => setCategory(e.target.value)}
+          aria-label="Filter by category"
+          className="h-10 rounded-lg border bg-card px-3 text-sm text-foreground focus:ring-2 focus:ring-ring focus:outline-none"
+        >
+          <option value="all">All categories</option>
+          {categories.hasUncategorized && (
+            <option value={UNCATEGORIZED}>Uncategorized</option>
+          )}
+          {categories.list.map((c) => (
+            <option key={c} value={c}>
+              {c}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* Register */}
+      <section className="overflow-hidden rounded-2xl border bg-card card-ring">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b text-left text-xs tracking-wide text-muted-foreground uppercase">
+                <th className="px-4 py-3 font-medium">Date</th>
+                <th className="px-4 py-3 font-medium">Merchant</th>
+                <th className="px-4 py-3 font-medium">Category</th>
+                <th className="px-4 py-3 font-medium">Account</th>
+                <th className="px-4 py-3 text-right font-medium">Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              {txQuery.isPending ? (
+                Array.from({ length: 8 }).map((_, i) => (
+                  <tr key={i} className="border-b last:border-0">
+                    <td colSpan={5} className="px-4 py-3">
+                      <div className="h-5 animate-pulse rounded bg-muted" />
+                    </td>
+                  </tr>
+                ))
+              ) : filtered.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={5}
+                    className="px-4 py-12 text-center text-sm text-muted-foreground"
+                  >
+                    {transactions.length === 0
+                      ? "No transactions yet."
+                      : "No transactions match your filters."}
+                  </td>
+                </tr>
+              ) : (
+                filtered.map((tx) => (
+                  <TransactionRowView
+                    key={tx.entry_reference}
+                    tx={tx}
+                    accountLabel={
+                      tx.account_uid
+                        ? (accounts[tx.account_uid]?.label ?? "Unknown account")
+                        : "—"
+                    }
+                  />
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {txQuery.hasNextPage && (
+          <div className="border-t p-3 text-center">
+            <button
+              type="button"
+              onClick={() => void txQuery.fetchNextPage()}
+              disabled={txQuery.isFetchingNextPage}
+              className="rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-50"
+            >
+              {txQuery.isFetchingNextPage ? "Loading…" : "Load more"}
+            </button>
+          </div>
+        )}
+      </section>
+    </div>
+  );
+}
+
+function TransactionRowView({
+  tx,
+  accountLabel,
+}: {
+  tx: TransactionRow;
+  accountLabel: string;
+}) {
+  const eur = tx.signed_amount_eur;
+  const positive = (eur ?? 0) >= 0;
+  const showOriginal =
+    tx.currency != null &&
+    tx.currency !== "EUR" &&
+    tx.amount != null &&
+    eur != null;
+
+  return (
+    <tr className="border-b transition-colors last:border-0 hover:bg-accent/40">
+      <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">
+        {tx.booking_date
+          ? new Date(`${tx.booking_date}T00:00:00`).toLocaleDateString(
+              "en-GB",
+              { day: "numeric", month: "short", year: "numeric" },
+            )
+          : "—"}
+      </td>
+      <td className="max-w-48 truncate px-4 py-3 font-medium text-foreground">
+        {tx.creditor_name ?? "—"}
+      </td>
+      <td className="px-4 py-3">
+        {tx.category ? (
+          <span className="inline-flex rounded-full border border-primary/25 bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
+            {tx.category}
+          </span>
+        ) : (
+          <span className="inline-flex rounded-full border border-dashed px-2.5 py-0.5 text-xs text-muted-foreground">
+            Uncategorized
+          </span>
+        )}
+      </td>
+      <td className="max-w-36 truncate px-4 py-3 text-muted-foreground">
+        {accountLabel}
+      </td>
+      <td className="px-4 py-3 text-right whitespace-nowrap">
+        {eur == null ? (
+          <span className="text-muted-foreground">—</span>
+        ) : (
+          <span
+            className={`inline-flex items-center justify-end gap-1 font-figure font-medium ${
+              positive ? "text-positive" : "text-negative"
+            }`}
+          >
+            {positive ? (
+              <ArrowUpRight className="size-3.5" />
+            ) : (
+              <ArrowDownLeft className="size-3.5" />
+            )}
+            {formatEur(eur)}
+          </span>
+        )}
+        {showOriginal && (
+          <span className="ml-1.5 text-xs text-muted-foreground">
+            ({formatOriginal(tx.amount as number, tx.currency as string)})
+          </span>
+        )}
+      </td>
+    </tr>
+  );
+}
