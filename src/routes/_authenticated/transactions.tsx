@@ -291,20 +291,78 @@ function TransactionsPage() {
   );
 }
 
+function CategoryPicker({
+  tx,
+  onSelect,
+  saving,
+}: {
+  tx: TransactionRow;
+  onSelect: (category: string) => void;
+  saving: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          aria-label={`Change category for ${tx.creditor_name ?? "transaction"}`}
+          disabled={saving}
+          className="cursor-pointer disabled:opacity-60"
+        >
+          {tx.category ? (
+            <span className="inline-flex rounded-full border border-primary/25 bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary transition-colors hover:bg-primary/20">
+              {tx.category}
+            </span>
+          ) : (
+            <span className="inline-flex rounded-full border border-dashed px-2.5 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-accent">
+              Uncategorized
+            </span>
+          )}
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-48 p-1">
+        <div className="max-h-72 overflow-y-auto">
+          {CATEGORIES.map((c) => (
+            <button
+              key={c}
+              type="button"
+              onClick={() => {
+                setOpen(false);
+                if (c !== tx.category) onSelect(c);
+              }}
+              className={`block w-full rounded-md px-2.5 py-1.5 text-left text-sm transition-colors hover:bg-accent ${
+                c === tx.category
+                  ? "font-medium text-primary"
+                  : "text-foreground"
+              }`}
+            >
+              {c}
+            </button>
+          ))}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 function TransactionRowView({
   tx,
   accountLabel,
+  onSelectCategory,
+  saving,
 }: {
   tx: TransactionRow;
   accountLabel: string;
+  onSelectCategory: (category: string) => void;
+  saving: boolean;
 }) {
+  const native = nativeSignedAmount(tx);
+  const currency = tx.currency ?? "EUR";
+  const positive = (native ?? 0) >= 0;
   const eur = tx.signed_amount_eur;
-  const positive = (eur ?? 0) >= 0;
-  const showOriginal =
-    tx.currency != null &&
-    tx.currency !== "EUR" &&
-    tx.amount != null &&
-    eur != null;
+  const showEur = currency !== "EUR" && eur != null;
 
   return (
     <tr className="border-b transition-colors last:border-0 hover:bg-accent/40">
@@ -320,21 +378,13 @@ function TransactionRowView({
         {tx.creditor_name ?? "—"}
       </td>
       <td className="px-4 py-3">
-        {tx.category ? (
-          <span className="inline-flex rounded-full border border-primary/25 bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
-            {tx.category}
-          </span>
-        ) : (
-          <span className="inline-flex rounded-full border border-dashed px-2.5 py-0.5 text-xs text-muted-foreground">
-            Uncategorized
-          </span>
-        )}
+        <CategoryPicker tx={tx} onSelect={onSelectCategory} saving={saving} />
       </td>
       <td className="max-w-36 truncate px-4 py-3 text-muted-foreground">
         {accountLabel}
       </td>
       <td className="px-4 py-3 text-right whitespace-nowrap">
-        {eur == null ? (
+        {native == null ? (
           <span className="text-muted-foreground">—</span>
         ) : (
           <span
@@ -347,15 +397,16 @@ function TransactionRowView({
             ) : (
               <ArrowDownLeft className="size-3.5" />
             )}
-            {formatEur(eur)}
+            {formatMoney(native, currency)}
           </span>
         )}
-        {showOriginal && (
-          <span className="ml-1.5 text-xs text-muted-foreground">
-            ({formatOriginal(tx.amount as number, tx.currency as string)})
-          </span>
+        {showEur && (
+          <div className="text-xs text-muted-foreground">
+            {formatMoney(eur as number, "EUR")}
+          </div>
         )}
       </td>
     </tr>
+
   );
 }
