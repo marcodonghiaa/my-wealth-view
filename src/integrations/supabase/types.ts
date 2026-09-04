@@ -118,6 +118,7 @@ export type Database = {
           entry_reference: string
           raw: Json | null
           remittance_info: string | null
+          transaction_type: string | null
           user_id: string
           value_date: string | null
         }
@@ -135,6 +136,7 @@ export type Database = {
           entry_reference: string
           raw?: Json | null
           remittance_info?: string | null
+          transaction_type?: string | null
           user_id: string
           value_date?: string | null
         }
@@ -152,6 +154,7 @@ export type Database = {
           entry_reference?: string
           raw?: Json | null
           remittance_info?: string | null
+          transaction_type?: string | null
           user_id?: string
           value_date?: string | null
         }
@@ -222,6 +225,7 @@ export type Database = {
           currency: string | null
           entry_reference: string | null
           signed_amount_eur: number | null
+          transaction_type: string | null
           user_id: string | null
         }
         Relationships: [

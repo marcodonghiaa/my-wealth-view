@@ -46,6 +46,7 @@ interface TransactionRow {
   account_uid: string | null;
   booking_date: string | null;
   category: string | null;
+  transaction_type: string | null;
   creditor_name: string | null;
   currency: string | null;
   amount: number | null;
@@ -65,7 +66,7 @@ async function fetchTransactionsPage(
   const { data, error } = await getSupabase()
     .from("v_transactions_eur")
     .select(
-      "entry_reference,account_uid,booking_date,category,creditor_name,currency,amount,signed_amount_eur",
+      "entry_reference,account_uid,booking_date,category,transaction_type,creditor_name,currency,amount,signed_amount_eur",
     )
     .order("booking_date", { ascending: false })
     .range(from, from + PAGE_SIZE - 1);
@@ -284,6 +285,7 @@ function TransactionsPage() {
                 <th className="px-4 py-3 font-medium">Date</th>
                 <th className="px-4 py-3 font-medium">Merchant</th>
                 <th className="px-4 py-3 font-medium">Category</th>
+                <th className="px-4 py-3 font-medium">Type</th>
                 <th className="px-4 py-3 font-medium">Account</th>
                 <th className="px-4 py-3 text-right font-medium">Amount</th>
               </tr>
@@ -292,7 +294,7 @@ function TransactionsPage() {
               {txQuery.isPending ? (
                 Array.from({ length: 8 }).map((_, i) => (
                   <tr key={i} className="border-b last:border-0">
-                    <td colSpan={5} className="px-4 py-3">
+                    <td colSpan={6} className="px-4 py-3">
                       <div className="h-5 animate-pulse rounded bg-muted" />
                     </td>
                   </tr>
@@ -300,7 +302,7 @@ function TransactionsPage() {
               ) : filtered.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={5}
+                    colSpan={6}
                     className="px-4 py-12 text-center text-sm text-muted-foreground"
                   >
                     {transactions.length === 0
@@ -443,6 +445,15 @@ function TransactionRowView({
       <td className="px-4 py-3">
         <CategoryPicker tx={tx} onSelect={onSelectCategory} saving={saving} />
       </td>
+      <td className="px-4 py-3">
+        {tx.transaction_type ? (
+          <span className="inline-flex rounded-full border border-border bg-card px-2.5 py-0.5 text-xs text-muted-foreground">
+            {tx.transaction_type}
+          </span>
+        ) : (
+          <span className="text-sm text-muted-foreground">—</span>
+        )}
+      </td>
       <td className="max-w-36 truncate px-4 py-3 text-muted-foreground">
         {accountLabel}
       </td>
@@ -461,15 +472,14 @@ function TransactionRowView({
               <ArrowDownLeft className="size-3.5" />
             )}
             {formatMoney(native, currency)}
+            {showEur && (
+              <span className="ml-0.5 text-sm opacity-80">
+                ({formatMoney(eur as number, "EUR")})
+              </span>
+            )}
           </span>
-        )}
-        {showEur && (
-          <div className="text-xs text-muted-foreground">
-            {formatMoney(eur as number, "EUR")}
-          </div>
         )}
       </td>
     </tr>
-
   );
 }
