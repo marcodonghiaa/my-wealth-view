@@ -83,16 +83,7 @@ async function fetchAccounts(): Promise<Record<string, AccountRow>> {
   return map;
 }
 
-function formatEur(value: number): string {
-  return new Intl.NumberFormat("en-IE", {
-    style: "currency",
-    currency: "EUR",
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value);
-}
-
-function formatOriginal(value: number, currency: string): string {
+function formatMoney(value: number, currency: string): string {
   return new Intl.NumberFormat("en-IE", {
     style: "currency",
     currency,
@@ -101,7 +92,32 @@ function formatOriginal(value: number, currency: string): string {
   }).format(value);
 }
 
+/** Signed amount in the transaction's own currency. */
+function nativeSignedAmount(tx: TransactionRow): number | null {
+  if (tx.amount == null) return null;
+  const sign = (tx.signed_amount_eur ?? tx.amount) < 0 ? -1 : 1;
+  return sign * Math.abs(tx.amount);
+}
+
+const CATEGORIES = [
+  "Groceries",
+  "Dining",
+  "Transport",
+  "Housing",
+  "Utilities",
+  "Subscriptions",
+  "Shopping",
+  "Health",
+  "Entertainment",
+  "Travel",
+  "Income",
+  "Transfers",
+  "Fees",
+  "Other",
+] as const;
+
 const UNCATEGORIZED = "__uncategorized__";
+
 
 function TransactionsPage() {
   const [search, setSearch] = useState("");
