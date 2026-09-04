@@ -35,8 +35,16 @@ function AuthPage() {
   // Already signed in? Go straight to the dashboard.
   useEffect(() => {
     let cancelled = false;
-    getSupabase()
-      .auth.getSession()
+    let sessionPromise: ReturnType<
+      ReturnType<typeof getSupabase>["auth"]["getSession"]
+    >;
+    try {
+      sessionPromise = getSupabase().auth.getSession();
+    } catch {
+      setCheckingSession(false);
+      return;
+    }
+    sessionPromise
       .then(({ data }) => {
         if (cancelled) return;
         if (data.session) {

@@ -19,11 +19,16 @@ import { getSupabase } from "@/integrations/supabase/client";
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
   beforeLoad: async () => {
-    const { data, error } = await getSupabase().auth.getUser();
-    if (error || !data.user) {
+    try {
+      const { data, error } = await getSupabase().auth.getUser();
+      if (error || !data.user) {
+        throw redirect({ to: "/auth" });
+      }
+      return { user: data.user };
+    } catch (err) {
+      if (err instanceof Response) throw err;
       throw redirect({ to: "/auth" });
     }
-    return { user: data.user };
   },
   component: AuthenticatedLayout,
 });
