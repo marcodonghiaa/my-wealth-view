@@ -11,7 +11,6 @@ import {
   YAxis,
 } from "recharts";
 import { ArrowDownRight, ArrowUpRight, Wallet } from "lucide-react";
-import {
 import { getSupabase } from "@/integrations/supabase/client";
 
 export type NetWorthSnapshot = { snapshot_date: string; total_eur: number };
