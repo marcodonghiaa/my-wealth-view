@@ -101,20 +101,18 @@ function nativeSignedAmount(tx: TransactionRow): number | null {
 }
 
 const CATEGORIES = [
-  "Groceries",
-  "Dining",
-  "Transport",
-  "Housing",
-  "Utilities",
-  "Subscriptions",
   "Shopping",
-  "Health",
   "Entertainment",
-  "Travel",
+  "Groceries",
+  "Dine Out",
+  "Services",
+  "Housing",
+  "Transports",
+  "Experiences",
   "Income",
-  "Transfers",
-  "Fees",
-  "Other",
+  "Health",
+  "Transfer",
+  "Others",
 ] as const;
 
 const UNCATEGORIZED = "__uncategorized__";
@@ -171,6 +169,55 @@ function TransactionsPage() {
     },
     onSuccess: (_data, vars) => {
       toast.success(`Saved — ${vars.category}`);
+    },
+  });
+
+  const updateType = useMutation({
+    mutationFn: async ({
+      entryReference,
+      transactionType,
+    }: {
+      entryReference: string;
+      transactionType: string;
+    }) => {
+      const { error } = await getSupabase()
+        .from("transactions")
+        .update({ transaction_type: transactionType })
+        .eq("entry_reference", entryReference);
+      if (error) throw error;
+    },
+    onMutate: async ({ entryReference, transactionType: next }) => {
+      await queryClient.cancelQueries({ queryKey: ["transactions"] });
+      const previous = queryClient.getQueryData<
+        InfiniteData<Array<TransactionRow>>
+      >(["transactions"]);
+      queryClient.setQueryData<InfiniteData<Array<TransactionRow>>>(
+        ["transactions"],
+        (old) =>
+          old
+            ? {
+                ...old,
+                pages: old.pages.map((page) =>
+                  page.map((row) =>
+                    row.entry_reference === entryReference
+                      ? { ...row, transaction_type: next }
+                      : row,
+                  ),
+                ),
+              }
+            : old,
+      );
+      return { previous };
+    },
+    onError: (error, _vars, context) => {
+      if (context?.previous)
+        queryClient.setQueryData(["transactions"], context.previous);
+      toast.error("Couldn't save type", {
+        description: (error as Error).message,
+      });
+    },
+    onSuccess: (_data, vars) => {
+      toast.success(`Saved — ${vars.transactionType}`);
     },
   });
 
@@ -315,7 +362,7 @@ function TransactionsPage() {
                   <TransactionRowView
                     key={tx.entry_reference}
                     tx={tx}
-                    saving={
+                    savingCategory={
                       updateCategory.isPending &&
                       updateCategory.variables?.entryReference ===
                         tx.entry_reference
@@ -324,6 +371,17 @@ function TransactionsPage() {
                       updateCategory.mutate({
                         entryReference: tx.entry_reference,
                         category: next,
+                      })
+                    }
+                    savingType={
+                      updateType.isPending &&
+                      updateType.variables?.entryReference ===
+                        tx.entry_reference
+                    }
+                    onSelectType={(next) =>
+                      updateType.mutate({
+                        entryReference: tx.entry_reference,
+                        transactionType: next,
                       })
                     }
                     accountLabel={
@@ -412,16 +470,78 @@ function CategoryPicker({
   );
 }
 
+const TYPES = ["Subscription", "One-time"] as const;
+
+function TypePicker({
+  tx,
+  onSelect,
+  saving,
+}: {
+  tx: TransactionRow;
+  onSelect: (type: string) => void;
+  saving: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          aria-label={`Change type for ${tx.creditor_name ?? "transaction"}`}
+          disabled={saving}
+          className="cursor-pointer disabled:opacity-60"
+        >
+          {tx.transaction_type ? (
+            <span className="inline-flex rounded-full border border-border bg-card px-2.5 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-accent">
+              {tx.transaction_type}
+            </span>
+          ) : (
+            <span className="inline-flex rounded-full border border-dashed px-2.5 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-accent">
+              —
+            </span>
+          )}
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-48 p-1">
+        <div className="max-h-72 overflow-y-auto">
+          {TYPES.map((t) => (
+            <button
+              key={t}
+              type="button"
+              onClick={() => {
+                setOpen(false);
+                if (t !== tx.transaction_type) onSelect(t);
+              }}
+              className={`block w-full rounded-md px-2.5 py-1.5 text-left text-sm transition-colors hover:bg-accent ${
+                t === tx.transaction_type
+                  ? "font-medium text-primary"
+                  : "text-foreground"
+              }`}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 function TransactionRowView({
   tx,
   accountLabel,
   onSelectCategory,
-  saving,
+  savingCategory,
+  onSelectType,
+  savingType,
 }: {
   tx: TransactionRow;
   accountLabel: string;
   onSelectCategory: (category: string) => void;
-  saving: boolean;
+  savingCategory: boolean;
+  onSelectType: (type: string) => void;
+  savingType: boolean;
 }) {
   const native = nativeSignedAmount(tx);
   const currency = tx.currency ?? "EUR";
@@ -443,16 +563,10 @@ function TransactionRowView({
         {tx.creditor_name ?? "—"}
       </td>
       <td className="px-4 py-3">
-        <CategoryPicker tx={tx} onSelect={onSelectCategory} saving={saving} />
+        <CategoryPicker tx={tx} onSelect={onSelectCategory} saving={savingCategory} />
       </td>
       <td className="px-4 py-3">
-        {tx.transaction_type ? (
-          <span className="inline-flex rounded-full border border-border bg-card px-2.5 py-0.5 text-xs text-muted-foreground">
-            {tx.transaction_type}
-          </span>
-        ) : (
-          <span className="text-sm text-muted-foreground">—</span>
-        )}
+        <TypePicker tx={tx} onSelect={onSelectType} saving={savingType} />
       </td>
       <td className="max-w-36 truncate px-4 py-3 text-muted-foreground">
         {accountLabel}
