@@ -122,6 +122,57 @@ const UNCATEGORIZED = "__uncategorized__";
 function TransactionsPage() {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<string>("all");
+  const queryClient = useQueryClient();
+
+  const updateCategory = useMutation({
+    mutationFn: async ({
+      entryReference,
+      category: next,
+    }: {
+      entryReference: string;
+      category: string;
+    }) => {
+      const { error } = await getSupabase()
+        .from("transactions")
+        .update({ category: next })
+        .eq("entry_reference", entryReference);
+      if (error) throw error;
+    },
+    onMutate: async ({ entryReference, category: next }) => {
+      await queryClient.cancelQueries({ queryKey: ["transactions"] });
+      const previous = queryClient.getQueryData<
+        InfiniteData<Array<TransactionRow>>
+      >(["transactions"]);
+      queryClient.setQueryData<InfiniteData<Array<TransactionRow>>>(
+        ["transactions"],
+        (old) =>
+          old
+            ? {
+                ...old,
+                pages: old.pages.map((page) =>
+                  page.map((row) =>
+                    row.entry_reference === entryReference
+                      ? { ...row, category: next }
+                      : row,
+                  ),
+                ),
+              }
+            : old,
+      );
+      return { previous };
+    },
+    onError: (error, _vars, context) => {
+      if (context?.previous)
+        queryClient.setQueryData(["transactions"], context.previous);
+      toast.error("Couldn't save category", {
+        description: (error as Error).message,
+      });
+    },
+    onSuccess: (_data, vars) => {
+      toast.success(`Saved — ${vars.category}`);
+    },
+  });
+
 
   const accountsQuery = useQuery({
     queryKey: ["accounts"],
