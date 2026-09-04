@@ -128,7 +128,7 @@ function AuthPage() {
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {mode === "signin"
-              ? "Sign in to view your net worth"
+              ? "Sign in to view your finances"
               : "Create your account"}
           </p>
         </div>
