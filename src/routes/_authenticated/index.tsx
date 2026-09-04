@@ -12,10 +12,11 @@ import {
 } from "recharts";
 import { ArrowDownRight, ArrowUpRight, Wallet } from "lucide-react";
 import {
-  getSupabase,
-  type FxRate,
-  type NetWorthSnapshot,
-} from "@/integrations/supabase/client";
+import { getSupabase } from "@/integrations/supabase/client";
+
+export type NetWorthSnapshot = { snapshot_date: string; total_eur: number };
+export type FxRate = { date: string; currency: string; rate_to_eur: number };
+
 
 export const Route = createFileRoute("/_authenticated/")({
   head: () => ({
