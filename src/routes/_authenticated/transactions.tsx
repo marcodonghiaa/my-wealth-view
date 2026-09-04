@@ -172,6 +172,55 @@ function TransactionsPage() {
     },
   });
 
+  const updateType = useMutation({
+    mutationFn: async ({
+      entryReference,
+      transactionType,
+    }: {
+      entryReference: string;
+      transactionType: string;
+    }) => {
+      const { error } = await getSupabase()
+        .from("transactions")
+        .update({ transaction_type: transactionType })
+        .eq("entry_reference", entryReference);
+      if (error) throw error;
+    },
+    onMutate: async ({ entryReference, transactionType: next }) => {
+      await queryClient.cancelQueries({ queryKey: ["transactions"] });
+      const previous = queryClient.getQueryData<
+        InfiniteData<Array<TransactionRow>>
+      >(["transactions"]);
+      queryClient.setQueryData<InfiniteData<Array<TransactionRow>>>(
+        ["transactions"],
+        (old) =>
+          old
+            ? {
+                ...old,
+                pages: old.pages.map((page) =>
+                  page.map((row) =>
+                    row.entry_reference === entryReference
+                      ? { ...row, transaction_type: next }
+                      : row,
+                  ),
+                ),
+              }
+            : old,
+      );
+      return { previous };
+    },
+    onError: (error, _vars, context) => {
+      if (context?.previous)
+        queryClient.setQueryData(["transactions"], context.previous);
+      toast.error("Couldn't save type", {
+        description: (error as Error).message,
+      });
+    },
+    onSuccess: (_data, vars) => {
+      toast.success(`Saved — ${vars.transactionType}`);
+    },
+  });
+
 
   const accountsQuery = useQuery({
     queryKey: ["accounts"],
