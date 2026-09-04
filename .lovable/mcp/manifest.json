@@ -1,0 +1,67 @@
+{
+  "version": 1,
+  "sdk_version": "1.0.0",
+  "path": "/mcp",
+  "auth": {
+    "type": "oauth",
+    "issuer": "https://diwezyrtlwdbrsgegkay.supabase.co/auth/v1",
+    "accepted_audiences": [
+      "authenticated"
+    ]
+  },
+  "mcp": {
+    "server": {
+      "name": "finance-dashboard",
+      "version": "0.1.0",
+      "title": "Finance Dashboard"
+    },
+    "tools": [
+      {
+        "name": "get_net_worth",
+        "title": "Get net worth history",
+        "description": "Read the signed-in user's daily net worth snapshots (in EUR), newest last.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "limit": {
+              "description": "Maximum number of most recent daily snapshots to return.",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 1000
+            }
+          }
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_fx_rates",
+        "title": "Get FX rates",
+        "description": "Read the latest FX rate to EUR for each currency (divide a EUR amount by rate_to_eur to convert).",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "currency": {
+              "description": "Optional ISO currency code, e.g. USD.",
+              "type": "string",
+              "minLength": 3,
+              "maxLength": 3
+            }
+          }
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}
