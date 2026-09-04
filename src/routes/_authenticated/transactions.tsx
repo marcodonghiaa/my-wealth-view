@@ -362,7 +362,7 @@ function TransactionsPage() {
                   <TransactionRowView
                     key={tx.entry_reference}
                     tx={tx}
-                    saving={
+                    savingCategory={
                       updateCategory.isPending &&
                       updateCategory.variables?.entryReference ===
                         tx.entry_reference
@@ -371,6 +371,17 @@ function TransactionsPage() {
                       updateCategory.mutate({
                         entryReference: tx.entry_reference,
                         category: next,
+                      })
+                    }
+                    savingType={
+                      updateType.isPending &&
+                      updateType.variables?.entryReference ===
+                        tx.entry_reference
+                    }
+                    onSelectType={(next) =>
+                      updateType.mutate({
+                        entryReference: tx.entry_reference,
+                        transactionType: next,
                       })
                     }
                     accountLabel={
