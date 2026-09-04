@@ -112,9 +112,10 @@ function NetWorthPage() {
       ? (latest.total_eur - previous.total_eur) / previous.total_eur
       : null;
 
+  const first = snapshots.at(0);
   const periodChange =
-    latest != null && snapshots.length > 1 && snapshots[0].total_eur !== 0
-      ? (latest.total_eur - snapshots[0].total_eur) / snapshots[0].total_eur
+    latest != null && first != null && first.total_eur !== 0
+      ? (latest.total_eur - first.total_eur) / first.total_eur
       : null;
 
   return (
@@ -341,7 +342,7 @@ function NetWorthTooltip({
   label?: string;
 }) {
   if (!active || !payload?.length || !label) return null;
-  const point = payload[0].payload;
+  const point = payload.at(0)?.payload;
   if (!point) return null;
   return (
     <div className="rounded-lg border bg-popover px-3 py-2 shadow-lg">
