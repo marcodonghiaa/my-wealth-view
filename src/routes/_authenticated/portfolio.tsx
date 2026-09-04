@@ -283,9 +283,9 @@ function PortfolioTooltip({
   payload?: Array<TooltipPayloadItem>;
   totalEur: number;
 }) {
-  if (!active || !payload?.length) return null;
+  if (!active || !payload || payload.length === 0) return null;
   const point = payload[0];
-  const row = point.payload;
+  const row = point?.payload;
   if (!row || row.value_eur == null) return null;
   const percent = totalEur > 0 ? ((row.value_eur / totalEur) * 100).toFixed(1) : "0.0";
   return (
