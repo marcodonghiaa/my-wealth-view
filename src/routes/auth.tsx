@@ -97,9 +97,13 @@ function AuthPage() {
         const { error: signUpError } = await supabase.auth.signUp({
           email,
           password,
-          options: next
-            ? { emailRedirectTo: `${window.location.origin}${next}` }
-            : undefined,
+          ...(next
+            ? {
+                options: {
+                  emailRedirectTo: `${window.location.origin}${next}`,
+                },
+              }
+            : {}),
         });
         if (signUpError) throw signUpError;
         setMessage("Check your email to confirm your account, then sign in.");
