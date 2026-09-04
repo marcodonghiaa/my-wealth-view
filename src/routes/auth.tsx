@@ -3,7 +3,18 @@ import { useEffect, useState } from "react";
 import { Loader2, LockKeyhole, TrendingUp } from "lucide-react";
 import { getSupabase } from "@/integrations/supabase/client";
 
+function safeNext(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  // Same-origin relative path only.
+  return /^\/(?!\/)/.test(value) ? value : undefined;
+}
+
 export const Route = createFileRoute("/auth")({
+  ssr: false,
+  validateSearch: (s: Record<string, unknown>) => {
+    const next = safeNext(s["next"]);
+    return next ? { next } : {};
+  },
   head: () => ({
     meta: [
       { title: "Sign in — Finance Dashboard" },
@@ -24,6 +35,15 @@ export const Route = createFileRoute("/auth")({
 
 function AuthPage() {
   const navigate = useNavigate();
+  const { next } = Route.useSearch();
+
+  const goNext = (replace = true) => {
+    if (next) {
+      window.location.replace(next);
+      return Promise.resolve();
+    }
+    return navigate({ to: "/", replace });
+  };
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -48,7 +68,7 @@ function AuthPage() {
       .then(({ data }) => {
         if (cancelled) return;
         if (data.session) {
-          void navigate({ to: "/", replace: true });
+          void goNext();
         } else {
           setCheckingSession(false);
         }
@@ -72,11 +92,18 @@ function AuthPage() {
           password,
         });
         if (signInError) throw signInError;
-        await navigate({ to: "/", replace: true });
+        await goNext();
       } else {
         const { error: signUpError } = await supabase.auth.signUp({
           email,
           password,
+          ...(next
+            ? {
+                options: {
+                  emailRedirectTo: `${window.location.origin}${next}`,
+                },
+              }
+            : {}),
         });
         if (signUpError) throw signUpError;
         setMessage("Check your email to confirm your account, then sign in.");
