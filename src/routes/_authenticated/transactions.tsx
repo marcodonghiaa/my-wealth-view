@@ -313,6 +313,17 @@ function TransactionsPage() {
                   <TransactionRowView
                     key={tx.entry_reference}
                     tx={tx}
+                    saving={
+                      updateCategory.isPending &&
+                      updateCategory.variables?.entryReference ===
+                        tx.entry_reference
+                    }
+                    onSelectCategory={(next) =>
+                      updateCategory.mutate({
+                        entryReference: tx.entry_reference,
+                        category: next,
+                      })
+                    }
                     accountLabel={
                       tx.account_uid
                         ? (accounts[tx.account_uid]?.label ?? "Unknown account")
@@ -320,6 +331,7 @@ function TransactionsPage() {
                     }
                   />
                 ))
+
               )}
             </tbody>
           </table>
