@@ -1,8 +1,21 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type InfiniteData,
+} from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { ArrowDownLeft, ArrowUpRight, Search } from "lucide-react";
+import { toast } from "sonner";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { getSupabase } from "@/integrations/supabase/client";
+
 
 export const Route = createFileRoute("/_authenticated/transactions")({
   head: () => ({
@@ -70,16 +83,7 @@ async function fetchAccounts(): Promise<Record<string, AccountRow>> {
   return map;
 }
 
-function formatEur(value: number): string {
-  return new Intl.NumberFormat("en-IE", {
-    style: "currency",
-    currency: "EUR",
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value);
-}
-
-function formatOriginal(value: number, currency: string): string {
+function formatMoney(value: number, currency: string): string {
   return new Intl.NumberFormat("en-IE", {
     style: "currency",
     currency,
@@ -88,11 +92,87 @@ function formatOriginal(value: number, currency: string): string {
   }).format(value);
 }
 
+/** Signed amount in the transaction's own currency. */
+function nativeSignedAmount(tx: TransactionRow): number | null {
+  if (tx.amount == null) return null;
+  const sign = (tx.signed_amount_eur ?? tx.amount) < 0 ? -1 : 1;
+  return sign * Math.abs(tx.amount);
+}
+
+const CATEGORIES = [
+  "Groceries",
+  "Dining",
+  "Transport",
+  "Housing",
+  "Utilities",
+  "Subscriptions",
+  "Shopping",
+  "Health",
+  "Entertainment",
+  "Travel",
+  "Income",
+  "Transfers",
+  "Fees",
+  "Other",
+] as const;
+
 const UNCATEGORIZED = "__uncategorized__";
+
 
 function TransactionsPage() {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<string>("all");
+  const queryClient = useQueryClient();
+
+  const updateCategory = useMutation({
+    mutationFn: async ({
+      entryReference,
+      category: next,
+    }: {
+      entryReference: string;
+      category: string;
+    }) => {
+      const { error } = await getSupabase()
+        .from("transactions")
+        .update({ category: next })
+        .eq("entry_reference", entryReference);
+      if (error) throw error;
+    },
+    onMutate: async ({ entryReference, category: next }) => {
+      await queryClient.cancelQueries({ queryKey: ["transactions"] });
+      const previous = queryClient.getQueryData<
+        InfiniteData<Array<TransactionRow>>
+      >(["transactions"]);
+      queryClient.setQueryData<InfiniteData<Array<TransactionRow>>>(
+        ["transactions"],
+        (old) =>
+          old
+            ? {
+                ...old,
+                pages: old.pages.map((page) =>
+                  page.map((row) =>
+                    row.entry_reference === entryReference
+                      ? { ...row, category: next }
+                      : row,
+                  ),
+                ),
+              }
+            : old,
+      );
+      return { previous };
+    },
+    onError: (error, _vars, context) => {
+      if (context?.previous)
+        queryClient.setQueryData(["transactions"], context.previous);
+      toast.error("Couldn't save category", {
+        description: (error as Error).message,
+      });
+    },
+    onSuccess: (_data, vars) => {
+      toast.success(`Saved — ${vars.category}`);
+    },
+  });
+
 
   const accountsQuery = useQuery({
     queryKey: ["accounts"],
@@ -233,6 +313,17 @@ function TransactionsPage() {
                   <TransactionRowView
                     key={tx.entry_reference}
                     tx={tx}
+                    saving={
+                      updateCategory.isPending &&
+                      updateCategory.variables?.entryReference ===
+                        tx.entry_reference
+                    }
+                    onSelectCategory={(next) =>
+                      updateCategory.mutate({
+                        entryReference: tx.entry_reference,
+                        category: next,
+                      })
+                    }
                     accountLabel={
                       tx.account_uid
                         ? (accounts[tx.account_uid]?.label ?? "Unknown account")
@@ -240,6 +331,7 @@ function TransactionsPage() {
                     }
                   />
                 ))
+
               )}
             </tbody>
           </table>
@@ -262,20 +354,78 @@ function TransactionsPage() {
   );
 }
 
+function CategoryPicker({
+  tx,
+  onSelect,
+  saving,
+}: {
+  tx: TransactionRow;
+  onSelect: (category: string) => void;
+  saving: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          aria-label={`Change category for ${tx.creditor_name ?? "transaction"}`}
+          disabled={saving}
+          className="cursor-pointer disabled:opacity-60"
+        >
+          {tx.category ? (
+            <span className="inline-flex rounded-full border border-primary/25 bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary transition-colors hover:bg-primary/20">
+              {tx.category}
+            </span>
+          ) : (
+            <span className="inline-flex rounded-full border border-dashed px-2.5 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-accent">
+              Uncategorized
+            </span>
+          )}
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-48 p-1">
+        <div className="max-h-72 overflow-y-auto">
+          {CATEGORIES.map((c) => (
+            <button
+              key={c}
+              type="button"
+              onClick={() => {
+                setOpen(false);
+                if (c !== tx.category) onSelect(c);
+              }}
+              className={`block w-full rounded-md px-2.5 py-1.5 text-left text-sm transition-colors hover:bg-accent ${
+                c === tx.category
+                  ? "font-medium text-primary"
+                  : "text-foreground"
+              }`}
+            >
+              {c}
+            </button>
+          ))}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 function TransactionRowView({
   tx,
   accountLabel,
+  onSelectCategory,
+  saving,
 }: {
   tx: TransactionRow;
   accountLabel: string;
+  onSelectCategory: (category: string) => void;
+  saving: boolean;
 }) {
+  const native = nativeSignedAmount(tx);
+  const currency = tx.currency ?? "EUR";
+  const positive = (native ?? 0) >= 0;
   const eur = tx.signed_amount_eur;
-  const positive = (eur ?? 0) >= 0;
-  const showOriginal =
-    tx.currency != null &&
-    tx.currency !== "EUR" &&
-    tx.amount != null &&
-    eur != null;
+  const showEur = currency !== "EUR" && eur != null;
 
   return (
     <tr className="border-b transition-colors last:border-0 hover:bg-accent/40">
@@ -291,21 +441,13 @@ function TransactionRowView({
         {tx.creditor_name ?? "—"}
       </td>
       <td className="px-4 py-3">
-        {tx.category ? (
-          <span className="inline-flex rounded-full border border-primary/25 bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
-            {tx.category}
-          </span>
-        ) : (
-          <span className="inline-flex rounded-full border border-dashed px-2.5 py-0.5 text-xs text-muted-foreground">
-            Uncategorized
-          </span>
-        )}
+        <CategoryPicker tx={tx} onSelect={onSelectCategory} saving={saving} />
       </td>
       <td className="max-w-36 truncate px-4 py-3 text-muted-foreground">
         {accountLabel}
       </td>
       <td className="px-4 py-3 text-right whitespace-nowrap">
-        {eur == null ? (
+        {native == null ? (
           <span className="text-muted-foreground">—</span>
         ) : (
           <span
@@ -318,15 +460,16 @@ function TransactionRowView({
             ) : (
               <ArrowDownLeft className="size-3.5" />
             )}
-            {formatEur(eur)}
+            {formatMoney(native, currency)}
           </span>
         )}
-        {showOriginal && (
-          <span className="ml-1.5 text-xs text-muted-foreground">
-            ({formatOriginal(tx.amount as number, tx.currency as string)})
-          </span>
+        {showEur && (
+          <div className="text-xs text-muted-foreground">
+            {formatMoney(eur as number, "EUR")}
+          </div>
         )}
       </td>
     </tr>
+
   );
 }
