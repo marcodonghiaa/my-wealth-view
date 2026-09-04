@@ -42,6 +42,7 @@ async function fetchSubscriptions(): Promise<Array<SubscriptionRow>> {
     .select(
       "creditor_name,category,currency,amount,signed_amount_eur,last_charged,charge_count",
     )
+    .neq("amount", 0)
     .order("signed_amount_eur", { ascending: true });
   if (error) throw error;
   return (data ?? []) as Array<SubscriptionRow>;
