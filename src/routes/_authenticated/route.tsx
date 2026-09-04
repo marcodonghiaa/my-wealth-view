@@ -48,7 +48,7 @@ const NAV_ITEMS: Array<NavItem> = [
   { label: "Subscriptions", icon: Repeat, to: "/subscriptions" },
   { label: "Spending", icon: PieChart, to: "/spending" },
   { label: "Income vs Expenses", icon: ArrowLeftRight, to: "/income-expenses" },
-  { label: "Portfolio", icon: Briefcase, soon: true },
+  { label: "Portfolio", icon: Briefcase, to: "/portfolio" },
 ];
 
 function AuthenticatedLayout() {
