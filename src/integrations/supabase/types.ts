@@ -103,6 +103,84 @@ export type Database = {
           },
         ]
       }
+      portfolio_holdings: {
+        Row: {
+          broker_label: string
+          created_at: string
+          isin: string
+          name: string
+          shares: number
+          user_id: string
+          yahoo_symbol: string
+        }
+        Insert: {
+          broker_label?: string
+          created_at?: string
+          isin: string
+          name: string
+          shares: number
+          user_id: string
+          yahoo_symbol: string
+        }
+        Update: {
+          broker_label?: string
+          created_at?: string
+          isin?: string
+          name?: string
+          shares?: number
+          user_id?: string
+          yahoo_symbol?: string
+        }
+        Relationships: []
+      }
+      portfolio_snapshots: {
+        Row: {
+          created_at: string
+          currency: string
+          isin: string
+          price: number
+          snapshot_date: string
+          user_id: string
+          value_eur: number | null
+          value_native: number
+        }
+        Insert: {
+          created_at?: string
+          currency: string
+          isin: string
+          price: number
+          snapshot_date: string
+          user_id: string
+          value_eur?: number | null
+          value_native: number
+        }
+        Update: {
+          created_at?: string
+          currency?: string
+          isin?: string
+          price?: number
+          snapshot_date?: string
+          user_id?: string
+          value_eur?: number | null
+          value_native?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portfolio_snapshots_user_id_isin_fkey"
+            columns: ["user_id", "isin"]
+            isOneToOne: false
+            referencedRelation: "portfolio_holdings"
+            referencedColumns: ["user_id", "isin"]
+          },
+          {
+            foreignKeyName: "portfolio_snapshots_user_id_isin_fkey"
+            columns: ["user_id", "isin"]
+            isOneToOne: false
+            referencedRelation: "v_portfolio_latest"
+            referencedColumns: ["user_id", "isin"]
+          },
+        ]
+      }
       transactions: {
         Row: {
           account_uid: string | null
@@ -205,6 +283,21 @@ export type Database = {
             referencedColumns: ["uid"]
           },
         ]
+      }
+      v_portfolio_latest: {
+        Row: {
+          broker_label: string | null
+          currency: string | null
+          isin: string | null
+          name: string | null
+          price: number | null
+          shares: number | null
+          snapshot_date: string | null
+          user_id: string | null
+          value_eur: number | null
+          value_native: number | null
+        }
+        Relationships: []
       }
       v_spend_by_category_monthly: {
         Row: {
