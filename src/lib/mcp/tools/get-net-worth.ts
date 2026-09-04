@@ -16,6 +16,14 @@ export default defineTool({
       .optional()
       .describe("Maximum number of most recent daily snapshots to return."),
   },
+  outputSchema: {
+    snapshots: z.array(
+      z.object({ snapshot_date: z.string(), total_eur: z.number() }),
+    ),
+    latest: z
+      .object({ snapshot_date: z.string(), total_eur: z.number() })
+      .nullable(),
+  },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
   handler: async ({ limit }, ctx) => {
     if (!ctx.isAuthenticated())

@@ -16,6 +16,9 @@ export default defineTool({
       .optional()
       .describe("Optional ISO currency code, e.g. USD."),
   },
+  outputSchema: {
+    rates: z.array(z.unknown()),
+  },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
   handler: async ({ currency }, ctx) => {
     if (!ctx.isAuthenticated())

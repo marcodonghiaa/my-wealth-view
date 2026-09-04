@@ -37,7 +37,56 @@
             }
           }
         },
-        "outputSchema": null
+        "outputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "snapshots": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "snapshot_date": {
+                    "type": "string"
+                  },
+                  "total_eur": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "snapshot_date",
+                  "total_eur"
+                ]
+              }
+            },
+            "latest": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "snapshot_date": {
+                      "type": "string"
+                    },
+                    "total_eur": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "snapshot_date",
+                    "total_eur"
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "snapshots",
+            "latest"
+          ]
+        }
       },
       {
         "name": "get_fx_rates",
@@ -60,7 +109,19 @@
             }
           }
         },
-        "outputSchema": null
+        "outputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "rates": {
+              "type": "array",
+              "items": {}
+            }
+          },
+          "required": [
+            "rates"
+          ]
+        }
       }
     ]
   }
