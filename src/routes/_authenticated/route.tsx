@@ -13,6 +13,7 @@ import {
   PieChart,
   ArrowLeftRight,
   Briefcase,
+  ListChecks,
   LogOut,
   type LucideIcon,
 } from "lucide-react";
