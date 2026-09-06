@@ -5,6 +5,7 @@ import {
   Area,
   AreaChart,
   CartesianGrid,
+  Line,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -13,8 +14,35 @@ import {
 import { ArrowDownRight, ArrowUpRight, Wallet } from "lucide-react";
 import { getSupabase } from "@/integrations/supabase/client";
 
-export type NetWorthSnapshot = { snapshot_date: string; total_eur: number };
+export type NetWorthSnapshot = {
+  snapshot_date: string;
+  total_eur: number;
+  bank_total_eur: number;
+  portfolio_total_eur: number;
+  crypto_total_eur: number;
+};
 export type FxRate = { date: string; currency: string; rate_to_eur: number };
+
+// Trailing simple moving average, capped at 365 days but shrinking to a
+// fraction of however much history actually exists so the trend line is
+// still visible while the dataset is young (rather than a strict 12-month
+// window that would stay empty for the first year of usage).
+const TREND_WINDOW_DAYS = 365;
+
+function withTrend(
+  snapshots: Array<NetWorthSnapshot>,
+): Array<NetWorthSnapshot & { trend_eur: number | null }> {
+  const window = Math.min(
+    TREND_WINDOW_DAYS,
+    Math.max(1, Math.floor(snapshots.length / 3)),
+  );
+  return snapshots.map((row, i) => {
+    const slice = snapshots.slice(Math.max(0, i + 1 - window), i + 1);
+    const avg =
+      slice.reduce((sum, r) => sum + r.total_eur, 0) / slice.length;
+    return { ...row, trend_eur: avg };
+  });
+}
 
 
 export const Route = createFileRoute("/_authenticated/")({
@@ -45,7 +73,9 @@ const CURRENCIES: Array<Currency> = ["EUR", "USD", "GBP"];
 async function fetchNetWorth(): Promise<Array<NetWorthSnapshot>> {
   const { data, error } = await getSupabase()
     .from("v_net_worth_daily")
-    .select("snapshot_date,total_eur")
+    .select(
+      "snapshot_date,total_eur,bank_total_eur,portfolio_total_eur,crypto_total_eur",
+    )
     .order("snapshot_date", { ascending: true });
   if (error) throw error;
   return (data ?? []) as Array<NetWorthSnapshot>;
@@ -95,6 +125,7 @@ function NetWorthPage() {
   });
 
   const snapshots = netWorthQuery.data ?? [];
+  const chartData = useMemo(() => withTrend(snapshots), [snapshots]);
   const latest = snapshots.at(-1);
   const previous = snapshots.at(-2);
 
@@ -208,11 +239,16 @@ function NetWorthPage() {
 
       {/* Chart card */}
       <section className="rounded-2xl border bg-card p-4 card-ring sm:p-6">
-        <div className="mb-4 flex items-center justify-between px-2">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2 px-2">
           <h2 className="text-sm font-semibold text-foreground">
             Net worth over time
           </h2>
-          <span className="text-xs text-muted-foreground">EUR</span>
+          <div className="flex items-center gap-3 text-xs text-muted-foreground">
+            <LegendDot color="var(--color-chart-1)" label="Bank" />
+            <LegendDot color="var(--color-chart-2)" label="Portfolio" />
+            <LegendDot color="var(--color-chart-3)" label="Crypto" />
+            <LegendDot color="var(--color-foreground)" label="Trend" dashed />
+          </div>
         </div>
         <div className="h-80 w-full">
           {netWorthQuery.isPending ? (
@@ -224,23 +260,9 @@ function NetWorthPage() {
           ) : (
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart
-                data={snapshots}
+                data={chartData}
                 margin={{ top: 8, right: 8, bottom: 0, left: 8 }}
               >
-                <defs>
-                  <linearGradient id="nwFill" x1="0" y1="0" x2="0" y2="1">
-                    <stop
-                      offset="0%"
-                      stopColor="var(--color-primary)"
-                      stopOpacity={0.28}
-                    />
-                    <stop
-                      offset="100%"
-                      stopColor="var(--color-primary)"
-                      stopOpacity={0}
-                    />
-                  </linearGradient>
-                </defs>
                 <CartesianGrid
                   strokeDasharray="3 6"
                   stroke="var(--color-border)"
@@ -279,17 +301,47 @@ function NetWorthPage() {
                 />
                 <Area
                   type="monotone"
-                  dataKey="total_eur"
-                  stroke="var(--color-primary)"
-                  strokeWidth={2}
-                  fill="url(#nwFill)"
+                  dataKey="bank_total_eur"
+                  name="Bank"
+                  stackId="networth"
+                  stroke="var(--color-chart-1)"
+                  strokeWidth={1.5}
+                  fill="var(--color-chart-1)"
+                  fillOpacity={0.55}
                   dot={false}
-                  activeDot={{
-                    r: 4,
-                    fill: "var(--color-primary)",
-                    stroke: "var(--color-card)",
-                    strokeWidth: 2,
-                  }}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="portfolio_total_eur"
+                  name="Portfolio"
+                  stackId="networth"
+                  stroke="var(--color-chart-2)"
+                  strokeWidth={1.5}
+                  fill="var(--color-chart-2)"
+                  fillOpacity={0.55}
+                  dot={false}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="crypto_total_eur"
+                  name="Crypto"
+                  stackId="networth"
+                  stroke="var(--color-chart-3)"
+                  strokeWidth={1.5}
+                  fill="var(--color-chart-3)"
+                  fillOpacity={0.55}
+                  dot={false}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="trend_eur"
+                  name="Trend"
+                  stroke="var(--color-foreground)"
+                  strokeWidth={1.5}
+                  strokeDasharray="4 4"
+                  dot={false}
+                  activeDot={false}
+                  connectNulls
                 />
               </AreaChart>
             </ResponsiveContainer>
@@ -297,6 +349,33 @@ function NetWorthPage() {
         </div>
       </section>
     </div>
+  );
+}
+
+function LegendDot({
+  color,
+  label,
+  dashed,
+}: {
+  color: string;
+  label: string;
+  dashed?: boolean;
+}) {
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      <span
+        className="inline-block size-2 rounded-full"
+        style={
+          dashed
+            ? {
+                background: "transparent",
+                border: `1.5px dashed ${color}`,
+              }
+            : { backgroundColor: color }
+        }
+      />
+      {label}
+    </span>
   );
 }
 
@@ -329,7 +408,7 @@ function ChangePill({
 }
 
 interface TooltipEntry {
-  payload?: NetWorthSnapshot;
+  payload?: NetWorthSnapshot & { trend_eur: number | null };
 }
 
 function NetWorthTooltip({
@@ -356,6 +435,39 @@ function NetWorthTooltip({
       <p className="font-figure mt-0.5 text-sm font-semibold text-foreground">
         {formatMoney(point.total_eur, "EUR")}
       </p>
+      <div className="mt-2 space-y-0.5 text-xs">
+        <TooltipRow color="var(--color-chart-1)" label="Bank" value={point.bank_total_eur} />
+        <TooltipRow color="var(--color-chart-2)" label="Portfolio" value={point.portfolio_total_eur} />
+        <TooltipRow color="var(--color-chart-3)" label="Crypto" value={point.crypto_total_eur} />
+        {point.trend_eur != null && (
+          <TooltipRow color="var(--color-foreground)" label="Trend" value={point.trend_eur} />
+        )}
+      </div>
+    </div>
+  );
+}
+
+function TooltipRow({
+  color,
+  label,
+  value,
+}: {
+  color: string;
+  label: string;
+  value: number;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-4">
+      <span className="flex items-center gap-1.5 text-muted-foreground">
+        <span
+          className="inline-block size-1.5 rounded-full"
+          style={{ backgroundColor: color }}
+        />
+        {label}
+      </span>
+      <span className="font-figure text-foreground">
+        {formatMoney(value, "EUR")}
+      </span>
     </div>
   );
 }
