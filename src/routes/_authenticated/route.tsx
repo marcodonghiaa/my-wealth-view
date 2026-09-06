@@ -15,8 +15,16 @@ import {
   Briefcase,
   ListChecks,
   LogOut,
+  Menu,
   type LucideIcon,
 } from "lucide-react";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { getSupabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated")({
