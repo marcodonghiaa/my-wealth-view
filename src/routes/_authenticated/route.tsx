@@ -13,6 +13,7 @@ import {
   PieChart,
   ArrowLeftRight,
   Briefcase,
+  ListChecks,
   LogOut,
   type LucideIcon,
 } from "lucide-react";
@@ -49,6 +50,7 @@ const NAV_ITEMS: Array<NavItem> = [
   { label: "Spending", icon: PieChart, to: "/spending" },
   { label: "Income vs Expenses", icon: ArrowLeftRight, to: "/income-expenses" },
   { label: "Portfolio", icon: Briefcase, to: "/portfolio" },
+  { label: "Rules", icon: ListChecks, to: "/rules" },
 ];
 
 function AuthenticatedLayout() {
