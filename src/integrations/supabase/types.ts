@@ -74,6 +74,87 @@ export type Database = {
         }
         Relationships: []
       }
+      crypto_holdings: {
+        Row: {
+          amount: number
+          asset_symbol: string
+          coingecko_id: string
+          created_at: string
+          name: string
+          source: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          asset_symbol: string
+          coingecko_id: string
+          created_at?: string
+          name: string
+          source: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          asset_symbol?: string
+          coingecko_id?: string
+          created_at?: string
+          name?: string
+          source?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      crypto_snapshots: {
+        Row: {
+          amount: number
+          asset_symbol: string
+          created_at: string
+          price_usd: number
+          snapshot_date: string
+          source: string
+          user_id: string
+          value_eur: number | null
+          value_usd: number
+        }
+        Insert: {
+          amount: number
+          asset_symbol: string
+          created_at?: string
+          price_usd: number
+          snapshot_date: string
+          source: string
+          user_id: string
+          value_eur?: number | null
+          value_usd: number
+        }
+        Update: {
+          amount?: number
+          asset_symbol?: string
+          created_at?: string
+          price_usd?: number
+          snapshot_date?: string
+          source?: string
+          user_id?: string
+          value_eur?: number | null
+          value_usd?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crypto_snapshots_user_id_asset_symbol_source_fkey"
+            columns: ["user_id", "asset_symbol", "source"]
+            isOneToOne: false
+            referencedRelation: "crypto_holdings"
+            referencedColumns: ["user_id", "asset_symbol", "source"]
+          },
+          {
+            foreignKeyName: "crypto_snapshots_user_id_asset_symbol_source_fkey"
+            columns: ["user_id", "asset_symbol", "source"]
+            isOneToOne: false
+            referencedRelation: "v_crypto_latest"
+            referencedColumns: ["user_id", "asset_symbol", "source"]
+          },
+        ]
+      }
       fx_rates: {
         Row: {
           created_at: string
@@ -302,6 +383,20 @@ export type Database = {
       }
     }
     Views: {
+      v_crypto_latest: {
+        Row: {
+          amount: number | null
+          asset_symbol: string | null
+          name: string | null
+          price_usd: number | null
+          snapshot_date: string | null
+          source: string | null
+          user_id: string | null
+          value_eur: number | null
+          value_usd: number | null
+        }
+        Relationships: []
+      }
       v_income_vs_expenses_monthly: {
         Row: {
           expenses_eur: number | null
