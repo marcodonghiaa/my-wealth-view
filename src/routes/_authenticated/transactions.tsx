@@ -365,9 +365,57 @@ function TransactionsPage() {
         </select>
       </div>
 
-      {/* Register */}
+      {/* Register — cards on mobile, table from md up */}
       <section className="overflow-hidden rounded-2xl border bg-card card-ring">
-        <div className="overflow-x-auto">
+        {txQuery.isPending ? (
+          <div className="space-y-3 p-4 md:hidden">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="h-16 animate-pulse rounded-xl bg-muted" />
+            ))}
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="px-4 py-12 text-center text-sm text-muted-foreground md:hidden">
+            {transactions.length === 0
+              ? `No transactions for ${monthLabel}.`
+              : "No transactions match your filters."}
+          </div>
+        ) : (
+          <ul className="divide-y md:hidden">
+            {filtered.map((tx) => (
+              <TransactionCardView
+                key={tx.entry_reference}
+                tx={tx}
+                savingCategory={
+                  updateCategory.isPending &&
+                  updateCategory.variables?.entryReference === tx.entry_reference
+                }
+                onSelectCategory={(next) =>
+                  updateCategory.mutate({
+                    entryReference: tx.entry_reference,
+                    category: next,
+                  })
+                }
+                savingType={
+                  updateType.isPending &&
+                  updateType.variables?.entryReference === tx.entry_reference
+                }
+                onSelectType={(next) =>
+                  updateType.mutate({
+                    entryReference: tx.entry_reference,
+                    transactionType: next,
+                  })
+                }
+                accountLabel={
+                  tx.account_uid
+                    ? (accounts[tx.account_uid]?.label ?? "Unknown account")
+                    : "—"
+                }
+              />
+            ))}
+          </ul>
+        )}
+
+        <div className="hidden overflow-x-auto md:block">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b text-left text-xs tracking-wide text-muted-foreground uppercase">
@@ -438,6 +486,7 @@ function TransactionsPage() {
           </table>
         </div>
       </section>
+
     </div>
   );
 }
