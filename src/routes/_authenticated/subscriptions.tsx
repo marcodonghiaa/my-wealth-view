@@ -202,7 +202,7 @@ function SubscriptionsPage() {
           {query.isPending ? (
             <div className="h-14 w-64 animate-pulse rounded-lg bg-muted" />
           ) : (
-            <p className="font-figure text-5xl font-semibold tracking-tight text-foreground sm:text-6xl">
+            <p className="font-figure text-4xl font-semibold tracking-tight text-foreground sm:text-6xl">
               ~{formatMoney(estimatedMonthlyEur, "EUR")}
               <span className="text-foreground/60">/month</span>
             </p>

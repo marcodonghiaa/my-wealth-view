@@ -184,7 +184,7 @@ function NetWorthPage() {
           {netWorthQuery.isPending ? (
             <div className="h-14 w-64 animate-pulse rounded-lg bg-muted" />
           ) : headline != null ? (
-            <p className="font-figure text-5xl font-semibold tracking-tight text-foreground sm:text-6xl">
+            <p className="font-figure text-4xl font-semibold tracking-tight text-foreground sm:text-6xl">
               {formatMoney(headline, currency)}
             </p>
           ) : (
