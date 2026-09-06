@@ -52,15 +52,37 @@ interface NavItem {
   soon?: boolean;
 }
 
-const NAV_ITEMS: Array<NavItem> = [
-  { label: "Net Worth", icon: TrendingUp, to: "/" },
-  { label: "Transactions", icon: Receipt, to: "/transactions" },
-  { label: "Subscriptions", icon: Repeat, to: "/subscriptions" },
-  { label: "Spending", icon: PieChart, to: "/spending" },
-  { label: "Income vs Expenses", icon: ArrowLeftRight, to: "/income-expenses" },
-  { label: "Portfolio", icon: Briefcase, to: "/portfolio" },
-  { label: "Crypto", icon: Bitcoin, to: "/crypto" },
-  { label: "Rules", icon: ListChecks, to: "/rules" },
+interface NavGroup {
+  label: string;
+  items: Array<NavItem>;
+}
+
+const NAV_GROUPS: Array<NavGroup> = [
+  {
+    label: "Overview",
+    items: [{ label: "Net Worth", icon: TrendingUp, to: "/" }],
+  },
+  {
+    label: "Banking",
+    items: [
+      { label: "Transactions", icon: Receipt, to: "/transactions" },
+      { label: "Subscriptions", icon: Repeat, to: "/subscriptions" },
+      { label: "Spending", icon: PieChart, to: "/spending" },
+      {
+        label: "Income vs Expenses",
+        icon: ArrowLeftRight,
+        to: "/income-expenses",
+      },
+      { label: "Rules", icon: ListChecks, to: "/rules" },
+    ],
+  },
+  {
+    label: "Investing",
+    items: [
+      { label: "Portfolio", icon: Briefcase, to: "/portfolio" },
+      { label: "Crypto", icon: Bitcoin, to: "/crypto" },
+    ],
+  },
 ];
 
 function AuthenticatedLayout() {
@@ -101,36 +123,45 @@ function AuthenticatedLayout() {
           </span>
         </div>
 
-        <nav className="flex-1 space-y-1 px-3 py-4">
-          {NAV_ITEMS.map((item) =>
-            item.to ? (
-              <Link
-                key={item.label}
-                to={item.to}
-                activeOptions={{ exact: true }}
-                className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
-                activeProps={{
-                  className:
-                    "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium bg-sidebar-accent text-sidebar-primary",
-                }}
-              >
-                <item.icon className="size-4" />
-                {item.label}
-              </Link>
-            ) : (
-              <div
-                key={item.label}
-                aria-disabled
-                className="flex cursor-not-allowed items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground/50"
-              >
-                <item.icon className="size-4" />
-                {item.label}
-                <span className="ml-auto rounded-full border px-1.5 py-0.5 text-[10px] font-medium tracking-wide text-muted-foreground/60 uppercase">
-                  Soon
-                </span>
+        <nav className="flex-1 space-y-4 px-3 py-4">
+          {NAV_GROUPS.map((group) => (
+            <div key={group.label}>
+              <div className="px-3 pb-1.5 text-[10px] font-semibold tracking-wider text-muted-foreground/60 uppercase">
+                {group.label}
               </div>
-            ),
-          )}
+              <div className="space-y-1">
+                {group.items.map((item) =>
+                  item.to ? (
+                    <Link
+                      key={item.label}
+                      to={item.to}
+                      activeOptions={{ exact: true }}
+                      className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                      activeProps={{
+                        className:
+                          "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium bg-sidebar-accent text-sidebar-primary",
+                      }}
+                    >
+                      <item.icon className="size-4" />
+                      {item.label}
+                    </Link>
+                  ) : (
+                    <div
+                      key={item.label}
+                      aria-disabled
+                      className="flex cursor-not-allowed items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground/50"
+                    >
+                      <item.icon className="size-4" />
+                      {item.label}
+                      <span className="ml-auto rounded-full border px-1.5 py-0.5 text-[10px] font-medium tracking-wide text-muted-foreground/60 uppercase">
+                        Soon
+                      </span>
+                    </div>
+                  ),
+                )}
+              </div>
+            </div>
+          ))}
         </nav>
 
         <div className="border-t p-3">
@@ -174,25 +205,34 @@ function AuthenticatedLayout() {
               </SheetTitle>
             </SheetHeader>
 
-            <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-3">
-              {NAV_ITEMS.map((item) =>
-                item.to ? (
-                  <Link
-                    key={item.label}
-                    to={item.to}
-                    activeOptions={{ exact: true }}
-                    onClick={() => setMenuOpen(false)}
-                    className="flex min-h-11 items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
-                    activeProps={{
-                      className:
-                        "flex min-h-11 items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium bg-sidebar-accent text-sidebar-primary",
-                    }}
-                  >
-                    <item.icon className="size-4 shrink-0" />
-                    {item.label}
-                  </Link>
-                ) : null,
-              )}
+            <nav className="flex-1 space-y-4 overflow-y-auto px-3 py-3">
+              {NAV_GROUPS.map((group) => (
+                <div key={group.label}>
+                  <div className="px-3 pb-1.5 text-[10px] font-semibold tracking-wider text-muted-foreground/60 uppercase">
+                    {group.label}
+                  </div>
+                  <div className="space-y-1">
+                    {group.items.map((item) =>
+                      item.to ? (
+                        <Link
+                          key={item.label}
+                          to={item.to}
+                          activeOptions={{ exact: true }}
+                          onClick={() => setMenuOpen(false)}
+                          className="flex min-h-11 items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                          activeProps={{
+                            className:
+                              "flex min-h-11 items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium bg-sidebar-accent text-sidebar-primary",
+                          }}
+                        >
+                          <item.icon className="size-4 shrink-0" />
+                          {item.label}
+                        </Link>
+                      ) : null,
+                    )}
+                  </div>
+                </div>
+              ))}
             </nav>
 
             <div className="border-t p-3">

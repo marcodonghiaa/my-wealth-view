@@ -136,6 +136,7 @@ function TransactionsPage() {
   const [month, setMonth] = useState(() => startOfMonth(new Date()));
   const monthKey = useMemo(() => formatISODate(month), [month]);
   const queryClient = useQueryClient();
+  const [selected, setSelected] = useState<Set<string>>(new Set());
 
   const updateCategory = useMutation({
     mutationFn: async ({
@@ -228,6 +229,44 @@ function TransactionsPage() {
   });
 
 
+  const bulkUpdateCategory = useMutation({
+    mutationFn: async ({
+      entryReferences,
+      category: next,
+    }: {
+      entryReferences: Array<string>;
+      category: string;
+    }) => {
+      const { error } = await getSupabase()
+        .from("transactions")
+        .update({ category: next })
+        .in("entry_reference", entryReferences);
+      if (error) throw error;
+    },
+    onSuccess: (_data, vars) => {
+      queryClient.setQueryData<Array<TransactionRow>>(
+        ["transactions", monthKey],
+        (old) =>
+          old
+            ? old.map((row) =>
+                vars.entryReferences.includes(row.entry_reference)
+                  ? { ...row, category: vars.category }
+                  : row,
+              )
+            : old,
+      );
+      toast.success(
+        `Set ${vars.entryReferences.length} transaction${vars.entryReferences.length === 1 ? "" : "s"} to ${vars.category}`,
+      );
+      setSelected(new Set());
+    },
+    onError: (error) => {
+      toast.error("Couldn't update categories", {
+        description: (error as Error).message,
+      });
+    },
+  });
+
   const accountsQuery = useQuery({
     queryKey: ["accounts"],
     queryFn: fetchAccounts,
@@ -273,6 +312,38 @@ function TransactionsPage() {
 
   const accounts = accountsQuery.data ?? {};
 
+  const filteredRefs = useMemo(
+    () => filtered.map((tx) => tx.entry_reference),
+    [filtered],
+  );
+  const allFilteredSelected =
+    filteredRefs.length > 0 && filteredRefs.every((ref) => selected.has(ref));
+
+  function toggleOne(entryReference: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(entryReference)) next.delete(entryReference);
+      else next.add(entryReference);
+      return next;
+    });
+  }
+
+  function toggleAllFiltered() {
+    setSelected((prev) => {
+      if (allFilteredSelected) {
+        const next = new Set(prev);
+        for (const ref of filteredRefs) next.delete(ref);
+        return next;
+      }
+      return new Set([...prev, ...filteredRefs]);
+    });
+  }
+
+  function goToMonth(next: Date) {
+    setSelected(new Set());
+    setMonth(next);
+  }
+
   const monthLabel = month.toLocaleDateString("en-GB", {
     month: "long",
     year: "numeric",
@@ -282,12 +353,12 @@ function TransactionsPage() {
   const canGoNext = month < currentMonthStart;
 
   function goToPrevMonth() {
-    setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1));
+    goToMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1));
   }
 
   function goToNextMonth() {
     if (!canGoNext) return;
-    setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1));
+    goToMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1));
   }
 
   return (
@@ -365,6 +436,31 @@ function TransactionsPage() {
         </select>
       </div>
 
+      {/* Bulk action bar */}
+      {selected.size > 0 && (
+        <div className="mb-4 flex flex-wrap items-center gap-3 rounded-xl border bg-card p-3 card-ring">
+          <span className="text-sm font-medium text-foreground">
+            {selected.size} selected
+          </span>
+          <BulkCategoryPicker
+            onSelect={(next) =>
+              bulkUpdateCategory.mutate({
+                entryReferences: Array.from(selected),
+                category: next,
+              })
+            }
+            disabled={bulkUpdateCategory.isPending}
+          />
+          <button
+            type="button"
+            onClick={() => setSelected(new Set())}
+            className="ml-auto text-sm text-muted-foreground transition-colors hover:text-foreground"
+          >
+            Clear
+          </button>
+        </div>
+      )}
+
       {/* Register — cards on mobile, table from md up */}
       <section className="overflow-hidden rounded-2xl border bg-card card-ring">
         {txQuery.isPending ? (
@@ -385,6 +481,8 @@ function TransactionsPage() {
               <TransactionCardView
                 key={tx.entry_reference}
                 tx={tx}
+                selected={selected.has(tx.entry_reference)}
+                onToggleSelect={() => toggleOne(tx.entry_reference)}
                 savingCategory={
                   updateCategory.isPending &&
                   updateCategory.variables?.entryReference === tx.entry_reference
@@ -419,6 +517,15 @@ function TransactionsPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b text-left text-xs tracking-wide text-muted-foreground uppercase">
+                <th className="w-10 px-4 py-3">
+                  <input
+                    type="checkbox"
+                    aria-label="Select all filtered transactions"
+                    checked={allFilteredSelected}
+                    onChange={toggleAllFiltered}
+                    className="size-4 rounded border-border accent-primary"
+                  />
+                </th>
                 <th className="px-4 py-3 font-medium">Date</th>
                 <th className="px-4 py-3 font-medium">Merchant</th>
                 <th className="px-4 py-3 font-medium">Category</th>
@@ -431,7 +538,7 @@ function TransactionsPage() {
               {txQuery.isPending ? (
                 Array.from({ length: 8 }).map((_, i) => (
                   <tr key={i} className="border-b last:border-0">
-                    <td colSpan={6} className="px-4 py-3">
+                    <td colSpan={7} className="px-4 py-3">
                       <div className="h-5 animate-pulse rounded bg-muted" />
                     </td>
                   </tr>
@@ -439,7 +546,7 @@ function TransactionsPage() {
               ) : filtered.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={6}
+                    colSpan={7}
                     className="px-4 py-12 text-center text-sm text-muted-foreground"
                   >
                     {transactions.length === 0
@@ -452,6 +559,8 @@ function TransactionsPage() {
                   <TransactionRowView
                     key={tx.entry_reference}
                     tx={tx}
+                    selected={selected.has(tx.entry_reference)}
+                    onToggleSelect={() => toggleOne(tx.entry_reference)}
                     savingCategory={
                       updateCategory.isPending &&
                       updateCategory.variables?.entryReference ===
@@ -547,6 +656,47 @@ function CategoryPicker({
   );
 }
 
+function BulkCategoryPicker({
+  onSelect,
+  disabled,
+}: {
+  onSelect: (category: string) => void;
+  disabled: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          disabled={disabled}
+          className="inline-flex h-9 items-center rounded-lg border bg-background px-3 text-sm font-medium text-foreground transition-colors hover:bg-accent disabled:opacity-60"
+        >
+          {disabled ? "Saving…" : "Set category…"}
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-48 p-1">
+        <div className="max-h-72 overflow-y-auto">
+          {CATEGORIES.map((c) => (
+            <button
+              key={c}
+              type="button"
+              onClick={() => {
+                setOpen(false);
+                onSelect(c);
+              }}
+              className="block w-full rounded-md px-2.5 py-1.5 text-left text-sm text-foreground transition-colors hover:bg-accent"
+            >
+              {c}
+            </button>
+          ))}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 const TYPES = ["Subscription", "One-time"] as const;
 
 function TypePicker({
@@ -612,6 +762,8 @@ function TransactionRowView({
   savingCategory,
   onSelectType,
   savingType,
+  selected,
+  onToggleSelect,
 }: {
   tx: TransactionRow;
   accountLabel: string;
@@ -619,6 +771,8 @@ function TransactionRowView({
   savingCategory: boolean;
   onSelectType: (type: string) => void;
   savingType: boolean;
+  selected: boolean;
+  onToggleSelect: () => void;
 }) {
   const native = nativeSignedAmount(tx);
   const currency = tx.currency ?? "EUR";
@@ -627,7 +781,18 @@ function TransactionRowView({
   const showEur = currency !== "EUR" && eur != null;
 
   return (
-    <tr className="border-b transition-colors last:border-0 hover:bg-accent/40">
+    <tr
+      className={`border-b transition-colors last:border-0 hover:bg-accent/40 ${selected ? "bg-primary/5" : ""}`}
+    >
+      <td className="px-4 py-3">
+        <input
+          type="checkbox"
+          aria-label={`Select ${tx.creditor_name ?? "transaction"}`}
+          checked={selected}
+          onChange={onToggleSelect}
+          className="size-4 rounded border-border accent-primary"
+        />
+      </td>
       <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">
         {tx.booking_date
           ? new Date(`${tx.booking_date}T00:00:00`).toLocaleDateString(
@@ -682,6 +847,8 @@ function TransactionCardView({
   savingCategory,
   onSelectType,
   savingType,
+  selected,
+  onToggleSelect,
 }: {
   tx: TransactionRow;
   accountLabel: string;
@@ -689,6 +856,8 @@ function TransactionCardView({
   savingCategory: boolean;
   onSelectType: (type: string) => void;
   savingType: boolean;
+  selected: boolean;
+  onToggleSelect: () => void;
 }) {
   const native = nativeSignedAmount(tx);
   const currency = tx.currency ?? "EUR";
@@ -697,8 +866,15 @@ function TransactionCardView({
   const showEur = currency !== "EUR" && eur != null;
 
   return (
-    <li className="px-4 py-3">
-      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
+    <li className={`px-4 py-3 ${selected ? "bg-primary/5" : ""}`}>
+      <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-3">
+        <input
+          type="checkbox"
+          aria-label={`Select ${tx.creditor_name ?? "transaction"}`}
+          checked={selected}
+          onChange={onToggleSelect}
+          className="mt-0.5 size-4 rounded border-border accent-primary"
+        />
         <div className="min-w-0">
           <p className="truncate text-sm font-medium text-foreground">
             {tx.creditor_name ?? "—"}
