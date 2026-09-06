@@ -316,7 +316,7 @@ function TransactionsPage() {
           type="button"
           onClick={goToPrevMonth}
           aria-label="Previous month"
-          className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+          className="flex size-11 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
         >
           <ChevronLeft className="size-5" />
         </button>
@@ -328,7 +328,7 @@ function TransactionsPage() {
           onClick={goToNextMonth}
           disabled={!canGoNext}
           aria-label="Next month"
-          className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-40"
+          className="flex size-11 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-40"
         >
           <ChevronRight className="size-5" />
         </button>
@@ -509,7 +509,7 @@ function CategoryPicker({
           type="button"
           aria-label={`Change category for ${tx.creditor_name ?? "transaction"}`}
           disabled={saving}
-          className="cursor-pointer disabled:opacity-60"
+          className="-m-2 inline-flex min-h-11 cursor-pointer items-center p-2 disabled:opacity-60"
         >
           {tx.category ? (
             <span className="inline-flex rounded-full border border-primary/25 bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary transition-colors hover:bg-primary/20">
@@ -567,7 +567,7 @@ function TypePicker({
           type="button"
           aria-label={`Change type for ${tx.creditor_name ?? "transaction"}`}
           disabled={saving}
-          className="cursor-pointer disabled:opacity-60"
+          className="-m-2 inline-flex min-h-11 cursor-pointer items-center p-2 disabled:opacity-60"
         >
           {tx.transaction_type ? (
             <span className="inline-flex rounded-full border border-border bg-card px-2.5 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-accent">
