@@ -214,6 +214,27 @@ export type Database = {
           },
         ]
       }
+      subscription_billing_overrides: {
+        Row: {
+          billing_frequency: string
+          created_at: string
+          creditor_name: string
+          user_id: string
+        }
+        Insert: {
+          billing_frequency: string
+          created_at?: string
+          creditor_name: string
+          user_id: string
+        }
+        Update: {
+          billing_frequency?: string
+          created_at?: string
+          creditor_name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       transactions: {
         Row: {
           account_uid: string | null
@@ -344,11 +365,15 @@ export type Database = {
       v_subscriptions: {
         Row: {
           amount: number | null
+          billing_frequency: string | null
+          billing_frequency_is_manual: boolean | null
           category: string | null
           charge_count: number | null
           creditor_name: string | null
           currency: string | null
+          interval_days: number | null
           last_charged: string | null
+          monthly_equivalent_eur: number | null
           signed_amount_eur: number | null
           user_id: string | null
         }
