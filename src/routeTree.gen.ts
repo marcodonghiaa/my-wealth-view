@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
+import { Route as AuthenticatedCryptoRouteImport } from './routes/_authenticated/crypto'
 import { Route as AuthenticatedIncomeExpensesRouteImport } from './routes/_authenticated/income-expenses'
 import { Route as AuthenticatedPortfolioRouteImport } from './routes/_authenticated/portfolio'
 import { Route as AuthenticatedRulesRouteImport } from './routes/_authenticated/rules'
@@ -31,6 +32,11 @@ const AuthRoute = AuthRouteImport.update({
 const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedCryptoRoute = AuthenticatedCryptoRouteImport.update({
+  id: '/crypto',
+  path: '/crypto',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedIncomeExpensesRoute =
@@ -70,6 +76,7 @@ const AuthenticatedTransactionsRoute =
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
   '/auth': typeof AuthRoute
+  '/crypto': typeof AuthenticatedCryptoRoute
   '/income-expenses': typeof AuthenticatedIncomeExpensesRoute
   '/portfolio': typeof AuthenticatedPortfolioRoute
   '/rules': typeof AuthenticatedRulesRoute
@@ -79,6 +86,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
+  '/crypto': typeof AuthenticatedCryptoRoute
   '/income-expenses': typeof AuthenticatedIncomeExpensesRoute
   '/portfolio': typeof AuthenticatedPortfolioRoute
   '/rules': typeof AuthenticatedRulesRoute
@@ -91,6 +99,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/_authenticated/crypto': typeof AuthenticatedCryptoRoute
   '/_authenticated/income-expenses': typeof AuthenticatedIncomeExpensesRoute
   '/_authenticated/portfolio': typeof AuthenticatedPortfolioRoute
   '/_authenticated/rules': typeof AuthenticatedRulesRoute
@@ -104,6 +113,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/crypto'
     | '/income-expenses'
     | '/portfolio'
     | '/rules'
@@ -113,6 +123,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/auth'
+    | '/crypto'
     | '/income-expenses'
     | '/portfolio'
     | '/rules'
@@ -124,6 +135,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/_authenticated'
     | '/auth'
+    | '/_authenticated/crypto'
     | '/_authenticated/income-expenses'
     | '/_authenticated/portfolio'
     | '/_authenticated/rules'
@@ -159,6 +171,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof AuthenticatedIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/crypto': {
+      id: '/_authenticated/crypto'
+      path: '/crypto'
+      fullPath: '/crypto'
+      preLoaderRoute: typeof AuthenticatedCryptoRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/income-expenses': {
@@ -207,6 +226,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedCryptoRoute: typeof AuthenticatedCryptoRoute
   AuthenticatedIncomeExpensesRoute: typeof AuthenticatedIncomeExpensesRoute
   AuthenticatedPortfolioRoute: typeof AuthenticatedPortfolioRoute
   AuthenticatedRulesRoute: typeof AuthenticatedRulesRoute
@@ -217,6 +237,7 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedCryptoRoute: AuthenticatedCryptoRoute,
   AuthenticatedIncomeExpensesRoute: AuthenticatedIncomeExpensesRoute,
   AuthenticatedPortfolioRoute: AuthenticatedPortfolioRoute,
   AuthenticatedRulesRoute: AuthenticatedRulesRoute,
