@@ -316,7 +316,7 @@ function TransactionsPage() {
           type="button"
           onClick={goToPrevMonth}
           aria-label="Previous month"
-          className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+          className="flex size-11 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
         >
           <ChevronLeft className="size-5" />
         </button>
@@ -328,7 +328,7 @@ function TransactionsPage() {
           onClick={goToNextMonth}
           disabled={!canGoNext}
           aria-label="Next month"
-          className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-40"
+          className="flex size-11 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-40"
         >
           <ChevronRight className="size-5" />
         </button>
@@ -365,9 +365,57 @@ function TransactionsPage() {
         </select>
       </div>
 
-      {/* Register */}
+      {/* Register — cards on mobile, table from md up */}
       <section className="overflow-hidden rounded-2xl border bg-card card-ring">
-        <div className="overflow-x-auto">
+        {txQuery.isPending ? (
+          <div className="space-y-3 p-4 md:hidden">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="h-16 animate-pulse rounded-xl bg-muted" />
+            ))}
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="px-4 py-12 text-center text-sm text-muted-foreground md:hidden">
+            {transactions.length === 0
+              ? `No transactions for ${monthLabel}.`
+              : "No transactions match your filters."}
+          </div>
+        ) : (
+          <ul className="divide-y md:hidden">
+            {filtered.map((tx) => (
+              <TransactionCardView
+                key={tx.entry_reference}
+                tx={tx}
+                savingCategory={
+                  updateCategory.isPending &&
+                  updateCategory.variables?.entryReference === tx.entry_reference
+                }
+                onSelectCategory={(next) =>
+                  updateCategory.mutate({
+                    entryReference: tx.entry_reference,
+                    category: next,
+                  })
+                }
+                savingType={
+                  updateType.isPending &&
+                  updateType.variables?.entryReference === tx.entry_reference
+                }
+                onSelectType={(next) =>
+                  updateType.mutate({
+                    entryReference: tx.entry_reference,
+                    transactionType: next,
+                  })
+                }
+                accountLabel={
+                  tx.account_uid
+                    ? (accounts[tx.account_uid]?.label ?? "Unknown account")
+                    : "—"
+                }
+              />
+            ))}
+          </ul>
+        )}
+
+        <div className="hidden overflow-x-auto md:block">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b text-left text-xs tracking-wide text-muted-foreground uppercase">
@@ -438,6 +486,7 @@ function TransactionsPage() {
           </table>
         </div>
       </section>
+
     </div>
   );
 }
@@ -460,7 +509,7 @@ function CategoryPicker({
           type="button"
           aria-label={`Change category for ${tx.creditor_name ?? "transaction"}`}
           disabled={saving}
-          className="cursor-pointer disabled:opacity-60"
+          className="-m-2 inline-flex min-h-11 cursor-pointer items-center p-2 disabled:opacity-60"
         >
           {tx.category ? (
             <span className="inline-flex rounded-full border border-primary/25 bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary transition-colors hover:bg-primary/20">
@@ -518,7 +567,7 @@ function TypePicker({
           type="button"
           aria-label={`Change type for ${tx.creditor_name ?? "transaction"}`}
           disabled={saving}
-          className="cursor-pointer disabled:opacity-60"
+          className="-m-2 inline-flex min-h-11 cursor-pointer items-center p-2 disabled:opacity-60"
         >
           {tx.transaction_type ? (
             <span className="inline-flex rounded-full border border-border bg-card px-2.5 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-accent">
@@ -623,5 +672,72 @@ function TransactionRowView({
         )}
       </td>
     </tr>
+  );
+}
+
+function TransactionCardView({
+  tx,
+  accountLabel,
+  onSelectCategory,
+  savingCategory,
+  onSelectType,
+  savingType,
+}: {
+  tx: TransactionRow;
+  accountLabel: string;
+  onSelectCategory: (category: string) => void;
+  savingCategory: boolean;
+  onSelectType: (type: string) => void;
+  savingType: boolean;
+}) {
+  const native = nativeSignedAmount(tx);
+  const currency = tx.currency ?? "EUR";
+  const positive = (native ?? 0) >= 0;
+  const eur = tx.signed_amount_eur;
+  const showEur = currency !== "EUR" && eur != null;
+
+  return (
+    <li className="px-4 py-3">
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
+        <div className="min-w-0">
+          <p className="truncate text-sm font-medium text-foreground">
+            {tx.creditor_name ?? "—"}
+          </p>
+          <p className="mt-0.5 truncate text-xs text-muted-foreground">
+            {tx.booking_date
+              ? new Date(`${tx.booking_date}T00:00:00`).toLocaleDateString(
+                  "en-GB",
+                  { day: "numeric", month: "short", year: "numeric" },
+                )
+              : "—"}{" "}
+            · {accountLabel}
+          </p>
+        </div>
+        <div className="shrink-0 text-right">
+          {native == null ? (
+            <span className="text-sm text-muted-foreground">—</span>
+          ) : (
+            <>
+              <div
+                className={`font-figure text-sm font-medium ${
+                  positive ? "text-positive" : "text-negative"
+                }`}
+              >
+                {formatMoney(native, currency)}
+              </div>
+              {showEur && (
+                <div className="font-figure text-xs text-muted-foreground">
+                  {formatMoney(eur as number, "EUR")}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        <CategoryPicker tx={tx} onSelect={onSelectCategory} saving={savingCategory} />
+        <TypePicker tx={tx} onSelect={onSelectType} saving={savingType} />
+      </div>
+    </li>
   );
 }

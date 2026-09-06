@@ -125,7 +125,7 @@ function SpendingPage() {
             setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))
           }
           aria-label="Previous month"
-          className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+          className="flex size-11 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
         >
           <ChevronLeft className="size-5" />
         </button>
@@ -137,7 +137,7 @@ function SpendingPage() {
           }
           disabled={!canGoNext}
           aria-label="Next month"
-          className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-40"
+          className="flex size-11 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-40"
         >
           <ChevronRight className="size-5" />
         </button>
