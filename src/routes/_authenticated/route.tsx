@@ -65,6 +65,8 @@ function AuthenticatedLayout() {
   const { user } = Route.useRouteContext();
   const navigate = useNavigate();
   const [signingOut, setSigningOut] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+
 
   // Keep route data in sync with auth transitions (e.g. token expiry).
   useEffect(() => {
