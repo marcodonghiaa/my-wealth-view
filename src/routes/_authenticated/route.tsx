@@ -148,24 +148,87 @@ function AuthenticatedLayout() {
       </aside>
 
       {/* Mobile top bar */}
-      <div className="fixed inset-x-0 top-0 z-30 flex h-14 items-center justify-between border-b bg-sidebar px-4 md:hidden">
-        <div className="flex items-center gap-2">
-          <div className="flex size-7 items-center justify-center rounded-lg bg-primary/15 text-primary">
+      <div className="fixed inset-x-0 top-0 z-30 grid h-14 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 border-b bg-sidebar px-2 md:hidden">
+        <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
+          <SheetTrigger asChild>
+            <button
+              type="button"
+              aria-label="Open menu"
+              className="flex size-11 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-foreground"
+            >
+              <Menu className="size-5" />
+            </button>
+          </SheetTrigger>
+          <SheetContent
+            side="left"
+            className="w-72 border-r bg-sidebar p-0 [&>button]:size-11"
+          >
+            <SheetHeader className="border-b p-4">
+              <SheetTitle className="flex items-center gap-2.5 text-sm font-semibold text-sidebar-foreground">
+                <span className="flex size-8 items-center justify-center rounded-lg bg-primary/15 text-primary">
+                  <TrendingUp className="size-4" />
+                </span>
+                Finance Dashboard
+              </SheetTitle>
+            </SheetHeader>
+
+            <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-3">
+              {NAV_ITEMS.map((item) =>
+                item.to ? (
+                  <Link
+                    key={item.label}
+                    to={item.to}
+                    activeOptions={{ exact: true }}
+                    onClick={() => setMenuOpen(false)}
+                    className="flex min-h-11 items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                    activeProps={{
+                      className:
+                        "flex min-h-11 items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium bg-sidebar-accent text-sidebar-primary",
+                    }}
+                  >
+                    <item.icon className="size-4 shrink-0" />
+                    {item.label}
+                  </Link>
+                ) : null,
+              )}
+            </nav>
+
+            <div className="border-t p-3">
+              <div className="mb-2 truncate px-3 text-xs text-muted-foreground">
+                {user.email}
+              </div>
+              <button
+                type="button"
+                onClick={handleSignOut}
+                disabled={signingOut}
+                className="flex min-h-11 w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground disabled:opacity-50"
+              >
+                <LogOut className="size-4" />
+                {signingOut ? "Signing out…" : "Sign out"}
+              </button>
+            </div>
+          </SheetContent>
+        </Sheet>
+
+        <div className="flex min-w-0 items-center gap-2">
+          <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
             <TrendingUp className="size-3.5" />
           </div>
-          <span className="text-sm font-semibold text-sidebar-foreground">
+          <span className="truncate text-sm font-semibold text-sidebar-foreground">
             Finance Dashboard
           </span>
         </div>
         <button
           type="button"
           onClick={handleSignOut}
-          className="text-muted-foreground transition-colors hover:text-foreground"
+          disabled={signingOut}
+          className="flex size-11 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-foreground disabled:opacity-50"
           aria-label="Sign out"
         >
-          <LogOut className="size-4" />
+          <LogOut className="size-5" />
         </button>
       </div>
+
 
       {/* Main content */}
       <main className="min-w-0 flex-1 pt-14 md:pt-0 md:pl-64">
