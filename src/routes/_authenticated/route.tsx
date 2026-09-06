@@ -13,6 +13,7 @@ import {
   PieChart,
   ArrowLeftRight,
   Briefcase,
+  Bitcoin,
   ListChecks,
   LogOut,
   Menu,
