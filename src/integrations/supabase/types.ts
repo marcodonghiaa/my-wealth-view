@@ -41,6 +41,39 @@ export type Database = {
         }
         Relationships: []
       }
+      category_rules: {
+        Row: {
+          created_at: string
+          id: string
+          match_field: string
+          match_text: string
+          priority: number
+          set_category: string | null
+          set_transaction_type: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          match_field: string
+          match_text: string
+          priority?: number
+          set_category?: string | null
+          set_transaction_type?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          match_field?: string
+          match_text?: string
+          priority?: number
+          set_category?: string | null
+          set_transaction_type?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       fx_rates: {
         Row: {
           created_at: string
