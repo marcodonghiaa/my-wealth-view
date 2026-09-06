@@ -674,3 +674,70 @@ function TransactionRowView({
     </tr>
   );
 }
+
+function TransactionCardView({
+  tx,
+  accountLabel,
+  onSelectCategory,
+  savingCategory,
+  onSelectType,
+  savingType,
+}: {
+  tx: TransactionRow;
+  accountLabel: string;
+  onSelectCategory: (category: string) => void;
+  savingCategory: boolean;
+  onSelectType: (type: string) => void;
+  savingType: boolean;
+}) {
+  const native = nativeSignedAmount(tx);
+  const currency = tx.currency ?? "EUR";
+  const positive = (native ?? 0) >= 0;
+  const eur = tx.signed_amount_eur;
+  const showEur = currency !== "EUR" && eur != null;
+
+  return (
+    <li className="px-4 py-3">
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
+        <div className="min-w-0">
+          <p className="truncate text-sm font-medium text-foreground">
+            {tx.creditor_name ?? "—"}
+          </p>
+          <p className="mt-0.5 truncate text-xs text-muted-foreground">
+            {tx.booking_date
+              ? new Date(`${tx.booking_date}T00:00:00`).toLocaleDateString(
+                  "en-GB",
+                  { day: "numeric", month: "short", year: "numeric" },
+                )
+              : "—"}{" "}
+            · {accountLabel}
+          </p>
+        </div>
+        <div className="shrink-0 text-right">
+          {native == null ? (
+            <span className="text-sm text-muted-foreground">—</span>
+          ) : (
+            <>
+              <div
+                className={`font-figure text-sm font-medium ${
+                  positive ? "text-positive" : "text-negative"
+                }`}
+              >
+                {formatMoney(native, currency)}
+              </div>
+              {showEur && (
+                <div className="font-figure text-xs text-muted-foreground">
+                  {formatMoney(eur as number, "EUR")}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        <CategoryPicker tx={tx} onSelect={onSelectCategory} saving={savingCategory} />
+        <TypePicker tx={tx} onSelect={onSelectType} saving={savingType} />
+      </div>
+    </li>
+  );
+}
