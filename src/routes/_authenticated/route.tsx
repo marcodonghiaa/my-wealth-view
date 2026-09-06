@@ -161,7 +161,7 @@ function AuthenticatedLayout() {
           </SheetTrigger>
           <SheetContent
             side="left"
-            className="w-72 border-r bg-sidebar p-0 [&>button]:size-11"
+            className="flex w-72 flex-col gap-0 border-r bg-sidebar p-0 [&>button]:size-11"
           >
             <SheetHeader className="border-b p-4">
               <SheetTitle className="flex items-center gap-2.5 text-sm font-semibold text-sidebar-foreground">
