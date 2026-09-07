@@ -36,6 +36,15 @@ interface CryptoRow {
   value_eur: number | null;
 }
 
+interface AssetGroup {
+  symbol: string;
+  name: string;
+  amount: number;
+  priceUsd: number | null;
+  valueEur: number;
+  bySource: Array<{ source: string; amount: number; valueEur: number }>;
+}
+
 const CHART_COLORS = [
   "var(--color-chart-1)",
   "var(--color-chart-2)",
@@ -89,27 +98,51 @@ function formatDate(iso: string | null): string {
   });
 }
 
+/** Merge per-source rows for the same asset into one line, keeping the
+ * per-source split for display (e.g. BTC held in both Ledger and Coinbase). */
+function groupBySymbol(rows: Array<CryptoRow>): Array<AssetGroup> {
+  const bySymbol = new Map<string, AssetGroup>();
+  for (const row of rows) {
+    const symbol = row.asset_symbol ?? "—";
+    const existing = bySymbol.get(symbol);
+    const amount = row.amount ?? 0;
+    const valueEur = row.value_eur ?? 0;
+    if (existing) {
+      existing.amount += amount;
+      existing.valueEur += valueEur;
+      existing.bySource.push({ source: row.source ?? "—", amount, valueEur });
+    } else {
+      bySymbol.set(symbol, {
+        symbol,
+        name: row.name ?? symbol,
+        amount,
+        priceUsd: row.price_usd,
+        valueEur,
+        bySource: [{ source: row.source ?? "—", amount, valueEur }],
+      });
+    }
+  }
+  return Array.from(bySymbol.values()).sort((a, b) => b.valueEur - a.valueEur);
+}
+
 function CryptoPage() {
   const query = useQuery({
     queryKey: ["crypto-latest"],
     queryFn: fetchCrypto,
   });
 
-  const holdings = useMemo(() => query.data ?? [], [query.data]);
+  const rows = useMemo(() => query.data ?? [], [query.data]);
+  const assets = useMemo(() => groupBySymbol(rows), [rows]);
 
   const totalEur = useMemo(
-    () => holdings.reduce((sum, row) => sum + (row.value_eur ?? 0), 0),
-    [holdings],
+    () => assets.reduce((sum, a) => sum + a.valueEur, 0),
+    [assets],
   );
 
   const asOf = useMemo(() => {
-    if (holdings.length === 0) return null;
-    return holdings
-      .map((h) => h.snapshot_date)
-      .filter(Boolean)
-      .sort()
-      .reverse()[0] ?? null;
-  }, [holdings]);
+    if (rows.length === 0) return null;
+    return rows.map((h) => h.snapshot_date).filter(Boolean).sort().reverse()[0] ?? null;
+  }, [rows]);
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-8 md:py-12">
@@ -136,9 +169,7 @@ function CryptoPage() {
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Bitcoin className="size-4 text-primary" />
           Total crypto value
-          {asOf && (
-            <span className="ml-1">· as of {formatDate(asOf)}</span>
-          )}
+          {asOf && <span className="ml-1">· as of {formatDate(asOf)}</span>}
         </div>
 
         <div className="mt-3 min-h-16">
@@ -153,6 +184,7 @@ function CryptoPage() {
 
         <p className="mt-3 text-xs text-muted-foreground">
           Ledger holdings are entered manually; Coinbase syncs automatically.
+          The same asset held in multiple places is combined into one line below.
         </p>
       </section>
 
@@ -161,7 +193,7 @@ function CryptoPage() {
           <div className="mb-6 h-80 animate-pulse rounded-2xl bg-muted/50" />
           <div className="h-64 animate-pulse rounded-2xl bg-muted/50" />
         </>
-      ) : holdings.length === 0 ? (
+      ) : assets.length === 0 ? (
         <div className="flex h-48 items-center justify-center rounded-2xl border bg-card text-sm text-muted-foreground card-ring">
           No crypto holdings found yet.
         </div>
@@ -178,15 +210,15 @@ function CryptoPage() {
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
-                    data={holdings}
-                    dataKey="value_eur"
-                    nameKey="name"
+                    data={assets}
+                    dataKey="valueEur"
+                    nameKey="symbol"
                     innerRadius="55%"
                     outerRadius="80%"
                     paddingAngle={2}
                     cornerRadius={6}
                   >
-                    {holdings.map((_, i) => (
+                    {assets.map((_, i) => (
                       <Cell
                         key={i}
                         fill={CHART_COLORS[i % CHART_COLORS.length]}
@@ -210,7 +242,6 @@ function CryptoPage() {
                     <th className="px-4 py-3 font-medium sm:px-5">Holding</th>
                     <th className="px-4 py-3 font-medium sm:px-5">Amount</th>
                     <th className="px-4 py-3 font-medium sm:px-5">Price</th>
-                    <th className="px-4 py-3 font-medium sm:px-5">Source</th>
                     <th className="px-4 py-3 text-right font-medium sm:px-5">
                       Value
                     </th>
@@ -220,41 +251,43 @@ function CryptoPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y">
-                  {holdings.map((row) => {
-                    const valueEur = row.value_eur ?? 0;
+                  {assets.map((asset) => {
                     const percent =
-                      totalEur > 0 ? (valueEur / totalEur) * 100 : 0;
+                      totalEur > 0 ? (asset.valueEur / totalEur) * 100 : 0;
                     return (
-                      <tr key={row.asset_symbol ?? row.name}>
+                      <tr key={asset.symbol}>
                         <td className="px-4 py-3 sm:px-5">
                           <div className="font-medium text-foreground">
-                            {row.name ?? "—"}
+                            {asset.name}
                           </div>
                           <div className="mt-0.5 text-xs text-muted-foreground">
-                            {row.asset_symbol ?? "—"}
+                            {asset.symbol}
                           </div>
                         </td>
-                        <td className="px-4 py-3 font-figure text-foreground sm:px-5">
-                          {row.amount != null
-                            ? `${formatAmount(row.amount)} ${row.asset_symbol ?? ""}`
-                            : "—"}
-                        </td>
-                        <td className="px-4 py-3 font-figure text-foreground sm:px-5">
-                          {row.price_usd != null
-                            ? formatUsd(row.price_usd)
-                            : "—"}
-                        </td>
                         <td className="px-4 py-3 sm:px-5">
-                          {row.source ? (
-                            <span className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium text-muted-foreground">
-                              {row.source}
-                            </span>
-                          ) : (
-                            "—"
+                          <div className="font-figure text-foreground">
+                            {formatAmount(asset.amount)} {asset.symbol}
+                          </div>
+                          {asset.bySource.length > 1 && (
+                            <div className="mt-1 flex flex-wrap gap-1.5">
+                              {asset.bySource.map((s) => (
+                                <span
+                                  key={s.source}
+                                  className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs text-muted-foreground"
+                                >
+                                  {s.source}: {formatAmount(s.amount)}
+                                </span>
+                              ))}
+                            </div>
                           )}
                         </td>
+                        <td className="px-4 py-3 font-figure text-foreground sm:px-5">
+                          {asset.priceUsd != null
+                            ? formatUsd(asset.priceUsd)
+                            : "—"}
+                        </td>
                         <td className="px-4 py-3 text-right font-figure font-medium text-foreground sm:px-5">
-                          {formatEur(valueEur)}
+                          {formatEur(asset.valueEur)}
                         </td>
                         <td className="px-4 py-3 text-right font-figure text-foreground sm:px-5">
                           {percent.toFixed(1)}%
@@ -269,51 +302,57 @@ function CryptoPage() {
 
           {/* Mobile cards */}
           <section className="space-y-3 md:hidden">
-            {holdings.map((row) => {
-              const valueEur = row.value_eur ?? 0;
-              const percent = totalEur > 0 ? (valueEur / totalEur) * 100 : 0;
+            {assets.map((asset) => {
+              const percent =
+                totalEur > 0 ? (asset.valueEur / totalEur) * 100 : 0;
               return (
                 <div
-                  key={row.asset_symbol ?? row.name}
+                  key={asset.symbol}
                   className="rounded-2xl border bg-card p-4 card-ring"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
                       <div className="font-medium text-foreground">
-                        {row.name ?? "—"}
+                        {asset.name}
                       </div>
                       <div className="mt-0.5 text-xs text-muted-foreground">
-                        {row.asset_symbol ?? "—"}
+                        {asset.symbol}
                       </div>
                     </div>
-                    {row.source ? (
-                      <span className="inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-xs font-medium text-muted-foreground">
-                        {row.source}
-                      </span>
-                    ) : null}
                   </div>
+
+                  {asset.bySource.length > 1 && (
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {asset.bySource.map((s) => (
+                        <span
+                          key={s.source}
+                          className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs text-muted-foreground"
+                        >
+                          {s.source}: {formatAmount(s.amount)}
+                        </span>
+                      ))}
+                    </div>
+                  )}
 
                   <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
                     <div>
                       <div className="text-xs text-muted-foreground">Amount</div>
                       <div className="font-figure text-foreground">
-                        {row.amount != null
-                          ? `${formatAmount(row.amount)} ${row.asset_symbol ?? ""}`
-                          : "—"}
+                        {formatAmount(asset.amount)} {asset.symbol}
                       </div>
                     </div>
                     <div>
                       <div className="text-xs text-muted-foreground">Price</div>
                       <div className="font-figure text-foreground">
-                        {row.price_usd != null
-                          ? formatUsd(row.price_usd)
+                        {asset.priceUsd != null
+                          ? formatUsd(asset.priceUsd)
                           : "—"}
                       </div>
                     </div>
                     <div>
                       <div className="text-xs text-muted-foreground">Value</div>
                       <div className="font-figure font-medium text-foreground">
-                        {formatEur(valueEur)}
+                        {formatEur(asset.valueEur)}
                       </div>
                     </div>
                     <div>
@@ -334,9 +373,7 @@ function CryptoPage() {
 }
 
 interface TooltipPayloadItem {
-  payload?: CryptoRow;
-  name?: string;
-  value?: number;
+  payload?: AssetGroup;
 }
 
 function CryptoTooltip({
@@ -349,18 +386,17 @@ function CryptoTooltip({
   totalEur: number;
 }) {
   if (!active || !payload || payload.length === 0) return null;
-  const point = payload[0];
-  const row = point?.payload;
-  if (!row || row.value_eur == null) return null;
+  const asset = payload[0]?.payload;
+  if (!asset) return null;
   const percent =
-    totalEur > 0 ? ((row.value_eur / totalEur) * 100).toFixed(1) : "0.0";
+    totalEur > 0 ? ((asset.valueEur / totalEur) * 100).toFixed(1) : "0.0";
   return (
     <div className="rounded-lg border bg-popover px-3 py-2 shadow-lg">
       <p className="max-w-xs truncate text-xs text-muted-foreground">
-        {row.name ?? "—"}
+        {asset.name}
       </p>
       <p className="font-figure mt-0.5 text-sm font-semibold text-foreground">
-        {formatEur(row.value_eur)}
+        {formatEur(asset.valueEur)}
       </p>
       <p className="text-xs text-muted-foreground">{percent}% of crypto</p>
     </div>

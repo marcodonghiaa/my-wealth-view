@@ -41,21 +41,30 @@ interface PortfolioRow {
   currency: string | null;
   value_native: number | null;
   value_eur: number | null;
+  asset_type: string | null;
 }
 
-const CHART_COLORS = [
-  "var(--color-chart-1)",
-  "var(--color-chart-2)",
-  "var(--color-chart-3)",
-  "var(--color-chart-4)",
-  "var(--color-chart-5)",
-];
+const UNCLASSIFIED = "Other";
+
+// Fixed per-type color so a type keeps its color as holdings change,
+// rather than reassigning colors by array position like the old per-holding pie.
+const TYPE_COLORS: Record<string, string> = {
+  Stock: "var(--color-chart-1)",
+  ETF: "var(--color-chart-2)",
+  Fund: "var(--color-chart-3)",
+  Bond: "var(--color-chart-4)",
+  [UNCLASSIFIED]: "var(--color-chart-5)",
+};
+
+function colorForType(type: string): string {
+  return TYPE_COLORS[type] ?? TYPE_COLORS[UNCLASSIFIED];
+}
 
 async function fetchPortfolio(): Promise<Array<PortfolioRow>> {
   const { data, error } = await getSupabase()
     .from("v_portfolio_latest")
     .select(
-      "isin,name,shares,broker_label,snapshot_date,price,currency,value_native,value_eur",
+      "isin,name,shares,broker_label,snapshot_date,price,currency,value_native,value_eur,asset_type",
     )
     .order("value_eur", { ascending: false });
   if (error) throw error;
@@ -96,6 +105,12 @@ function formatDate(iso: string | null): string {
   });
 }
 
+interface TypeGroup {
+  type: string;
+  totalEur: number;
+  holdings: Array<PortfolioRow>;
+}
+
 function PortfolioPage() {
   const query = useQuery({
     queryKey: ["portfolio-latest"],
@@ -105,13 +120,26 @@ function PortfolioPage() {
   const holdings = useMemo(() => query.data ?? [], [query.data]);
 
   const totalEur = useMemo(
-    () =>
-      holdings.reduce(
-        (sum, row) => sum + (row.value_eur ?? 0),
-        0,
-      ),
+    () => holdings.reduce((sum, row) => sum + (row.value_eur ?? 0), 0),
     [holdings],
   );
+
+  const groups = useMemo<Array<TypeGroup>>(() => {
+    const byType = new Map<string, Array<PortfolioRow>>();
+    for (const row of holdings) {
+      const type = row.asset_type ?? UNCLASSIFIED;
+      const list = byType.get(type) ?? [];
+      list.push(row);
+      byType.set(type, list);
+    }
+    return Array.from(byType.entries())
+      .map(([type, rows]) => ({
+        type,
+        totalEur: rows.reduce((sum, r) => sum + (r.value_eur ?? 0), 0),
+        holdings: rows,
+      }))
+      .sort((a, b) => b.totalEur - a.totalEur);
+  }, [holdings]);
 
   const asOf = holdings[0]?.snapshot_date ?? null;
 
@@ -140,11 +168,7 @@ function PortfolioPage() {
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Briefcase className="size-4 text-primary" />
           Total portfolio value
-          {asOf && (
-            <span className="ml-1">
-              · as of {formatDate(asOf)}
-            </span>
-          )}
+          {asOf && <span className="ml-1">· as of {formatDate(asOf)}</span>}
         </div>
 
         <div className="mt-3 min-h-16">
@@ -173,95 +197,142 @@ function PortfolioPage() {
         </div>
       ) : (
         <>
-          {/* Allocation chart */}
+          {/* Allocation by type */}
           <section className="mb-6 rounded-2xl border bg-card p-4 card-ring sm:p-6">
             <div className="mb-4 px-2">
               <h2 className="text-sm font-semibold text-foreground">
-                Allocation by holding
+                Allocation by type
               </h2>
             </div>
             <div className="h-80 w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
-                    data={holdings}
-                    dataKey="value_eur"
-                    nameKey="name"
+                    data={groups}
+                    dataKey="totalEur"
+                    nameKey="type"
                     innerRadius="55%"
                     outerRadius="80%"
                     paddingAngle={2}
                     cornerRadius={6}
                   >
-                    {holdings.map((_, i) => (
+                    {groups.map((g) => (
                       <Cell
-                        key={i}
-                        fill={CHART_COLORS[i % CHART_COLORS.length]}
+                        key={g.type}
+                        fill={colorForType(g.type)}
                         stroke="var(--color-card)"
                         strokeWidth={2}
                       />
                     ))}
                   </Pie>
-                  <Tooltip content={<PortfolioTooltip totalEur={totalEur} />} />
+                  <Tooltip content={<TypeTooltip totalEur={totalEur} />} />
                 </PieChart>
               </ResponsiveContainer>
             </div>
           </section>
 
-          {/* Holdings table */}
-          <section className="overflow-hidden rounded-2xl border bg-card card-ring">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-muted/50 text-left text-xs uppercase tracking-wide text-muted-foreground">
-                  <tr>
-                    <th className="px-4 py-3 font-medium sm:px-5">Holding</th>
-                    <th className="px-4 py-3 font-medium sm:px-5">Shares</th>
-                    <th className="px-4 py-3 font-medium sm:px-5">Price</th>
-                    <th className="px-4 py-3 text-right font-medium sm:px-5">
-                      Value
-                    </th>
-                    <th className="px-4 py-3 text-right font-medium sm:px-5">
-                      % of total
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {holdings.map((row) => {
-                    const valueEur = row.value_eur ?? 0;
-                    const percent =
-                      totalEur > 0 ? (valueEur / totalEur) * 100 : 0;
-                    return (
-                      <tr key={row.isin ?? row.name}>
-                        <td className="px-4 py-3 sm:px-5">
-                          <div className="font-medium text-foreground">
-                            {row.name ?? "—"}
-                          </div>
-                          <div className="mt-0.5 text-xs text-muted-foreground">
-                            {row.broker_label ?? "—"}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3 font-figure text-foreground sm:px-5">
-                          {row.shares != null
-                            ? formatShares(row.shares)
-                            : "—"}
-                        </td>
-                        <td className="px-4 py-3 font-figure text-foreground sm:px-5">
-                          {row.price != null && row.currency
-                            ? formatMoney(row.price, row.currency)
-                            : "—"}
-                        </td>
-                        <td className="px-4 py-3 text-right font-figure font-medium text-foreground sm:px-5">
-                          {formatEur(valueEur)}
-                        </td>
-                        <td className="px-4 py-3 text-right font-figure text-foreground sm:px-5">
-                          {percent.toFixed(1)}%
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </section>
+          {/* Holdings grouped by type */}
+          <div className="space-y-4">
+            {groups.map((group) => {
+              const percent =
+                totalEur > 0 ? (group.totalEur / totalEur) * 100 : 0;
+              const color = colorForType(group.type);
+              return (
+                <section
+                  key={group.type}
+                  className="overflow-hidden rounded-2xl border bg-card card-ring"
+                >
+                  <div
+                    className="flex items-center justify-between gap-3 border-b px-4 py-3 sm:px-5"
+                    style={{
+                      backgroundColor: `color-mix(in srgb, ${color} 12%, transparent)`,
+                    }}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="inline-block size-2.5 rounded-full"
+                        style={{ backgroundColor: color }}
+                      />
+                      <span className="text-sm font-semibold text-foreground">
+                        {group.type}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        · {group.holdings.length} holding
+                        {group.holdings.length === 1 ? "" : "s"}
+                      </span>
+                    </div>
+                    <div className="text-right">
+                      <div className="font-figure text-sm font-semibold text-foreground">
+                        {formatEur(group.totalEur)}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {percent.toFixed(1)}%
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="bg-muted/50 text-left text-xs uppercase tracking-wide text-muted-foreground">
+                        <tr>
+                          <th className="px-4 py-2.5 font-medium sm:px-5">
+                            Holding
+                          </th>
+                          <th className="px-4 py-2.5 font-medium sm:px-5">
+                            Shares
+                          </th>
+                          <th className="px-4 py-2.5 font-medium sm:px-5">
+                            Price
+                          </th>
+                          <th className="px-4 py-2.5 text-right font-medium sm:px-5">
+                            Value
+                          </th>
+                          <th className="px-4 py-2.5 text-right font-medium sm:px-5">
+                            % of total
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y">
+                        {group.holdings.map((row) => {
+                          const valueEur = row.value_eur ?? 0;
+                          const rowPercent =
+                            totalEur > 0 ? (valueEur / totalEur) * 100 : 0;
+                          return (
+                            <tr key={row.isin ?? row.name}>
+                              <td className="px-4 py-3 sm:px-5">
+                                <div className="font-medium text-foreground">
+                                  {row.name ?? "—"}
+                                </div>
+                                <div className="mt-0.5 text-xs text-muted-foreground">
+                                  {row.broker_label ?? "—"}
+                                </div>
+                              </td>
+                              <td className="px-4 py-3 font-figure text-foreground sm:px-5">
+                                {row.shares != null
+                                  ? formatShares(row.shares)
+                                  : "—"}
+                              </td>
+                              <td className="px-4 py-3 font-figure text-foreground sm:px-5">
+                                {row.price != null && row.currency
+                                  ? formatMoney(row.price, row.currency)
+                                  : "—"}
+                              </td>
+                              <td className="px-4 py-3 text-right font-figure font-medium text-foreground sm:px-5">
+                                {formatEur(valueEur)}
+                              </td>
+                              <td className="px-4 py-3 text-right font-figure text-foreground sm:px-5">
+                                {rowPercent.toFixed(1)}%
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </section>
+              );
+            })}
+          </div>
         </>
       )}
     </div>
@@ -269,12 +340,10 @@ function PortfolioPage() {
 }
 
 interface TooltipPayloadItem {
-  payload?: PortfolioRow;
-  name?: string;
-  value?: number;
+  payload?: TypeGroup;
 }
 
-function PortfolioTooltip({
+function TypeTooltip({
   active,
   payload,
   totalEur,
@@ -284,17 +353,15 @@ function PortfolioTooltip({
   totalEur: number;
 }) {
   if (!active || !payload || payload.length === 0) return null;
-  const point = payload[0];
-  const row = point?.payload;
-  if (!row || row.value_eur == null) return null;
-  const percent = totalEur > 0 ? ((row.value_eur / totalEur) * 100).toFixed(1) : "0.0";
+  const group = payload[0]?.payload;
+  if (!group) return null;
+  const percent =
+    totalEur > 0 ? ((group.totalEur / totalEur) * 100).toFixed(1) : "0.0";
   return (
     <div className="rounded-lg border bg-popover px-3 py-2 shadow-lg">
-      <p className="max-w-xs truncate text-xs text-muted-foreground">
-        {row.name ?? "—"}
-      </p>
+      <p className="text-xs text-muted-foreground">{group.type}</p>
       <p className="font-figure mt-0.5 text-sm font-semibold text-foreground">
-        {formatEur(row.value_eur)}
+        {formatEur(group.totalEur)}
       </p>
       <p className="text-xs text-muted-foreground">{percent}% of portfolio</p>
     </div>

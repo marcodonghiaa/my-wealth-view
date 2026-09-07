@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import {
   ArrowDownLeft,
   ArrowUpRight,
+  Banknote,
   ChevronLeft,
   ChevronRight,
   Search,
@@ -105,6 +106,15 @@ function formatMoney(value: number, currency: string): string {
   }).format(value);
 }
 
+/** Amount without a currency symbol — the Currency column states it instead. */
+function formatAmountPlain(value: number): string {
+  return new Intl.NumberFormat("en-IE", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+    signDisplay: "never",
+  }).format(Math.abs(value));
+}
+
 /** Signed amount in the transaction's own currency. */
 function nativeSignedAmount(tx: TransactionRow): number | null {
   if (tx.amount == null) return null;
@@ -128,6 +138,70 @@ const CATEGORIES = [
 ] as const;
 
 const UNCATEGORIZED = "__uncategorized__";
+
+// Bank logos are Enable Banking's public brand assets (same source used to
+// build the consent-flow links), keyed by the bank name our account labels
+// start with (e.g. "Revolut EUR" -> "Revolut").
+const BANK_META: Record<string, { logo: string; color: string }> = {
+  Revolut: {
+    logo: "https://enablebanking.com/brands/IT/Revolut/",
+    color: "var(--color-chart-1)",
+  },
+  Wise: {
+    logo: "https://enablebanking.com/brands/IT/Wise/",
+    color: "var(--color-chart-2)",
+  },
+  Fineco: {
+    logo: "https://enablebanking.com/brands/IT/FinecoBank/",
+    color: "var(--color-chart-3)",
+  },
+};
+
+function bankNameFromLabel(label: string): string {
+  const parts = label.trim().split(/\s+/);
+  const last = parts[parts.length - 1];
+  if (parts.length > 1 && /^[A-Z]{3}$/.test(last)) {
+    return parts.slice(0, -1).join(" ");
+  }
+  return label;
+}
+
+function AccountBadge({ label }: { label: string }) {
+  const bankName = bankNameFromLabel(label);
+  const meta = BANK_META[bankName];
+
+  if (!meta) {
+    return (
+      <span
+        title={label}
+        className="inline-flex size-6 items-center justify-center rounded-full bg-muted text-[10px] font-semibold text-muted-foreground"
+      >
+        {bankName.slice(0, 1).toUpperCase()}
+      </span>
+    );
+  }
+
+  return (
+    <span
+      title={label}
+      className="inline-flex items-center justify-center rounded-full p-1"
+      style={{
+        backgroundColor: `color-mix(in srgb, ${meta.color} 18%, transparent)`,
+      }}
+    >
+      <img src={meta.logo} alt={bankName} className="h-4 w-auto object-contain" />
+    </span>
+  );
+}
+
+function CurrencyBadge({ currency }: { currency: string }) {
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium text-muted-foreground">
+      <Banknote className="size-3" />
+      {currency}
+    </span>
+  );
+}
 
 
 function TransactionsPage() {
@@ -531,6 +605,7 @@ function TransactionsPage() {
                 <th className="px-4 py-3 font-medium">Category</th>
                 <th className="px-4 py-3 font-medium">Type</th>
                 <th className="px-4 py-3 font-medium">Account</th>
+                <th className="px-4 py-3 font-medium">Currency</th>
                 <th className="px-4 py-3 text-right font-medium">Amount</th>
               </tr>
             </thead>
@@ -538,7 +613,7 @@ function TransactionsPage() {
               {txQuery.isPending ? (
                 Array.from({ length: 8 }).map((_, i) => (
                   <tr key={i} className="border-b last:border-0">
-                    <td colSpan={7} className="px-4 py-3">
+                    <td colSpan={8} className="px-4 py-3">
                       <div className="h-5 animate-pulse rounded bg-muted" />
                     </td>
                   </tr>
@@ -546,7 +621,7 @@ function TransactionsPage() {
               ) : filtered.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={7}
+                    colSpan={8}
                     className="px-4 py-12 text-center text-sm text-muted-foreground"
                   >
                     {transactions.length === 0
@@ -810,8 +885,11 @@ function TransactionRowView({
       <td className="px-4 py-3">
         <TypePicker tx={tx} onSelect={onSelectType} saving={savingType} />
       </td>
-      <td className="max-w-36 truncate px-4 py-3 text-muted-foreground">
-        {accountLabel}
+      <td className="px-4 py-3">
+        <AccountBadge label={accountLabel} />
+      </td>
+      <td className="px-4 py-3">
+        <CurrencyBadge currency={currency} />
       </td>
       <td className="px-4 py-3 text-right whitespace-nowrap">
         {native == null ? (
@@ -827,7 +905,7 @@ function TransactionRowView({
             ) : (
               <ArrowDownLeft className="size-3.5" />
             )}
-            {formatMoney(native, currency)}
+            {formatAmountPlain(native)}
             {showEur && (
               <span className="ml-0.5 text-sm opacity-80">
                 ({formatMoney(eur as number, "EUR")})
@@ -879,14 +957,14 @@ function TransactionCardView({
           <p className="truncate text-sm font-medium text-foreground">
             {tx.creditor_name ?? "—"}
           </p>
-          <p className="mt-0.5 truncate text-xs text-muted-foreground">
+          <p className="mt-0.5 flex items-center gap-1.5 truncate text-xs text-muted-foreground">
             {tx.booking_date
               ? new Date(`${tx.booking_date}T00:00:00`).toLocaleDateString(
                   "en-GB",
                   { day: "numeric", month: "short", year: "numeric" },
                 )
-              : "—"}{" "}
-            · {accountLabel}
+              : "—"}
+            <AccountBadge label={accountLabel} />
           </p>
         </div>
         <div className="shrink-0 text-right">
@@ -899,7 +977,7 @@ function TransactionCardView({
                   positive ? "text-positive" : "text-negative"
                 }`}
               >
-                {formatMoney(native, currency)}
+                {formatAmountPlain(native)}
               </div>
               {showEur && (
                 <div className="font-figure text-xs text-muted-foreground">
@@ -913,6 +991,7 @@ function TransactionCardView({
       <div className="mt-2 flex flex-wrap items-center gap-2">
         <CategoryPicker tx={tx} onSelect={onSelectCategory} saving={savingCategory} />
         <TypePicker tx={tx} onSelect={onSelectType} saving={savingType} />
+        <CurrencyBadge currency={currency} />
       </div>
     </li>
   );
