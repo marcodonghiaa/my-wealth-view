@@ -39,6 +39,8 @@ export const Route = createFileRoute("/_authenticated/subscriptions")({
   component: SubscriptionsPage,
 });
 
+type IntervalUnit = "days" | "weeks" | "months" | "years";
+
 interface SubscriptionRow {
   creditor_name: string | null;
   category: string | null;
@@ -50,20 +52,28 @@ interface SubscriptionRow {
   charge_count: number | null;
   billing_frequency: string | null;
   billing_frequency_is_manual: boolean | null;
+  custom_interval_value: number | null;
+  custom_interval_unit: IntervalUnit | null;
 }
 
 const BILLING_FREQUENCIES = ["Weekly", "Monthly", "Quarterly", "Yearly"];
+const INTERVAL_UNITS: Array<IntervalUnit> = ["days", "weeks", "months", "years"];
 
 async function fetchSubscriptions(): Promise<Array<SubscriptionRow>> {
   const { data, error } = await getSupabase()
     .from("v_subscriptions")
     .select(
-      "creditor_name,category,currency,amount,signed_amount_eur,monthly_equivalent_eur,last_charged,charge_count,billing_frequency,billing_frequency_is_manual",
+      "creditor_name,category,currency,amount,signed_amount_eur,monthly_equivalent_eur,last_charged,charge_count,billing_frequency,billing_frequency_is_manual,custom_interval_value,custom_interval_unit",
     )
     .neq("amount", 0)
     .order("monthly_equivalent_eur", { ascending: true });
   if (error) throw error;
   return (data ?? []) as Array<SubscriptionRow>;
+}
+
+function customIntervalLabel(value: number, unit: IntervalUnit): string {
+  const unitLabel = value === 1 ? unit.slice(0, -1) : unit;
+  return `Every ${value} ${unitLabel}`;
 }
 
 function formatMoney(value: number, currency: string): string {
@@ -88,14 +98,16 @@ function SubscriptionsPage() {
     queryFn: fetchSubscriptions,
   });
 
+  type OverrideInput =
+    | { creditorName: string; frequency: string; custom?: undefined }
+    | {
+        creditorName: string;
+        frequency?: undefined;
+        custom: { value: number; unit: IntervalUnit };
+      };
+
   const frequencyMutation = useMutation({
-    mutationFn: async ({
-      creditorName,
-      frequency,
-    }: {
-      creditorName: string;
-      frequency: string;
-    }) => {
+    mutationFn: async (vars: OverrideInput) => {
       const supabase = getSupabase();
       const {
         data: { user },
@@ -107,14 +119,16 @@ function SubscriptionsPage() {
         .upsert(
           {
             user_id: user.id,
-            creditor_name: creditorName,
-            billing_frequency: frequency,
+            creditor_name: vars.creditorName,
+            billing_frequency: vars.custom ? null : vars.frequency,
+            custom_interval_value: vars.custom?.value ?? null,
+            custom_interval_unit: vars.custom?.unit ?? null,
           },
           { onConflict: "user_id,creditor_name" },
         );
       if (error) throw error;
     },
-    onMutate: async ({ creditorName, frequency }) => {
+    onMutate: async (vars) => {
       await queryClient.cancelQueries({ queryKey: ["subscriptions"] });
       const previous =
         queryClient.getQueryData<Array<SubscriptionRow>>(["subscriptions"]);
@@ -122,11 +136,13 @@ function SubscriptionsPage() {
         ["subscriptions"],
         (old) =>
           old?.map((sub) =>
-            sub.creditor_name === creditorName
+            sub.creditor_name === vars.creditorName
               ? {
                   ...sub,
-                  billing_frequency: frequency,
+                  billing_frequency: vars.custom ? "Custom" : vars.frequency,
                   billing_frequency_is_manual: true,
+                  custom_interval_value: vars.custom?.value ?? null,
+                  custom_interval_unit: vars.custom?.unit ?? null,
                 }
               : sub,
           ),
@@ -141,8 +157,12 @@ function SubscriptionsPage() {
         description: error.message,
       });
     },
-    onSuccess: (_data, { frequency }) => {
-      toast.success(`Billing frequency set to ${frequency}`);
+    onSuccess: (_data, vars) => {
+      toast.success(
+        `Billing frequency set to ${
+          vars.custom ? customIntervalLabel(vars.custom.value, vars.custom.unit) : vars.frequency
+        }`,
+      );
     },
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: ["subscriptions"] });
@@ -239,6 +259,13 @@ function SubscriptionsPage() {
                     frequency,
                   });
                 }}
+                onSelectCustom={(value, unit) => {
+                  if (!sub.creditor_name) return;
+                  frequencyMutation.mutate({
+                    creditorName: sub.creditor_name,
+                    custom: { value, unit },
+                  });
+                }}
               />
             ))}
       </section>
@@ -255,9 +282,11 @@ function SubscriptionsPage() {
 function SubscriptionCard({
   sub,
   onSelectFrequency,
+  onSelectCustom,
 }: {
   sub: SubscriptionRow;
   onSelectFrequency: (frequency: string) => void;
+  onSelectCustom: (value: number, unit: IntervalUnit) => void;
 }) {
   const native = signedNativeAmount(sub);
   const currency = sub.currency ?? "EUR";
@@ -328,7 +357,10 @@ function SubscriptionCard({
         <FrequencyPicker
           frequency={sub.billing_frequency}
           isManual={sub.billing_frequency_is_manual === true}
+          customValue={sub.custom_interval_value}
+          customUnit={sub.custom_interval_unit}
           onSelect={onSelectFrequency}
+          onSelectCustom={onSelectCustom}
         />
         <span>·</span>
         <span className="inline-flex items-center gap-1">
@@ -343,24 +375,63 @@ function SubscriptionCard({
 function FrequencyPicker({
   frequency,
   isManual,
+  customValue,
+  customUnit,
   onSelect,
+  onSelectCustom,
 }: {
   frequency: string | null;
   isManual: boolean;
+  customValue: number | null;
+  customUnit: IntervalUnit | null;
   onSelect: (frequency: string) => void;
+  onSelectCustom: (value: number, unit: IntervalUnit) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const [customOpen, setCustomOpen] = useState(false);
+  const [draftValue, setDraftValue] = useState(
+    customValue != null ? String(customValue) : "3",
+  );
+  const [draftUnit, setDraftUnit] = useState<IntervalUnit>(
+    customUnit ?? "months",
+  );
+
+  const isCustom = frequency === "Custom";
+  const label =
+    isCustom && customValue != null && customUnit
+      ? customIntervalLabel(customValue, customUnit)
+      : (frequency ?? "Unconfirmed");
+
+  function openCustomForm() {
+    setDraftValue(customValue != null ? String(customValue) : "3");
+    setDraftUnit(customUnit ?? "months");
+    setCustomOpen(true);
+  }
+
+  function submitCustom() {
+    const value = parseInt(draftValue, 10);
+    if (!Number.isFinite(value) || value <= 0) return;
+    onSelectCustom(value, draftUnit);
+    setCustomOpen(false);
+    setOpen(false);
+  }
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        if (!next) setCustomOpen(false);
+      }}
+    >
       <PopoverTrigger asChild>
         <button
           type="button"
           title={
             frequency
               ? isManual
-                ? `${frequency} — manually set`
-                : `${frequency} — auto-detected`
+                ? `${label} — manually set`
+                : `${label} — auto-detected`
               : "Not enough history to detect — click to set manually"
           }
           className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
@@ -369,7 +440,7 @@ function FrequencyPicker({
               : "border border-dashed border-muted-foreground/40 text-muted-foreground hover:border-primary/50 hover:text-foreground"
           }`}
         >
-          {frequency ?? "Unconfirmed"}
+          {label}
           {isManual && frequency ? (
             <Pencil className="size-3 text-primary" aria-label="manually set" />
           ) : (
@@ -377,23 +448,74 @@ function FrequencyPicker({
           )}
         </button>
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-44 p-1">
-        {BILLING_FREQUENCIES.map((option) => (
-          <button
-            key={option}
-            type="button"
-            onClick={() => {
-              onSelect(option);
-              setOpen(false);
-            }}
-            className="flex w-full items-center justify-between rounded-md px-2.5 py-1.5 text-left text-sm text-foreground hover:bg-accent"
-          >
-            {option}
-            {frequency === option && (
-              <Check className="size-4 text-primary" />
-            )}
-          </button>
-        ))}
+      <PopoverContent align="start" className="w-48 p-1">
+        {customOpen ? (
+          <div className="p-2">
+            <div className="flex items-center gap-1.5">
+              <span className="text-sm text-muted-foreground">Every</span>
+              <input
+                type="number"
+                min={1}
+                value={draftValue}
+                onChange={(e) => setDraftValue(e.target.value)}
+                className="h-8 w-14 rounded-md border bg-background px-2 text-sm text-foreground focus:ring-2 focus:ring-ring focus:outline-none"
+                autoFocus
+              />
+              <select
+                value={draftUnit}
+                onChange={(e) => setDraftUnit(e.target.value as IntervalUnit)}
+                className="h-8 flex-1 rounded-md border bg-background px-1.5 text-sm text-foreground focus:ring-2 focus:ring-ring focus:outline-none"
+              >
+                {INTERVAL_UNITS.map((u) => (
+                  <option key={u} value={u}>
+                    {u}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="mt-2 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setCustomOpen(false)}
+                className="rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-accent"
+              >
+                Back
+              </button>
+              <button
+                type="button"
+                onClick={submitCustom}
+                className="rounded-md bg-primary px-2.5 py-1 text-xs font-medium text-primary-foreground hover:opacity-90"
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            {BILLING_FREQUENCIES.map((option) => (
+              <button
+                key={option}
+                type="button"
+                onClick={() => {
+                  onSelect(option);
+                  setOpen(false);
+                }}
+                className="flex w-full items-center justify-between rounded-md px-2.5 py-1.5 text-left text-sm text-foreground hover:bg-accent"
+              >
+                {option}
+                {frequency === option && <Check className="size-4 text-primary" />}
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={openCustomForm}
+              className="flex w-full items-center justify-between rounded-md px-2.5 py-1.5 text-left text-sm text-foreground hover:bg-accent"
+            >
+              Custom…
+              {isCustom && <Check className="size-4 text-primary" />}
+            </button>
+          </>
+        )}
       </PopoverContent>
     </Popover>
   );
