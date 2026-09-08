@@ -8,6 +8,7 @@ import {
 import { useEffect, useState } from "react";
 import {
   TrendingUp,
+  Landmark,
   Receipt,
   Repeat,
   PieChart,
@@ -65,6 +66,7 @@ const NAV_GROUPS: Array<NavGroup> = [
   {
     label: "Banking",
     items: [
+      { label: "Accounts", icon: Landmark, to: "/accounts" },
       { label: "Transactions", icon: Receipt, to: "/transactions" },
       { label: "Subscriptions", icon: Repeat, to: "/subscriptions" },
       { label: "Spending", icon: PieChart, to: "/spending" },

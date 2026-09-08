@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
+import { Route as AuthenticatedAccountsRouteImport } from './routes/_authenticated/accounts'
 import { Route as AuthenticatedCryptoRouteImport } from './routes/_authenticated/crypto'
 import { Route as AuthenticatedIncomeExpensesRouteImport } from './routes/_authenticated/income-expenses'
 import { Route as AuthenticatedPortfolioRouteImport } from './routes/_authenticated/portfolio'
@@ -32,6 +33,11 @@ const AuthRoute = AuthRouteImport.update({
 const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedAccountsRoute = AuthenticatedAccountsRouteImport.update({
+  id: '/accounts',
+  path: '/accounts',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedCryptoRoute = AuthenticatedCryptoRouteImport.update({
@@ -76,6 +82,7 @@ const AuthenticatedTransactionsRoute =
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
   '/auth': typeof AuthRoute
+  '/accounts': typeof AuthenticatedAccountsRoute
   '/crypto': typeof AuthenticatedCryptoRoute
   '/income-expenses': typeof AuthenticatedIncomeExpensesRoute
   '/portfolio': typeof AuthenticatedPortfolioRoute
@@ -86,6 +93,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
+  '/accounts': typeof AuthenticatedAccountsRoute
   '/crypto': typeof AuthenticatedCryptoRoute
   '/income-expenses': typeof AuthenticatedIncomeExpensesRoute
   '/portfolio': typeof AuthenticatedPortfolioRoute
@@ -99,6 +107,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/_authenticated/accounts': typeof AuthenticatedAccountsRoute
   '/_authenticated/crypto': typeof AuthenticatedCryptoRoute
   '/_authenticated/income-expenses': typeof AuthenticatedIncomeExpensesRoute
   '/_authenticated/portfolio': typeof AuthenticatedPortfolioRoute
@@ -113,6 +122,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/accounts'
     | '/crypto'
     | '/income-expenses'
     | '/portfolio'
@@ -123,6 +133,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/auth'
+    | '/accounts'
     | '/crypto'
     | '/income-expenses'
     | '/portfolio'
@@ -135,6 +146,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/_authenticated'
     | '/auth'
+    | '/_authenticated/accounts'
     | '/_authenticated/crypto'
     | '/_authenticated/income-expenses'
     | '/_authenticated/portfolio'
@@ -171,6 +183,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof AuthenticatedIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/accounts': {
+      id: '/_authenticated/accounts'
+      path: '/accounts'
+      fullPath: '/accounts'
+      preLoaderRoute: typeof AuthenticatedAccountsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/crypto': {
@@ -226,6 +245,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAccountsRoute: typeof AuthenticatedAccountsRoute
   AuthenticatedCryptoRoute: typeof AuthenticatedCryptoRoute
   AuthenticatedIncomeExpensesRoute: typeof AuthenticatedIncomeExpensesRoute
   AuthenticatedPortfolioRoute: typeof AuthenticatedPortfolioRoute
@@ -237,6 +257,7 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAccountsRoute: AuthenticatedAccountsRoute,
   AuthenticatedCryptoRoute: AuthenticatedCryptoRoute,
   AuthenticatedIncomeExpensesRoute: AuthenticatedIncomeExpensesRoute,
   AuthenticatedPortfolioRoute: AuthenticatedPortfolioRoute,
