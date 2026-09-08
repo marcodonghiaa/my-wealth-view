@@ -425,14 +425,14 @@ function TransactionsPage() {
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search by merchant…"
             aria-label="Search by merchant"
-            className="h-10 w-full rounded-lg border bg-card pr-3 pl-9 text-sm text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-ring focus:outline-none"
+            className="h-10 w-full rounded-lg border bg-card pr-3 pl-9 text-base text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-ring focus:outline-none"
           />
         </div>
         <select
           value={category}
           onChange={(e) => setCategory(e.target.value)}
           aria-label="Filter by category"
-          className="h-10 rounded-lg border bg-card px-3 text-sm text-foreground focus:ring-2 focus:ring-ring focus:outline-none"
+          className="h-10 rounded-lg border bg-card px-3 text-base text-foreground focus:ring-2 focus:ring-ring focus:outline-none"
         >
           <option value="all">All categories</option>
           {categories.hasUncategorized && (
@@ -528,13 +528,15 @@ function TransactionsPage() {
             <thead>
               <tr className="border-b text-left text-xs tracking-wide text-muted-foreground uppercase">
                 <th className="w-10 px-4 py-3">
-                  <input
-                    type="checkbox"
-                    aria-label="Select all filtered transactions"
-                    checked={allFilteredSelected}
-                    onChange={toggleAllFiltered}
-                    className="size-4 rounded border-border accent-primary"
-                  />
+                  <label className="-m-3.5 inline-flex size-11 cursor-pointer items-center justify-center p-3.5">
+                    <input
+                      type="checkbox"
+                      aria-label="Select all filtered transactions"
+                      checked={allFilteredSelected}
+                      onChange={toggleAllFiltered}
+                      className="size-4 rounded border-border accent-primary"
+                    />
+                  </label>
                 </th>
                 <th className="px-4 py-3 font-medium">Date</th>
                 <th className="px-4 py-3 font-medium">Merchant</th>
@@ -652,7 +654,7 @@ function CategoryPicker({
                 setOpen(false);
                 if (c !== tx.category) onSelect(c);
               }}
-              className={`block w-full rounded-md px-2.5 py-1.5 text-left text-sm transition-colors hover:bg-accent ${
+              className={`block min-h-11 w-full rounded-md px-2.5 py-1.5 text-left text-sm transition-colors hover:bg-accent ${
                 c === tx.category
                   ? "font-medium text-primary"
                   : "text-foreground"
@@ -697,7 +699,7 @@ function BulkCategoryPicker({
                 setOpen(false);
                 onSelect(c);
               }}
-              className="block w-full rounded-md px-2.5 py-1.5 text-left text-sm text-foreground transition-colors hover:bg-accent"
+              className="block min-h-11 w-full rounded-md px-2.5 py-1.5 text-left text-sm text-foreground transition-colors hover:bg-accent"
             >
               {c}
             </button>
@@ -751,7 +753,7 @@ function TypePicker({
                 setOpen(false);
                 if (t !== tx.transaction_type) onSelect(t);
               }}
-              className={`block w-full rounded-md px-2.5 py-1.5 text-left text-sm transition-colors hover:bg-accent ${
+              className={`block min-h-11 w-full rounded-md px-2.5 py-1.5 text-left text-sm transition-colors hover:bg-accent ${
                 t === tx.transaction_type
                   ? "font-medium text-primary"
                   : "text-foreground"
@@ -796,13 +798,15 @@ function TransactionRowView({
       className={`border-b transition-colors last:border-0 hover:bg-accent/40 ${selected ? "bg-primary/5" : ""}`}
     >
       <td className="px-4 py-3">
-        <input
-          type="checkbox"
-          aria-label={`Select ${tx.creditor_name ?? "transaction"}`}
-          checked={selected}
-          onChange={onToggleSelect}
-          className="size-4 rounded border-border accent-primary"
-        />
+        <label className="-m-3.5 inline-flex size-11 cursor-pointer items-center justify-center p-3.5">
+          <input
+            type="checkbox"
+            aria-label={`Select ${tx.creditor_name ?? "transaction"}`}
+            checked={selected}
+            onChange={onToggleSelect}
+            className="size-4 rounded border-border accent-primary"
+          />
+        </label>
       </td>
       <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">
         {tx.booking_date
@@ -882,13 +886,15 @@ function TransactionCardView({
   return (
     <li className={`px-4 py-3 ${selected ? "bg-primary/5" : ""}`}>
       <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-3">
-        <input
-          type="checkbox"
-          aria-label={`Select ${tx.creditor_name ?? "transaction"}`}
-          checked={selected}
-          onChange={onToggleSelect}
-          className="mt-0.5 size-4 rounded border-border accent-primary"
-        />
+        <label className="-m-3.5 -mt-3 inline-flex size-11 shrink-0 cursor-pointer items-center justify-center p-3.5">
+          <input
+            type="checkbox"
+            aria-label={`Select ${tx.creditor_name ?? "transaction"}`}
+            checked={selected}
+            onChange={onToggleSelect}
+            className="size-4 rounded border-border accent-primary"
+          />
+        </label>
         <div className="min-w-0">
           <p className="truncate text-sm font-medium text-foreground">
             {tx.creditor_name ?? "—"}
@@ -909,10 +915,15 @@ function TransactionCardView({
           ) : (
             <>
               <div
-                className={`font-figure text-sm font-medium ${
+                className={`inline-flex items-center justify-end gap-1 font-figure text-sm font-medium ${
                   positive ? "text-positive" : "text-negative"
                 }`}
               >
+                {positive ? (
+                  <ArrowUpRight className="size-3.5" />
+                ) : (
+                  <ArrowDownLeft className="size-3.5" />
+                )}
                 {formatAmountPlain(native)}
               </div>
               {showEur && (

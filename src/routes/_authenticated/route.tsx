@@ -113,7 +113,7 @@ function AuthenticatedLayout() {
   }
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="flex min-h-dvh bg-background">
       {/* Sidebar */}
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r bg-sidebar md:flex">
         <div className="flex h-16 items-center gap-2.5 border-b px-5">
@@ -182,8 +182,10 @@ function AuthenticatedLayout() {
         </div>
       </aside>
 
-      {/* Mobile top bar */}
-      <div className="fixed inset-x-0 top-0 z-30 grid h-14 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 border-b bg-sidebar px-2 md:hidden">
+      {/* Mobile top bar — padded for the notch/status bar so the hamburger
+          never sits under it on a home-screen install (safe-area-inset-top
+          is 0 on a normal browser tab, so this is a no-op there). */}
+      <div className="fixed inset-x-0 top-0 z-30 grid h-[calc(3.5rem+env(safe-area-inset-top))] grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 border-b bg-sidebar px-2 pt-[env(safe-area-inset-top)] md:hidden">
         <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
           <SheetTrigger asChild>
             <button
@@ -275,7 +277,7 @@ function AuthenticatedLayout() {
 
 
       {/* Main content */}
-      <main className="min-w-0 flex-1 pt-14 md:pt-0 md:pl-64">
+      <main className="min-w-0 flex-1 pt-[calc(3.5rem+env(safe-area-inset-top))] pb-[env(safe-area-inset-bottom)] md:pt-0 md:pb-0 md:pl-64">
         <Outlet />
       </main>
     </div>

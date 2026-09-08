@@ -106,6 +106,9 @@
     color: var(--color-foreground);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
+    /* iOS rubber-band scroll otherwise visually detaches the fixed mobile
+       top bar from the page content underneath it. */
+    overscroll-behavior-y: none;
   }
 
   ::selection {

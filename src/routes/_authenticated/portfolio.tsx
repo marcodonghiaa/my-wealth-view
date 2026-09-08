@@ -165,7 +165,7 @@ function PortfolioPage() {
 
       {/* Headline */}
       <section className="mb-6 rounded-2xl border bg-card p-6 card-ring surface-glow sm:p-8">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
           <Briefcase className="size-4 text-primary" />
           Total portfolio value
           {asOf && <span className="ml-1">· as of {formatDate(asOf)}</span>}
@@ -271,7 +271,8 @@ function PortfolioPage() {
                     </div>
                   </div>
 
-                  <div className="overflow-x-auto">
+                  {/* Desktop table */}
+                  <div className="hidden overflow-x-auto md:block">
                     <table className="w-full text-sm">
                       <thead className="bg-muted/50 text-left text-xs uppercase tracking-wide text-muted-foreground">
                         <tr>
@@ -328,6 +329,68 @@ function PortfolioPage() {
                         })}
                       </tbody>
                     </table>
+                  </div>
+
+                  {/* Mobile cards */}
+                  <div className="space-y-3 p-4 md:hidden">
+                    {group.holdings.map((row) => {
+                      const valueEur = row.value_eur ?? 0;
+                      const rowPercent =
+                        totalEur > 0 ? (valueEur / totalEur) * 100 : 0;
+                      return (
+                        <div
+                          key={row.isin ?? row.name}
+                          className="rounded-xl border bg-background/40 p-3"
+                        >
+                          <div className="min-w-0">
+                            <div className="truncate font-medium text-foreground">
+                              {row.name ?? "—"}
+                            </div>
+                            <div className="mt-0.5 text-xs text-muted-foreground">
+                              {row.broker_label ?? "—"}
+                            </div>
+                          </div>
+                          <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
+                            <div>
+                              <div className="text-xs text-muted-foreground">
+                                Shares
+                              </div>
+                              <div className="font-figure text-foreground">
+                                {row.shares != null
+                                  ? formatShares(row.shares)
+                                  : "—"}
+                              </div>
+                            </div>
+                            <div>
+                              <div className="text-xs text-muted-foreground">
+                                Price
+                              </div>
+                              <div className="font-figure text-foreground">
+                                {row.price != null && row.currency
+                                  ? formatMoney(row.price, row.currency)
+                                  : "—"}
+                              </div>
+                            </div>
+                            <div>
+                              <div className="text-xs text-muted-foreground">
+                                Value
+                              </div>
+                              <div className="font-figure font-medium text-foreground">
+                                {formatEur(valueEur)}
+                              </div>
+                            </div>
+                            <div>
+                              <div className="text-xs text-muted-foreground">
+                                % of total
+                              </div>
+                              <div className="font-figure text-foreground">
+                                {rowPercent.toFixed(1)}%
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </section>
               );

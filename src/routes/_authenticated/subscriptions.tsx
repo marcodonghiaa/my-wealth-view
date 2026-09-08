@@ -434,7 +434,7 @@ function FrequencyPicker({
                 : `${label} — auto-detected`
               : "Not enough history to detect — click to set manually"
           }
-          className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+          className={`inline-flex min-h-11 items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
             frequency
               ? "border border-border text-foreground/80 hover:border-primary/50 hover:text-foreground"
               : "border border-dashed border-muted-foreground/40 text-muted-foreground hover:border-primary/50 hover:text-foreground"
@@ -458,13 +458,13 @@ function FrequencyPicker({
                 min={1}
                 value={draftValue}
                 onChange={(e) => setDraftValue(e.target.value)}
-                className="h-8 w-14 rounded-md border bg-background px-2 text-sm text-foreground focus:ring-2 focus:ring-ring focus:outline-none"
+                className="h-8 w-14 rounded-md border bg-background px-2 text-base text-foreground focus:ring-2 focus:ring-ring focus:outline-none"
                 autoFocus
               />
               <select
                 value={draftUnit}
                 onChange={(e) => setDraftUnit(e.target.value as IntervalUnit)}
-                className="h-8 flex-1 rounded-md border bg-background px-1.5 text-sm text-foreground focus:ring-2 focus:ring-ring focus:outline-none"
+                className="h-8 flex-1 rounded-md border bg-background px-1.5 text-base text-foreground focus:ring-2 focus:ring-ring focus:outline-none"
               >
                 {INTERVAL_UNITS.map((u) => (
                   <option key={u} value={u}>
@@ -500,7 +500,7 @@ function FrequencyPicker({
                   onSelect(option);
                   setOpen(false);
                 }}
-                className="flex w-full items-center justify-between rounded-md px-2.5 py-1.5 text-left text-sm text-foreground hover:bg-accent"
+                className="flex min-h-11 w-full items-center justify-between rounded-md px-2.5 py-1.5 text-left text-sm text-foreground hover:bg-accent"
               >
                 {option}
                 {frequency === option && <Check className="size-4 text-primary" />}
@@ -509,7 +509,7 @@ function FrequencyPicker({
             <button
               type="button"
               onClick={openCustomForm}
-              className="flex w-full items-center justify-between rounded-md px-2.5 py-1.5 text-left text-sm text-foreground hover:bg-accent"
+              className="flex min-h-11 w-full items-center justify-between rounded-md px-2.5 py-1.5 text-left text-sm text-foreground hover:bg-accent"
             >
               Custom…
               {isCustom && <Check className="size-4 text-primary" />}

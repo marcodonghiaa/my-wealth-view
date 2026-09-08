@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import {
+  ChevronDown,
   Landmark,
   Loader2,
   Lock,
@@ -171,6 +172,7 @@ function AccountsPage() {
   );
   const [maturityDate, setMaturityDate] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
+  const [showCdForm, setShowCdForm] = useState(false);
 
   const addCd = useMutation({
     mutationFn: async (input: {
@@ -374,14 +376,27 @@ function AccountsPage() {
           )}
         </div>
 
-        {/* Add CD form */}
+        {/* Add CD form — collapsed by default so it doesn't push the actual
+            CD list below the fold on a phone. */}
         <form
           onSubmit={handleAddCd}
-          className="mb-4 rounded-2xl border bg-card p-5 card-ring"
+          className="mb-4 rounded-2xl border bg-card card-ring"
         >
-          <h3 className="mb-3 text-sm font-medium text-foreground">
-            Add a certificate of deposit
-          </h3>
+          <button
+            type="button"
+            onClick={() => setShowCdForm((v) => !v)}
+            className="flex min-h-11 w-full items-center justify-between gap-3 p-5 text-left"
+            aria-expanded={showCdForm}
+          >
+            <h3 className="text-sm font-medium text-foreground">
+              Add a certificate of deposit
+            </h3>
+            <ChevronDown
+              className={`size-4 shrink-0 text-muted-foreground transition-transform ${showCdForm ? "rotate-180" : ""}`}
+            />
+          </button>
+          {showCdForm && (
+          <div className="px-5 pb-5">
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
             <div className="lg:col-span-2">
               <label className="mb-1 block text-xs text-muted-foreground">
@@ -392,7 +407,7 @@ function AccountsPage() {
                 value={label}
                 onChange={(e) => setLabel(e.target.value)}
                 placeholder="e.g. House deposit CD"
-                className="w-full rounded-lg border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground/50 focus:ring-2 focus:ring-ring focus:outline-none"
+                className="w-full rounded-lg border bg-background px-3 py-2 text-base placeholder:text-muted-foreground/50 focus:ring-2 focus:ring-ring focus:outline-none"
               />
             </div>
             <div>
@@ -404,7 +419,7 @@ function AccountsPage() {
                 value={bankLabel}
                 onChange={(e) => setBankLabel(e.target.value)}
                 placeholder="Fineco"
-                className="w-full rounded-lg border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground/50 focus:ring-2 focus:ring-ring focus:outline-none"
+                className="w-full rounded-lg border bg-background px-3 py-2 text-base placeholder:text-muted-foreground/50 focus:ring-2 focus:ring-ring focus:outline-none"
               />
             </div>
             <div>
@@ -414,7 +429,7 @@ function AccountsPage() {
               <select
                 value={currency}
                 onChange={(e) => setCurrency(e.target.value)}
-                className="w-full rounded-lg border bg-background px-3 py-2 text-sm focus:ring-2 focus:ring-ring focus:outline-none"
+                className="w-full rounded-lg border bg-background px-3 py-2 text-base focus:ring-2 focus:ring-ring focus:outline-none"
               >
                 <option value="EUR">EUR</option>
                 <option value="USD">USD</option>
@@ -433,7 +448,7 @@ function AccountsPage() {
                 value={principal}
                 onChange={(e) => setPrincipal(e.target.value)}
                 placeholder="10000"
-                className="w-full rounded-lg border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground/50 focus:ring-2 focus:ring-ring focus:outline-none"
+                className="w-full rounded-lg border bg-background px-3 py-2 text-base placeholder:text-muted-foreground/50 focus:ring-2 focus:ring-ring focus:outline-none"
               />
             </div>
             <div>
@@ -447,7 +462,7 @@ function AccountsPage() {
                 value={annualRatePct}
                 onChange={(e) => setAnnualRatePct(e.target.value)}
                 placeholder="3.5"
-                className="w-full rounded-lg border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground/50 focus:ring-2 focus:ring-ring focus:outline-none"
+                className="w-full rounded-lg border bg-background px-3 py-2 text-base placeholder:text-muted-foreground/50 focus:ring-2 focus:ring-ring focus:outline-none"
               />
             </div>
             <div>
@@ -458,7 +473,7 @@ function AccountsPage() {
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="w-full rounded-lg border bg-background px-3 py-2 text-sm focus:ring-2 focus:ring-ring focus:outline-none"
+                className="w-full rounded-lg border bg-background px-3 py-2 text-base focus:ring-2 focus:ring-ring focus:outline-none"
               />
             </div>
             <div>
@@ -469,7 +484,7 @@ function AccountsPage() {
                 type="date"
                 value={maturityDate}
                 onChange={(e) => setMaturityDate(e.target.value)}
-                className="w-full rounded-lg border bg-background px-3 py-2 text-sm focus:ring-2 focus:ring-ring focus:outline-none"
+                className="w-full rounded-lg border bg-background px-3 py-2 text-base focus:ring-2 focus:ring-ring focus:outline-none"
               />
             </div>
           </div>
@@ -477,7 +492,7 @@ function AccountsPage() {
             <button
               type="submit"
               disabled={addCd.isPending}
-              className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+              className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
             >
               {addCd.isPending ? (
                 <Loader2 className="size-4 animate-spin" />
@@ -488,6 +503,8 @@ function AccountsPage() {
             </button>
             {formError && <p className="text-sm text-negative">{formError}</p>}
           </div>
+          </div>
+          )}
         </form>
 
         {cdQuery.isError && (

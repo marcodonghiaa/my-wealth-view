@@ -3,7 +3,6 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ChevronDown,
-  ListChecks,
   Loader2,
   Plus,
   Trash2,
@@ -90,6 +89,7 @@ function RulesPage() {
   const [categoryOpen, setCategoryOpen] = useState(false);
   const [typeOpen, setTypeOpen] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [showForm, setShowForm] = useState(false);
 
   const rulesQuery = useQuery({ queryKey: ["category-rules"], queryFn: fetchRules });
 
@@ -168,27 +168,37 @@ function RulesPage() {
   const rules = rulesQuery.data ?? [];
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
-      <header className="mb-6">
-        <div className="flex items-center gap-2.5">
-          <div className="flex size-8 items-center justify-center rounded-lg bg-primary/15 text-primary">
-            <ListChecks className="size-4" />
-          </div>
-          <h1 className="text-2xl font-semibold tracking-tight">Categorization Rules</h1>
-        </div>
-        <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-          Rules run automatically before AI categorization. If a transaction's
-          chosen field contains your match text, it's categorized instantly —
-          no AI needed.
+    <div className="mx-auto max-w-5xl px-4 py-8 sm:px-8 md:py-12">
+      <header className="mb-8">
+        <h1 className="text-xl font-semibold tracking-tight text-foreground">
+          Rules
+        </h1>
+        <p className="mt-0.5 text-sm text-muted-foreground">
+          Rules run automatically before AI categorization — if a
+          transaction's chosen field contains your match text, it's
+          categorized instantly, no AI needed.
         </p>
       </header>
 
-      {/* Add rule form */}
+      {/* Add rule form — collapsed by default so it doesn't push the
+          existing rules list below the fold on a phone. */}
       <form
         onSubmit={handleSubmit}
-        className="card-ring surface-glow mb-8 rounded-xl p-5"
+        className="card-ring surface-glow mb-8 rounded-xl"
       >
-        <h2 className="mb-4 text-sm font-medium">Add rule</h2>
+        <button
+          type="button"
+          onClick={() => setShowForm((v) => !v)}
+          className="flex min-h-11 w-full items-center justify-between gap-3 p-5 text-left"
+          aria-expanded={showForm}
+        >
+          <h2 className="text-sm font-medium">Add rule</h2>
+          <ChevronDown
+            className={`size-4 shrink-0 text-muted-foreground transition-transform ${showForm ? "rotate-180" : ""}`}
+          />
+        </button>
+        {showForm && (
+        <div className="px-5 pb-5">
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
           <div className="lg:col-span-1">
             <label className="mb-1 block text-xs text-muted-foreground">
@@ -198,7 +208,7 @@ function RulesPage() {
               <PopoverTrigger asChild>
                 <button
                   type="button"
-                  className="flex w-full items-center justify-between rounded-lg border bg-background px-3 py-2 text-sm"
+                  className="flex w-full items-center justify-between rounded-lg border bg-background px-3 py-2 text-base"
                 >
                   {fieldLabel(matchField)}
                   <ChevronDown className="size-3.5 opacity-50" />
@@ -214,7 +224,7 @@ function RulesPage() {
                       setFieldOpen(false);
                     }}
                     className={cn(
-                      "w-full rounded-md px-2.5 py-1.5 text-left text-sm hover:bg-accent",
+                      "min-h-11 w-full rounded-md px-2.5 py-1.5 text-left text-sm hover:bg-accent",
                       f.value === matchField && "bg-accent",
                     )}
                   >
@@ -234,7 +244,7 @@ function RulesPage() {
               value={matchText}
               onChange={(e) => setMatchText(e.target.value)}
               placeholder="e.g. spotify"
-              className="w-full rounded-lg border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/50"
+              className="w-full rounded-lg border bg-background px-3 py-2 text-base placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/50"
             />
           </div>
 
@@ -246,7 +256,7 @@ function RulesPage() {
               <PopoverTrigger asChild>
                 <button
                   type="button"
-                  className="flex w-full items-center justify-between rounded-lg border bg-background px-3 py-2 text-sm"
+                  className="flex w-full items-center justify-between rounded-lg border bg-background px-3 py-2 text-base"
                 >
                   <span className={cn(!category && "text-muted-foreground/60")}>
                     {category ?? "—"}
@@ -262,7 +272,7 @@ function RulesPage() {
                     setCategoryOpen(false);
                   }}
                   className={cn(
-                    "w-full rounded-md px-2.5 py-1.5 text-left text-sm text-muted-foreground hover:bg-accent",
+                    "min-h-11 w-full rounded-md px-2.5 py-1.5 text-left text-sm text-muted-foreground hover:bg-accent",
                     !category && "bg-accent",
                   )}
                 >
@@ -277,7 +287,7 @@ function RulesPage() {
                       setCategoryOpen(false);
                     }}
                     className={cn(
-                      "w-full rounded-md px-2.5 py-1.5 text-left text-sm hover:bg-accent",
+                      "min-h-11 w-full rounded-md px-2.5 py-1.5 text-left text-sm hover:bg-accent",
                       c === category && "bg-accent",
                     )}
                   >
@@ -296,7 +306,7 @@ function RulesPage() {
               <PopoverTrigger asChild>
                 <button
                   type="button"
-                  className="flex w-full items-center justify-between rounded-lg border bg-background px-3 py-2 text-sm"
+                  className="flex w-full items-center justify-between rounded-lg border bg-background px-3 py-2 text-base"
                 >
                   <span className={cn(!type && "text-muted-foreground/60")}>
                     {type ?? "—"}
@@ -312,7 +322,7 @@ function RulesPage() {
                     setTypeOpen(false);
                   }}
                   className={cn(
-                    "w-full rounded-md px-2.5 py-1.5 text-left text-sm text-muted-foreground hover:bg-accent",
+                    "min-h-11 w-full rounded-md px-2.5 py-1.5 text-left text-sm text-muted-foreground hover:bg-accent",
                     !type && "bg-accent",
                   )}
                 >
@@ -327,7 +337,7 @@ function RulesPage() {
                       setTypeOpen(false);
                     }}
                     className={cn(
-                      "w-full rounded-md px-2.5 py-1.5 text-left text-sm hover:bg-accent",
+                      "min-h-11 w-full rounded-md px-2.5 py-1.5 text-left text-sm hover:bg-accent",
                       t === type && "bg-accent",
                     )}
                   >
@@ -343,7 +353,7 @@ function RulesPage() {
           <button
             type="submit"
             disabled={addRule.isPending}
-            className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+            className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
           >
             {addRule.isPending ? (
               <Loader2 className="size-4 animate-spin" />
@@ -356,6 +366,8 @@ function RulesPage() {
             <p className="text-sm text-destructive">{formError}</p>
           )}
         </div>
+        </div>
+        )}
       </form>
 
       {/* Rules list */}

@@ -174,7 +174,7 @@ function NetWorthPage() {
               type="button"
               onClick={() => setCurrency(c)}
               aria-pressed={currency === c}
-              className={`rounded-md px-3.5 py-1.5 text-xs font-semibold tracking-wide transition-colors ${
+              className={`min-h-11 rounded-md px-3.5 py-1.5 text-xs font-semibold tracking-wide transition-colors ${
                 currency === c
                   ? "bg-primary text-primary-foreground"
                   : "text-muted-foreground hover:text-foreground"
@@ -197,7 +197,7 @@ function NetWorthPage() {
 
       {/* Headline card */}
       <section className="mb-6 rounded-2xl border bg-card p-6 card-ring surface-glow sm:p-8">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
           <Wallet className="size-4 text-primary" />
           Total net worth
           {latest && (
