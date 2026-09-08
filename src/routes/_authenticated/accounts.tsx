@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { getSupabase } from "@/integrations/supabase/client";
-import { AccountBadge } from "@/components/bank-badge";
+import { AccountBadge, bankNameFromLabel } from "@/components/bank-badge";
 
 export const Route = createFileRoute("/_authenticated/accounts")({
   head: () => ({
@@ -40,6 +40,13 @@ interface BankAccountRow {
   snapshot_date: string | null;
   amount: number | null;
   amount_eur: number | null;
+}
+
+interface BankGroup {
+  bank: string;
+  main: BankAccountRow;
+  subAccounts: Array<BankAccountRow>;
+  subtotalEur: number;
 }
 
 interface CdRow {
@@ -118,6 +125,36 @@ function AccountsPage() {
     () => bankAccounts.reduce((sum, a) => sum + (a.amount_eur ?? 0), 0),
     [bankAccounts],
   );
+
+  const bankGroups = useMemo<Array<BankGroup>>(() => {
+    const byBank = new Map<string, Array<BankAccountRow>>();
+    for (const a of bankAccounts) {
+      const bank = bankNameFromLabel(a.label ?? "Bank account");
+      const list = byBank.get(bank) ?? [];
+      list.push(a);
+      byBank.set(bank, list);
+    }
+    return Array.from(byBank.entries())
+      .map(([bank, accountsForBank]) => {
+        const eurAccount = accountsForBank.find((a) => a.currency === "EUR");
+        // Fall back to the largest-balance account if a bank somehow has no
+        // EUR account — shouldn't happen for Revolut/Wise/Fineco today, but
+        // keeps the grouping from silently dropping accounts if it ever does.
+        const main =
+          eurAccount ??
+          [...accountsForBank].sort(
+            (a, b) => Math.abs(b.amount_eur ?? 0) - Math.abs(a.amount_eur ?? 0),
+          )[0];
+        const subAccounts = accountsForBank
+          .filter((a) => a.uid !== main.uid && (a.amount ?? 0) !== 0)
+          .sort((a, b) => (b.amount_eur ?? 0) - (a.amount_eur ?? 0));
+        const subtotalEur =
+          (main.amount_eur ?? 0) +
+          subAccounts.reduce((sum, a) => sum + (a.amount_eur ?? 0), 0);
+        return { bank, main, subAccounts, subtotalEur };
+      })
+      .sort((a, b) => b.subtotalEur - a.subtotalEur);
+  }, [bankAccounts]);
   const totalCdEur = useMemo(
     () => cds.reduce((sum, c) => sum + (c.current_value_eur ?? 0), 0),
     [cds],
@@ -268,38 +305,53 @@ function AccountsPage() {
             </div>
           ) : (
             <ul className="divide-y">
-              {bankAccounts.map((a) => {
+              {bankGroups.map((group) => {
                 const percent =
-                  totalBankEur > 0 ? ((a.amount_eur ?? 0) / totalBankEur) * 100 : 0;
+                  totalBankEur > 0 ? (group.subtotalEur / totalBankEur) * 100 : 0;
                 return (
-                  <li
-                    key={a.uid}
-                    className="flex items-center gap-3 px-4 py-3 sm:px-5"
-                  >
-                    <AccountBadge label={a.label ?? "Bank account"} />
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate text-sm font-medium text-foreground">
-                        {a.label ?? "Bank account"}
-                      </div>
-                      <div className="mt-0.5 truncate text-xs text-muted-foreground">
-                        {a.iban ?? a.currency}
-                      </div>
-                    </div>
-                    <div className="shrink-0 text-right">
-                      <div className="font-figure text-sm font-medium text-foreground">
-                        {formatMoney(a.amount ?? 0, a.currency)}
-                      </div>
-                      {a.currency !== "EUR" && (
-                        <div className="font-figure text-xs text-muted-foreground">
-                          {formatEur(a.amount_eur ?? 0)} · {percent.toFixed(1)}%
+                  <li key={group.bank} className="px-4 py-3 sm:px-5">
+                    {/* Main (EUR) account */}
+                    <div className="flex items-center gap-3">
+                      <AccountBadge label={group.main.label ?? group.bank} />
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-sm font-medium text-foreground">
+                          {group.bank}
                         </div>
-                      )}
-                      {a.currency === "EUR" && (
+                        <div className="mt-0.5 truncate text-xs text-muted-foreground">
+                          {group.main.iban ?? group.main.currency}
+                        </div>
+                      </div>
+                      <div className="shrink-0 text-right">
+                        <div className="font-figure text-sm font-medium text-foreground">
+                          {formatEur(group.subtotalEur)}
+                        </div>
                         <div className="text-xs text-muted-foreground">
                           {percent.toFixed(1)}%
                         </div>
-                      )}
+                      </div>
                     </div>
+
+                    {/* Sub-accounts in other currencies */}
+                    {group.subAccounts.length > 0 && (
+                      <ul className="mt-2 ml-9 space-y-1.5 border-l pl-3">
+                        {group.subAccounts.map((sub) => (
+                          <li
+                            key={sub.uid}
+                            className="flex items-center justify-between gap-3 text-sm"
+                          >
+                            <span className="text-xs font-medium text-muted-foreground">
+                              {sub.currency}
+                            </span>
+                            <span className="font-figure text-foreground">
+                              {formatMoney(sub.amount ?? 0, sub.currency)}
+                              <span className="ml-1.5 text-xs text-muted-foreground">
+                                ({formatEur(sub.amount_eur ?? 0)})
+                              </span>
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
                   </li>
                 );
               })}
