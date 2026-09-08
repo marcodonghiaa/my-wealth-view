@@ -111,7 +111,7 @@ interface TypeGroup {
   holdings: Array<PortfolioRow>;
 }
 
-function PortfolioPage() {
+export function PortfolioPage() {
   const query = useQuery({
     queryKey: ["portfolio-latest"],
     queryFn: fetchPortfolio,

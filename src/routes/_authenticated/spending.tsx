@@ -66,7 +66,7 @@ function formatEur(value: number): string {
   }).format(value);
 }
 
-function SpendingPage() {
+export function SpendingPage() {
   const [month, setMonth] = useState<Date>(() => startOfMonth(new Date()));
 
   const spendQuery = useQuery({

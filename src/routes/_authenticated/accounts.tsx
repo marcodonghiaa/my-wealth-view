@@ -10,7 +10,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
-import { getSupabase } from "@/integrations/supabase/client";
+import { getSupabase, isDemoRoute } from "@/integrations/supabase/client";
 import { AccountBadge, bankNameFromLabel } from "@/components/bank-badge";
 
 export const Route = createFileRoute("/_authenticated/accounts")({
@@ -111,7 +111,7 @@ function formatDate(iso: string | null): string {
   });
 }
 
-function AccountsPage() {
+export function AccountsPage() {
   const queryClient = useQueryClient();
   const bankQuery = useQuery({
     queryKey: ["bank-accounts-latest"],
@@ -184,6 +184,7 @@ function AccountsPage() {
       start_date: string;
       maturity_date: string;
     }) => {
+      if (isDemoRoute()) throw new Error("This is a read-only demo — sign up to make changes.");
       const supabase = getSupabase();
       const { data: userData, error: userError } = await supabase.auth.getUser();
       if (userError || !userData.user) throw userError ?? new Error("Not signed in");
@@ -209,6 +210,7 @@ function AccountsPage() {
 
   const deleteCd = useMutation({
     mutationFn: async (id: string) => {
+      if (isDemoRoute()) throw new Error("This is a read-only demo — sign up to make changes.");
       const { error } = await getSupabase().from("cd_holdings").delete().eq("id", id);
       if (error) throw error;
     },

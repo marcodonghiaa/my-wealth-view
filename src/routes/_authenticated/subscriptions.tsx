@@ -10,7 +10,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { toast } from "sonner";
-import { getSupabase } from "@/integrations/supabase/client";
+import { getSupabase, isDemoRoute } from "@/integrations/supabase/client";
 import {
   Popover,
   PopoverContent,
@@ -91,7 +91,7 @@ function signedNativeAmount(sub: SubscriptionRow): number | null {
   return sign * Math.abs(sub.amount);
 }
 
-function SubscriptionsPage() {
+export function SubscriptionsPage() {
   const queryClient = useQueryClient();
   const query = useQuery({
     queryKey: ["subscriptions"],
@@ -108,6 +108,7 @@ function SubscriptionsPage() {
 
   const frequencyMutation = useMutation({
     mutationFn: async (vars: OverrideInput) => {
+      if (isDemoRoute()) throw new Error("This is a read-only demo — sign up to make changes.");
       const supabase = getSupabase();
       const {
         data: { user },

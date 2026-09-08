@@ -111,7 +111,7 @@ function formatAxisDate(iso: string): string {
   });
 }
 
-function NetWorthPage() {
+export function NetWorthPage() {
   const [currency, setCurrency] = useState<Currency>("EUR");
 
   const netWorthQuery = useQuery({

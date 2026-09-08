@@ -14,7 +14,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { getSupabase } from "@/integrations/supabase/client";
+import { getSupabase, isDemoRoute } from "@/integrations/supabase/client";
 import { AccountBadge, CurrencyBadge } from "@/components/bank-badge";
 
 
@@ -140,7 +140,7 @@ const CATEGORIES = [
 const UNCATEGORIZED = "__uncategorized__";
 
 
-function TransactionsPage() {
+export function TransactionsPage() {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<string>("all");
   const [month, setMonth] = useState(() => startOfMonth(new Date()));
@@ -156,6 +156,7 @@ function TransactionsPage() {
       entryReference: string;
       category: string;
     }) => {
+      if (isDemoRoute()) throw new Error("This is a read-only demo — sign up to make changes.");
       const { error } = await getSupabase()
         .from("transactions")
         .update({ category: next })
@@ -201,6 +202,7 @@ function TransactionsPage() {
       entryReference: string;
       transactionType: string;
     }) => {
+      if (isDemoRoute()) throw new Error("This is a read-only demo — sign up to make changes.");
       const { error } = await getSupabase()
         .from("transactions")
         .update({ transaction_type: transactionType })
@@ -247,6 +249,7 @@ function TransactionsPage() {
       entryReferences: Array<string>;
       category: string;
     }) => {
+      if (isDemoRoute()) throw new Error("This is a read-only demo — sign up to make changes.");
       const { error } = await getSupabase()
         .from("transactions")
         .update({ category: next })

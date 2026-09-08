@@ -8,7 +8,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
-import { getSupabase } from "@/integrations/supabase/client";
+import { getSupabase, isDemoRoute } from "@/integrations/supabase/client";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
@@ -79,7 +79,7 @@ function fieldLabel(value: string) {
   return MATCH_FIELDS.find((f) => f.value === value)?.label ?? value;
 }
 
-function RulesPage() {
+export function RulesPage() {
   const queryClient = useQueryClient();
   const [matchField, setMatchField] = useState("creditor_name");
   const [matchText, setMatchText] = useState("");
@@ -100,6 +100,7 @@ function RulesPage() {
       set_category: string | null;
       set_transaction_type: string | null;
     }) => {
+      if (isDemoRoute()) throw new Error("This is a read-only demo — sign up to make changes.");
       const supabase = getSupabase();
       const { data: userData, error: userError } = await supabase.auth.getUser();
       if (userError || !userData.user) throw userError ?? new Error("Not signed in");
@@ -125,6 +126,7 @@ function RulesPage() {
 
   const deleteRule = useMutation({
     mutationFn: async (id: string) => {
+      if (isDemoRoute()) throw new Error("This is a read-only demo — sign up to make changes.");
       const { error } = await getSupabase().from("category_rules").delete().eq("id", id);
       if (error) throw error;
     },

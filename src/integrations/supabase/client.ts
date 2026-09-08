@@ -16,5 +16,21 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     autoRefreshToken: true,
   }
 });
-// Compatibility accessor used across the app.
-export const getSupabase = () => supabase;
+
+// A second client with no session persistence, always talking as the
+// anonymous role, regardless of what's logged in elsewhere in this browser.
+// Used by /demo so the public demo never depends on (or leaks) a real session.
+export const demoSupabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+  auth: {
+    persistSession: false,
+    autoRefreshToken: false,
+  }
+});
+
+export const isDemoRoute = () =>
+  typeof window !== "undefined" && window.location.pathname.startsWith("/demo");
+
+// Compatibility accessor used across the app — routes to the read-only anon
+// client on /demo, real client everywhere else, so every page's existing
+// data-fetching code works unchanged in both places.
+export const getSupabase = () => (isDemoRoute() ? demoSupabase : supabase);
