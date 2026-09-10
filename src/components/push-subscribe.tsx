@@ -79,7 +79,17 @@ export function PushSubscribeButton() {
       setSubscribed(true);
       toast.success("Purchase check-ins enabled");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Couldn't enable check-ins");
+      // DOMException (what pushManager.subscribe/register actually throw) is not
+      // `instanceof Error`, so that check alone was swallowing the real reason.
+      console.error("Push subscribe failed:", err);
+      const name = err && typeof err === "object" && "name" in err ? String(err.name) : null;
+      const message =
+        err instanceof Error
+          ? err.message
+          : err && typeof err === "object" && "message" in err
+            ? String((err as { message: unknown }).message)
+            : "Couldn't enable check-ins";
+      toast.error(name ? `${name}: ${message}` : message);
     } finally {
       setBusy(false);
     }
