@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ChevronDown,
   Landmark,
@@ -119,6 +119,21 @@ export function AccountsPage() {
     queryFn: fetchBankAccounts,
   });
   const cdQuery = useQuery({ queryKey: ["cd-holdings"], queryFn: fetchCds });
+
+  // Landed here from the bank-consent-callback redirect after connecting a bank.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const linked = params.get("bank_linked");
+    const error = params.get("bank_link_error");
+    if (linked) {
+      toast.success(`${linked} account${linked === "1" ? "" : "s"} connected`);
+      void queryClient.invalidateQueries({ queryKey: ["bank-accounts-latest"] });
+    } else if (error) {
+      toast.error("Couldn't connect bank", { description: error });
+    }
+    if (linked || error) window.history.replaceState(null, "", window.location.pathname);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const bankAccounts = bankQuery.data ?? [];
   const cds = cdQuery.data ?? [];
