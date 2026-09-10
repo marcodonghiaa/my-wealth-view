@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Loader2, LockKeyhole, TrendingUp } from "lucide-react";
+import { Loader2, LockKeyhole, Sparkles, TrendingUp } from "lucide-react";
 import { getSupabase } from "@/integrations/supabase/client";
 
 function safeNext(value: unknown): string | undefined {
@@ -132,6 +132,14 @@ function AuthPage() {
               : "Create your account"}
           </p>
         </div>
+
+        <a
+          href="/demo"
+          className="mb-4 flex items-center justify-center gap-2 rounded-xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm font-medium text-primary transition-colors hover:bg-primary/20"
+        >
+          <Sparkles className="size-4" />
+          Just here to look around? View the live demo
+        </a>
 
         <div className="rounded-2xl border bg-card p-6 card-ring">
           {checkingSession ? (
