@@ -28,6 +28,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { getSupabase } from "@/integrations/supabase/client";
+import { PushSubscribeButton } from "@/components/push-subscribe";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -170,6 +171,7 @@ function AuthenticatedLayout() {
           <div className="mb-2 truncate px-3 text-xs text-muted-foreground">
             {user.email}
           </div>
+          <PushSubscribeButton />
           <button
             type="button"
             onClick={handleSignOut}
@@ -243,6 +245,7 @@ function AuthenticatedLayout() {
               <div className="mb-2 truncate px-3 text-xs text-muted-foreground">
                 {user.email}
               </div>
+              <PushSubscribeButton />
               <button
                 type="button"
                 onClick={handleSignOut}
