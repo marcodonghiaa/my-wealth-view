@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { Bell, BellOff } from "lucide-react";
 import { getSupabase, isDemoRoute } from "@/integrations/supabase/client";
 
@@ -24,13 +25,21 @@ function urlBase64ToUint8Array(base64: string) {
 export function PushSubscribeButton() {
   const [supported, setSupported] = useState(false);
   const [permission, setPermission] = useState<NotificationPermission>("default");
+  // Tracks an actual saved subscription, not just OS-level permission -- granting
+  // permission can still be followed by a failed subscribe/insert, and permission
+  // alone would then wrongly keep showing "enabled" with no way to retry.
+  const [subscribed, setSubscribed] = useState(false);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    setSupported(
-      isStandalone() && "serviceWorker" in navigator && "PushManager" in window,
-    );
+    const ok = isStandalone() && "serviceWorker" in navigator && "PushManager" in window;
+    setSupported(ok);
     if ("Notification" in window) setPermission(Notification.permission);
+    if (!ok) return;
+    navigator.serviceWorker.getRegistration().then(async (reg) => {
+      const existing = await reg?.pushManager.getSubscription();
+      if (existing) setSubscribed(true);
+    });
   }, []);
 
   if (!supported || isDemoRoute()) return null;
@@ -40,7 +49,10 @@ export function PushSubscribeButton() {
     try {
       const result = await Notification.requestPermission();
       setPermission(result);
-      if (result !== "granted") return;
+      if (result !== "granted") {
+        toast.error("Notification permission denied");
+        return;
+      }
 
       const registration = await navigator.serviceWorker.register("/sw.js");
       const subscription = await registration.pushManager.subscribe({
@@ -49,22 +61,28 @@ export function PushSubscribeButton() {
       });
 
       const supabase = getSupabase();
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData.user) return;
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError || !userData.user) throw userError ?? new Error("Not signed in");
 
       const json = subscription.toJSON();
-      await supabase.from("push_subscriptions" as never).insert({
+      const { error } = await supabase.from("push_subscriptions" as never).insert({
         user_id: userData.user.id,
         endpoint: json.endpoint,
         p256dh: json.keys?.["p256dh"],
         auth: json.keys?.["auth"],
       } as never);
+      if (error) throw error;
+
+      setSubscribed(true);
+      toast.success("Purchase check-ins enabled");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Couldn't enable check-ins");
     } finally {
       setBusy(false);
     }
   }
 
-  if (permission === "granted") {
+  if (subscribed) {
     return (
       <div className="flex min-h-11 items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground">
         <Bell className="size-4" />
