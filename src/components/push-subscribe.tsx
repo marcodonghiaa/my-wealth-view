@@ -54,7 +54,10 @@ export function PushSubscribeButton() {
         return;
       }
 
-      const registration = await navigator.serviceWorker.register("/sw.js");
+      await navigator.serviceWorker.register("/sw.js");
+      // register() can resolve before the worker is actually active -- pushManager.subscribe
+      // needs an active worker, so wait for the ready promise rather than the raw registration.
+      const registration = await navigator.serviceWorker.ready;
       const subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
