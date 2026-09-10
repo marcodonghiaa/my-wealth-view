@@ -16,6 +16,13 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { getSupabase, isDemoRoute } from "@/integrations/supabase/client";
 import { AccountBadge, CurrencyBadge } from "@/components/bank-badge";
 
@@ -372,12 +379,17 @@ export function TransactionsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const [spotlightTx, setSpotlightTx] = useState<TransactionRow | null>(null);
+
   useEffect(() => {
     if (!highlightRef || txQuery.isPending) return;
     const el = document.querySelector(`[data-entry-ref="${CSS.escape(highlightRef)}"]`);
     el?.scrollIntoView({ behavior: "smooth", block: "center" });
+    const tx = transactions.find((t) => t.entry_reference === highlightRef);
+    if (tx && tx.worth_it == null) setSpotlightTx(tx);
     const timer = setTimeout(() => setHighlightRef(null), 3000);
     return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [highlightRef, txQuery.isPending, transactions]);
 
   const categories = useMemo(() => {
@@ -462,6 +474,55 @@ export function TransactionsPage() {
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-8 md:py-12">
+      <Dialog
+        open={spotlightTx != null}
+        onOpenChange={(open) => {
+          if (!open) setSpotlightTx(null);
+        }}
+      >
+        {spotlightTx && (
+          <DialogContent className="max-w-sm text-center">
+            <DialogHeader>
+              <DialogTitle className="text-center text-xl">Worth it?</DialogTitle>
+              <DialogDescription className="text-center">
+                {spotlightTx.creditor_name ?? "A purchase"} · {spotlightTx.category}
+              </DialogDescription>
+            </DialogHeader>
+            <p className="font-figure py-4 text-4xl font-semibold text-foreground">
+              {formatMoney(Math.abs(spotlightTx.amount ?? 0), spotlightTx.currency ?? "EUR")}
+            </p>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  answerWorthIt.mutate({
+                    entryReference: spotlightTx.entry_reference,
+                    worthIt: "no",
+                  });
+                  setSpotlightTx(null);
+                }}
+                className="min-h-11 flex-1 rounded-lg border border-negative/30 bg-negative/10 text-sm font-semibold text-negative transition-colors hover:bg-negative/20"
+              >
+                No
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  answerWorthIt.mutate({
+                    entryReference: spotlightTx.entry_reference,
+                    worthIt: "yes",
+                  });
+                  setSpotlightTx(null);
+                }}
+                className="min-h-11 flex-1 rounded-lg border border-positive/30 bg-positive/10 text-sm font-semibold text-positive transition-colors hover:bg-positive/20"
+              >
+                Yes
+              </button>
+            </div>
+          </DialogContent>
+        )}
+      </Dialog>
+
       <header className="mb-8">
         <h1 className="text-xl font-semibold tracking-tight text-foreground">
           Transactions
