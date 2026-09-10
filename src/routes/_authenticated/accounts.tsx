@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import {
   ChevronDown,
   Landmark,
+  Link2,
   Loader2,
   Lock,
   Plus,
@@ -161,6 +162,41 @@ export function AccountsPage() {
     [cds],
   );
 
+  // Connect-a-bank form state
+  const [showConnectForm, setShowConnectForm] = useState(false);
+  const [bankName, setBankName] = useState("");
+  const [bankCountry, setBankCountry] = useState("IT");
+  const [connectError, setConnectError] = useState<string | null>(null);
+
+  const connectBank = useMutation({
+    mutationFn: async (input: { bankName: string; country: string }) => {
+      if (isDemoRoute()) throw new Error("This is a read-only demo — sign up to connect a real bank.");
+      const { data, error } = await getSupabase().functions.invoke<{ url?: string; error?: string }>(
+        "start-bank-consent",
+        { body: input },
+      );
+      if (error) throw error;
+      if (!data?.url) throw new Error(data?.error ?? "No consent URL returned");
+      return data.url;
+    },
+    onSuccess: (url) => {
+      window.location.href = url;
+    },
+    onError: (err) => {
+      toast.error(err instanceof Error ? err.message : "Couldn't start bank connection");
+    },
+  });
+
+  function handleConnectBank(e: React.FormEvent) {
+    e.preventDefault();
+    if (!bankName.trim() || !bankCountry.trim()) {
+      setConnectError("Bank name and country are both required.");
+      return;
+    }
+    setConnectError(null);
+    connectBank.mutate({ bankName: bankName.trim(), country: bankCountry.trim().toUpperCase() });
+  }
+
   // Add-CD form state
   const [label, setLabel] = useState("");
   const [bankLabel, setBankLabel] = useState("");
@@ -295,6 +331,77 @@ export function AccountsPage() {
             Couldn't load bank accounts: {bankQuery.error.message}
           </div>
         )}
+
+        {/* Connect a bank — collapsed by default, same pattern as Add CD below. */}
+        <form
+          onSubmit={handleConnectBank}
+          className="mb-4 rounded-2xl border bg-card card-ring"
+        >
+          <button
+            type="button"
+            onClick={() => setShowConnectForm((v) => !v)}
+            className="flex min-h-11 w-full items-center justify-between gap-3 p-5 text-left"
+            aria-expanded={showConnectForm}
+          >
+            <h3 className="flex items-center gap-2 text-sm font-medium text-foreground">
+              <Link2 className="size-4 text-primary" />
+              Connect a bank
+            </h3>
+            <ChevronDown
+              className={`size-4 shrink-0 text-muted-foreground transition-transform ${showConnectForm ? "rotate-180" : ""}`}
+            />
+          </button>
+          {showConnectForm && (
+            <div className="px-5 pb-5">
+              <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
+                <div>
+                  <label className="mb-1 block text-xs text-muted-foreground">
+                    Bank name
+                  </label>
+                  <input
+                    type="text"
+                    value={bankName}
+                    onChange={(e) => setBankName(e.target.value)}
+                    placeholder="e.g. Revolut"
+                    className="w-full rounded-lg border bg-background px-3 py-2 text-base placeholder:text-muted-foreground/50 focus:ring-2 focus:ring-ring focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs text-muted-foreground">
+                    Country
+                  </label>
+                  <input
+                    type="text"
+                    value={bankCountry}
+                    onChange={(e) => setBankCountry(e.target.value)}
+                    placeholder="IT"
+                    maxLength={2}
+                    className="w-full rounded-lg border bg-background px-3 py-2 text-base uppercase placeholder:text-muted-foreground/50 focus:ring-2 focus:ring-ring focus:outline-none sm:w-20"
+                  />
+                </div>
+              </div>
+              <div className="mt-4 flex items-center gap-3">
+                <button
+                  type="submit"
+                  disabled={connectBank.isPending}
+                  className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+                >
+                  {connectBank.isPending ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <Link2 className="size-4" />
+                  )}
+                  {connectBank.isPending ? "Connecting…" : "Connect"}
+                </button>
+                {connectError && <p className="text-sm text-negative">{connectError}</p>}
+              </div>
+              <p className="mt-3 text-xs text-muted-foreground">
+                You'll be redirected to log into your bank directly — we never see your
+                bank password.
+              </p>
+            </div>
+          )}
+        </form>
 
         <div className="overflow-hidden rounded-2xl border bg-card card-ring">
           {bankQuery.isPending ? (
