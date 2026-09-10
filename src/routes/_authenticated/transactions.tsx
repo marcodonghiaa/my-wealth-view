@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ArrowDownLeft,
   ArrowUpRight,
@@ -360,6 +360,26 @@ export function TransactionsPage() {
 
   const transactions = txQuery.data ?? [];
 
+  // Arrived via a "worth it?" push: force fresh data (the cache may be stale
+  // from before this notification's transaction existed) and jump to it.
+  const [highlightRef, setHighlightRef] = useState<string | null>(null);
+  useEffect(() => {
+    const ref = new URLSearchParams(window.location.search).get("highlight");
+    if (!ref) return;
+    setHighlightRef(ref);
+    void queryClient.invalidateQueries({ queryKey: ["transactions", monthKey] });
+    window.history.replaceState(null, "", window.location.pathname);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (!highlightRef || txQuery.isPending) return;
+    const el = document.querySelector(`[data-entry-ref="${CSS.escape(highlightRef)}"]`);
+    el?.scrollIntoView({ behavior: "smooth", block: "center" });
+    const timer = setTimeout(() => setHighlightRef(null), 3000);
+    return () => clearTimeout(timer);
+  }, [highlightRef, txQuery.isPending, transactions]);
+
   const categories = useMemo(() => {
     const set = new Set<string>();
     let hasUncategorized = false;
@@ -590,6 +610,7 @@ export function TransactionsPage() {
                 onAnswerWorthIt={(worthIt) =>
                   answerWorthIt.mutate({ entryReference: tx.entry_reference, worthIt })
                 }
+                highlighted={tx.entry_reference === highlightRef}
               />
             ))}
           </ul>
@@ -676,6 +697,7 @@ export function TransactionsPage() {
                     onAnswerWorthIt={(worthIt) =>
                       answerWorthIt.mutate({ entryReference: tx.entry_reference, worthIt })
                     }
+                    highlighted={tx.entry_reference === highlightRef}
                   />
                 ))
               )}
@@ -894,6 +916,7 @@ function TransactionRowView({
   selected,
   onToggleSelect,
   onAnswerWorthIt,
+  highlighted,
 }: {
   tx: TransactionRow;
   accountLabel: string;
@@ -904,6 +927,7 @@ function TransactionRowView({
   selected: boolean;
   onToggleSelect: () => void;
   onAnswerWorthIt: (worthIt: "yes" | "no") => void;
+  highlighted?: boolean;
 }) {
   const native = nativeSignedAmount(tx);
   const currency = tx.currency ?? "EUR";
@@ -913,7 +937,8 @@ function TransactionRowView({
 
   return (
     <tr
-      className={`border-b transition-colors last:border-0 hover:bg-accent/40 ${selected ? "bg-primary/5" : ""}`}
+      data-entry-ref={tx.entry_reference}
+      className={`border-b transition-colors last:border-0 hover:bg-accent/40 ${selected ? "bg-primary/5" : ""} ${highlighted ? "ring-2 ring-inset ring-primary" : ""}`}
     >
       <td className="px-4 py-3">
         <label className="-m-3.5 inline-flex size-11 cursor-pointer items-center justify-center p-3.5">
@@ -989,6 +1014,7 @@ function TransactionCardView({
   selected,
   onToggleSelect,
   onAnswerWorthIt,
+  highlighted,
 }: {
   tx: TransactionRow;
   accountLabel: string;
@@ -999,6 +1025,7 @@ function TransactionCardView({
   selected: boolean;
   onToggleSelect: () => void;
   onAnswerWorthIt: (worthIt: "yes" | "no") => void;
+  highlighted?: boolean;
 }) {
   const native = nativeSignedAmount(tx);
   const currency = tx.currency ?? "EUR";
@@ -1007,7 +1034,10 @@ function TransactionCardView({
   const showEur = currency !== "EUR" && eur != null;
 
   return (
-    <li className={`px-4 py-3 ${selected ? "bg-primary/5" : ""}`}>
+    <li
+      data-entry-ref={tx.entry_reference}
+      className={`px-4 py-3 ${selected ? "bg-primary/5" : ""} ${highlighted ? "ring-2 ring-inset ring-primary" : ""}`}
+    >
       <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-3">
         <label className="-m-3.5 -mt-3 inline-flex size-11 shrink-0 cursor-pointer items-center justify-center p-3.5">
           <input
