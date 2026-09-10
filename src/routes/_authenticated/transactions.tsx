@@ -7,6 +7,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Search,
+  ThumbsDown,
+  ThumbsUp,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -50,6 +52,27 @@ interface TransactionRow {
   currency: string | null;
   amount: number | null;
   signed_amount_eur: number | null;
+  credit_debit_indicator: string | null;
+  created_at: string | null;
+  worth_it: string | null;
+}
+
+// Mirrors the allowlist in the backend's notify-worth-it.js — kept in sync by hand,
+// the two repos don't share code.
+const WORTH_IT_CATEGORIES = ["Shopping", "Entertainment", "Dine Out", "Experiences"];
+const WORTH_IT_MIN_AMOUNT = 15;
+const WORTH_IT_MIN_AGE_HOURS = 3;
+
+function isWorthItEligible(tx: TransactionRow): boolean {
+  return (
+    tx.credit_debit_indicator === "DBIT" &&
+    tx.worth_it == null &&
+    tx.category != null &&
+    WORTH_IT_CATEGORIES.includes(tx.category) &&
+    (tx.amount ?? 0) >= WORTH_IT_MIN_AMOUNT &&
+    tx.created_at != null &&
+    Date.now() - new Date(tx.created_at).getTime() >= WORTH_IT_MIN_AGE_HOURS * 3600_000
+  );
 }
 
 interface AccountRow {
@@ -76,7 +99,7 @@ async function fetchTransactionsForMonth(
   const { data, error } = await getSupabase()
     .from("v_transactions_eur")
     .select(
-      "entry_reference,account_uid,booking_date,category,transaction_type,creditor_name,currency,amount,signed_amount_eur",
+      "entry_reference,account_uid,booking_date,category,transaction_type,creditor_name,currency,amount,signed_amount_eur,credit_debit_indicator,created_at,worth_it",
     )
     .gte("booking_date", start)
     .lt("booking_date", end)
@@ -240,6 +263,49 @@ export function TransactionsPage() {
     },
   });
 
+
+  const answerWorthIt = useMutation({
+    mutationFn: async ({
+      entryReference,
+      worthIt,
+    }: {
+      entryReference: string;
+      worthIt: "yes" | "no";
+    }) => {
+      if (isDemoRoute()) throw new Error("This is a read-only demo — sign up to make changes.");
+      const { error } = await getSupabase()
+        .from("transactions")
+        .update({ worth_it: worthIt })
+        .eq("entry_reference", entryReference);
+      if (error) throw error;
+    },
+    onMutate: async ({ entryReference, worthIt }) => {
+      await queryClient.cancelQueries({ queryKey: ["transactions", monthKey] });
+      const previous = queryClient.getQueryData<Array<TransactionRow>>([
+        "transactions",
+        monthKey,
+      ]);
+      queryClient.setQueryData<Array<TransactionRow>>(
+        ["transactions", monthKey],
+        (old) =>
+          old
+            ? old.map((row) =>
+                row.entry_reference === entryReference
+                  ? { ...row, worth_it: worthIt }
+                  : row,
+              )
+            : old,
+      );
+      return { previous };
+    },
+    onError: (error, _vars, context) => {
+      if (context?.previous)
+        queryClient.setQueryData(["transactions", monthKey], context.previous);
+      toast.error("Couldn't save answer", {
+        description: (error as Error).message,
+      });
+    },
+  });
 
   const bulkUpdateCategory = useMutation({
     mutationFn: async ({
@@ -521,6 +587,9 @@ export function TransactionsPage() {
                     ? (accounts[tx.account_uid]?.label ?? "Unknown account")
                     : "—"
                 }
+                onAnswerWorthIt={(worthIt) =>
+                  answerWorthIt.mutate({ entryReference: tx.entry_reference, worthIt })
+                }
               />
             ))}
           </ul>
@@ -603,6 +672,9 @@ export function TransactionsPage() {
                       tx.account_uid
                         ? (accounts[tx.account_uid]?.label ?? "Unknown account")
                         : "—"
+                    }
+                    onAnswerWorthIt={(worthIt) =>
+                      answerWorthIt.mutate({ entryReference: tx.entry_reference, worthIt })
                     }
                   />
                 ))
@@ -771,6 +843,47 @@ function TypePicker({
   );
 }
 
+function WorthItPrompt({
+  tx,
+  onAnswer,
+}: {
+  tx: TransactionRow;
+  onAnswer: (worthIt: "yes" | "no") => void;
+}) {
+  if (tx.worth_it) {
+    return (
+      <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+        {tx.worth_it === "yes" ? (
+          <ThumbsUp className="size-3 text-positive" />
+        ) : (
+          <ThumbsDown className="size-3 text-negative" />
+        )}
+        {tx.worth_it === "yes" ? "Worth it" : "Not worth it"}
+      </span>
+    );
+  }
+  if (!isWorthItEligible(tx)) return null;
+  return (
+    <span className="inline-flex items-center gap-2 text-xs text-muted-foreground">
+      Worth it?
+      <button
+        type="button"
+        onClick={() => onAnswer("yes")}
+        className="min-h-11 rounded-md px-2 py-1 font-medium text-positive transition-colors hover:bg-positive/10"
+      >
+        Yes
+      </button>
+      <button
+        type="button"
+        onClick={() => onAnswer("no")}
+        className="min-h-11 rounded-md px-2 py-1 font-medium text-negative transition-colors hover:bg-negative/10"
+      >
+        No
+      </button>
+    </span>
+  );
+}
+
 function TransactionRowView({
   tx,
   accountLabel,
@@ -780,6 +893,7 @@ function TransactionRowView({
   savingType,
   selected,
   onToggleSelect,
+  onAnswerWorthIt,
 }: {
   tx: TransactionRow;
   accountLabel: string;
@@ -789,6 +903,7 @@ function TransactionRowView({
   savingType: boolean;
   selected: boolean;
   onToggleSelect: () => void;
+  onAnswerWorthIt: (worthIt: "yes" | "no") => void;
 }) {
   const native = nativeSignedAmount(tx);
   const currency = tx.currency ?? "EUR";
@@ -819,8 +934,11 @@ function TransactionRowView({
             )
           : "—"}
       </td>
-      <td className="max-w-48 truncate px-4 py-3 font-medium text-foreground">
-        {tx.creditor_name ?? "—"}
+      <td className="max-w-48 px-4 py-3">
+        <div className="truncate font-medium text-foreground">
+          {tx.creditor_name ?? "—"}
+        </div>
+        <WorthItPrompt tx={tx} onAnswer={onAnswerWorthIt} />
       </td>
       <td className="px-4 py-3">
         <CategoryPicker tx={tx} onSelect={onSelectCategory} saving={savingCategory} />
@@ -870,6 +988,7 @@ function TransactionCardView({
   savingType,
   selected,
   onToggleSelect,
+  onAnswerWorthIt,
 }: {
   tx: TransactionRow;
   accountLabel: string;
@@ -879,6 +998,7 @@ function TransactionCardView({
   savingType: boolean;
   selected: boolean;
   onToggleSelect: () => void;
+  onAnswerWorthIt: (worthIt: "yes" | "no") => void;
 }) {
   const native = nativeSignedAmount(tx);
   const currency = tx.currency ?? "EUR";
@@ -911,6 +1031,9 @@ function TransactionCardView({
               : "—"}
             <AccountBadge label={accountLabel} />
           </p>
+          <div className="mt-0.5">
+            <WorthItPrompt tx={tx} onAnswer={onAnswerWorthIt} />
+          </div>
         </div>
         <div className="shrink-0 text-right">
           {native == null ? (

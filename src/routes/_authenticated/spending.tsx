@@ -40,6 +40,17 @@ interface SpendRow {
   spend_eur: number | null;
 }
 
+interface RegretRow {
+  category: string | null;
+  amount: number | null;
+}
+
+interface RegretGroup {
+  category: string;
+  total: number;
+  count: number;
+}
+
 function startOfMonth(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth(), 1);
 }
@@ -55,6 +66,29 @@ async function fetchSpendForMonth(month: Date): Promise<Array<SpendRow>> {
     .eq("month", formatISODate(startOfMonth(month)));
   if (error) throw error;
   return (data ?? []) as Array<SpendRow>;
+}
+
+// All-time, not scoped to the selected month -- "not worth it" answers accumulate
+// slowly and the point is the overall pattern, not a per-month view of it.
+async function fetchRegretSpend(): Promise<Array<RegretGroup>> {
+  const { data, error } = await getSupabase()
+    .from("transactions")
+    .select("category,amount")
+    .eq("worth_it", "no");
+  if (error) throw error;
+  const byCategory = new Map<string, RegretGroup>();
+  for (const row of (data ?? []) as Array<RegretRow>) {
+    const category = row.category ?? "Uncategorized";
+    const amount = row.amount ?? 0;
+    const existing = byCategory.get(category);
+    if (existing) {
+      existing.total += amount;
+      existing.count += 1;
+    } else {
+      byCategory.set(category, { category, total: amount, count: 1 });
+    }
+  }
+  return Array.from(byCategory.values()).sort((a, b) => b.total - a.total);
 }
 
 function formatEur(value: number): string {
@@ -73,6 +107,14 @@ export function SpendingPage() {
     queryKey: ["spend-by-category", formatISODate(month)],
     queryFn: () => fetchSpendForMonth(month),
   });
+
+  const regretQuery = useQuery({
+    queryKey: ["worth-it-regret"],
+    queryFn: fetchRegretSpend,
+  });
+  const regretRows = regretQuery.data ?? [];
+  const regretTotal = regretRows.reduce((sum, r) => sum + r.total, 0);
+  const regretCount = regretRows.reduce((sum, r) => sum + r.count, 0);
 
   const rows = useMemo(
     () =>
@@ -227,6 +269,38 @@ export function SpendingPage() {
             </ul>
           </section>
         </>
+      )}
+
+      {regretCount > 0 && (
+        <section className="mt-6 overflow-hidden rounded-2xl border bg-card card-ring">
+          <div className="border-b px-4 py-3 sm:px-5">
+            <h2 className="text-sm font-semibold text-foreground">
+              Not worth it — {formatEur(regretTotal)} across {regretCount}{" "}
+              purchase{regretCount === 1 ? "" : "s"}
+            </h2>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              From your "worth it?" check-ins, all time.
+            </p>
+          </div>
+          <ul className="divide-y">
+            {regretRows.map((row) => (
+              <li
+                key={row.category}
+                className="flex items-center justify-between px-4 py-3 text-sm sm:px-5"
+              >
+                <span className="font-medium text-foreground">
+                  {row.category}{" "}
+                  <span className="text-xs text-muted-foreground">
+                    ({row.count})
+                  </span>
+                </span>
+                <span className="font-figure text-negative">
+                  {formatEur(row.total)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
     </div>
   );
