@@ -183,6 +183,24 @@ export function AccountsPage() {
   const [bankCountry, setBankCountry] = useState("IT");
   const [connectError, setConnectError] = useState<string | null>(null);
 
+  // Only fetched once the form is actually open, and cached per country so
+  // switching back to a country already loaded doesn't re-hit the function.
+  const banksQuery = useQuery({
+    queryKey: ["enable-banking-banks", bankCountry],
+    queryFn: async () => {
+      const { data, error } = await getSupabase().functions.invoke<{
+        banks?: Array<{ name: string; logo: string | null }>;
+        error?: string;
+      }>("list-banks", { body: { country: bankCountry } });
+      if (error) throw error;
+      if (!data?.banks) throw new Error(data?.error ?? "No bank list returned");
+      return data.banks;
+    },
+    enabled: showConnectForm,
+    staleTime: 10 * 60_000,
+  });
+  const banks = banksQuery.data ?? [];
+
   const connectBank = useMutation({
     mutationFn: async (input: { bankName: string; country: string }) => {
       if (isDemoRoute()) throw new Error("This is a read-only demo — sign up to connect a real bank.");
@@ -204,12 +222,12 @@ export function AccountsPage() {
 
   function handleConnectBank(e: React.FormEvent) {
     e.preventDefault();
-    if (!bankName.trim() || !bankCountry.trim()) {
-      setConnectError("Bank name and country are both required.");
+    if (!bankName) {
+      setConnectError("Pick a bank first.");
       return;
     }
     setConnectError(null);
-    connectBank.mutate({ bankName: bankName.trim(), country: bankCountry.trim().toUpperCase() });
+    connectBank.mutate({ bankName, country: bankCountry });
   }
 
   // Add-CD form state
@@ -368,37 +386,61 @@ export function AccountsPage() {
           </button>
           {showConnectForm && (
             <div className="px-5 pb-5">
-              <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
-                <div>
-                  <label className="mb-1 block text-xs text-muted-foreground">
-                    Bank name
-                  </label>
-                  <input
-                    type="text"
-                    value={bankName}
-                    onChange={(e) => setBankName(e.target.value)}
-                    placeholder="e.g. Revolut"
-                    className="w-full rounded-lg border bg-background px-3 py-2 text-base placeholder:text-muted-foreground/50 focus:ring-2 focus:ring-ring focus:outline-none"
-                  />
-                </div>
+              <div className="grid gap-3 sm:grid-cols-[auto_1fr]">
                 <div>
                   <label className="mb-1 block text-xs text-muted-foreground">
                     Country
                   </label>
-                  <input
-                    type="text"
+                  <select
                     value={bankCountry}
-                    onChange={(e) => setBankCountry(e.target.value)}
-                    placeholder="IT"
-                    maxLength={2}
-                    className="w-full rounded-lg border bg-background px-3 py-2 text-base uppercase placeholder:text-muted-foreground/50 focus:ring-2 focus:ring-ring focus:outline-none sm:w-20"
-                  />
+                    onChange={(e) => {
+                      setBankCountry(e.target.value);
+                      setBankName("");
+                    }}
+                    className="w-full rounded-lg border bg-background px-3 py-2 text-base focus:ring-2 focus:ring-ring focus:outline-none sm:w-28"
+                  >
+                    <option value="IT">Italy</option>
+                    <option value="DE">Germany</option>
+                    <option value="FR">France</option>
+                    <option value="ES">Spain</option>
+                    <option value="GB">UK</option>
+                    <option value="NL">Netherlands</option>
+                    <option value="BE">Belgium</option>
+                    <option value="AT">Austria</option>
+                    <option value="PT">Portugal</option>
+                    <option value="IE">Ireland</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs text-muted-foreground">
+                    Bank
+                  </label>
+                  <select
+                    value={bankName}
+                    onChange={(e) => setBankName(e.target.value)}
+                    disabled={banksQuery.isPending || banksQuery.isError}
+                    className="w-full rounded-lg border bg-background px-3 py-2 text-base focus:ring-2 focus:ring-ring focus:outline-none disabled:opacity-50"
+                  >
+                    <option value="">
+                      {banksQuery.isPending ? "Loading banks…" : "Select a bank…"}
+                    </option>
+                    {banks.map((b) => (
+                      <option key={b.name} value={b.name}>
+                        {b.name}
+                      </option>
+                    ))}
+                  </select>
+                  {banksQuery.isError && (
+                    <p className="mt-1 text-xs text-negative">
+                      Couldn't load banks for this country.
+                    </p>
+                  )}
                 </div>
               </div>
               <div className="mt-4 flex items-center gap-3">
                 <button
                   type="submit"
-                  disabled={connectBank.isPending}
+                  disabled={connectBank.isPending || !bankName}
                   className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
                 >
                   {connectBank.isPending ? (
