@@ -169,6 +169,54 @@ const CATEGORIES = [
 
 const UNCATEGORIZED = "__uncategorized__";
 
+// Shared shape behind updateCategory/updateType/answerWorthIt: update one column
+// on one transaction, with optimistic cache update + demo-mode guard + rollback.
+function useTransactionFieldMutation<K extends "category" | "transaction_type" | "worth_it">(
+  queryClient: ReturnType<typeof useQueryClient>,
+  monthKey: string,
+  column: K,
+  opts: { errorMessage: string; successMessage?: (value: TransactionRow[K]) => string },
+) {
+  type Vars = { entryReference: string; value: TransactionRow[K] };
+  type Context = { previous: Array<TransactionRow> | undefined };
+
+  return useMutation<void, Error, Vars, Context>({
+    mutationFn: async ({ entryReference, value }) => {
+      if (isDemoRoute()) throw new Error("This is a read-only demo — sign up to make changes.");
+      const { error } = await getSupabase()
+        .from("transactions")
+        .update({ [column]: value } as never)
+        .eq("entry_reference", entryReference);
+      if (error) throw error;
+    },
+    onMutate: async ({ entryReference, value }) => {
+      await queryClient.cancelQueries({ queryKey: ["transactions", monthKey] });
+      const previous = queryClient.getQueryData<Array<TransactionRow>>([
+        "transactions",
+        monthKey,
+      ]);
+      queryClient.setQueryData<Array<TransactionRow>>(
+        ["transactions", monthKey],
+        (old) =>
+          old
+            ? old.map((row) =>
+                row.entry_reference === entryReference ? { ...row, [column]: value } : row,
+              )
+            : old,
+      );
+      return { previous };
+    },
+    onError: (error, _vars, context) => {
+      if (context?.previous)
+        queryClient.setQueryData(["transactions", monthKey], context.previous);
+      toast.error(opts.errorMessage, { description: error.message });
+    },
+    onSuccess: (_data, vars) => {
+      if (opts.successMessage) toast.success(opts.successMessage(vars.value));
+    },
+  });
+}
+
 
 export function TransactionsPage() {
   const [search, setSearch] = useState("");
@@ -178,140 +226,18 @@ export function TransactionsPage() {
   const queryClient = useQueryClient();
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
-  const updateCategory = useMutation({
-    mutationFn: async ({
-      entryReference,
-      category: next,
-    }: {
-      entryReference: string;
-      category: string;
-    }) => {
-      if (isDemoRoute()) throw new Error("This is a read-only demo — sign up to make changes.");
-      const { error } = await getSupabase()
-        .from("transactions")
-        .update({ category: next })
-        .eq("entry_reference", entryReference);
-      if (error) throw error;
-    },
-    onMutate: async ({ entryReference, category: next }) => {
-      await queryClient.cancelQueries({ queryKey: ["transactions", monthKey] });
-      const previous = queryClient.getQueryData<Array<TransactionRow>>([
-        "transactions",
-        monthKey,
-      ]);
-      queryClient.setQueryData<Array<TransactionRow>>(
-        ["transactions", monthKey],
-        (old) =>
-          old
-            ? old.map((row) =>
-                row.entry_reference === entryReference
-                  ? { ...row, category: next }
-                  : row,
-              )
-            : old,
-      );
-      return { previous };
-    },
-    onError: (error, _vars, context) => {
-      if (context?.previous)
-        queryClient.setQueryData(["transactions", monthKey], context.previous);
-      toast.error("Couldn't save category", {
-        description: (error as Error).message,
-      });
-    },
-    onSuccess: (_data, vars) => {
-      toast.success(`Saved — ${vars.category}`);
-    },
+  const updateCategory = useTransactionFieldMutation(queryClient, monthKey, "category", {
+    errorMessage: "Couldn't save category",
+    successMessage: (value) => `Saved — ${value}`,
   });
 
-  const updateType = useMutation({
-    mutationFn: async ({
-      entryReference,
-      transactionType,
-    }: {
-      entryReference: string;
-      transactionType: string;
-    }) => {
-      if (isDemoRoute()) throw new Error("This is a read-only demo — sign up to make changes.");
-      const { error } = await getSupabase()
-        .from("transactions")
-        .update({ transaction_type: transactionType })
-        .eq("entry_reference", entryReference);
-      if (error) throw error;
-    },
-    onMutate: async ({ entryReference, transactionType: next }) => {
-      await queryClient.cancelQueries({ queryKey: ["transactions", monthKey] });
-      const previous = queryClient.getQueryData<Array<TransactionRow>>([
-        "transactions",
-        monthKey,
-      ]);
-      queryClient.setQueryData<Array<TransactionRow>>(
-        ["transactions", monthKey],
-        (old) =>
-          old
-            ? old.map((row) =>
-                row.entry_reference === entryReference
-                  ? { ...row, transaction_type: next }
-                  : row,
-              )
-            : old,
-      );
-      return { previous };
-    },
-    onError: (error, _vars, context) => {
-      if (context?.previous)
-        queryClient.setQueryData(["transactions", monthKey], context.previous);
-      toast.error("Couldn't save type", {
-        description: (error as Error).message,
-      });
-    },
-    onSuccess: (_data, vars) => {
-      toast.success(`Saved — ${vars.transactionType}`);
-    },
+  const updateType = useTransactionFieldMutation(queryClient, monthKey, "transaction_type", {
+    errorMessage: "Couldn't save type",
+    successMessage: (value) => `Saved — ${value}`,
   });
 
-
-  const answerWorthIt = useMutation({
-    mutationFn: async ({
-      entryReference,
-      worthIt,
-    }: {
-      entryReference: string;
-      worthIt: "yes" | "no";
-    }) => {
-      if (isDemoRoute()) throw new Error("This is a read-only demo — sign up to make changes.");
-      const { error } = await getSupabase()
-        .from("transactions")
-        .update({ worth_it: worthIt })
-        .eq("entry_reference", entryReference);
-      if (error) throw error;
-    },
-    onMutate: async ({ entryReference, worthIt }) => {
-      await queryClient.cancelQueries({ queryKey: ["transactions", monthKey] });
-      const previous = queryClient.getQueryData<Array<TransactionRow>>([
-        "transactions",
-        monthKey,
-      ]);
-      queryClient.setQueryData<Array<TransactionRow>>(
-        ["transactions", monthKey],
-        (old) =>
-          old
-            ? old.map((row) =>
-                row.entry_reference === entryReference
-                  ? { ...row, worth_it: worthIt }
-                  : row,
-              )
-            : old,
-      );
-      return { previous };
-    },
-    onError: (error, _vars, context) => {
-      if (context?.previous)
-        queryClient.setQueryData(["transactions", monthKey], context.previous);
-      toast.error("Couldn't save answer", {
-        description: (error as Error).message,
-      });
-    },
+  const answerWorthIt = useTransactionFieldMutation(queryClient, monthKey, "worth_it", {
+    errorMessage: "Couldn't save answer",
   });
 
   const bulkUpdateCategory = useMutation({
@@ -497,7 +423,7 @@ export function TransactionsPage() {
                 onClick={() => {
                   answerWorthIt.mutate({
                     entryReference: spotlightTx.entry_reference,
-                    worthIt: "no",
+                    value: "no",
                   });
                   setSpotlightTx(null);
                 }}
@@ -510,7 +436,7 @@ export function TransactionsPage() {
                 onClick={() => {
                   answerWorthIt.mutate({
                     entryReference: spotlightTx.entry_reference,
-                    worthIt: "yes",
+                    value: "yes",
                   });
                   setSpotlightTx(null);
                 }}
@@ -650,7 +576,7 @@ export function TransactionsPage() {
                 onSelectCategory={(next) =>
                   updateCategory.mutate({
                     entryReference: tx.entry_reference,
-                    category: next,
+                    value: next,
                   })
                 }
                 savingType={
@@ -660,7 +586,7 @@ export function TransactionsPage() {
                 onSelectType={(next) =>
                   updateType.mutate({
                     entryReference: tx.entry_reference,
-                    transactionType: next,
+                    value: next,
                   })
                 }
                 accountLabel={
@@ -669,7 +595,7 @@ export function TransactionsPage() {
                     : "—"
                 }
                 onAnswerWorthIt={(worthIt) =>
-                  answerWorthIt.mutate({ entryReference: tx.entry_reference, worthIt })
+                  answerWorthIt.mutate({ entryReference: tx.entry_reference, value: worthIt })
                 }
                 highlighted={tx.entry_reference === highlightRef}
               />
@@ -736,7 +662,7 @@ export function TransactionsPage() {
                     onSelectCategory={(next) =>
                       updateCategory.mutate({
                         entryReference: tx.entry_reference,
-                        category: next,
+                        value: next,
                       })
                     }
                     savingType={
@@ -747,7 +673,7 @@ export function TransactionsPage() {
                     onSelectType={(next) =>
                       updateType.mutate({
                         entryReference: tx.entry_reference,
-                        transactionType: next,
+                        value: next,
                       })
                     }
                     accountLabel={
@@ -756,7 +682,7 @@ export function TransactionsPage() {
                         : "—"
                     }
                     onAnswerWorthIt={(worthIt) =>
-                      answerWorthIt.mutate({ entryReference: tx.entry_reference, worthIt })
+                      answerWorthIt.mutate({ entryReference: tx.entry_reference, value: worthIt })
                     }
                     highlighted={tx.entry_reference === highlightRef}
                   />
