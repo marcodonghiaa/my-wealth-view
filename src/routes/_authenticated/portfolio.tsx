@@ -181,9 +181,6 @@ export function PortfolioPage() {
           )}
         </div>
 
-        <p className="mt-3 text-xs text-muted-foreground">
-          Holdings are updated manually in the database — not live market data.
-        </p>
       </section>
 
       {query.isPending ? (
