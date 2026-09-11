@@ -32,6 +32,8 @@ interface OwedRow {
   personal_amount: number | null;
   owed_by: string | null;
   owed_settled: boolean;
+  signed_amount_eur: number | null;
+  personal_signed_amount_eur: number | null;
 }
 
 function formatMoney(value: number, currency: string): string {
@@ -43,10 +45,18 @@ function formatMoney(value: number, currency: string): string {
   }).format(value);
 }
 
+// EUR-equivalent of what's owed on this row, via the view's own fx_rates
+// conversion -- works for any transaction currency, not just EUR ones.
+function owedEur(r: OwedRow): number {
+  return Math.abs((r.signed_amount_eur ?? 0) - (r.personal_signed_amount_eur ?? 0));
+}
+
 async function fetchOwed(): Promise<Array<OwedRow>> {
   const { data, error } = await getSupabase()
-    .from("transactions")
-    .select("entry_reference,booking_date,creditor_name,currency,amount,personal_amount,owed_by,owed_settled")
+    .from("v_transactions_eur")
+    .select(
+      "entry_reference,booking_date,creditor_name,currency,amount,personal_amount,owed_by,owed_settled,signed_amount_eur,personal_signed_amount_eur",
+    )
     .not("personal_amount", "is", null)
     .order("owed_settled", { ascending: true })
     .order("booking_date", { ascending: false });
@@ -65,9 +75,7 @@ export function OwedPage() {
   const rows = owedQuery.data ?? [];
   const outstanding = rows.filter((r) => !r.owed_settled);
   const settled = rows.filter((r) => r.owed_settled);
-  const totalOutstandingEur = outstanding
-    .filter((r) => r.currency === "EUR")
-    .reduce((sum, r) => sum + ((r.amount ?? 0) - (r.personal_amount ?? 0)), 0);
+  const totalOutstandingEur = outstanding.reduce((sum, r) => sum + owedEur(r), 0);
 
   const toggleSettled = useMutation({
     mutationFn: async ({ entryReference, settled: next }: { entryReference: string; settled: boolean }) => {
@@ -105,11 +113,6 @@ export function OwedPage() {
         <p className="font-figure mt-2 text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">
           {formatMoney(totalOutstandingEur, "EUR")}
         </p>
-        {rows.some((r) => !r.owed_settled && r.currency !== "EUR") && (
-          <p className="mt-2 text-xs text-muted-foreground">
-            Plus non-EUR splits below — not included in this total.
-          </p>
-        )}
       </section>
 
       {owedQuery.isPending ? (
