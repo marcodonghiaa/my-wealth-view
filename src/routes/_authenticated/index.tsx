@@ -196,7 +196,7 @@ export function NetWorthPage() {
       )}
 
       {/* Headline card */}
-      <section className="mb-6 rounded-2xl border bg-card p-6 card-ring surface-glow sm:p-8">
+      <section className="mb-6 rounded-2xl border bg-card p-6 card-ring sm:p-8">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
           <Wallet className="size-4 text-primary" />
           Total net worth

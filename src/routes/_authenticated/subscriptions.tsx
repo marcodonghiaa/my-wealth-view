@@ -213,7 +213,7 @@ export function SubscriptionsPage() {
       )}
 
       {/* Estimated monthly cost */}
-      <section className="mb-6 rounded-2xl border bg-card p-6 card-ring surface-glow sm:p-8">
+      <section className="mb-6 rounded-2xl border bg-card p-6 card-ring sm:p-8">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Wallet className="size-4 text-primary" />
           Estimated monthly recurring cost

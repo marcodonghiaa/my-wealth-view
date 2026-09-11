@@ -108,7 +108,7 @@ function DemoLayout() {
         <nav className="flex-1 space-y-4 px-3 py-4">
           {NAV_GROUPS.map((group) => (
             <div key={group.label}>
-              <div className="px-3 pb-1.5 text-[10px] font-semibold tracking-wider text-muted-foreground/60 uppercase">
+              <div className="px-3 pb-1.5 text-xs font-semibold tracking-wider text-muted-foreground/60 uppercase">
                 {group.label}
               </div>
               <div className="space-y-1">
@@ -168,7 +168,7 @@ function DemoLayout() {
             <nav className="flex-1 space-y-4 overflow-y-auto px-3 py-3">
               {NAV_GROUPS.map((group) => (
                 <div key={group.label}>
-                  <div className="px-3 pb-1.5 text-[10px] font-semibold tracking-wider text-muted-foreground/60 uppercase">
+                  <div className="px-3 pb-1.5 text-xs font-semibold tracking-wider text-muted-foreground/60 uppercase">
                     {group.label}
                   </div>
                   <div className="space-y-1">

@@ -186,7 +186,7 @@ export function RulesPage() {
           existing rules list below the fold on a phone. */}
       <form
         onSubmit={handleSubmit}
-        className="card-ring surface-glow mb-8 rounded-xl"
+        className="card-ring mb-8 rounded-xl"
       >
         <button
           type="button"
@@ -373,7 +373,7 @@ export function RulesPage() {
       </form>
 
       {/* Rules list */}
-      <div className="card-ring surface-glow rounded-xl">
+      <div className="card-ring rounded-xl">
         <div className="border-b px-5 py-3">
           <h2 className="text-sm font-medium">
             Existing rules{" "}
