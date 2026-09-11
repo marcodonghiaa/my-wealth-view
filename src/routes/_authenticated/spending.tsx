@@ -13,6 +13,7 @@ import {
 } from "recharts";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { getSupabase } from "@/integrations/supabase/client";
+import { formatISODate } from "@/lib/date";
 
 export const Route = createFileRoute("/_authenticated/spending")({
   head: () => ({
@@ -54,10 +55,6 @@ interface RegretGroup {
 
 function startOfMonth(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth(), 1);
-}
-
-function formatISODate(date: Date): string {
-  return date.toISOString().slice(0, 10);
 }
 
 async function fetchSpendForMonth(month: Date): Promise<Array<SpendRow>> {

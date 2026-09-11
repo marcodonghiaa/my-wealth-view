@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/dialog";
 import { getSupabase, isDemoRoute } from "@/integrations/supabase/client";
 import { AccountBadge, CurrencyBadge } from "@/components/bank-badge";
+import { formatISODate } from "@/lib/date";
 
 
 export const Route = createFileRoute("/_authenticated/transactions")({
@@ -92,10 +93,6 @@ interface AccountRow {
 
 function startOfMonth(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth(), 1);
-}
-
-function formatISODate(date: Date): string {
-  return date.toISOString().slice(0, 10);
 }
 
 async function fetchTransactionsForMonth(

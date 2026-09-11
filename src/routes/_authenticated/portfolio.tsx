@@ -81,12 +81,21 @@ function formatEur(value: number): string {
 }
 
 function formatMoney(value: number, currency: string): string {
-  return new Intl.NumberFormat("en-IE", {
-    style: "currency",
-    currency,
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value);
+  try {
+    return new Intl.NumberFormat("en-IE", {
+      style: "currency",
+      currency,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(value);
+  } catch {
+    // Intl.NumberFormat throws on a malformed ISO 4217 code -- fall back to
+    // a plain number rather than crashing the whole page during render.
+    return `${new Intl.NumberFormat("en-IE", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(value)} ${currency}`;
+  }
 }
 
 function formatShares(value: number): string {
@@ -291,12 +300,12 @@ export function PortfolioPage() {
                         </tr>
                       </thead>
                       <tbody className="divide-y">
-                        {group.holdings.map((row) => {
+                        {group.holdings.map((row, i) => {
                           const valueEur = row.value_eur ?? 0;
                           const rowPercent =
                             totalEur > 0 ? (valueEur / totalEur) * 100 : 0;
                           return (
-                            <tr key={row.isin ?? row.name}>
+                            <tr key={row.isin ?? `${row.name ?? "row"}-${i}`}>
                               <td className="px-4 py-3 sm:px-5">
                                 <div className="font-medium text-foreground">
                                   {row.name ?? "—"}
@@ -330,13 +339,13 @@ export function PortfolioPage() {
 
                   {/* Mobile cards */}
                   <div className="space-y-3 p-4 md:hidden">
-                    {group.holdings.map((row) => {
+                    {group.holdings.map((row, i) => {
                       const valueEur = row.value_eur ?? 0;
                       const rowPercent =
                         totalEur > 0 ? (valueEur / totalEur) * 100 : 0;
                       return (
                         <div
-                          key={row.isin ?? row.name}
+                          key={row.isin ?? `${row.name ?? "row"}-${i}`}
                           className="rounded-xl border bg-background/40 p-3"
                         >
                           <div className="min-w-0">

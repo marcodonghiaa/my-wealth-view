@@ -10,6 +10,7 @@ import {
   ThumbsDown,
 } from "lucide-react";
 import { getSupabase } from "@/integrations/supabase/client";
+import { formatISODate } from "@/lib/date";
 
 export const Route = createFileRoute("/_authenticated/reports")({
   head: () => ({
@@ -37,10 +38,6 @@ function startOfMonth(date: Date): Date {
 
 function endOfMonth(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth() + 1, 0);
-}
-
-function formatISODate(date: Date): string {
-  return date.toISOString().slice(0, 10);
 }
 
 function formatEur(value: number): string {
@@ -158,7 +155,7 @@ async function fetchWorthItForMonth(
     no: rows.filter((r) => r.worth_it === "no").length,
     notWorthItTotal: rows
       .filter((r) => r.worth_it === "no")
-      .reduce((sum, r) => sum + (r.personal_amount ?? r.amount), 0),
+      .reduce((sum, r) => sum + Math.abs(r.personal_amount ?? r.amount), 0),
   };
 }
 

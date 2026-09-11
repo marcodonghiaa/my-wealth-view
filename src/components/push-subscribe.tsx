@@ -38,7 +38,19 @@ export function PushSubscribeButton() {
     if (!ok) return;
     navigator.serviceWorker.getRegistration().then(async (reg) => {
       const existing = await reg?.pushManager.getSubscription();
-      if (existing) setSubscribed(true);
+      if (!existing) return;
+      // A subscribed browser doesn't prove the DB row exists -- the insert
+      // in subscribe() can fail after pushManager.subscribe() succeeds.
+      const supabase = getSupabase();
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) return;
+      const { data } = await supabase
+        .from("push_subscriptions" as never)
+        .select("id")
+        .eq("user_id", userData.user.id)
+        .eq("endpoint", existing.endpoint)
+        .maybeSingle();
+      if (data) setSubscribed(true);
     });
   }, []);
 

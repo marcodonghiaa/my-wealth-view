@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { ChevronLeft, ChevronRight, ArrowDownLeft } from "lucide-react";
 import { getSupabase } from "@/integrations/supabase/client";
+import { formatISODate } from "@/lib/date";
 
 export const Route = createFileRoute("/_authenticated/income")({
   head: () => ({
@@ -36,10 +37,6 @@ interface IncomeRow {
 
 function startOfMonth(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth(), 1);
-}
-
-function formatISODate(date: Date): string {
-  return date.toISOString().slice(0, 10);
 }
 
 function formatEur(value: number): string {

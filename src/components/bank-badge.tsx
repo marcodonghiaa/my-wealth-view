@@ -24,7 +24,7 @@ export function bankNameFromLabel(label: string): string {
   if (parts.length > 1 && /^[A-Z]{3}$/.test(last)) {
     return parts.slice(0, -1).join(" ");
   }
-  return label;
+  return parts.join(" ");
 }
 
 export function bankColor(bankName: string): string | null {

@@ -214,13 +214,17 @@ export function NetWorthPage() {
         <div className="mt-3 min-h-16">
           {netWorthQuery.isPending ? (
             <div className="h-14 w-64 animate-pulse rounded-lg bg-muted" />
+          ) : latest == null ? (
+            <p className="text-sm text-muted-foreground">
+              No snapshots available yet.
+            </p>
           ) : headline != null ? (
             <p className="font-figure text-4xl font-semibold tracking-tight text-foreground sm:text-6xl">
               {formatMoney(headline, currency)}
             </p>
           ) : (
             <p className="text-sm text-muted-foreground">
-              No snapshots available yet.
+              No {currency} exchange rate available yet.
             </p>
           )}
           {currency !== "EUR" && headline != null && rateToEur != null && (
