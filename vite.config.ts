@@ -12,4 +12,8 @@ export default defineConfig({
     // nitro/vite builds from this
     server: { entry: "server" },
   },
+  // Self-hosters get a plain Node server instead of a Cloudflare Worker build.
+  // Lovable's own sandbox/deploy builds ignore this and always force
+  // cloudflare-module, so this has no effect on the hosted app.
+  nitro: { preset: "node-server" },
 });
