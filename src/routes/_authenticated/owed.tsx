@@ -159,8 +159,15 @@ export function OwedPage() {
                         </div>
                       </div>
                       <div className="flex shrink-0 items-center gap-3">
-                        <span className="font-figure font-medium text-foreground">
-                          {formatMoney(owed, r.currency ?? "EUR")}
+                        <span className="text-right">
+                          <span className="font-figure block font-medium text-foreground">
+                            {formatMoney(owed, r.currency ?? "EUR")}
+                          </span>
+                          {r.currency !== "EUR" && (
+                            <span className="font-figure block text-xs text-muted-foreground">
+                              {formatMoney(owedEur(r), "EUR")}
+                            </span>
+                          )}
                         </span>
                         <button
                           type="button"
