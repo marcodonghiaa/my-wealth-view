@@ -494,7 +494,7 @@ export function AccountsPage() {
                           {formatEur(group.subtotalEur)}
                         </div>
                         <div className="text-xs text-muted-foreground">
-                          {percent.toFixed(1)}%
+                          {group.main.snapshot_date ? `${percent.toFixed(1)}%` : "Syncing…"}
                         </div>
                       </div>
                     </div>
