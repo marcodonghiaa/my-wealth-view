@@ -44,4 +44,4 @@ Continue developing in the [Lovable editor](https://lovable.dev/projects/00c8edf
 
 ## License
 
-TBD — coming soon.
+[MIT](LICENSE)
