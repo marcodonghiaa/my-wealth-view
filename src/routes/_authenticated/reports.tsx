@@ -131,6 +131,7 @@ async function fetchSubscriptionsTotal(): Promise<number> {
 
 interface WorthItTxRow {
   amount: number;
+  personal_amount: number | null;
   worth_it: "yes" | "no" | null;
 }
 
@@ -146,7 +147,7 @@ async function fetchWorthItForMonth(
 ): Promise<WorthItSummary> {
   const { data, error } = await getSupabase()
     .from("transactions")
-    .select("amount,worth_it")
+    .select("amount,personal_amount,worth_it")
     .not("worth_it", "is", null)
     .gte("booking_date", startISO)
     .lt("booking_date", endExclusiveISO);
@@ -157,7 +158,7 @@ async function fetchWorthItForMonth(
     no: rows.filter((r) => r.worth_it === "no").length,
     notWorthItTotal: rows
       .filter((r) => r.worth_it === "no")
-      .reduce((sum, r) => sum + r.amount, 0),
+      .reduce((sum, r) => sum + (r.personal_amount ?? r.amount), 0),
   };
 }
 

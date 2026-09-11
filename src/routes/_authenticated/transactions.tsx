@@ -62,6 +62,8 @@ interface TransactionRow {
   credit_debit_indicator: string | null;
   created_at: string | null;
   worth_it: string | null;
+  personal_amount: number | null;
+  owed_by: string | null;
 }
 
 // Mirrors the allowlist in the backend's notify-worth-it.js — kept in sync by hand,
@@ -106,10 +108,11 @@ async function fetchTransactionsForMonth(
   const { data, error } = await getSupabase()
     .from("v_transactions_eur")
     .select(
-      "entry_reference,account_uid,booking_date,category,transaction_type,creditor_name,currency,amount,signed_amount_eur,credit_debit_indicator,created_at,worth_it",
+      "entry_reference,account_uid,booking_date,category,transaction_type,creditor_name,currency,amount,signed_amount_eur,credit_debit_indicator,created_at,worth_it,personal_amount,owed_by",
     )
     .gte("booking_date", start)
     .lt("booking_date", end)
+    .eq("flow_type", "spend")
     .neq("amount", 0)
     .order("booking_date", { ascending: false })
     .order("entry_reference", { ascending: false });
@@ -217,6 +220,49 @@ function useTransactionFieldMutation<K extends "category" | "transaction_type" |
   });
 }
 
+// Splitting updates personal_amount + owed_by together, so it's a separate
+// mutation rather than another useTransactionFieldMutation call -- same
+// optimistic-update/demo-guard/rollback shape either way.
+function useSplitMutation(queryClient: ReturnType<typeof useQueryClient>, monthKey: string) {
+  type Vars = { entryReference: string; personalAmount: number | null; owedBy: string | null };
+  type Context = { previous: Array<TransactionRow> | undefined };
+
+  return useMutation<void, Error, Vars, Context>({
+    mutationFn: async ({ entryReference, personalAmount, owedBy }) => {
+      if (isDemoRoute()) throw new Error("This is a read-only demo — sign up to make changes.");
+      const { error } = await getSupabase()
+        .from("transactions")
+        .update({ personal_amount: personalAmount, owed_by: owedBy })
+        .eq("entry_reference", entryReference);
+      if (error) throw error;
+    },
+    onMutate: async ({ entryReference, personalAmount, owedBy }) => {
+      await queryClient.cancelQueries({ queryKey: ["transactions", monthKey] });
+      const previous = queryClient.getQueryData<Array<TransactionRow>>([
+        "transactions",
+        monthKey,
+      ]);
+      queryClient.setQueryData<Array<TransactionRow>>(
+        ["transactions", monthKey],
+        (old) =>
+          old
+            ? old.map((row) =>
+                row.entry_reference === entryReference
+                  ? { ...row, personal_amount: personalAmount, owed_by: owedBy }
+                  : row,
+              )
+            : old,
+      );
+      return { previous };
+    },
+    onError: (error, _vars, context) => {
+      if (context?.previous)
+        queryClient.setQueryData(["transactions", monthKey], context.previous);
+      toast.error("Couldn't save split", { description: error.message });
+    },
+    onSuccess: () => toast.success("Split saved"),
+  });
+}
 
 export function TransactionsPage() {
   const [search, setSearch] = useState("");
@@ -239,6 +285,8 @@ export function TransactionsPage() {
   const answerWorthIt = useTransactionFieldMutation(queryClient, monthKey, "worth_it", {
     errorMessage: "Couldn't save answer",
   });
+
+  const updateSplit = useSplitMutation(queryClient, monthKey);
 
   const bulkUpdateCategory = useMutation({
     mutationFn: async ({
@@ -597,6 +645,17 @@ export function TransactionsPage() {
                 onAnswerWorthIt={(worthIt) =>
                   answerWorthIt.mutate({ entryReference: tx.entry_reference, value: worthIt })
                 }
+                savingSplit={
+                  updateSplit.isPending &&
+                  updateSplit.variables?.entryReference === tx.entry_reference
+                }
+                onSaveSplit={(personalAmount, owedBy) =>
+                  updateSplit.mutate({
+                    entryReference: tx.entry_reference,
+                    personalAmount,
+                    owedBy,
+                  })
+                }
                 highlighted={tx.entry_reference === highlightRef}
               />
             ))}
@@ -622,6 +681,7 @@ export function TransactionsPage() {
                 <th className="px-4 py-3 font-medium">Merchant</th>
                 <th className="px-4 py-3 font-medium">Category</th>
                 <th className="px-4 py-3 font-medium">Type</th>
+                <th className="px-4 py-3 font-medium">Split</th>
                 <th className="px-4 py-3 font-medium">Account</th>
                 <th className="px-4 py-3 font-medium">Currency</th>
                 <th className="px-4 py-3 text-right font-medium">Amount</th>
@@ -631,7 +691,7 @@ export function TransactionsPage() {
               {txQuery.isPending ? (
                 Array.from({ length: 8 }).map((_, i) => (
                   <tr key={i} className="border-b last:border-0">
-                    <td colSpan={8} className="px-4 py-3">
+                    <td colSpan={9} className="px-4 py-3">
                       <div className="h-5 animate-pulse rounded bg-muted" />
                     </td>
                   </tr>
@@ -639,7 +699,7 @@ export function TransactionsPage() {
               ) : filtered.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={8}
+                    colSpan={9}
                     className="px-4 py-12 text-center text-sm text-muted-foreground"
                   >
                     {transactions.length === 0
@@ -683,6 +743,17 @@ export function TransactionsPage() {
                     }
                     onAnswerWorthIt={(worthIt) =>
                       answerWorthIt.mutate({ entryReference: tx.entry_reference, value: worthIt })
+                    }
+                    savingSplit={
+                      updateSplit.isPending &&
+                      updateSplit.variables?.entryReference === tx.entry_reference
+                    }
+                    onSaveSplit={(personalAmount, owedBy) =>
+                      updateSplit.mutate({
+                        entryReference: tx.entry_reference,
+                        personalAmount,
+                        owedBy,
+                      })
                     }
                     highlighted={tx.entry_reference === highlightRef}
                   />
@@ -852,6 +923,121 @@ function TypePicker({
   );
 }
 
+// Lets you record that only part of a transaction was actually yours (e.g.
+// you fronted a group flight booking) -- personal_amount is what counts
+// toward your spend analytics, the rest shows on the Owed dashboard as a
+// receivable from whoever owed_by names.
+function SplitEditor({
+  tx,
+  onSave,
+  saving,
+}: {
+  tx: TransactionRow;
+  onSave: (personalAmount: number | null, owedBy: string | null) => void;
+  saving: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const fullAmount = Math.abs(tx.amount ?? 0);
+  const [shareInput, setShareInput] = useState(() =>
+    String(tx.personal_amount ?? fullAmount),
+  );
+  const [owedByInput, setOwedByInput] = useState(tx.owed_by ?? "");
+
+  const isSplit = tx.personal_amount != null && tx.personal_amount < fullAmount;
+  const owed = isSplit ? fullAmount - (tx.personal_amount as number) : 0;
+
+  return (
+    <Popover
+      open={open}
+      onOpenChange={(next) => {
+        if (next) {
+          setShareInput(String(tx.personal_amount ?? fullAmount));
+          setOwedByInput(tx.owed_by ?? "");
+        }
+        setOpen(next);
+      }}
+    >
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          aria-label={`Split ${tx.creditor_name ?? "transaction"}`}
+          disabled={saving}
+          className="-m-2 inline-flex min-h-11 cursor-pointer items-center p-2 disabled:opacity-60"
+        >
+          {isSplit ? (
+            <span className="inline-flex rounded-full border border-primary/25 bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary transition-colors hover:bg-primary/20">
+              Split · owed {formatMoney(owed, tx.currency ?? "EUR")}
+            </span>
+          ) : (
+            <span className="inline-flex rounded-full border border-dashed px-2.5 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-accent">
+              Split…
+            </span>
+          )}
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-64 space-y-2.5 p-3">
+        <div>
+          <label className="mb-1 block text-xs font-medium text-muted-foreground">
+            Your share ({tx.currency ?? "EUR"}, full amount {formatAmountPlain(fullAmount)})
+          </label>
+          <input
+            type="number"
+            step="0.01"
+            min="0"
+            max={fullAmount}
+            value={shareInput}
+            onChange={(e) => setShareInput(e.target.value)}
+            className="h-10 w-full rounded-lg border bg-background px-3 text-sm text-foreground focus:ring-2 focus:ring-ring focus:outline-none"
+          />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-medium text-muted-foreground">
+            Owed by (optional)
+          </label>
+          <input
+            type="text"
+            placeholder="e.g. Anna, Luca"
+            value={owedByInput}
+            onChange={(e) => setOwedByInput(e.target.value)}
+            className="h-10 w-full rounded-lg border bg-background px-3 text-sm text-foreground focus:ring-2 focus:ring-ring focus:outline-none"
+          />
+        </div>
+        <div className="flex gap-2 pt-1">
+          {isSplit && (
+            <button
+              type="button"
+              onClick={() => {
+                setOpen(false);
+                onSave(null, null);
+              }}
+              className="min-h-9 flex-1 rounded-lg border px-3 text-sm text-muted-foreground transition-colors hover:bg-accent"
+            >
+              Clear
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => {
+              const parsed = Number(shareInput);
+              if (!Number.isFinite(parsed) || parsed < 0 || parsed > fullAmount) return;
+              setOpen(false);
+              // Full amount = same as unset, keeps the "NULL means whole
+              // thing is mine" convention the schema/views rely on.
+              onSave(
+                parsed === fullAmount ? null : parsed,
+                parsed === fullAmount ? null : owedByInput.trim() || null,
+              );
+            }}
+            className="min-h-9 flex-1 rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground transition-colors hover:opacity-90"
+          >
+            Save
+          </button>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 function WorthItPrompt({
   tx,
   onAnswer,
@@ -903,6 +1089,8 @@ function TransactionRowView({
   selected,
   onToggleSelect,
   onAnswerWorthIt,
+  savingSplit,
+  onSaveSplit,
   highlighted,
 }: {
   tx: TransactionRow;
@@ -914,6 +1102,8 @@ function TransactionRowView({
   selected: boolean;
   onToggleSelect: () => void;
   onAnswerWorthIt: (worthIt: "yes" | "no") => void;
+  savingSplit: boolean;
+  onSaveSplit: (personalAmount: number | null, owedBy: string | null) => void;
   highlighted?: boolean;
 }) {
   const native = nativeSignedAmount(tx);
@@ -959,6 +1149,9 @@ function TransactionRowView({
         <TypePicker tx={tx} onSelect={onSelectType} saving={savingType} />
       </td>
       <td className="px-4 py-3">
+        <SplitEditor tx={tx} onSave={onSaveSplit} saving={savingSplit} />
+      </td>
+      <td className="px-4 py-3">
         <AccountBadge label={accountLabel} />
       </td>
       <td className="px-4 py-3">
@@ -1001,6 +1194,8 @@ function TransactionCardView({
   selected,
   onToggleSelect,
   onAnswerWorthIt,
+  savingSplit,
+  onSaveSplit,
   highlighted,
 }: {
   tx: TransactionRow;
@@ -1012,6 +1207,8 @@ function TransactionCardView({
   selected: boolean;
   onToggleSelect: () => void;
   onAnswerWorthIt: (worthIt: "yes" | "no") => void;
+  savingSplit: boolean;
+  onSaveSplit: (personalAmount: number | null, owedBy: string | null) => void;
   highlighted?: boolean;
 }) {
   const native = nativeSignedAmount(tx);
@@ -1081,6 +1278,7 @@ function TransactionCardView({
       <div className="mt-2 flex flex-wrap items-center gap-2">
         <CategoryPicker tx={tx} onSelect={onSelectCategory} saving={savingCategory} />
         <TypePicker tx={tx} onSelect={onSelectType} saving={savingType} />
+        <SplitEditor tx={tx} onSave={onSaveSplit} saving={savingSplit} />
         <CurrencyBadge currency={currency} />
       </div>
     </li>

@@ -43,6 +43,7 @@ interface SpendRow {
 interface RegretRow {
   category: string | null;
   amount: number | null;
+  personal_amount: number | null;
 }
 
 interface RegretGroup {
@@ -73,13 +74,13 @@ async function fetchSpendForMonth(month: Date): Promise<Array<SpendRow>> {
 async function fetchRegretSpend(): Promise<Array<RegretGroup>> {
   const { data, error } = await getSupabase()
     .from("transactions")
-    .select("category,amount")
+    .select("category,amount,personal_amount")
     .eq("worth_it", "no");
   if (error) throw error;
   const byCategory = new Map<string, RegretGroup>();
   for (const row of (data ?? []) as Array<RegretRow>) {
     const category = row.category ?? "Uncategorized";
-    const amount = row.amount ?? 0;
+    const amount = row.personal_amount ?? row.amount ?? 0;
     const existing = byCategory.get(category);
     if (existing) {
       existing.total += amount;

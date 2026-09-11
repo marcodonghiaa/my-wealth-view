@@ -19,6 +19,8 @@ import {
   LogOut,
   Menu,
   FileText,
+  ArrowDownLeft,
+  HandCoins,
   type LucideIcon,
 } from "lucide-react";
 import {
@@ -73,6 +75,8 @@ const NAV_GROUPS: Array<NavGroup> = [
     items: [
       { label: "Accounts", icon: Landmark, to: "/accounts" },
       { label: "Transactions", icon: Receipt, to: "/transactions" },
+      { label: "Income", icon: ArrowDownLeft, to: "/income" },
+      { label: "Owed", icon: HandCoins, to: "/owed" },
       { label: "Subscriptions", icon: Repeat, to: "/subscriptions" },
       { label: "Spending", icon: PieChart, to: "/spending" },
       {
