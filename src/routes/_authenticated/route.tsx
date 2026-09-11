@@ -18,6 +18,7 @@ import {
   ListChecks,
   LogOut,
   Menu,
+  FileText,
   type LucideIcon,
 } from "lucide-react";
 import {
@@ -62,7 +63,10 @@ interface NavGroup {
 const NAV_GROUPS: Array<NavGroup> = [
   {
     label: "Overview",
-    items: [{ label: "Net Worth", icon: TrendingUp, to: "/" }],
+    items: [
+      { label: "Net Worth", icon: TrendingUp, to: "/" },
+      { label: "Reports", icon: FileText, to: "/reports" },
+    ],
   },
   {
     label: "Banking",
