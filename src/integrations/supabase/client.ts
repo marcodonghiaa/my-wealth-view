@@ -8,9 +8,19 @@ import { brokeredPreviewStorage } from './previewAuthStorage';
 // own pipeline (not the Docker path in .env.example) and doesn't set these,
 // so a hard throw here takes production down. Self-hosters who DO set them
 // via Docker build args get their own project as intended.
+const usingFallback =
+  !import.meta.env["VITE_SUPABASE_URL"] || !import.meta.env["VITE_SUPABASE_PUBLISHABLE_KEY"];
 const SUPABASE_URL = import.meta.env["VITE_SUPABASE_URL"] || "https://diwezyrtlwdbrsgegkay.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY =
   import.meta.env["VITE_SUPABASE_PUBLISHABLE_KEY"] || "sb_publishable_TUrIFr1vCjdFi7UF81VWhA_Qu8FiCe1";
+
+if (usingFallback) {
+  console.warn(
+    "[my-wealth-view] VITE_SUPABASE_URL / VITE_SUPABASE_PUBLISHABLE_KEY not set — " +
+      "connecting to the maintainer's reference project instead of your own. " +
+      "Self-hosting? Set these in .env (see .env.example) and rebuild.",
+  );
+}
 
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";

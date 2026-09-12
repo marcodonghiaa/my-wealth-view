@@ -23,7 +23,7 @@ This is the frontend half of a two-repo project. The data pipeline that feeds it
 
 - [TanStack Start](https://tanstack.com/start) (React) + Tailwind + shadcn/ui, built and maintained via [Lovable](https://lovable.dev), two-way git-synced with this repo.
 - Data access goes exclusively through an authenticated Supabase client using the publishable (anon) key — every read/write is subject to Row Level Security on the underlying tables. There is no service-role key anywhere in this app.
-- Connects to an existing Supabase project (org "Marcoo") rather than a Lovable-provisioned database — this app is one of two consumers (alongside the backend sync pipeline) of the same Postgres instance.
+- Connects to your own Supabase project (set via `.env`) rather than a Lovable-provisioned database — this app and the backend sync pipeline are two consumers of the same Postgres instance. Without a `.env`, it falls back to a read-only reference project (with a console warning) so the build never breaks — set your own credentials to see your own data.
 
 ## Development
 
@@ -35,7 +35,7 @@ cp .env.example .env   # fill in your Supabase project's URL + publishable key
 bun run dev
 ```
 
-Continue developing in the [Lovable editor](https://lovable.dev/projects/00c8edfa-0a83-4d45-870f-4d24bffe450a) — changes made there sync straight to this repo, and pushes to `main` sync back into Lovable.
+The maintainer's own instance is additionally two-way synced with a private [Lovable](https://lovable.dev) project — that link is maintainer-only and not needed to build, run, or contribute to this repo.
 
 ## Security notes
 
