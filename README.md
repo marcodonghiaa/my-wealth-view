@@ -8,6 +8,8 @@ An open-source, self-hosted net worth dashboard: bank accounts, investment portf
 
 This is the frontend half of a two-repo project. The data pipeline that feeds it (open banking sync, FX rates, AI categorization, portfolio/crypto pricing, self-hosting setup) lives in the backend repo, [finance-app](https://github.com/marcodonghiaa/myfinances) — start there to self-host.
 
+If this is useful to you, a ⭐ on both repos helps other people find them.
+
 ## Screens
 
 - **Net Worth** — total net worth over time (bank + portfolio + crypto), with an EUR/USD/GBP toggle.
