@@ -27,6 +27,8 @@ This is the frontend half of a two-repo project. The data pipeline that feeds it
 
 ## Development
 
+Requires [Bun](https://bun.sh) (`curl -fsSL https://bun.sh/install | bash`), and a Supabase project with this project's schema already applied — that's what the backend repo's [setup wizard](https://github.com/marcodonghiaa/myfinances#setup) does; run that first if you haven't.
+
 ```sh
 git clone https://github.com/marcodonghiaa/my-wealth-view.git
 cd my-wealth-view
