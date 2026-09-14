@@ -12,6 +12,9 @@ import {
   ListChecks,
   Sparkles,
   Menu,
+  FileText,
+  ArrowDownLeft,
+  HandCoins,
   type LucideIcon,
 } from "lucide-react";
 import {
@@ -51,13 +54,18 @@ interface NavGroup {
 const NAV_GROUPS: Array<NavGroup> = [
   {
     label: "Overview",
-    items: [{ label: "Net Worth", icon: TrendingUp, to: "/demo" }],
+    items: [
+      { label: "Net Worth", icon: TrendingUp, to: "/demo" },
+      { label: "Reports", icon: FileText, to: "/demo/reports" },
+    ],
   },
   {
     label: "Banking",
     items: [
       { label: "Accounts", icon: Landmark, to: "/demo/accounts" },
       { label: "Transactions", icon: Receipt, to: "/demo/transactions" },
+      { label: "Income", icon: ArrowDownLeft, to: "/demo/income" },
+      { label: "Owed", icon: HandCoins, to: "/demo/owed" },
       { label: "Subscriptions", icon: Repeat, to: "/demo/subscriptions" },
       { label: "Spending", icon: PieChart, to: "/demo/spending" },
       {

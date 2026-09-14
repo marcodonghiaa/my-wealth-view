@@ -27,8 +27,11 @@ import { Route as AuthenticatedTransactionsRouteImport } from './routes/_authent
 import { Route as DemoIndexRouteImport } from './routes/demo/index'
 import { Route as DemoAccountsRouteImport } from './routes/demo/accounts'
 import { Route as DemoCryptoRouteImport } from './routes/demo/crypto'
+import { Route as DemoIncomeRouteImport } from './routes/demo/income'
 import { Route as DemoIncomeExpensesRouteImport } from './routes/demo/income-expenses'
+import { Route as DemoOwedRouteImport } from './routes/demo/owed'
 import { Route as DemoPortfolioRouteImport } from './routes/demo/portfolio'
+import { Route as DemoReportsRouteImport } from './routes/demo/reports'
 import { Route as DemoRulesRouteImport } from './routes/demo/rules'
 import { Route as DemoSpendingRouteImport } from './routes/demo/spending'
 import { Route as DemoSubscriptionsRouteImport } from './routes/demo/subscriptions'
@@ -126,14 +129,29 @@ const DemoCryptoRoute = DemoCryptoRouteImport.update({
   path: '/crypto',
   getParentRoute: () => DemoRouteRoute,
 } as any)
+const DemoIncomeRoute = DemoIncomeRouteImport.update({
+  id: '/income',
+  path: '/income',
+  getParentRoute: () => DemoRouteRoute,
+} as any)
 const DemoIncomeExpensesRoute = DemoIncomeExpensesRouteImport.update({
   id: '/income-expenses',
   path: '/income-expenses',
   getParentRoute: () => DemoRouteRoute,
 } as any)
+const DemoOwedRoute = DemoOwedRouteImport.update({
+  id: '/owed',
+  path: '/owed',
+  getParentRoute: () => DemoRouteRoute,
+} as any)
 const DemoPortfolioRoute = DemoPortfolioRouteImport.update({
   id: '/portfolio',
   path: '/portfolio',
+  getParentRoute: () => DemoRouteRoute,
+} as any)
+const DemoReportsRoute = DemoReportsRouteImport.update({
+  id: '/reports',
+  path: '/reports',
   getParentRoute: () => DemoRouteRoute,
 } as any)
 const DemoRulesRoute = DemoRulesRouteImport.update({
@@ -174,8 +192,11 @@ export interface FileRoutesByFullPath {
   '/transactions': typeof AuthenticatedTransactionsRoute
   '/demo/accounts': typeof DemoAccountsRoute
   '/demo/crypto': typeof DemoCryptoRoute
+  '/demo/income': typeof DemoIncomeRoute
   '/demo/income-expenses': typeof DemoIncomeExpensesRoute
+  '/demo/owed': typeof DemoOwedRoute
   '/demo/portfolio': typeof DemoPortfolioRoute
+  '/demo/reports': typeof DemoReportsRoute
   '/demo/rules': typeof DemoRulesRoute
   '/demo/spending': typeof DemoSpendingRoute
   '/demo/subscriptions': typeof DemoSubscriptionsRoute
@@ -197,8 +218,11 @@ export interface FileRoutesByTo {
   '/transactions': typeof AuthenticatedTransactionsRoute
   '/demo/accounts': typeof DemoAccountsRoute
   '/demo/crypto': typeof DemoCryptoRoute
+  '/demo/income': typeof DemoIncomeRoute
   '/demo/income-expenses': typeof DemoIncomeExpensesRoute
+  '/demo/owed': typeof DemoOwedRoute
   '/demo/portfolio': typeof DemoPortfolioRoute
+  '/demo/reports': typeof DemoReportsRoute
   '/demo/rules': typeof DemoRulesRoute
   '/demo/spending': typeof DemoSpendingRoute
   '/demo/subscriptions': typeof DemoSubscriptionsRoute
@@ -224,8 +248,11 @@ export interface FileRoutesById {
   '/_authenticated/transactions': typeof AuthenticatedTransactionsRoute
   '/demo/accounts': typeof DemoAccountsRoute
   '/demo/crypto': typeof DemoCryptoRoute
+  '/demo/income': typeof DemoIncomeRoute
   '/demo/income-expenses': typeof DemoIncomeExpensesRoute
+  '/demo/owed': typeof DemoOwedRoute
   '/demo/portfolio': typeof DemoPortfolioRoute
+  '/demo/reports': typeof DemoReportsRoute
   '/demo/rules': typeof DemoRulesRoute
   '/demo/spending': typeof DemoSpendingRoute
   '/demo/subscriptions': typeof DemoSubscriptionsRoute
@@ -252,8 +279,11 @@ export interface FileRouteTypes {
     | '/transactions'
     | '/demo/accounts'
     | '/demo/crypto'
+    | '/demo/income'
     | '/demo/income-expenses'
+    | '/demo/owed'
     | '/demo/portfolio'
+    | '/demo/reports'
     | '/demo/rules'
     | '/demo/spending'
     | '/demo/subscriptions'
@@ -275,8 +305,11 @@ export interface FileRouteTypes {
     | '/transactions'
     | '/demo/accounts'
     | '/demo/crypto'
+    | '/demo/income'
     | '/demo/income-expenses'
+    | '/demo/owed'
     | '/demo/portfolio'
+    | '/demo/reports'
     | '/demo/rules'
     | '/demo/spending'
     | '/demo/subscriptions'
@@ -301,8 +334,11 @@ export interface FileRouteTypes {
     | '/_authenticated/transactions'
     | '/demo/accounts'
     | '/demo/crypto'
+    | '/demo/income'
     | '/demo/income-expenses'
+    | '/demo/owed'
     | '/demo/portfolio'
+    | '/demo/reports'
     | '/demo/rules'
     | '/demo/spending'
     | '/demo/subscriptions'
@@ -445,6 +481,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DemoCryptoRouteImport
       parentRoute: typeof DemoRouteRoute
     }
+    '/demo/income': {
+      id: '/demo/income'
+      path: '/income'
+      fullPath: '/demo/income'
+      preLoaderRoute: typeof DemoIncomeRouteImport
+      parentRoute: typeof DemoRouteRoute
+    }
     '/demo/income-expenses': {
       id: '/demo/income-expenses'
       path: '/income-expenses'
@@ -452,11 +495,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DemoIncomeExpensesRouteImport
       parentRoute: typeof DemoRouteRoute
     }
+    '/demo/owed': {
+      id: '/demo/owed'
+      path: '/owed'
+      fullPath: '/demo/owed'
+      preLoaderRoute: typeof DemoOwedRouteImport
+      parentRoute: typeof DemoRouteRoute
+    }
     '/demo/portfolio': {
       id: '/demo/portfolio'
       path: '/portfolio'
       fullPath: '/demo/portfolio'
       preLoaderRoute: typeof DemoPortfolioRouteImport
+      parentRoute: typeof DemoRouteRoute
+    }
+    '/demo/reports': {
+      id: '/demo/reports'
+      path: '/reports'
+      fullPath: '/demo/reports'
+      preLoaderRoute: typeof DemoReportsRouteImport
       parentRoute: typeof DemoRouteRoute
     }
     '/demo/rules': {
@@ -526,8 +583,11 @@ const AuthenticatedRouteRouteWithChildren =
 interface DemoRouteRouteChildren {
   DemoAccountsRoute: typeof DemoAccountsRoute
   DemoCryptoRoute: typeof DemoCryptoRoute
+  DemoIncomeRoute: typeof DemoIncomeRoute
   DemoIncomeExpensesRoute: typeof DemoIncomeExpensesRoute
+  DemoOwedRoute: typeof DemoOwedRoute
   DemoPortfolioRoute: typeof DemoPortfolioRoute
+  DemoReportsRoute: typeof DemoReportsRoute
   DemoRulesRoute: typeof DemoRulesRoute
   DemoSpendingRoute: typeof DemoSpendingRoute
   DemoSubscriptionsRoute: typeof DemoSubscriptionsRoute
@@ -538,8 +598,11 @@ interface DemoRouteRouteChildren {
 const DemoRouteRouteChildren: DemoRouteRouteChildren = {
   DemoAccountsRoute: DemoAccountsRoute,
   DemoCryptoRoute: DemoCryptoRoute,
+  DemoIncomeRoute: DemoIncomeRoute,
   DemoIncomeExpensesRoute: DemoIncomeExpensesRoute,
+  DemoOwedRoute: DemoOwedRoute,
   DemoPortfolioRoute: DemoPortfolioRoute,
+  DemoReportsRoute: DemoReportsRoute,
   DemoRulesRoute: DemoRulesRoute,
   DemoSpendingRoute: DemoSpendingRoute,
   DemoSubscriptionsRoute: DemoSubscriptionsRoute,
