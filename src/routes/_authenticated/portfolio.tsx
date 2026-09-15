@@ -251,7 +251,9 @@ export function PortfolioPage() {
                   <div
                     className="flex items-center justify-between gap-3 border-b px-4 py-3 sm:px-5"
                     style={{
-                      backgroundColor: `color-mix(in srgb, ${color} 12%, transparent)`,
+                      // 8%, not 12% -- the muted-foreground text in this header
+                      // (holding count, %) dropped to ~4.1:1 contrast at 12%.
+                      backgroundColor: `color-mix(in srgb, ${color} 8%, transparent)`,
                     }}
                   >
                     <div className="flex items-center gap-2">
@@ -337,8 +339,8 @@ export function PortfolioPage() {
                     </table>
                   </div>
 
-                  {/* Mobile cards */}
-                  <div className="space-y-3 p-4 md:hidden">
+                  {/* Mobile rows -- divided list, not nested cards */}
+                  <div className="divide-y md:hidden">
                     {group.holdings.map((row, i) => {
                       const valueEur = row.value_eur ?? 0;
                       const rowPercent =
@@ -346,7 +348,7 @@ export function PortfolioPage() {
                       return (
                         <div
                           key={row.isin ?? `${row.name ?? "row"}-${i}`}
-                          className="rounded-xl border bg-background/40 p-3"
+                          className="p-4"
                         >
                           <div className="min-w-0">
                             <div className="truncate font-medium text-foreground">
