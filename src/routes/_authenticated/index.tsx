@@ -162,21 +162,28 @@ export function NetWorthPage() {
           </p>
         </div>
 
-        {/* Currency toggle */}
+        {/* Currency toggle -- sliding highlight, not a hard background swap */}
         <div
           role="group"
           aria-label="Display currency"
-          className="flex rounded-lg border bg-card p-1"
+          className="relative grid grid-cols-3 rounded-lg border bg-card p-1"
         >
+          <div
+            aria-hidden
+            className="absolute inset-y-1 left-1 w-[calc((100%-0.5rem)/3)] rounded-md bg-primary transition-transform duration-200 ease-out"
+            style={{
+              transform: `translateX(${CURRENCIES.indexOf(currency) * 100}%)`,
+            }}
+          />
           {CURRENCIES.map((c) => (
             <button
               key={c}
               type="button"
               onClick={() => setCurrency(c)}
               aria-pressed={currency === c}
-              className={`min-h-11 rounded-md px-3.5 py-1.5 text-xs font-semibold tracking-wide transition-colors ${
+              className={`relative z-10 min-h-11 rounded-md px-3.5 py-1.5 text-xs font-semibold tracking-wide transition-colors ${
                 currency === c
-                  ? "bg-primary text-primary-foreground"
+                  ? "text-primary-foreground"
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >

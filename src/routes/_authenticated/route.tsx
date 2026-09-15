@@ -12,10 +12,8 @@ import {
   Receipt,
   Repeat,
   PieChart,
-  ArrowLeftRight,
   Briefcase,
   Bitcoin,
-  ListChecks,
   LogOut,
   MoreHorizontal,
   FileText,
@@ -73,18 +71,12 @@ const NAV_GROUPS: Array<NavGroup> = [
   {
     label: "Banking",
     items: [
-      { label: "Accounts", icon: Landmark, to: "/accounts" },
       { label: "Transactions", icon: Receipt, to: "/transactions" },
+      { label: "Spending", icon: PieChart, to: "/spending" },
+      { label: "Accounts", icon: Landmark, to: "/accounts" },
+      { label: "Subscriptions", icon: Repeat, to: "/subscriptions" },
       { label: "Income", icon: ArrowDownLeft, to: "/income" },
       { label: "Owed", icon: HandCoins, to: "/owed" },
-      { label: "Subscriptions", icon: Repeat, to: "/subscriptions" },
-      { label: "Spending", icon: PieChart, to: "/spending" },
-      {
-        label: "Income vs Expenses",
-        icon: ArrowLeftRight,
-        to: "/income-expenses",
-      },
-      { label: "Rules", icon: ListChecks, to: "/rules" },
     ],
   },
   {
