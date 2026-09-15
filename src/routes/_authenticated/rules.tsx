@@ -15,12 +15,12 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/_authenticated/rules")({
   head: () => ({
     meta: [
-      { title: "Rules — Finance Dashboard" },
+      { title: "Rules — MyFinances" },
       {
         name: "description",
         content: "Manage automatic transaction categorization rules.",
       },
-      { property: "og:title", content: "Rules — Finance Dashboard" },
+      { property: "og:title", content: "Rules — MyFinances" },
       {
         property: "og:description",
         content: "Manage automatic transaction categorization rules.",

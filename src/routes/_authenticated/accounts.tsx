@@ -17,12 +17,12 @@ import { AccountBadge, bankNameFromLabel } from "@/components/bank-badge";
 export const Route = createFileRoute("/_authenticated/accounts")({
   head: () => ({
     meta: [
-      { title: "Accounts — Finance Dashboard" },
+      { title: "Accounts — MyFinances" },
       {
         name: "description",
         content: "Your bank accounts and fixed-term deposits.",
       },
-      { property: "og:title", content: "Accounts — Finance Dashboard" },
+      { property: "og:title", content: "Accounts — MyFinances" },
       {
         property: "og:description",
         content: "Your bank accounts and fixed-term deposits.",

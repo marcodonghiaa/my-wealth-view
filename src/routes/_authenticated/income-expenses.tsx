@@ -17,14 +17,14 @@ import { getSupabase } from "@/integrations/supabase/client";
 export const Route = createFileRoute("/_authenticated/income-expenses")({
   head: () => ({
     meta: [
-      { title: "Income vs Expenses — Finance Dashboard" },
+      { title: "Income vs Expenses — MyFinances" },
       {
         name: "description",
         content: "Compare monthly income against expenses over time.",
       },
       {
         property: "og:title",
-        content: "Income vs Expenses — Finance Dashboard",
+        content: "Income vs Expenses — MyFinances",
       },
       {
         property: "og:description",

@@ -6,12 +6,12 @@ import { getSupabase, isDemoRoute } from "@/integrations/supabase/client";
 export const Route = createFileRoute("/_authenticated/owed")({
   head: () => ({
     meta: [
-      { title: "Owed — Finance Dashboard" },
+      { title: "Owed — MyFinances" },
       {
         name: "description",
         content: "Money fronted for others, split off transactions you paid in full.",
       },
-      { property: "og:title", content: "Owed — Finance Dashboard" },
+      { property: "og:title", content: "Owed — MyFinances" },
       {
         property: "og:description",
         content: "Money fronted for others, split off transactions you paid in full.",

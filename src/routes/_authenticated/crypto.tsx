@@ -8,12 +8,12 @@ import { getSupabase } from "@/integrations/supabase/client";
 export const Route = createFileRoute("/_authenticated/crypto")({
   head: () => ({
     meta: [
-      { title: "Crypto — Finance Dashboard" },
+      { title: "Crypto — MyFinances" },
       {
         name: "description",
         content: "Track your cryptocurrency holdings and allocation.",
       },
-      { property: "og:title", content: "Crypto — Finance Dashboard" },
+      { property: "og:title", content: "Crypto — MyFinances" },
       {
         property: "og:description",
         content: "Track your cryptocurrency holdings and allocation.",

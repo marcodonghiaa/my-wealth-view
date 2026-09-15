@@ -14,12 +14,12 @@ import { getSupabase } from "@/integrations/supabase/client";
 export const Route = createFileRoute("/_authenticated/portfolio")({
   head: () => ({
     meta: [
-      { title: "Portfolio — Finance Dashboard" },
+      { title: "Portfolio — MyFinances" },
       {
         name: "description",
         content: "Track your investment holdings and allocation.",
       },
-      { property: "og:title", content: "Portfolio — Finance Dashboard" },
+      { property: "og:title", content: "Portfolio — MyFinances" },
       {
         property: "og:description",
         content: "Track your investment holdings and allocation.",

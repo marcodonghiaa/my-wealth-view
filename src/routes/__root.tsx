@@ -79,13 +79,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Finance Dashboard" },
+      { title: "MyFinances" },
       {
         name: "description",
         content:
           "A personal finance dashboard to track net worth, spending, and portfolio over time.",
       },
-      { property: "og:title", content: "Finance Dashboard" },
+      { property: "og:title", content: "MyFinances" },
       {
         property: "og:description",
         content:

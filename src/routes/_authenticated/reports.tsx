@@ -15,12 +15,12 @@ import { formatISODate } from "@/lib/date";
 export const Route = createFileRoute("/_authenticated/reports")({
   head: () => ({
     meta: [
-      { title: "Monthly Report — Finance Dashboard" },
+      { title: "Monthly Report — MyFinances" },
       {
         name: "description",
         content: "Net worth change, income vs expenses, and spending for the month.",
       },
-      { property: "og:title", content: "Monthly Report — Finance Dashboard" },
+      { property: "og:title", content: "Monthly Report — MyFinances" },
       {
         property: "og:description",
         content: "Net worth change, income vs expenses, and spending for the month.",

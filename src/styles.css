@@ -5,7 +5,7 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * Finance Dashboard design system.
+ * MyFinances design system.
  * Dark-first "trading terminal" aesthetic: deep ink surfaces, a single
  * luminous green accent for value/gains, restrained red for losses, and
  * tabular mono figures for anything numeric.

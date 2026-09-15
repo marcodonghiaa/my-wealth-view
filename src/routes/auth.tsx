@@ -17,13 +17,13 @@ export const Route = createFileRoute("/auth")({
   },
   head: () => ({
     meta: [
-      { title: "Sign in — Finance Dashboard" },
+      { title: "Sign in — MyFinances" },
       {
         name: "description",
         content: "Sign in to your personal finance dashboard.",
       },
       { name: "robots", content: "noindex" },
-      { property: "og:title", content: "Sign in — Finance Dashboard" },
+      { property: "og:title", content: "Sign in — MyFinances" },
       {
         property: "og:description",
         content: "Sign in to your personal finance dashboard.",
@@ -124,7 +124,7 @@ function AuthPage() {
             <TrendingUp className="size-6" />
           </div>
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-            Finance Dashboard
+            MyFinances
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {mode === "signin"

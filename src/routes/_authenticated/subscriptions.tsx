@@ -20,13 +20,13 @@ import {
 export const Route = createFileRoute("/_authenticated/subscriptions")({
   head: () => ({
     meta: [
-      { title: "Subscriptions — Finance Dashboard" },
+      { title: "Subscriptions — MyFinances" },
       {
         name: "description",
         content:
           "Track recurring subscription charges and estimated monthly spend.",
       },
-      { property: "og:title", content: "Subscriptions — Finance Dashboard" },
+      { property: "og:title", content: "Subscriptions — MyFinances" },
       {
         property: "og:description",
         content:

@@ -1,6 +1,6 @@
 {
-  "name": "Finance Dashboard",
-  "short_name": "Finance",
+  "name": "MyFinances",
+  "short_name": "MyFinances",
   "description": "Track net worth, spending, subscriptions and portfolio in one place.",
   "start_url": "/",
   "scope": "/",

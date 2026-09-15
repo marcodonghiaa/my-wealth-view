@@ -1,7 +1,7 @@
 self.addEventListener("push", (event) => {
   const data = event.data ? event.data.json() : {};
   event.waitUntil(
-    self.registration.showNotification(data.title || "Finance Dashboard", {
+    self.registration.showNotification(data.title || "MyFinances", {
       body: data.body || "",
       icon: "/icon-192.png",
       badge: "/icon-192.png",

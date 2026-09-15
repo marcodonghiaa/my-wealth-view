@@ -21,11 +21,11 @@ export const Route = createFileRoute("/demo")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "Live Demo — Finance Dashboard" },
+      { title: "Live Demo — MyFinances" },
       {
         name: "description",
         content:
-          "A read-only walkthrough of the Finance Dashboard, populated with sample data.",
+          "A read-only walkthrough of MyFinances, populated with sample data.",
       },
     ],
   }),
@@ -102,7 +102,7 @@ function DemoLayout() {
             <TrendingUp className="size-4" />
           </div>
           <span className="text-sm font-semibold tracking-tight text-sidebar-foreground">
-            Finance Dashboard
+            MyFinances
           </span>
         </div>
 
@@ -154,7 +154,7 @@ function DemoLayout() {
                 <span className="flex size-8 items-center justify-center rounded-lg bg-primary/15 text-primary">
                   <TrendingUp className="size-4" />
                 </span>
-                Finance Dashboard
+                MyFinances
               </SheetTitle>
             </SheetHeader>
 
@@ -200,7 +200,7 @@ function DemoLayout() {
             <TrendingUp className="size-3.5" />
           </div>
           <span className="truncate text-sm font-semibold text-sidebar-foreground">
-            Finance Dashboard
+            MyFinances
           </span>
         </div>
         <a

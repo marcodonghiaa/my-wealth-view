@@ -48,13 +48,13 @@ function withTrend(
 export const Route = createFileRoute("/_authenticated/")({
   head: () => ({
     meta: [
-      { title: "Net Worth — Finance Dashboard" },
+      { title: "Net Worth — MyFinances" },
       {
         name: "description",
         content:
           "Track your net worth over time with daily snapshots and currency conversion.",
       },
-      { property: "og:title", content: "Net Worth — Finance Dashboard" },
+      { property: "og:title", content: "Net Worth — MyFinances" },
       {
         property: "og:description",
         content:

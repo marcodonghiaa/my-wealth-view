@@ -8,12 +8,12 @@ import { formatISODate } from "@/lib/date";
 export const Route = createFileRoute("/_authenticated/income")({
   head: () => ({
     meta: [
-      { title: "Income — Finance Dashboard" },
+      { title: "Income — MyFinances" },
       {
         name: "description",
         content: "Real income for the month, separate from spending and transfers.",
       },
-      { property: "og:title", content: "Income — Finance Dashboard" },
+      { property: "og:title", content: "Income — MyFinances" },
       {
         property: "og:description",
         content: "Real income for the month, separate from spending and transfers.",
