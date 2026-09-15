@@ -17,7 +17,7 @@ import {
   Bitcoin,
   ListChecks,
   LogOut,
-  Menu,
+  MoreHorizontal,
   FileText,
   ArrowDownLeft,
   HandCoins,
@@ -94,6 +94,15 @@ const NAV_GROUPS: Array<NavGroup> = [
       { label: "Crypto", icon: Bitcoin, to: "/crypto" },
     ],
   },
+];
+
+// iOS HIG: bottom tabs max 5, icon + label, current tab visually distinct.
+// The 5th slot opens the full nav (Sheet) rather than a 6th route.
+const TAB_BAR_ITEMS: Array<{ label: string; icon: LucideIcon; to: string }> = [
+  { label: "Net Worth", icon: TrendingUp, to: "/" },
+  { label: "Transactions", icon: Receipt, to: "/transactions" },
+  { label: "Spending", icon: PieChart, to: "/spending" },
+  { label: "Portfolio", icon: Briefcase, to: "/portfolio" },
 ];
 
 function AuthenticatedLayout() {
@@ -192,20 +201,13 @@ function AuthenticatedLayout() {
         </div>
       </aside>
 
-      {/* Mobile top bar — padded for the notch/status bar so the hamburger
+      {/* Mobile top bar — padded for the notch/status bar so its content
           never sits under it on a home-screen install (safe-area-inset-top
-          is 0 on a normal browser tab, so this is a no-op there). */}
-      <div className="fixed inset-x-0 top-0 z-30 grid h-[calc(3.5rem+env(safe-area-inset-top))] grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 border-b bg-sidebar px-2 pt-[env(safe-area-inset-top)] md:hidden">
+          is 0 on a normal browser tab, so this is a no-op there). Primary
+          nav lives in the bottom tab bar below; this Sheet is reached via
+          the "More" tab for the items that don't fit. */}
+      <div className="fixed inset-x-0 top-0 z-30 grid h-[calc(3.5rem+env(safe-area-inset-top))] grid-cols-[minmax(0,1fr)_auto] items-center gap-2 border-b bg-sidebar px-4 pt-[env(safe-area-inset-top)] md:hidden">
         <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
-          <SheetTrigger asChild>
-            <button
-              type="button"
-              aria-label="Open menu"
-              className="flex size-11 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-foreground"
-            >
-              <Menu className="size-5" />
-            </button>
-          </SheetTrigger>
           <SheetContent
             side="left"
             className="flex w-72 flex-col gap-0 border-r bg-sidebar p-0 [&>button]:size-11"
@@ -286,9 +288,37 @@ function AuthenticatedLayout() {
         </button>
       </div>
 
+      {/* Mobile bottom tab bar — primary nav on an installed/home-screen app.
+          iOS HIG: max 5 items, icon + label, current tab visually distinct. */}
+      <nav
+        aria-label="Primary"
+        className="fixed inset-x-0 bottom-0 z-30 grid h-[calc(4rem+env(safe-area-inset-bottom))] grid-cols-5 border-t bg-sidebar pb-[env(safe-area-inset-bottom)] md:hidden"
+      >
+        {TAB_BAR_ITEMS.map((item) => (
+          <Link
+            key={item.label}
+            to={item.to}
+            activeOptions={{ exact: true }}
+            className="flex flex-col items-center justify-center gap-1 text-muted-foreground transition-transform active:scale-90"
+            activeProps={{ className: "flex flex-col items-center justify-center gap-1 text-sidebar-primary transition-transform active:scale-90" }}
+          >
+            <item.icon className="size-5" />
+            <span className="text-[10px] font-medium">{item.label}</span>
+          </Link>
+        ))}
+        <button
+          type="button"
+          onClick={() => setMenuOpen(true)}
+          aria-label="More"
+          className="flex flex-col items-center justify-center gap-1 text-muted-foreground transition-transform active:scale-90"
+        >
+          <MoreHorizontal className="size-5" />
+          <span className="text-[10px] font-medium">More</span>
+        </button>
+      </nav>
 
       {/* Main content */}
-      <main className="min-w-0 flex-1 pt-[calc(3.5rem+env(safe-area-inset-top))] pb-[env(safe-area-inset-bottom)] md:pt-0 md:pb-0 md:pl-64">
+      <main className="min-w-0 flex-1 pt-[calc(3.5rem+env(safe-area-inset-top))] pb-[calc(4rem+env(safe-area-inset-bottom))] md:pt-0 md:pb-0 md:pl-64">
         <Outlet />
       </main>
     </div>

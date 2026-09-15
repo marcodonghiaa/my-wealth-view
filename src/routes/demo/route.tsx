@@ -11,19 +11,13 @@ import {
   Bitcoin,
   ListChecks,
   Sparkles,
-  Menu,
+  MoreHorizontal,
   FileText,
   ArrowDownLeft,
   HandCoins,
   type LucideIcon,
 } from "lucide-react";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 
 export const Route = createFileRoute("/demo")({
   ssr: false,
@@ -83,6 +77,13 @@ const NAV_GROUPS: Array<NavGroup> = [
       { label: "Crypto", icon: Bitcoin, to: "/demo/crypto" },
     ],
   },
+];
+
+const TAB_BAR_ITEMS: Array<{ label: string; icon: LucideIcon; to: string }> = [
+  { label: "Net Worth", icon: TrendingUp, to: "/demo" },
+  { label: "Transactions", icon: Receipt, to: "/demo/transactions" },
+  { label: "Spending", icon: PieChart, to: "/demo/spending" },
+  { label: "Portfolio", icon: Briefcase, to: "/demo/portfolio" },
 ];
 
 function SignUpCta({ className = "" }: { className?: string }) {
@@ -148,18 +149,10 @@ function DemoLayout() {
         </div>
       </aside>
 
-      {/* Mobile top bar */}
-      <div className="fixed inset-x-0 top-0 z-30 grid h-[calc(3.5rem+env(safe-area-inset-top))] grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 border-b bg-sidebar px-2 pt-[env(safe-area-inset-top)] md:hidden">
+      {/* Mobile top bar — primary nav lives in the bottom tab bar below;
+          this Sheet is reached via the "More" tab. */}
+      <div className="fixed inset-x-0 top-0 z-30 grid h-[calc(3.5rem+env(safe-area-inset-top))] grid-cols-[minmax(0,1fr)_auto] items-center gap-2 border-b bg-sidebar px-4 pt-[env(safe-area-inset-top)] md:hidden">
         <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
-          <SheetTrigger asChild>
-            <button
-              type="button"
-              aria-label="Open menu"
-              className="flex size-11 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-foreground"
-            >
-              <Menu className="size-5" />
-            </button>
-          </SheetTrigger>
           <SheetContent
             side="left"
             className="flex w-72 flex-col gap-0 border-r bg-sidebar p-0 [&>button]:size-11"
@@ -227,8 +220,36 @@ function DemoLayout() {
         </a>
       </div>
 
+      {/* Mobile bottom tab bar */}
+      <nav
+        aria-label="Primary"
+        className="fixed inset-x-0 bottom-0 z-30 grid h-[calc(4rem+env(safe-area-inset-bottom))] grid-cols-5 border-t bg-sidebar pb-[env(safe-area-inset-bottom)] md:hidden"
+      >
+        {TAB_BAR_ITEMS.map((item) => (
+          <Link
+            key={item.label}
+            to={item.to}
+            activeOptions={{ exact: true }}
+            className="flex flex-col items-center justify-center gap-1 text-muted-foreground transition-transform active:scale-90"
+            activeProps={{ className: "flex flex-col items-center justify-center gap-1 text-sidebar-primary transition-transform active:scale-90" }}
+          >
+            <item.icon className="size-5" />
+            <span className="text-[10px] font-medium">{item.label}</span>
+          </Link>
+        ))}
+        <button
+          type="button"
+          onClick={() => setMenuOpen(true)}
+          aria-label="More"
+          className="flex flex-col items-center justify-center gap-1 text-muted-foreground transition-transform active:scale-90"
+        >
+          <MoreHorizontal className="size-5" />
+          <span className="text-[10px] font-medium">More</span>
+        </button>
+      </nav>
+
       {/* Main content */}
-      <main className="min-w-0 flex-1 pt-[calc(3.5rem+env(safe-area-inset-top))] pb-[env(safe-area-inset-bottom)] md:pt-0 md:pb-0 md:pl-64">
+      <main className="min-w-0 flex-1 pt-[calc(3.5rem+env(safe-area-inset-top))] pb-[calc(4rem+env(safe-area-inset-bottom))] md:pt-0 md:pb-0 md:pl-64">
         <div className="sticky top-[calc(3.5rem+env(safe-area-inset-top))] z-20 border-b bg-primary/10 px-4 py-2 text-center text-xs font-medium text-primary md:top-0">
           You're viewing a live demo with sample data — everything here is
           read-only.{" "}
