@@ -17,6 +17,8 @@ import {
 } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 
+const REPO_URL = "https://github.com/marcodonghiaa/my-wealth-view";
+
 export const Route = createFileRoute("/demo")({
   ssr: false,
   head: () => ({
@@ -81,7 +83,7 @@ const TAB_BAR_ITEMS: Array<{ label: string; icon: LucideIcon; to: string }> = [
 function SignUpCta({ className = "" }: { className?: string }) {
   return (
     <a
-      href="https://github.com/marcodonghiaa/my-wealth-view"
+      href={REPO_URL}
       target="_blank"
       rel="noopener noreferrer"
       className={`flex min-h-11 items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-primary transition-colors hover:bg-sidebar-accent ${className}`}
@@ -206,7 +208,7 @@ function DemoLayout() {
           </span>
         </div>
         <a
-          href="https://github.com/marcodonghiaa/my-wealth-view"
+          href={REPO_URL}
           target="_blank"
           rel="noopener noreferrer"
           aria-label="Self-host your own"
@@ -250,7 +252,7 @@ function DemoLayout() {
           You're viewing a live demo with sample data — everything here is
           read-only.{" "}
           <a
-            href="https://github.com/marcodonghiaa/my-wealth-view"
+            href={REPO_URL}
             target="_blank"
             rel="noopener noreferrer"
             className="underline underline-offset-2"
