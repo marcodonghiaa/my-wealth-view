@@ -19,7 +19,6 @@ If this is useful to you, a ⭐ on both repos helps other people find them.
 - **Income vs Expenses** — monthly income/expense comparison.
 - **Portfolio** — stock/ETF holdings, allocation breakdown, and live-priced value.
 - **Crypto** — crypto holdings (Coinbase-synced and manually tracked), allocation breakdown, and live-priced value.
-- **Rules** — user-editable rules that steer automatic transaction categorization ahead of the AI fallback.
 
 ## How it's built
 
