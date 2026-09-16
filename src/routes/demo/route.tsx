@@ -8,7 +8,7 @@ import {
   PieChart,
   Briefcase,
   Bitcoin,
-  Sparkles,
+  Github,
   MoreHorizontal,
   FileText,
   ArrowDownLeft,
@@ -81,11 +81,13 @@ const TAB_BAR_ITEMS: Array<{ label: string; icon: LucideIcon; to: string }> = [
 function SignUpCta({ className = "" }: { className?: string }) {
   return (
     <a
-      href="/auth"
+      href="https://github.com/marcodonghiaa/my-wealth-view"
+      target="_blank"
+      rel="noopener noreferrer"
       className={`flex min-h-11 items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-primary transition-colors hover:bg-sidebar-accent ${className}`}
     >
-      <Sparkles className="size-4" />
-      Sign up for your own
+      <Github className="size-4" />
+      Self-host your own
     </a>
   );
 }
@@ -204,11 +206,13 @@ function DemoLayout() {
           </span>
         </div>
         <a
-          href="/auth"
-          aria-label="Sign up"
+          href="https://github.com/marcodonghiaa/my-wealth-view"
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="Self-host your own"
           className="flex size-11 items-center justify-center rounded-lg text-primary transition-colors hover:bg-sidebar-accent"
         >
-          <Sparkles className="size-5" />
+          <Github className="size-5" />
         </a>
       </div>
 
@@ -245,8 +249,13 @@ function DemoLayout() {
         <div className="sticky top-[calc(3.5rem+env(safe-area-inset-top))] z-20 border-b bg-primary/10 px-4 py-2 text-center text-xs font-medium text-primary md:top-0">
           You're viewing a live demo with sample data — everything here is
           read-only.{" "}
-          <a href="/auth" className="underline underline-offset-2">
-            Sign up
+          <a
+            href="https://github.com/marcodonghiaa/my-wealth-view"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline underline-offset-2"
+          >
+            Self-host it
           </a>{" "}
           to connect your own accounts.
         </div>
