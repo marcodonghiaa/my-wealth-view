@@ -4,9 +4,16 @@ import { Loader2, LockKeyhole, Sparkles, TrendingUp } from "lucide-react";
 import { getSupabase } from "@/integrations/supabase/client";
 
 function safeNext(value: unknown): string | undefined {
-  if (typeof value !== "string") return undefined;
-  // Same-origin relative path only.
-  return /^\/(?!\/)/.test(value) ? value : undefined;
+  if (typeof value !== "string" || !value.startsWith("/")) return undefined;
+  // Parse (not regex-match) so the URL parser's own backslash/protocol-relative
+  // normalization catches bypasses like "/\evil.com" -> "//evil.com" that a
+  // leading-slash regex alone would miss.
+  try {
+    const parsed = new URL(value, window.location.origin);
+    return parsed.origin === window.location.origin ? value : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 export const Route = createFileRoute("/auth")({
