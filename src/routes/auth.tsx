@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { Loader2, LockKeyhole, Sparkles, TrendingUp } from "lucide-react";
 import { getSupabase } from "@/integrations/supabase/client";
 
-function safeNext(value: unknown): string | undefined {
+export function safeNext(value: unknown): string | undefined {
   if (typeof value !== "string" || !value.startsWith("/")) return undefined;
   // Parse (not regex-match) so the URL parser's own backslash/protocol-relative
   // normalization catches bypasses like "/\evil.com" -> "//evil.com" that a
