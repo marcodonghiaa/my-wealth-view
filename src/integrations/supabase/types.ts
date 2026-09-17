@@ -16,25 +16,31 @@ export type Database = {
     Tables: {
       accounts: {
         Row: {
+          consent_valid_until: string | null
           created_at: string | null
           currency: string
           iban: string | null
+          identification_hash: string | null
           label: string | null
           uid: string
           user_id: string
         }
         Insert: {
+          consent_valid_until?: string | null
           created_at?: string | null
           currency: string
           iban?: string | null
+          identification_hash?: string | null
           label?: string | null
           uid: string
           user_id: string
         }
         Update: {
+          consent_valid_until?: string | null
           created_at?: string | null
           currency?: string
           iban?: string | null
+          identification_hash?: string | null
           label?: string | null
           uid?: string
           user_id?: string
@@ -70,6 +76,45 @@ export type Database = {
           priority?: number
           set_category?: string | null
           set_transaction_type?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      cd_holdings: {
+        Row: {
+          annual_rate: number
+          bank_label: string | null
+          created_at: string
+          currency: string
+          id: string
+          label: string
+          maturity_date: string
+          principal: number
+          start_date: string
+          user_id: string
+        }
+        Insert: {
+          annual_rate: number
+          bank_label?: string | null
+          created_at?: string
+          currency: string
+          id?: string
+          label: string
+          maturity_date: string
+          principal: number
+          start_date: string
+          user_id: string
+        }
+        Update: {
+          annual_rate?: number
+          bank_label?: string | null
+          created_at?: string
+          currency?: string
+          id?: string
+          label?: string
+          maturity_date?: string
+          principal?: number
+          start_date?: string
           user_id?: string
         }
         Relationships: []
@@ -215,10 +260,36 @@ export type Database = {
             referencedRelation: "accounts"
             referencedColumns: ["uid"]
           },
+          {
+            foreignKeyName: "net_worth_snapshots_account_uid_fkey"
+            columns: ["account_uid"]
+            isOneToOne: false
+            referencedRelation: "v_bank_accounts_latest"
+            referencedColumns: ["uid"]
+          },
         ]
+      }
+      pending_bank_consents: {
+        Row: {
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       portfolio_holdings: {
         Row: {
+          asset_type: string | null
           broker_label: string
           created_at: string
           isin: string
@@ -228,6 +299,7 @@ export type Database = {
           yahoo_symbol: string
         }
         Insert: {
+          asset_type?: string | null
           broker_label?: string
           created_at?: string
           isin: string
@@ -237,6 +309,7 @@ export type Database = {
           yahoo_symbol: string
         }
         Update: {
+          asset_type?: string | null
           broker_label?: string
           created_at?: string
           isin?: string
@@ -295,23 +368,56 @@ export type Database = {
           },
         ]
       }
-      subscription_billing_overrides: {
+      push_subscriptions: {
         Row: {
-          billing_frequency: string
+          auth: string
           created_at: string
-          creditor_name: string
+          endpoint: string
+          id: string
+          p256dh: string
           user_id: string
         }
         Insert: {
-          billing_frequency: string
+          auth: string
           created_at?: string
-          creditor_name: string
+          endpoint: string
+          id?: string
+          p256dh: string
           user_id: string
         }
         Update: {
-          billing_frequency?: string
+          auth?: string
+          created_at?: string
+          endpoint?: string
+          id?: string
+          p256dh?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      subscription_billing_overrides: {
+        Row: {
+          billing_frequency: string | null
+          created_at: string
+          creditor_name: string
+          custom_interval_unit: string | null
+          custom_interval_value: number | null
+          user_id: string
+        }
+        Insert: {
+          billing_frequency?: string | null
+          created_at?: string
+          creditor_name: string
+          custom_interval_unit?: string | null
+          custom_interval_value?: number | null
+          user_id: string
+        }
+        Update: {
+          billing_frequency?: string | null
           created_at?: string
           creditor_name?: string
+          custom_interval_unit?: string | null
+          custom_interval_value?: number | null
           user_id?: string
         }
         Relationships: []
@@ -329,11 +435,18 @@ export type Database = {
           currency: string
           debtor_name: string | null
           entry_reference: string
+          flow_type: string | null
+          owed_by: string | null
+          owed_settled: boolean
+          personal_amount: number | null
           raw: Json | null
           remittance_info: string | null
+          settled_at: string | null
           transaction_type: string | null
           user_id: string
           value_date: string | null
+          worth_it: string | null
+          worth_it_prompted_at: string | null
         }
         Insert: {
           account_uid?: string | null
@@ -347,11 +460,18 @@ export type Database = {
           currency: string
           debtor_name?: string | null
           entry_reference: string
+          flow_type?: string | null
+          owed_by?: string | null
+          owed_settled?: boolean
+          personal_amount?: number | null
           raw?: Json | null
           remittance_info?: string | null
+          settled_at?: string | null
           transaction_type?: string | null
           user_id: string
           value_date?: string | null
+          worth_it?: string | null
+          worth_it_prompted_at?: string | null
         }
         Update: {
           account_uid?: string | null
@@ -365,11 +485,18 @@ export type Database = {
           currency?: string
           debtor_name?: string | null
           entry_reference?: string
+          flow_type?: string | null
+          owed_by?: string | null
+          owed_settled?: boolean
+          personal_amount?: number | null
           raw?: Json | null
           remittance_info?: string | null
+          settled_at?: string | null
           transaction_type?: string | null
           user_id?: string
           value_date?: string | null
+          worth_it?: string | null
+          worth_it_prompted_at?: string | null
         }
         Relationships: [
           {
@@ -379,10 +506,49 @@ export type Database = {
             referencedRelation: "accounts"
             referencedColumns: ["uid"]
           },
+          {
+            foreignKeyName: "transactions_account_uid_fkey"
+            columns: ["account_uid"]
+            isOneToOne: false
+            referencedRelation: "v_bank_accounts_latest"
+            referencedColumns: ["uid"]
+          },
         ]
       }
     }
     Views: {
+      v_bank_accounts_latest: {
+        Row: {
+          amount: number | null
+          amount_eur: number | null
+          consent_valid_until: string | null
+          currency: string | null
+          iban: string | null
+          label: string | null
+          snapshot_date: string | null
+          uid: string | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
+      v_cd_holdings: {
+        Row: {
+          annual_rate: number | null
+          bank_label: string | null
+          currency: string | null
+          current_value_eur: number | null
+          current_value_native: number | null
+          days_elapsed: number | null
+          id: string | null
+          is_matured: boolean | null
+          label: string | null
+          maturity_date: string | null
+          principal: number | null
+          start_date: string | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
       v_crypto_latest: {
         Row: {
           amount: number | null
@@ -408,6 +574,9 @@ export type Database = {
       }
       v_net_worth_daily: {
         Row: {
+          bank_total_eur: number | null
+          crypto_total_eur: number | null
+          portfolio_total_eur: number | null
           snapshot_date: string | null
           total_eur: number | null
           user_id: string | null
@@ -431,10 +600,18 @@ export type Database = {
             referencedRelation: "accounts"
             referencedColumns: ["uid"]
           },
+          {
+            foreignKeyName: "net_worth_snapshots_account_uid_fkey"
+            columns: ["account_uid"]
+            isOneToOne: false
+            referencedRelation: "v_bank_accounts_latest"
+            referencedColumns: ["uid"]
+          },
         ]
       }
       v_portfolio_latest: {
         Row: {
+          asset_type: string | null
           broker_label: string | null
           currency: string | null
           isin: string | null
@@ -466,6 +643,8 @@ export type Database = {
           charge_count: number | null
           creditor_name: string | null
           currency: string | null
+          custom_interval_unit: string | null
+          custom_interval_value: number | null
           interval_days: number | null
           last_charged: string | null
           monthly_equivalent_eur: number | null
@@ -480,12 +659,21 @@ export type Database = {
           amount: number | null
           booking_date: string | null
           category: string | null
+          created_at: string | null
+          credit_debit_indicator: string | null
           creditor_name: string | null
           currency: string | null
           entry_reference: string | null
+          flow_type: string | null
+          owed_by: string | null
+          owed_settled: boolean | null
+          personal_amount: number | null
+          personal_signed_amount_eur: number | null
+          settled_at: string | null
           signed_amount_eur: number | null
           transaction_type: string | null
           user_id: string | null
+          worth_it: string | null
         }
         Relationships: [
           {
@@ -493,6 +681,13 @@ export type Database = {
             columns: ["account_uid"]
             isOneToOne: false
             referencedRelation: "accounts"
+            referencedColumns: ["uid"]
+          },
+          {
+            foreignKeyName: "transactions_account_uid_fkey"
+            columns: ["account_uid"]
+            isOneToOne: false
+            referencedRelation: "v_bank_accounts_latest"
             referencedColumns: ["uid"]
           },
         ]

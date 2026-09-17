@@ -57,7 +57,8 @@ const TYPE_COLORS: Record<string, string> = {
 };
 
 function colorForType(type: string): string {
-  return TYPE_COLORS[type] ?? TYPE_COLORS[UNCLASSIFIED];
+  // UNCLASSIFIED is always a key in TYPE_COLORS -- defined right above.
+  return TYPE_COLORS[type] ?? TYPE_COLORS[UNCLASSIFIED]!;
 }
 
 async function fetchPortfolio(): Promise<Array<PortfolioRow>> {

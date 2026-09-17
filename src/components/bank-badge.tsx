@@ -20,7 +20,7 @@ const BANK_META: Record<string, { logo: string; color: string }> = {
 
 export function bankNameFromLabel(label: string): string {
   const parts = label.trim().split(/\s+/);
-  const last = parts[parts.length - 1];
+  const last = parts[parts.length - 1] ?? "";
   if (parts.length > 1 && /^[A-Z]{3}$/.test(last)) {
     return parts.slice(0, -1).join(" ");
   }

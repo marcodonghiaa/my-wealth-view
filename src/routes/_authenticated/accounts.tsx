@@ -159,9 +159,11 @@ export function AccountsPage() {
         // keeps the grouping from silently dropping accounts if it ever does.
         const main =
           eurAccount ??
+          // accountsForBank always has >=1 entry -- it's only ever created via
+          // list.push(a) before byBank.set(bank, list), never empty.
           [...accountsForBank].sort(
             (a, b) => Math.abs(b.amount_eur ?? 0) - Math.abs(a.amount_eur ?? 0),
-          )[0];
+          )[0]!;
         const subAccounts = accountsForBank
           .filter((a) => a.uid !== main.uid && (a.amount ?? 0) !== 0)
           .sort((a, b) => (b.amount_eur ?? 0) - (a.amount_eur ?? 0));

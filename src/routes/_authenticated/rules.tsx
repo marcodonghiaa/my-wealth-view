@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { getSupabase, isDemoRoute } from "@/integrations/supabase/client";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { CATEGORIES, TRANSACTION_TYPES } from "@/lib/categories";
 
 export const Route = createFileRoute("/_authenticated/rules")({
   head: () => ({
@@ -39,23 +40,6 @@ type RuleRow = {
   priority: number;
   created_at: string;
 };
-
-const CATEGORIES = [
-  "Shopping",
-  "Entertainment",
-  "Groceries",
-  "Dine Out",
-  "Services",
-  "Housing",
-  "Transports",
-  "Experiences",
-  "Income",
-  "Health",
-  "Transfer",
-  "Others",
-];
-
-const TYPES = ["Subscription", "One-time"];
 
 const MATCH_FIELDS = [
   { value: "creditor_name", label: "Creditor name" },
@@ -330,7 +314,7 @@ export function RulesPage() {
                 >
                   None
                 </button>
-                {TYPES.map((t) => (
+                {TRANSACTION_TYPES.map((t) => (
                   <button
                     key={t}
                     type="button"

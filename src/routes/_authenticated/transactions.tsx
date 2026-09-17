@@ -26,6 +26,7 @@ import {
 import { getSupabase, isDemoRoute } from "@/integrations/supabase/client";
 import { AccountBadge, CurrencyBadge } from "@/components/bank-badge";
 import { formatISODate } from "@/lib/date";
+import { CATEGORIES, TRANSACTION_TYPES } from "@/lib/categories";
 
 
 export const Route = createFileRoute("/_authenticated/transactions")({
@@ -151,21 +152,6 @@ function nativeSignedAmount(tx: TransactionRow): number | null {
   const sign = (tx.signed_amount_eur ?? tx.amount) < 0 ? -1 : 1;
   return sign * Math.abs(tx.amount);
 }
-
-const CATEGORIES = [
-  "Shopping",
-  "Entertainment",
-  "Groceries",
-  "Dine Out",
-  "Services",
-  "Housing",
-  "Transports",
-  "Experiences",
-  "Income",
-  "Health",
-  "Transfer",
-  "Others",
-] as const;
 
 const UNCATEGORIZED = "__uncategorized__";
 
@@ -862,8 +848,6 @@ function BulkCategoryPicker({
   );
 }
 
-const TYPES = ["Subscription", "One-time"] as const;
-
 function TypePicker({
   tx,
   onSelect,
@@ -897,7 +881,7 @@ function TypePicker({
       </PopoverTrigger>
       <PopoverContent align="start" className="w-48 p-1">
         <div className="max-h-72 overflow-y-auto">
-          {TYPES.map((t) => (
+          {TRANSACTION_TYPES.map((t) => (
             <button
               key={t}
               type="button"

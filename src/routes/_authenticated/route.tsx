@@ -51,8 +51,7 @@ export const Route = createFileRoute("/_authenticated")({
 interface NavItem {
   label: string;
   icon: LucideIcon;
-  to?: string;
-  soon?: boolean;
+  to: string;
 }
 
 interface NavGroup {
@@ -142,35 +141,21 @@ function AuthenticatedLayout() {
                 {group.label}
               </div>
               <div className="space-y-1">
-                {group.items.map((item) =>
-                  item.to ? (
-                    <Link
-                      key={item.label}
-                      to={item.to}
-                      activeOptions={{ exact: true }}
-                      className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
-                      activeProps={{
-                        className:
-                          "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium bg-sidebar-accent text-sidebar-primary",
-                      }}
-                    >
-                      <item.icon className="size-4" />
-                      {item.label}
-                    </Link>
-                  ) : (
-                    <div
-                      key={item.label}
-                      aria-disabled
-                      className="flex cursor-not-allowed items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground/50"
-                    >
-                      <item.icon className="size-4" />
-                      {item.label}
-                      <span className="ml-auto rounded-full border px-1.5 py-0.5 text-xs font-medium tracking-wide text-muted-foreground/60 uppercase">
-                        Soon
-                      </span>
-                    </div>
-                  ),
-                )}
+                {group.items.map((item) => (
+                  <Link
+                    key={item.label}
+                    to={item.to}
+                    activeOptions={{ exact: true }}
+                    className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                    activeProps={{
+                      className:
+                        "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium bg-sidebar-accent text-sidebar-primary",
+                    }}
+                  >
+                    <item.icon className="size-4" />
+                    {item.label}
+                  </Link>
+                ))}
               </div>
             </div>
           ))}
@@ -220,24 +205,22 @@ function AuthenticatedLayout() {
                     {group.label}
                   </div>
                   <div className="space-y-1">
-                    {group.items.map((item) =>
-                      item.to ? (
-                        <Link
-                          key={item.label}
-                          to={item.to}
-                          activeOptions={{ exact: true }}
-                          onClick={() => setMenuOpen(false)}
-                          className="flex min-h-11 items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
-                          activeProps={{
-                            className:
-                              "flex min-h-11 items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium bg-sidebar-accent text-sidebar-primary",
-                          }}
-                        >
-                          <item.icon className="size-4 shrink-0" />
-                          {item.label}
-                        </Link>
-                      ) : null,
-                    )}
+                    {group.items.map((item) => (
+                      <Link
+                        key={item.label}
+                        to={item.to}
+                        activeOptions={{ exact: true }}
+                        onClick={() => setMenuOpen(false)}
+                        className="flex min-h-11 items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                        activeProps={{
+                          className:
+                            "flex min-h-11 items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium bg-sidebar-accent text-sidebar-primary",
+                        }}
+                      >
+                        <item.icon className="size-4 shrink-0" />
+                        {item.label}
+                      </Link>
+                    ))}
                   </div>
                 </div>
               ))}
