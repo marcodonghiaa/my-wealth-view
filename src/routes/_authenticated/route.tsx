@@ -295,7 +295,7 @@ function AuthenticatedLayout() {
             activeProps={{ className: "flex flex-col items-center justify-center gap-1 text-sidebar-primary transition-transform active:scale-90" }}
           >
             <item.icon className="size-5" />
-            <span className="text-[10px] font-medium">{item.label}</span>
+            <span className="text-xs font-medium">{item.label}</span>
           </Link>
         ))}
         <button
@@ -305,7 +305,7 @@ function AuthenticatedLayout() {
           className="flex flex-col items-center justify-center gap-1 text-muted-foreground transition-transform active:scale-90"
         >
           <MoreHorizontal className="size-5" />
-          <span className="text-[10px] font-medium">More</span>
+          <span className="text-xs font-medium">More</span>
         </button>
       </nav>
 
