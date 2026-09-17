@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Loader2, LockKeyhole, Sparkles, TrendingUp } from "lucide-react";
+import { Github, Loader2, LockKeyhole, Sparkles, TrendingUp } from "lucide-react";
 import { getSupabase } from "@/integrations/supabase/client";
 
 export function safeNext(value: unknown): string | undefined {
@@ -51,11 +51,9 @@ function AuthPage() {
     }
     return navigate({ to: "/", replace });
   };
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [checkingSession, setCheckingSession] = useState(true);
 
@@ -89,33 +87,14 @@ function AuthPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    setMessage(null);
     setPending(true);
     try {
-      const supabase = getSupabase();
-      if (mode === "signin") {
-        const { error: signInError } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
-        if (signInError) throw signInError;
-        await goNext();
-      } else {
-        const { error: signUpError } = await supabase.auth.signUp({
-          email,
-          password,
-          ...(next
-            ? {
-                options: {
-                  emailRedirectTo: `${window.location.origin}${next}`,
-                },
-              }
-            : {}),
-        });
-        if (signUpError) throw signUpError;
-        setMessage("Check your email to confirm your account, then sign in.");
-        setMode("signin");
-      }
+      const { error: signInError } = await getSupabase().auth.signInWithPassword({
+        email,
+        password,
+      });
+      if (signInError) throw signInError;
+      await goNext();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Authentication failed");
     } finally {
@@ -134,9 +113,7 @@ function AuthPage() {
             MyFinances
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            {mode === "signin"
-              ? "Sign in to view your finances"
-              : "Create your account"}
+            Sign in to view your finances
           </p>
         </div>
 
@@ -184,10 +161,7 @@ function AuthPage() {
                   id="password"
                   type="password"
                   required
-                  minLength={6}
-                  autoComplete={
-                    mode === "signin" ? "current-password" : "new-password"
-                  }
+                  autoComplete="current-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-base text-foreground outline-none transition-colors placeholder:text-muted-foreground/60 focus:border-primary/60 focus:ring-2 focus:ring-ring"
@@ -200,7 +174,6 @@ function AuthPage() {
                   {error}
                 </p>
               )}
-              {message && <p className="text-sm text-positive">{message}</p>}
 
               <button
                 type="submit"
@@ -212,25 +185,21 @@ function AuthPage() {
                 ) : (
                   <LockKeyhole className="size-4" />
                 )}
-                {mode === "signin" ? "Sign in" : "Create account"}
+                Sign in
               </button>
             </form>
           )}
 
           <div className="mt-5 border-t pt-4 text-center">
-            <button
-              type="button"
-              onClick={() => {
-                setMode(mode === "signin" ? "signup" : "signin");
-                setError(null);
-                setMessage(null);
-              }}
-              className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+            <a
+              href="https://github.com/marcodonghiaa/my-wealth-view"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
             >
-              {mode === "signin"
-                ? "Need an account? Sign up"
-                : "Already have an account? Sign in"}
-            </button>
+              <Github className="size-3.5" />
+              No account? Self-host your own
+            </a>
           </div>
         </div>
       </div>
