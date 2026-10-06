@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Github, Loader2, LockKeyhole, TrendingUp } from "lucide-react";
-import { getSupabase } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client";
 
 export function safeNext(value: unknown): string | undefined {
   if (typeof value !== "string" || !value.startsWith("/")) return undefined;
@@ -60,9 +60,9 @@ function AuthPage() {
   // Already signed in? Go straight to the dashboard.
   useEffect(() => {
     let cancelled = false;
-    let sessionPromise: ReturnType<ReturnType<typeof getSupabase>["auth"]["getSession"]>;
+    let sessionPromise: ReturnType<typeof supabase.auth.getSession>;
     try {
-      sessionPromise = getSupabase().auth.getSession();
+      sessionPromise = supabase.auth.getSession();
     } catch {
       setCheckingSession(false);
       return;
@@ -87,7 +87,7 @@ function AuthPage() {
     setError(null);
     setPending(true);
     try {
-      const { error: signInError } = await getSupabase().auth.signInWithPassword({
+      const { error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,
       });

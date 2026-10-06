@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { getSupabase } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated/owed")({
   head: () => ({
@@ -52,7 +52,7 @@ function owedEur(r: OwedRow): number {
 }
 
 async function fetchOwed(): Promise<Array<OwedRow>> {
-  const { data, error } = await getSupabase()
+  const { data, error } = await supabase
     .from("v_transactions_eur")
     .select(
       "entry_reference,booking_date,creditor_name,currency,amount,personal_amount,owed_by,owed_settled,signed_amount_eur,personal_signed_amount_eur",
@@ -83,7 +83,7 @@ export function OwedPage() {
       entryReference: string;
       settled: boolean;
     }) => {
-      const { error } = await getSupabase()
+      const { error } = await supabase
         .from("transactions")
         .update({ owed_settled: next, settled_at: next ? new Date().toISOString() : null })
         .eq("entry_reference", entryReference);

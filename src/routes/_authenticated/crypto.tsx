@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import { Bitcoin } from "lucide-react";
-import { getSupabase } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated/crypto")({
   head: () => ({
@@ -54,7 +54,7 @@ const CHART_COLORS = [
 ];
 
 async function fetchCrypto(): Promise<Array<CryptoRow>> {
-  const { data, error } = await getSupabase()
+  const { data, error } = await supabase
     .from("v_crypto_latest")
     .select("asset_symbol,name,amount,source,snapshot_date,price_usd,value_usd,value_eur")
     .order("value_eur", { ascending: false });

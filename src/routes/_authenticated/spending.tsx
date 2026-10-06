@@ -12,7 +12,7 @@ import {
   YAxis,
 } from "recharts";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { getSupabase } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client";
 import { formatISODate } from "@/lib/date";
 
 export const Route = createFileRoute("/_authenticated/spending")({
@@ -58,7 +58,7 @@ function startOfMonth(date: Date): Date {
 }
 
 async function fetchSpendForMonth(month: Date): Promise<Array<SpendRow>> {
-  const { data, error } = await getSupabase()
+  const { data, error } = await supabase
     .from("v_spend_by_category_monthly")
     .select("month,category,spend_eur")
     .eq("month", formatISODate(startOfMonth(month)));
@@ -69,7 +69,7 @@ async function fetchSpendForMonth(month: Date): Promise<Array<SpendRow>> {
 // All-time, not scoped to the selected month -- "not worth it" answers accumulate
 // slowly and the point is the overall pattern, not a per-month view of it.
 async function fetchRegretSpend(): Promise<Array<RegretGroup>> {
-  const { data, error } = await getSupabase()
+  const { data, error } = await supabase
     .from("transactions")
     .select("category,amount,personal_amount")
     .eq("worth_it", "no");

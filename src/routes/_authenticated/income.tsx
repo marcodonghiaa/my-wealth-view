@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { ChevronLeft, ChevronRight, ArrowDownLeft } from "lucide-react";
-import { getSupabase } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client";
 import { formatISODate } from "@/lib/date";
 
 export const Route = createFileRoute("/_authenticated/income")({
@@ -60,7 +60,7 @@ function formatMoney(value: number, currency: string): string {
 async function fetchIncomeForMonth(month: Date): Promise<Array<IncomeRow>> {
   const start = formatISODate(startOfMonth(month));
   const end = formatISODate(new Date(month.getFullYear(), month.getMonth() + 1, 1));
-  const { data, error } = await getSupabase()
+  const { data, error } = await supabase
     .from("v_transactions_eur")
     .select("entry_reference,booking_date,category,creditor_name,currency,amount,signed_amount_eur")
     .eq("flow_type", "income")

@@ -12,7 +12,7 @@ import {
   YAxis,
 } from "recharts";
 import { ArrowDownRight, ArrowUpRight, Wallet } from "lucide-react";
-import { getSupabase } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client";
 
 export type NetWorthSnapshot = {
   snapshot_date: string;
@@ -64,7 +64,7 @@ type Currency = "EUR" | "USD" | "GBP";
 const CURRENCIES: Array<Currency> = ["EUR", "USD", "GBP"];
 
 async function fetchNetWorth(): Promise<Array<NetWorthSnapshot>> {
-  const { data, error } = await getSupabase()
+  const { data, error } = await supabase
     .from("v_net_worth_daily")
     .select("snapshot_date,total_eur,bank_total_eur,portfolio_total_eur,crypto_total_eur")
     .order("snapshot_date", { ascending: true });
@@ -74,7 +74,7 @@ async function fetchNetWorth(): Promise<Array<NetWorthSnapshot>> {
 
 async function fetchLatestFxRates(): Promise<Record<string, FxRate>> {
   // Latest fx_rates row per non-EUR currency.
-  const { data, error } = await getSupabase()
+  const { data, error } = await supabase
     .from("fx_rates")
     .select("date,currency,rate_to_eur")
     .order("date", { ascending: false })

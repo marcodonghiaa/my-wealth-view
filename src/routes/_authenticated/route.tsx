@@ -16,14 +16,14 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { getSupabase } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client";
 import { PushSubscribeButton } from "@/components/push-subscribe";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
   beforeLoad: async () => {
     try {
-      const { data, error } = await getSupabase().auth.getUser();
+      const { data, error } = await supabase.auth.getUser();
       if (error || !data.user) {
         throw redirect({ to: "/auth" });
       }
@@ -94,7 +94,7 @@ function AuthenticatedLayout() {
   useEffect(() => {
     const {
       data: { subscription },
-    } = getSupabase().auth.onAuthStateChange((event) => {
+    } = supabase.auth.onAuthStateChange((event) => {
       if (event === "SIGNED_OUT") {
         void navigate({ to: "/auth", replace: true });
       }
@@ -104,7 +104,7 @@ function AuthenticatedLayout() {
 
   async function handleSignOut() {
     setSigningOut(true);
-    await getSupabase().auth.signOut();
+    await supabase.auth.signOut();
     await navigate({ to: "/auth", replace: true });
   }
 

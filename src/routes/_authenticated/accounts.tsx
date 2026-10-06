@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { ChevronDown, Landmark, Link2, Loader2, Lock, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { getSupabase } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client";
 import { AccountBadge, bankNameFromLabel } from "@/components/bank-badge";
 
 export const Route = createFileRoute("/_authenticated/accounts")({
@@ -58,7 +58,7 @@ interface CdRow {
 }
 
 async function fetchBankAccounts(): Promise<Array<BankAccountRow>> {
-  const { data, error } = await getSupabase()
+  const { data, error } = await supabase
     .from("v_bank_accounts_latest")
     .select("uid,label,iban,currency,snapshot_date,amount,amount_eur")
     .order("amount_eur", { ascending: false });
@@ -67,7 +67,7 @@ async function fetchBankAccounts(): Promise<Array<BankAccountRow>> {
 }
 
 async function fetchCds(): Promise<Array<CdRow>> {
-  const { data, error } = await getSupabase()
+  const { data, error } = await supabase
     .from("v_cd_holdings")
     .select(
       "id,label,bank_label,currency,principal,annual_rate,start_date,maturity_date,is_matured,current_value_native,current_value_eur",
@@ -181,7 +181,7 @@ export function AccountsPage() {
   const banksQuery = useQuery({
     queryKey: ["enable-banking-banks", bankCountry],
     queryFn: async () => {
-      const { data, error } = await getSupabase().functions.invoke<{
+      const { data, error } = await supabase.functions.invoke<{
         banks?: Array<{ name: string; logo: string | null }>;
         error?: string;
       }>("list-banks", { body: { country: bankCountry } });
@@ -196,7 +196,7 @@ export function AccountsPage() {
 
   const connectBank = useMutation({
     mutationFn: async (input: { bankName: string; country: string }) => {
-      const { data, error } = await getSupabase().functions.invoke<{
+      const { data, error } = await supabase.functions.invoke<{
         url?: string;
         error?: string;
       }>("start-bank-consent", { body: input });
@@ -243,7 +243,6 @@ export function AccountsPage() {
       start_date: string;
       maturity_date: string;
     }) => {
-      const supabase = getSupabase();
       const { data: userData, error: userError } = await supabase.auth.getUser();
       if (userError || !userData.user) throw userError ?? new Error("Not signed in");
       const { error } = await supabase
@@ -268,7 +267,7 @@ export function AccountsPage() {
 
   const deleteCd = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await getSupabase().from("cd_holdings").delete().eq("id", id);
+      const { error } = await supabase.from("cd_holdings").delete().eq("id", id);
       if (error) throw error;
     },
     onMutate: async (id) => {

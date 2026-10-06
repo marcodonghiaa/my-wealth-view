@@ -19,7 +19,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { getSupabase } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client";
 import { AccountBadge, CurrencyBadge } from "@/components/bank-badge";
 import { formatISODate } from "@/lib/date";
 import { CATEGORIES, TRANSACTION_TYPES } from "@/lib/categories";
@@ -92,7 +92,7 @@ function startOfMonth(date: Date): Date {
 async function fetchTransactionsForMonth(month: Date): Promise<Array<TransactionRow>> {
   const start = formatISODate(startOfMonth(month));
   const end = formatISODate(new Date(month.getFullYear(), month.getMonth() + 1, 1));
-  const { data, error } = await getSupabase()
+  const { data, error } = await supabase
     .from("v_transactions_eur")
     .select(
       "entry_reference,account_uid,booking_date,category,transaction_type,creditor_name,currency,amount,signed_amount_eur,credit_debit_indicator,created_at,worth_it,personal_amount,owed_by",
@@ -108,7 +108,7 @@ async function fetchTransactionsForMonth(month: Date): Promise<Array<Transaction
 }
 
 async function fetchAccounts(): Promise<Record<string, AccountRow>> {
-  const { data, error } = await getSupabase().from("accounts").select("uid,label,currency");
+  const { data, error } = await supabase.from("accounts").select("uid,label,currency");
   if (error) throw error;
   const map: Record<string, AccountRow> = {};
   for (const row of (data ?? []) as Array<AccountRow>) map[row.uid] = row;
@@ -155,7 +155,7 @@ function useTransactionFieldMutation<K extends "category" | "transaction_type" |
 
   return useMutation<void, Error, Vars, Context>({
     mutationFn: async ({ entryReference, value }) => {
-      const { error } = await getSupabase()
+      const { error } = await supabase
         .from("transactions")
         .update({ [column]: value } as never)
         .eq("entry_reference", entryReference);
@@ -192,7 +192,7 @@ function useSplitMutation(queryClient: ReturnType<typeof useQueryClient>, monthK
 
   return useMutation<void, Error, Vars, Context>({
     mutationFn: async ({ entryReference, personalAmount, owedBy }) => {
-      const { error } = await getSupabase()
+      const { error } = await supabase
         .from("transactions")
         .update({ personal_amount: personalAmount, owed_by: owedBy })
         .eq("entry_reference", entryReference);
@@ -252,7 +252,7 @@ export function TransactionsPage() {
       entryReferences: Array<string>;
       category: string;
     }) => {
-      const { error } = await getSupabase()
+      const { error } = await supabase
         .from("transactions")
         .update({ category: next })
         .in("entry_reference", entryReferences);

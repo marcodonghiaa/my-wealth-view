@@ -9,7 +9,7 @@ import {
   ArrowLeftRight,
   ThumbsDown,
 } from "lucide-react";
-import { getSupabase } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client";
 import { formatISODate } from "@/lib/date";
 
 export const Route = createFileRoute("/_authenticated/reports")({
@@ -66,7 +66,7 @@ interface NetWorthDailyRow {
 // the start-of-month baseline. No new view needed: v_net_worth_daily
 // already has one row per day per user.
 async function fetchNetWorthBoundary(onOrBefore: string): Promise<NetWorthDailyRow | null> {
-  const { data, error } = await getSupabase()
+  const { data, error } = await supabase
     .from("v_net_worth_daily")
     .select("snapshot_date,total_eur,bank_total_eur,portfolio_total_eur,crypto_total_eur")
     .lte("snapshot_date", onOrBefore)
@@ -82,7 +82,7 @@ interface IncomeExpenseRow {
 }
 
 async function fetchIncomeExpenses(monthISO: string): Promise<IncomeExpenseRow | null> {
-  const { data, error } = await getSupabase()
+  const { data, error } = await supabase
     .from("v_income_vs_expenses_monthly")
     .select("income_eur,expenses_eur")
     .eq("month", monthISO)
@@ -97,7 +97,7 @@ interface SpendRow {
 }
 
 async function fetchSpendByCategory(monthISO: string): Promise<Array<SpendRow>> {
-  const { data, error } = await getSupabase()
+  const { data, error } = await supabase
     .from("v_spend_by_category_monthly")
     .select("category,spend_eur")
     .eq("month", monthISO);
@@ -113,9 +113,7 @@ interface SubscriptionTotalRow {
 // state regardless of which month is selected. Labeled "current" in the UI
 // rather than implied to be that month's actual figure.
 async function fetchSubscriptionsTotal(): Promise<number> {
-  const { data, error } = await getSupabase()
-    .from("v_subscriptions")
-    .select("monthly_equivalent_eur");
+  const { data, error } = await supabase.from("v_subscriptions").select("monthly_equivalent_eur");
   if (error) throw error;
   // monthly_equivalent_eur is signed (debits negative), same convention as
   // signed_amount_eur elsewhere -- but this is displayed as a cost total,
@@ -142,7 +140,7 @@ async function fetchWorthItForMonth(
   startISO: string,
   endExclusiveISO: string,
 ): Promise<WorthItSummary> {
-  const { data, error } = await getSupabase()
+  const { data, error } = await supabase
     .from("transactions")
     .select("amount,personal_amount,worth_it")
     .not("worth_it", "is", null)

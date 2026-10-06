@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { ArrowDownLeft, Check, ChevronDown, Pencil, Repeat, Wallet } from "lucide-react";
 import { toast } from "sonner";
-import { getSupabase } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 export const Route = createFileRoute("/_authenticated/subscriptions")({
@@ -47,7 +47,7 @@ const BILLING_FREQUENCIES = ["Weekly", "Monthly", "Quarterly", "Yearly"];
 const INTERVAL_UNITS: Array<IntervalUnit> = ["days", "weeks", "months", "years"];
 
 async function fetchSubscriptions(): Promise<Array<SubscriptionRow>> {
-  const { data, error } = await getSupabase()
+  const { data, error } = await supabase
     .from("v_subscriptions")
     .select(
       "creditor_name,category,currency,amount,signed_amount_eur,monthly_equivalent_eur,last_charged,charge_count,billing_frequency,billing_frequency_is_manual,custom_interval_value,custom_interval_unit",
@@ -95,7 +95,6 @@ export function SubscriptionsPage() {
 
   const frequencyMutation = useMutation({
     mutationFn: async (vars: OverrideInput) => {
-      const supabase = getSupabase();
       const {
         data: { user },
         error: userError,

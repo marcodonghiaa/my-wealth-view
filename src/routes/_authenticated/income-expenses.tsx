@@ -12,7 +12,7 @@ import {
   YAxis,
 } from "recharts";
 import { ArrowDownRight, ArrowUpRight, Scale } from "lucide-react";
-import { getSupabase } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated/income-expenses")({
   head: () => ({
@@ -44,7 +44,7 @@ interface MonthlyRow {
 }
 
 async function fetchMonthly(): Promise<Array<MonthlyRow>> {
-  const { data, error } = await getSupabase()
+  const { data, error } = await supabase
     .from("v_income_vs_expenses_monthly")
     .select("month,income_eur,expenses_eur")
     .order("month", { ascending: true });

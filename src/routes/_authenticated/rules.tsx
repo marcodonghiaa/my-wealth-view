@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronDown, Loader2, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { getSupabase } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { CATEGORIES, TRANSACTION_TYPES } from "@/lib/categories";
@@ -43,7 +43,7 @@ const MATCH_FIELDS = [
 ];
 
 async function fetchRules(): Promise<RuleRow[]> {
-  const { data, error } = await getSupabase()
+  const { data, error } = await supabase
     .from("category_rules")
     .select("id, match_field, match_text, set_category, set_transaction_type, priority, created_at")
     .order("priority", { ascending: true })
@@ -77,7 +77,6 @@ export function RulesPage() {
       set_category: string | null;
       set_transaction_type: string | null;
     }) => {
-      const supabase = getSupabase();
       const { data: userData, error: userError } = await supabase.auth.getUser();
       if (userError || !userData.user) throw userError ?? new Error("Not signed in");
       const { error } = await supabase.from("category_rules").insert({
@@ -102,7 +101,7 @@ export function RulesPage() {
 
   const deleteRule = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await getSupabase().from("category_rules").delete().eq("id", id);
+      const { error } = await supabase.from("category_rules").delete().eq("id", id);
       if (error) throw error;
     },
     onMutate: async (id) => {

@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import { Briefcase } from "lucide-react";
-import { getSupabase } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated/portfolio")({
   head: () => ({
@@ -56,7 +56,7 @@ function colorForType(type: string): string {
 }
 
 async function fetchPortfolio(): Promise<Array<PortfolioRow>> {
-  const { data, error } = await getSupabase()
+  const { data, error } = await supabase
     .from("v_portfolio_latest")
     .select(
       "isin,name,shares,broker_label,snapshot_date,price,currency,value_native,value_eur,asset_type",
