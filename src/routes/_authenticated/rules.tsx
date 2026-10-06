@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronDown, Loader2, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { getSupabase, isDemoRoute } from "@/integrations/supabase/client";
+import { getSupabase } from "@/integrations/supabase/client";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { CATEGORIES, TRANSACTION_TYPES } from "@/lib/categories";
@@ -77,7 +77,6 @@ export function RulesPage() {
       set_category: string | null;
       set_transaction_type: string | null;
     }) => {
-      if (isDemoRoute()) throw new Error("This is a read-only demo — sign up to make changes.");
       const supabase = getSupabase();
       const { data: userData, error: userError } = await supabase.auth.getUser();
       if (userError || !userData.user) throw userError ?? new Error("Not signed in");
@@ -103,7 +102,6 @@ export function RulesPage() {
 
   const deleteRule = useMutation({
     mutationFn: async (id: string) => {
-      if (isDemoRoute()) throw new Error("This is a read-only demo — sign up to make changes.");
       const { error } = await getSupabase().from("category_rules").delete().eq("id", id);
       if (error) throw error;
     },

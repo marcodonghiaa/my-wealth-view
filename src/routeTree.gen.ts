@@ -11,7 +11,6 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
-import { Route as DemoRouteRouteImport } from './routes/demo/route'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
 import { Route as AuthenticatedAccountsRouteImport } from './routes/_authenticated/accounts'
 import { Route as AuthenticatedCryptoRouteImport } from './routes/_authenticated/crypto'
@@ -24,18 +23,6 @@ import { Route as AuthenticatedRulesRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedSpendingRouteImport } from './routes/_authenticated/spending'
 import { Route as AuthenticatedSubscriptionsRouteImport } from './routes/_authenticated/subscriptions'
 import { Route as AuthenticatedTransactionsRouteImport } from './routes/_authenticated/transactions'
-import { Route as DemoIndexRouteImport } from './routes/demo/index'
-import { Route as DemoAccountsRouteImport } from './routes/demo/accounts'
-import { Route as DemoCryptoRouteImport } from './routes/demo/crypto'
-import { Route as DemoIncomeRouteImport } from './routes/demo/income'
-import { Route as DemoIncomeExpensesRouteImport } from './routes/demo/income-expenses'
-import { Route as DemoOwedRouteImport } from './routes/demo/owed'
-import { Route as DemoPortfolioRouteImport } from './routes/demo/portfolio'
-import { Route as DemoReportsRouteImport } from './routes/demo/reports'
-import { Route as DemoRulesRouteImport } from './routes/demo/rules'
-import { Route as DemoSpendingRouteImport } from './routes/demo/spending'
-import { Route as DemoSubscriptionsRouteImport } from './routes/demo/subscriptions'
-import { Route as DemoTransactionsRouteImport } from './routes/demo/transactions'
 
 const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
   id: '/_authenticated',
@@ -44,11 +31,6 @@ const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DemoRouteRoute = DemoRouteRouteImport.update({
-  id: '/demo',
-  path: '/demo',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
@@ -114,70 +96,9 @@ const AuthenticatedTransactionsRoute =
     path: '/transactions',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
-const DemoIndexRoute = DemoIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => DemoRouteRoute,
-} as any)
-const DemoAccountsRoute = DemoAccountsRouteImport.update({
-  id: '/accounts',
-  path: '/accounts',
-  getParentRoute: () => DemoRouteRoute,
-} as any)
-const DemoCryptoRoute = DemoCryptoRouteImport.update({
-  id: '/crypto',
-  path: '/crypto',
-  getParentRoute: () => DemoRouteRoute,
-} as any)
-const DemoIncomeRoute = DemoIncomeRouteImport.update({
-  id: '/income',
-  path: '/income',
-  getParentRoute: () => DemoRouteRoute,
-} as any)
-const DemoIncomeExpensesRoute = DemoIncomeExpensesRouteImport.update({
-  id: '/income-expenses',
-  path: '/income-expenses',
-  getParentRoute: () => DemoRouteRoute,
-} as any)
-const DemoOwedRoute = DemoOwedRouteImport.update({
-  id: '/owed',
-  path: '/owed',
-  getParentRoute: () => DemoRouteRoute,
-} as any)
-const DemoPortfolioRoute = DemoPortfolioRouteImport.update({
-  id: '/portfolio',
-  path: '/portfolio',
-  getParentRoute: () => DemoRouteRoute,
-} as any)
-const DemoReportsRoute = DemoReportsRouteImport.update({
-  id: '/reports',
-  path: '/reports',
-  getParentRoute: () => DemoRouteRoute,
-} as any)
-const DemoRulesRoute = DemoRulesRouteImport.update({
-  id: '/rules',
-  path: '/rules',
-  getParentRoute: () => DemoRouteRoute,
-} as any)
-const DemoSpendingRoute = DemoSpendingRouteImport.update({
-  id: '/spending',
-  path: '/spending',
-  getParentRoute: () => DemoRouteRoute,
-} as any)
-const DemoSubscriptionsRoute = DemoSubscriptionsRouteImport.update({
-  id: '/subscriptions',
-  path: '/subscriptions',
-  getParentRoute: () => DemoRouteRoute,
-} as any)
-const DemoTransactionsRoute = DemoTransactionsRouteImport.update({
-  id: '/transactions',
-  path: '/transactions',
-  getParentRoute: () => DemoRouteRoute,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
-  '/demo': typeof DemoRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/accounts': typeof AuthenticatedAccountsRoute
   '/crypto': typeof AuthenticatedCryptoRoute
@@ -190,18 +111,6 @@ export interface FileRoutesByFullPath {
   '/spending': typeof AuthenticatedSpendingRoute
   '/subscriptions': typeof AuthenticatedSubscriptionsRoute
   '/transactions': typeof AuthenticatedTransactionsRoute
-  '/demo/accounts': typeof DemoAccountsRoute
-  '/demo/crypto': typeof DemoCryptoRoute
-  '/demo/income': typeof DemoIncomeRoute
-  '/demo/income-expenses': typeof DemoIncomeExpensesRoute
-  '/demo/owed': typeof DemoOwedRoute
-  '/demo/portfolio': typeof DemoPortfolioRoute
-  '/demo/reports': typeof DemoReportsRoute
-  '/demo/rules': typeof DemoRulesRoute
-  '/demo/spending': typeof DemoSpendingRoute
-  '/demo/subscriptions': typeof DemoSubscriptionsRoute
-  '/demo/transactions': typeof DemoTransactionsRoute
-  '/demo/': typeof DemoIndexRoute
 }
 export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
@@ -216,24 +125,11 @@ export interface FileRoutesByTo {
   '/spending': typeof AuthenticatedSpendingRoute
   '/subscriptions': typeof AuthenticatedSubscriptionsRoute
   '/transactions': typeof AuthenticatedTransactionsRoute
-  '/demo/accounts': typeof DemoAccountsRoute
-  '/demo/crypto': typeof DemoCryptoRoute
-  '/demo/income': typeof DemoIncomeRoute
-  '/demo/income-expenses': typeof DemoIncomeExpensesRoute
-  '/demo/owed': typeof DemoOwedRoute
-  '/demo/portfolio': typeof DemoPortfolioRoute
-  '/demo/reports': typeof DemoReportsRoute
-  '/demo/rules': typeof DemoRulesRoute
-  '/demo/spending': typeof DemoSpendingRoute
-  '/demo/subscriptions': typeof DemoSubscriptionsRoute
-  '/demo/transactions': typeof DemoTransactionsRoute
   '/': typeof AuthenticatedIndexRoute
-  '/demo': typeof DemoIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
-  '/demo': typeof DemoRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/_authenticated/accounts': typeof AuthenticatedAccountsRoute
   '/_authenticated/crypto': typeof AuthenticatedCryptoRoute
@@ -246,25 +142,12 @@ export interface FileRoutesById {
   '/_authenticated/spending': typeof AuthenticatedSpendingRoute
   '/_authenticated/subscriptions': typeof AuthenticatedSubscriptionsRoute
   '/_authenticated/transactions': typeof AuthenticatedTransactionsRoute
-  '/demo/accounts': typeof DemoAccountsRoute
-  '/demo/crypto': typeof DemoCryptoRoute
-  '/demo/income': typeof DemoIncomeRoute
-  '/demo/income-expenses': typeof DemoIncomeExpensesRoute
-  '/demo/owed': typeof DemoOwedRoute
-  '/demo/portfolio': typeof DemoPortfolioRoute
-  '/demo/reports': typeof DemoReportsRoute
-  '/demo/rules': typeof DemoRulesRoute
-  '/demo/spending': typeof DemoSpendingRoute
-  '/demo/subscriptions': typeof DemoSubscriptionsRoute
-  '/demo/transactions': typeof DemoTransactionsRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
-  '/demo/': typeof DemoIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/demo'
     | '/auth'
     | '/accounts'
     | '/crypto'
@@ -277,18 +160,6 @@ export interface FileRouteTypes {
     | '/spending'
     | '/subscriptions'
     | '/transactions'
-    | '/demo/accounts'
-    | '/demo/crypto'
-    | '/demo/income'
-    | '/demo/income-expenses'
-    | '/demo/owed'
-    | '/demo/portfolio'
-    | '/demo/reports'
-    | '/demo/rules'
-    | '/demo/spending'
-    | '/demo/subscriptions'
-    | '/demo/transactions'
-    | '/demo/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/auth'
@@ -303,23 +174,10 @@ export interface FileRouteTypes {
     | '/spending'
     | '/subscriptions'
     | '/transactions'
-    | '/demo/accounts'
-    | '/demo/crypto'
-    | '/demo/income'
-    | '/demo/income-expenses'
-    | '/demo/owed'
-    | '/demo/portfolio'
-    | '/demo/reports'
-    | '/demo/rules'
-    | '/demo/spending'
-    | '/demo/subscriptions'
-    | '/demo/transactions'
     | '/'
-    | '/demo'
   id:
     | '__root__'
     | '/_authenticated'
-    | '/demo'
     | '/auth'
     | '/_authenticated/accounts'
     | '/_authenticated/crypto'
@@ -332,24 +190,11 @@ export interface FileRouteTypes {
     | '/_authenticated/spending'
     | '/_authenticated/subscriptions'
     | '/_authenticated/transactions'
-    | '/demo/accounts'
-    | '/demo/crypto'
-    | '/demo/income'
-    | '/demo/income-expenses'
-    | '/demo/owed'
-    | '/demo/portfolio'
-    | '/demo/reports'
-    | '/demo/rules'
-    | '/demo/spending'
-    | '/demo/subscriptions'
-    | '/demo/transactions'
     | '/_authenticated/'
-    | '/demo/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
-  DemoRouteRoute: typeof DemoRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
 }
 
@@ -367,13 +212,6 @@ declare module '@tanstack/react-router' {
       path: '/auth'
       fullPath: '/auth'
       preLoaderRoute: typeof AuthRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/demo': {
-      id: '/demo'
-      path: '/demo'
-      fullPath: '/demo'
-      preLoaderRoute: typeof DemoRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/': {
@@ -460,90 +298,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedTransactionsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/demo/': {
-      id: '/demo/'
-      path: '/'
-      fullPath: '/demo/'
-      preLoaderRoute: typeof DemoIndexRouteImport
-      parentRoute: typeof DemoRouteRoute
-    }
-    '/demo/accounts': {
-      id: '/demo/accounts'
-      path: '/accounts'
-      fullPath: '/demo/accounts'
-      preLoaderRoute: typeof DemoAccountsRouteImport
-      parentRoute: typeof DemoRouteRoute
-    }
-    '/demo/crypto': {
-      id: '/demo/crypto'
-      path: '/crypto'
-      fullPath: '/demo/crypto'
-      preLoaderRoute: typeof DemoCryptoRouteImport
-      parentRoute: typeof DemoRouteRoute
-    }
-    '/demo/income': {
-      id: '/demo/income'
-      path: '/income'
-      fullPath: '/demo/income'
-      preLoaderRoute: typeof DemoIncomeRouteImport
-      parentRoute: typeof DemoRouteRoute
-    }
-    '/demo/income-expenses': {
-      id: '/demo/income-expenses'
-      path: '/income-expenses'
-      fullPath: '/demo/income-expenses'
-      preLoaderRoute: typeof DemoIncomeExpensesRouteImport
-      parentRoute: typeof DemoRouteRoute
-    }
-    '/demo/owed': {
-      id: '/demo/owed'
-      path: '/owed'
-      fullPath: '/demo/owed'
-      preLoaderRoute: typeof DemoOwedRouteImport
-      parentRoute: typeof DemoRouteRoute
-    }
-    '/demo/portfolio': {
-      id: '/demo/portfolio'
-      path: '/portfolio'
-      fullPath: '/demo/portfolio'
-      preLoaderRoute: typeof DemoPortfolioRouteImport
-      parentRoute: typeof DemoRouteRoute
-    }
-    '/demo/reports': {
-      id: '/demo/reports'
-      path: '/reports'
-      fullPath: '/demo/reports'
-      preLoaderRoute: typeof DemoReportsRouteImport
-      parentRoute: typeof DemoRouteRoute
-    }
-    '/demo/rules': {
-      id: '/demo/rules'
-      path: '/rules'
-      fullPath: '/demo/rules'
-      preLoaderRoute: typeof DemoRulesRouteImport
-      parentRoute: typeof DemoRouteRoute
-    }
-    '/demo/spending': {
-      id: '/demo/spending'
-      path: '/spending'
-      fullPath: '/demo/spending'
-      preLoaderRoute: typeof DemoSpendingRouteImport
-      parentRoute: typeof DemoRouteRoute
-    }
-    '/demo/subscriptions': {
-      id: '/demo/subscriptions'
-      path: '/subscriptions'
-      fullPath: '/demo/subscriptions'
-      preLoaderRoute: typeof DemoSubscriptionsRouteImport
-      parentRoute: typeof DemoRouteRoute
-    }
-    '/demo/transactions': {
-      id: '/demo/transactions'
-      path: '/transactions'
-      fullPath: '/demo/transactions'
-      preLoaderRoute: typeof DemoTransactionsRouteImport
-      parentRoute: typeof DemoRouteRoute
-    }
   }
 }
 
@@ -580,43 +334,8 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
 const AuthenticatedRouteRouteWithChildren =
   AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
 
-interface DemoRouteRouteChildren {
-  DemoAccountsRoute: typeof DemoAccountsRoute
-  DemoCryptoRoute: typeof DemoCryptoRoute
-  DemoIncomeRoute: typeof DemoIncomeRoute
-  DemoIncomeExpensesRoute: typeof DemoIncomeExpensesRoute
-  DemoOwedRoute: typeof DemoOwedRoute
-  DemoPortfolioRoute: typeof DemoPortfolioRoute
-  DemoReportsRoute: typeof DemoReportsRoute
-  DemoRulesRoute: typeof DemoRulesRoute
-  DemoSpendingRoute: typeof DemoSpendingRoute
-  DemoSubscriptionsRoute: typeof DemoSubscriptionsRoute
-  DemoTransactionsRoute: typeof DemoTransactionsRoute
-  DemoIndexRoute: typeof DemoIndexRoute
-}
-
-const DemoRouteRouteChildren: DemoRouteRouteChildren = {
-  DemoAccountsRoute: DemoAccountsRoute,
-  DemoCryptoRoute: DemoCryptoRoute,
-  DemoIncomeRoute: DemoIncomeRoute,
-  DemoIncomeExpensesRoute: DemoIncomeExpensesRoute,
-  DemoOwedRoute: DemoOwedRoute,
-  DemoPortfolioRoute: DemoPortfolioRoute,
-  DemoReportsRoute: DemoReportsRoute,
-  DemoRulesRoute: DemoRulesRoute,
-  DemoSpendingRoute: DemoSpendingRoute,
-  DemoSubscriptionsRoute: DemoSubscriptionsRoute,
-  DemoTransactionsRoute: DemoTransactionsRoute,
-  DemoIndexRoute: DemoIndexRoute,
-}
-
-const DemoRouteRouteWithChildren = DemoRouteRoute._addFileChildren(
-  DemoRouteRouteChildren,
-)
-
 const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
-  DemoRouteRoute: DemoRouteRouteWithChildren,
   AuthRoute: AuthRoute,
 }
 export const routeTree = rootRouteImport

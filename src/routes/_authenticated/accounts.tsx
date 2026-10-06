@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { ChevronDown, Landmark, Link2, Loader2, Lock, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { getSupabase, isDemoRoute } from "@/integrations/supabase/client";
+import { getSupabase } from "@/integrations/supabase/client";
 import { AccountBadge, bankNameFromLabel } from "@/components/bank-badge";
 
 export const Route = createFileRoute("/_authenticated/accounts")({
@@ -196,8 +196,6 @@ export function AccountsPage() {
 
   const connectBank = useMutation({
     mutationFn: async (input: { bankName: string; country: string }) => {
-      if (isDemoRoute())
-        throw new Error("This is a read-only demo — sign up to connect a real bank.");
       const { data, error } = await getSupabase().functions.invoke<{
         url?: string;
         error?: string;
@@ -245,7 +243,6 @@ export function AccountsPage() {
       start_date: string;
       maturity_date: string;
     }) => {
-      if (isDemoRoute()) throw new Error("This is a read-only demo — sign up to make changes.");
       const supabase = getSupabase();
       const { data: userData, error: userError } = await supabase.auth.getUser();
       if (userError || !userData.user) throw userError ?? new Error("Not signed in");
@@ -271,7 +268,6 @@ export function AccountsPage() {
 
   const deleteCd = useMutation({
     mutationFn: async (id: string) => {
-      if (isDemoRoute()) throw new Error("This is a read-only demo — sign up to make changes.");
       const { error } = await getSupabase().from("cd_holdings").delete().eq("id", id);
       if (error) throw error;
     },

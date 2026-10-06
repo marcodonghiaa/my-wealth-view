@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { ArrowDownLeft, Check, ChevronDown, Pencil, Repeat, Wallet } from "lucide-react";
 import { toast } from "sonner";
-import { getSupabase, isDemoRoute } from "@/integrations/supabase/client";
+import { getSupabase } from "@/integrations/supabase/client";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 export const Route = createFileRoute("/_authenticated/subscriptions")({
@@ -95,7 +95,6 @@ export function SubscriptionsPage() {
 
   const frequencyMutation = useMutation({
     mutationFn: async (vars: OverrideInput) => {
-      if (isDemoRoute()) throw new Error("This is a read-only demo — sign up to make changes.");
       const supabase = getSupabase();
       const {
         data: { user },

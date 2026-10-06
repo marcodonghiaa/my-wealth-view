@@ -15,4 +15,4 @@ labels: bug
 **Environment**
 
 - Browser:
-- Self-hosted via: Docker, or the live demo?
+- Self-hosted via: Docker, or `bun run dev`?

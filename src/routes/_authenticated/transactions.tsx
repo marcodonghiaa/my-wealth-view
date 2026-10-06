@@ -19,7 +19,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { getSupabase, isDemoRoute } from "@/integrations/supabase/client";
+import { getSupabase } from "@/integrations/supabase/client";
 import { AccountBadge, CurrencyBadge } from "@/components/bank-badge";
 import { formatISODate } from "@/lib/date";
 import { CATEGORIES, TRANSACTION_TYPES } from "@/lib/categories";
@@ -143,7 +143,7 @@ function nativeSignedAmount(tx: TransactionRow): number | null {
 const UNCATEGORIZED = "__uncategorized__";
 
 // Shared shape behind updateCategory/updateType/answerWorthIt: update one column
-// on one transaction, with optimistic cache update + demo-mode guard + rollback.
+// on one transaction, with optimistic cache update + rollback.
 function useTransactionFieldMutation<K extends "category" | "transaction_type" | "worth_it">(
   queryClient: ReturnType<typeof useQueryClient>,
   monthKey: string,
@@ -155,7 +155,6 @@ function useTransactionFieldMutation<K extends "category" | "transaction_type" |
 
   return useMutation<void, Error, Vars, Context>({
     mutationFn: async ({ entryReference, value }) => {
-      if (isDemoRoute()) throw new Error("This is a read-only demo — sign up to make changes.");
       const { error } = await getSupabase()
         .from("transactions")
         .update({ [column]: value } as never)
@@ -186,14 +185,13 @@ function useTransactionFieldMutation<K extends "category" | "transaction_type" |
 
 // Splitting updates personal_amount + owed_by together, so it's a separate
 // mutation rather than another useTransactionFieldMutation call -- same
-// optimistic-update/demo-guard/rollback shape either way.
+// optimistic-update/rollback shape either way.
 function useSplitMutation(queryClient: ReturnType<typeof useQueryClient>, monthKey: string) {
   type Vars = { entryReference: string; personalAmount: number | null; owedBy: string | null };
   type Context = { previous: Array<TransactionRow> | undefined };
 
   return useMutation<void, Error, Vars, Context>({
     mutationFn: async ({ entryReference, personalAmount, owedBy }) => {
-      if (isDemoRoute()) throw new Error("This is a read-only demo — sign up to make changes.");
       const { error } = await getSupabase()
         .from("transactions")
         .update({ personal_amount: personalAmount, owed_by: owedBy })
@@ -254,7 +252,6 @@ export function TransactionsPage() {
       entryReferences: Array<string>;
       category: string;
     }) => {
-      if (isDemoRoute()) throw new Error("This is a read-only demo — sign up to make changes.");
       const { error } = await getSupabase()
         .from("transactions")
         .update({ category: next })

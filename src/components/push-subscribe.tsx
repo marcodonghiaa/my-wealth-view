@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Bell, BellOff } from "lucide-react";
-import { getSupabase, isDemoRoute } from "@/integrations/supabase/client";
+import { getSupabase } from "@/integrations/supabase/client";
 
 // Self-hosters get their own VAPID keypair from setup.sh; falls back to the
 // reference deployment's key (same fallback pattern as client.ts) so a
@@ -59,7 +59,7 @@ export function PushSubscribeButton() {
     });
   }, []);
 
-  if (!supported || isDemoRoute()) return null;
+  if (!supported) return null;
 
   async function subscribe() {
     setBusy(true);

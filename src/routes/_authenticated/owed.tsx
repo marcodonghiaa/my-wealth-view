@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { getSupabase, isDemoRoute } from "@/integrations/supabase/client";
+import { getSupabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated/owed")({
   head: () => ({
@@ -83,7 +83,6 @@ export function OwedPage() {
       entryReference: string;
       settled: boolean;
     }) => {
-      if (isDemoRoute()) throw new Error("This is a read-only demo — sign up to make changes.");
       const { error } = await getSupabase()
         .from("transactions")
         .update({ owed_settled: next, settled_at: next ? new Date().toISOString() : null })
