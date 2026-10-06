@@ -60,9 +60,7 @@ function AuthPage() {
   // Already signed in? Go straight to the dashboard.
   useEffect(() => {
     let cancelled = false;
-    let sessionPromise: ReturnType<
-      ReturnType<typeof getSupabase>["auth"]["getSession"]
-    >;
+    let sessionPromise: ReturnType<ReturnType<typeof getSupabase>["auth"]["getSession"]>;
     try {
       sessionPromise = getSupabase().auth.getSession();
     } catch {
@@ -109,12 +107,8 @@ function AuthPage() {
           <div className="mb-4 flex size-12 items-center justify-center rounded-2xl bg-primary/15 text-primary">
             <TrendingUp className="size-6" />
           </div>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-            MyFinances
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Sign in to view your finances
-          </p>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">MyFinances</h1>
+          <p className="mt-1 text-sm text-muted-foreground">Sign in to view your finances</p>
         </div>
 
         <a

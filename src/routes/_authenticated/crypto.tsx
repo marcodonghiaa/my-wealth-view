@@ -56,9 +56,7 @@ const CHART_COLORS = [
 async function fetchCrypto(): Promise<Array<CryptoRow>> {
   const { data, error } = await getSupabase()
     .from("v_crypto_latest")
-    .select(
-      "asset_symbol,name,amount,source,snapshot_date,price_usd,value_usd,value_eur",
-    )
+    .select("asset_symbol,name,amount,source,snapshot_date,price_usd,value_usd,value_eur")
     .order("value_eur", { ascending: false });
   if (error) throw error;
   return (data ?? []) as Array<CryptoRow>;
@@ -134,22 +132,23 @@ export function CryptoPage() {
   const rows = useMemo(() => query.data ?? [], [query.data]);
   const assets = useMemo(() => groupBySymbol(rows), [rows]);
 
-  const totalEur = useMemo(
-    () => assets.reduce((sum, a) => sum + a.valueEur, 0),
-    [assets],
-  );
+  const totalEur = useMemo(() => assets.reduce((sum, a) => sum + a.valueEur, 0), [assets]);
 
   const asOf = useMemo(() => {
     if (rows.length === 0) return null;
-    return rows.map((h) => h.snapshot_date).filter(Boolean).sort().reverse()[0] ?? null;
+    return (
+      rows
+        .map((h) => h.snapshot_date)
+        .filter(Boolean)
+        .sort()
+        .reverse()[0] ?? null
+    );
   }, [rows]);
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-8 md:py-12">
       <header className="mb-8">
-        <h1 className="text-xl font-semibold tracking-tight text-foreground">
-          Crypto
-        </h1>
+        <h1 className="text-xl font-semibold tracking-tight text-foreground">Crypto</h1>
         <p className="mt-0.5 text-sm text-muted-foreground">
           Your cryptocurrency holdings and allocation.
         </p>
@@ -183,8 +182,8 @@ export function CryptoPage() {
         </div>
 
         <p className="mt-3 text-xs text-muted-foreground">
-          Ledger holdings are entered manually; Coinbase syncs automatically.
-          The same asset held in multiple places is combined into one line below.
+          Ledger holdings are entered manually; Coinbase syncs automatically. The same asset held in
+          multiple places is combined into one line below.
         </p>
       </section>
 
@@ -202,9 +201,7 @@ export function CryptoPage() {
           {/* Allocation chart */}
           <section className="mb-6 rounded-2xl border bg-card p-4 card-ring sm:p-6">
             <div className="mb-4 px-2">
-              <h2 className="text-sm font-semibold text-foreground">
-                Allocation by holding
-              </h2>
+              <h2 className="text-sm font-semibold text-foreground">Allocation by holding</h2>
             </div>
             <div className="h-80 w-full">
               <ResponsiveContainer width="100%" height="100%">
@@ -242,27 +239,18 @@ export function CryptoPage() {
                     <th className="px-4 py-3 font-medium sm:px-5">Holding</th>
                     <th className="px-4 py-3 font-medium sm:px-5">Amount</th>
                     <th className="px-4 py-3 font-medium sm:px-5">Price</th>
-                    <th className="px-4 py-3 text-right font-medium sm:px-5">
-                      Value
-                    </th>
-                    <th className="px-4 py-3 text-right font-medium sm:px-5">
-                      % of total
-                    </th>
+                    <th className="px-4 py-3 text-right font-medium sm:px-5">Value</th>
+                    <th className="px-4 py-3 text-right font-medium sm:px-5">% of total</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
                   {assets.map((asset) => {
-                    const percent =
-                      totalEur > 0 ? (asset.valueEur / totalEur) * 100 : 0;
+                    const percent = totalEur > 0 ? (asset.valueEur / totalEur) * 100 : 0;
                     return (
                       <tr key={asset.symbol}>
                         <td className="px-4 py-3 sm:px-5">
-                          <div className="font-medium text-foreground">
-                            {asset.name}
-                          </div>
-                          <div className="mt-0.5 text-xs text-muted-foreground">
-                            {asset.symbol}
-                          </div>
+                          <div className="font-medium text-foreground">{asset.name}</div>
+                          <div className="mt-0.5 text-xs text-muted-foreground">{asset.symbol}</div>
                         </td>
                         <td className="px-4 py-3 sm:px-5">
                           <div className="font-figure text-foreground">
@@ -282,9 +270,7 @@ export function CryptoPage() {
                           )}
                         </td>
                         <td className="px-4 py-3 font-figure text-foreground sm:px-5">
-                          {asset.priceUsd != null
-                            ? formatUsd(asset.priceUsd)
-                            : "—"}
+                          {asset.priceUsd != null ? formatUsd(asset.priceUsd) : "—"}
                         </td>
                         <td className="px-4 py-3 text-right font-figure font-medium text-foreground sm:px-5">
                           {formatEur(asset.valueEur)}
@@ -303,21 +289,13 @@ export function CryptoPage() {
           {/* Mobile cards */}
           <section className="space-y-3 md:hidden">
             {assets.map((asset) => {
-              const percent =
-                totalEur > 0 ? (asset.valueEur / totalEur) * 100 : 0;
+              const percent = totalEur > 0 ? (asset.valueEur / totalEur) * 100 : 0;
               return (
-                <div
-                  key={asset.symbol}
-                  className="rounded-2xl border bg-card p-4 card-ring"
-                >
+                <div key={asset.symbol} className="rounded-2xl border bg-card p-4 card-ring">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
-                      <div className="font-medium text-foreground">
-                        {asset.name}
-                      </div>
-                      <div className="mt-0.5 text-xs text-muted-foreground">
-                        {asset.symbol}
-                      </div>
+                      <div className="font-medium text-foreground">{asset.name}</div>
+                      <div className="mt-0.5 text-xs text-muted-foreground">{asset.symbol}</div>
                     </div>
                   </div>
 
@@ -344,9 +322,7 @@ export function CryptoPage() {
                     <div>
                       <div className="text-xs text-muted-foreground">Price</div>
                       <div className="font-figure text-foreground">
-                        {asset.priceUsd != null
-                          ? formatUsd(asset.priceUsd)
-                          : "—"}
+                        {asset.priceUsd != null ? formatUsd(asset.priceUsd) : "—"}
                       </div>
                     </div>
                     <div>
@@ -357,9 +333,7 @@ export function CryptoPage() {
                     </div>
                     <div>
                       <div className="text-xs text-muted-foreground">% of total</div>
-                      <div className="font-figure text-foreground">
-                        {percent.toFixed(1)}%
-                      </div>
+                      <div className="font-figure text-foreground">{percent.toFixed(1)}%</div>
                     </div>
                   </div>
                 </div>
@@ -388,13 +362,10 @@ function CryptoTooltip({
   if (!active || !payload || payload.length === 0) return null;
   const asset = payload[0]?.payload;
   if (!asset) return null;
-  const percent =
-    totalEur > 0 ? ((asset.valueEur / totalEur) * 100).toFixed(1) : "0.0";
+  const percent = totalEur > 0 ? ((asset.valueEur / totalEur) * 100).toFixed(1) : "0.0";
   return (
     <div className="rounded-lg border bg-popover px-3 py-2 shadow-lg">
-      <p className="max-w-xs truncate text-xs text-muted-foreground">
-        {asset.name}
-      </p>
+      <p className="max-w-xs truncate text-xs text-muted-foreground">{asset.name}</p>
       <p className="font-figure mt-0.5 text-sm font-semibold text-foreground">
         {formatEur(asset.valueEur)}
       </p>

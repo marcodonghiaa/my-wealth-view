@@ -13,5 +13,6 @@ labels: bug
 **Screenshot or console error** (redact any real account data):
 
 **Environment**
+
 - Browser:
 - Self-hosted via: Docker, or the live demo?

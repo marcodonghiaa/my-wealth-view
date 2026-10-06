@@ -128,11 +128,7 @@ export function PushSubscribeButton() {
       disabled={busy}
       className="flex min-h-11 w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground disabled:opacity-50"
     >
-      {permission === "denied" ? (
-        <BellOff className="size-4" />
-      ) : (
-        <Bell className="size-4" />
-      )}
+      {permission === "denied" ? <BellOff className="size-4" /> : <Bell className="size-4" />}
       {permission === "denied"
         ? "Notifications blocked"
         : busy

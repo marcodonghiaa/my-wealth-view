@@ -83,7 +83,8 @@ export function IncomePage() {
 
   const monthLabel = month.toLocaleDateString("en-GB", { month: "long", year: "numeric" });
   const canGoNext =
-    startOfMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1)) <= startOfMonth(new Date());
+    startOfMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1)) <=
+    startOfMonth(new Date());
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-8 md:py-12">
@@ -147,7 +148,10 @@ export function IncomePage() {
         ) : (
           <ul className="divide-y">
             {rows.map((r) => (
-              <li key={r.entry_reference} className="flex items-center justify-between gap-3 px-4 py-3 text-sm sm:px-5">
+              <li
+                key={r.entry_reference}
+                className="flex items-center justify-between gap-3 px-4 py-3 text-sm sm:px-5"
+              >
                 <div className="min-w-0">
                   <div className="truncate font-medium text-foreground">
                     {r.creditor_name ?? "—"}

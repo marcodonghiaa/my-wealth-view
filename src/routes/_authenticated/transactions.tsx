@@ -11,11 +11,7 @@ import {
   ThumbsUp,
 } from "lucide-react";
 import { toast } from "sonner";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Dialog,
   DialogContent,
@@ -28,21 +24,18 @@ import { AccountBadge, CurrencyBadge } from "@/components/bank-badge";
 import { formatISODate } from "@/lib/date";
 import { CATEGORIES, TRANSACTION_TYPES } from "@/lib/categories";
 
-
 export const Route = createFileRoute("/_authenticated/transactions")({
   head: () => ({
     meta: [
       { title: "Transactions — MyFinances" },
       {
         name: "description",
-        content:
-          "Browse and search transactions month by month, newest first.",
+        content: "Browse and search transactions month by month, newest first.",
       },
       { property: "og:title", content: "Transactions — MyFinances" },
       {
         property: "og:description",
-        content:
-          "Browse and search transactions month by month, newest first.",
+        content: "Browse and search transactions month by month, newest first.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -96,13 +89,9 @@ function startOfMonth(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth(), 1);
 }
 
-async function fetchTransactionsForMonth(
-  month: Date,
-): Promise<Array<TransactionRow>> {
+async function fetchTransactionsForMonth(month: Date): Promise<Array<TransactionRow>> {
   const start = formatISODate(startOfMonth(month));
-  const end = formatISODate(
-    new Date(month.getFullYear(), month.getMonth() + 1, 1),
-  );
+  const end = formatISODate(new Date(month.getFullYear(), month.getMonth() + 1, 1));
   const { data, error } = await getSupabase()
     .from("v_transactions_eur")
     .select(
@@ -119,9 +108,7 @@ async function fetchTransactionsForMonth(
 }
 
 async function fetchAccounts(): Promise<Record<string, AccountRow>> {
-  const { data, error } = await getSupabase()
-    .from("accounts")
-    .select("uid,label,currency");
+  const { data, error } = await getSupabase().from("accounts").select("uid,label,currency");
   if (error) throw error;
   const map: Record<string, AccountRow> = {};
   for (const row of (data ?? []) as Array<AccountRow>) map[row.uid] = row;
@@ -177,24 +164,18 @@ function useTransactionFieldMutation<K extends "category" | "transaction_type" |
     },
     onMutate: async ({ entryReference, value }) => {
       await queryClient.cancelQueries({ queryKey: ["transactions", monthKey] });
-      const previous = queryClient.getQueryData<Array<TransactionRow>>([
-        "transactions",
-        monthKey,
-      ]);
-      queryClient.setQueryData<Array<TransactionRow>>(
-        ["transactions", monthKey],
-        (old) =>
-          old
-            ? old.map((row) =>
-                row.entry_reference === entryReference ? { ...row, [column]: value } : row,
-              )
-            : old,
+      const previous = queryClient.getQueryData<Array<TransactionRow>>(["transactions", monthKey]);
+      queryClient.setQueryData<Array<TransactionRow>>(["transactions", monthKey], (old) =>
+        old
+          ? old.map((row) =>
+              row.entry_reference === entryReference ? { ...row, [column]: value } : row,
+            )
+          : old,
       );
       return { previous };
     },
     onError: (error, _vars, context) => {
-      if (context?.previous)
-        queryClient.setQueryData(["transactions", monthKey], context.previous);
+      if (context?.previous) queryClient.setQueryData(["transactions", monthKey], context.previous);
       toast.error(opts.errorMessage, { description: error.message });
     },
     onSuccess: (_data, vars) => {
@@ -221,26 +202,20 @@ function useSplitMutation(queryClient: ReturnType<typeof useQueryClient>, monthK
     },
     onMutate: async ({ entryReference, personalAmount, owedBy }) => {
       await queryClient.cancelQueries({ queryKey: ["transactions", monthKey] });
-      const previous = queryClient.getQueryData<Array<TransactionRow>>([
-        "transactions",
-        monthKey,
-      ]);
-      queryClient.setQueryData<Array<TransactionRow>>(
-        ["transactions", monthKey],
-        (old) =>
-          old
-            ? old.map((row) =>
-                row.entry_reference === entryReference
-                  ? { ...row, personal_amount: personalAmount, owed_by: owedBy }
-                  : row,
-              )
-            : old,
+      const previous = queryClient.getQueryData<Array<TransactionRow>>(["transactions", monthKey]);
+      queryClient.setQueryData<Array<TransactionRow>>(["transactions", monthKey], (old) =>
+        old
+          ? old.map((row) =>
+              row.entry_reference === entryReference
+                ? { ...row, personal_amount: personalAmount, owed_by: owedBy }
+                : row,
+            )
+          : old,
       );
       return { previous };
     },
     onError: (error, _vars, context) => {
-      if (context?.previous)
-        queryClient.setQueryData(["transactions", monthKey], context.previous);
+      if (context?.previous) queryClient.setQueryData(["transactions", monthKey], context.previous);
       toast.error("Couldn't save split", { description: error.message });
     },
     onSuccess: () => toast.success("Split saved"),
@@ -287,16 +262,14 @@ export function TransactionsPage() {
       if (error) throw error;
     },
     onSuccess: (_data, vars) => {
-      queryClient.setQueryData<Array<TransactionRow>>(
-        ["transactions", monthKey],
-        (old) =>
-          old
-            ? old.map((row) =>
-                vars.entryReferences.includes(row.entry_reference)
-                  ? { ...row, category: vars.category }
-                  : row,
-              )
-            : old,
+      queryClient.setQueryData<Array<TransactionRow>>(["transactions", monthKey], (old) =>
+        old
+          ? old.map((row) =>
+              vars.entryReferences.includes(row.entry_reference)
+                ? { ...row, category: vars.category }
+                : row,
+            )
+          : old,
       );
       toast.success(
         `Set ${vars.entryReferences.length} transaction${vars.entryReferences.length === 1 ? "" : "s"} to ${vars.category}`,
@@ -366,24 +339,16 @@ export function TransactionsPage() {
     const q = search.trim().toLowerCase();
     return transactions.filter((tx) => {
       if (category === UNCATEGORIZED && tx.category != null) return false;
-      if (
-        category !== "all" &&
-        category !== UNCATEGORIZED &&
-        tx.category !== category
-      )
+      if (category !== "all" && category !== UNCATEGORIZED && tx.category !== category)
         return false;
-      if (q && !(tx.creditor_name ?? "").toLowerCase().includes(q))
-        return false;
+      if (q && !(tx.creditor_name ?? "").toLowerCase().includes(q)) return false;
       return true;
     });
   }, [transactions, search, category]);
 
   const accounts = accountsQuery.data ?? {};
 
-  const filteredRefs = useMemo(
-    () => filtered.map((tx) => tx.entry_reference),
-    [filtered],
-  );
+  const filteredRefs = useMemo(() => filtered.map((tx) => tx.entry_reference), [filtered]);
   const allFilteredSelected =
     filteredRefs.length > 0 && filteredRefs.every((ref) => selected.has(ref));
 
@@ -481,9 +446,7 @@ export function TransactionsPage() {
       </Dialog>
 
       <header className="mb-8">
-        <h1 className="text-xl font-semibold tracking-tight text-foreground">
-          Transactions
-        </h1>
+        <h1 className="text-xl font-semibold tracking-tight text-foreground">Transactions</h1>
         <p className="mt-0.5 text-sm text-muted-foreground">
           Every transaction for the selected month, newest first.
         </p>
@@ -508,9 +471,7 @@ export function TransactionsPage() {
         >
           <ChevronLeft className="size-5" />
         </button>
-        <span className="text-sm font-medium text-foreground">
-          {monthLabel}
-        </span>
+        <span className="text-sm font-medium text-foreground">{monthLabel}</span>
         <button
           type="button"
           onClick={goToNextMonth}
@@ -542,9 +503,7 @@ export function TransactionsPage() {
           className="h-10 rounded-lg border bg-card px-3 text-base text-foreground focus:ring-2 focus:ring-ring focus:outline-none"
         >
           <option value="all">All categories</option>
-          {categories.hasUncategorized && (
-            <option value={UNCATEGORIZED}>Uncategorized</option>
-          )}
+          {categories.hasUncategorized && <option value={UNCATEGORIZED}>Uncategorized</option>}
           {categories.list.map((c) => (
             <option key={c} value={c}>
               {c}
@@ -556,9 +515,7 @@ export function TransactionsPage() {
       {/* Bulk action bar */}
       {selected.size > 0 && (
         <div className="mb-4 flex flex-wrap items-center gap-3 rounded-xl border bg-card p-3 card-ring">
-          <span className="text-sm font-medium text-foreground">
-            {selected.size} selected
-          </span>
+          <span className="text-sm font-medium text-foreground">{selected.size} selected</span>
           <BulkCategoryPicker
             onSelect={(next) =>
               bulkUpdateCategory.mutate({
@@ -621,9 +578,7 @@ export function TransactionsPage() {
                   })
                 }
                 accountLabel={
-                  tx.account_uid
-                    ? (accounts[tx.account_uid]?.label ?? "Unknown account")
-                    : "—"
+                  tx.account_uid ? (accounts[tx.account_uid]?.label ?? "Unknown account") : "—"
                 }
                 onAnswerWorthIt={(worthIt) =>
                   answerWorthIt.mutate({ entryReference: tx.entry_reference, value: worthIt })
@@ -681,10 +636,7 @@ export function TransactionsPage() {
                 ))
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td
-                    colSpan={9}
-                    className="px-4 py-12 text-center text-sm text-muted-foreground"
-                  >
+                  <td colSpan={9} className="px-4 py-12 text-center text-sm text-muted-foreground">
                     {transactions.length === 0
                       ? `No transactions for ${monthLabel}.`
                       : "No transactions match your filters."}
@@ -699,8 +651,7 @@ export function TransactionsPage() {
                     onToggleSelect={() => toggleOne(tx.entry_reference)}
                     savingCategory={
                       updateCategory.isPending &&
-                      updateCategory.variables?.entryReference ===
-                        tx.entry_reference
+                      updateCategory.variables?.entryReference === tx.entry_reference
                     }
                     onSelectCategory={(next) =>
                       updateCategory.mutate({
@@ -710,8 +661,7 @@ export function TransactionsPage() {
                     }
                     savingType={
                       updateType.isPending &&
-                      updateType.variables?.entryReference ===
-                        tx.entry_reference
+                      updateType.variables?.entryReference === tx.entry_reference
                     }
                     onSelectType={(next) =>
                       updateType.mutate({
@@ -720,9 +670,7 @@ export function TransactionsPage() {
                       })
                     }
                     accountLabel={
-                      tx.account_uid
-                        ? (accounts[tx.account_uid]?.label ?? "Unknown account")
-                        : "—"
+                      tx.account_uid ? (accounts[tx.account_uid]?.label ?? "Unknown account") : "—"
                     }
                     onAnswerWorthIt={(worthIt) =>
                       answerWorthIt.mutate({ entryReference: tx.entry_reference, value: worthIt })
@@ -746,7 +694,6 @@ export function TransactionsPage() {
           </table>
         </div>
       </section>
-
     </div>
   );
 }
@@ -793,9 +740,7 @@ function CategoryPicker({
                 if (c !== tx.category) onSelect(c);
               }}
               className={`block min-h-11 w-full rounded-md px-2.5 py-1.5 text-left text-sm transition-colors hover:bg-accent ${
-                c === tx.category
-                  ? "font-medium text-primary"
-                  : "text-foreground"
+                c === tx.category ? "font-medium text-primary" : "text-foreground"
               }`}
             >
               {c}
@@ -890,9 +835,7 @@ function TypePicker({
                 if (t !== tx.transaction_type) onSelect(t);
               }}
               className={`block min-h-11 w-full rounded-md px-2.5 py-1.5 text-left text-sm transition-colors hover:bg-accent ${
-                t === tx.transaction_type
-                  ? "font-medium text-primary"
-                  : "text-foreground"
+                t === tx.transaction_type ? "font-medium text-primary" : "text-foreground"
               }`}
             >
               {t}
@@ -919,9 +862,7 @@ function SplitEditor({
 }) {
   const [open, setOpen] = useState(false);
   const fullAmount = Math.abs(tx.amount ?? 0);
-  const [shareInput, setShareInput] = useState(() =>
-    String(tx.personal_amount ?? fullAmount),
-  );
+  const [shareInput, setShareInput] = useState(() => String(tx.personal_amount ?? fullAmount));
   const [owedByInput, setOwedByInput] = useState(tx.owed_by ?? "");
 
   const isSplit = tx.personal_amount != null && tx.personal_amount < fullAmount;
@@ -1111,16 +1052,15 @@ function TransactionRowView({
       </td>
       <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">
         {tx.booking_date
-          ? new Date(`${tx.booking_date}T00:00:00`).toLocaleDateString(
-              "en-GB",
-              { day: "numeric", month: "short", year: "numeric" },
-            )
+          ? new Date(`${tx.booking_date}T00:00:00`).toLocaleDateString("en-GB", {
+              day: "numeric",
+              month: "short",
+              year: "numeric",
+            })
           : "—"}
       </td>
       <td className="max-w-48 px-4 py-3">
-        <div className="truncate font-medium text-foreground">
-          {tx.creditor_name ?? "—"}
-        </div>
+        <div className="truncate font-medium text-foreground">{tx.creditor_name ?? "—"}</div>
         <WorthItPrompt tx={tx} onAnswer={onAnswerWorthIt} />
       </td>
       <td className="px-4 py-3">
@@ -1214,15 +1154,14 @@ function TransactionCardView({
           />
         </label>
         <div className="min-w-0">
-          <p className="truncate text-sm font-medium text-foreground">
-            {tx.creditor_name ?? "—"}
-          </p>
+          <p className="truncate text-sm font-medium text-foreground">{tx.creditor_name ?? "—"}</p>
           <p className="mt-0.5 flex items-center gap-1.5 truncate text-xs text-muted-foreground">
             {tx.booking_date
-              ? new Date(`${tx.booking_date}T00:00:00`).toLocaleDateString(
-                  "en-GB",
-                  { day: "numeric", month: "short", year: "numeric" },
-                )
+              ? new Date(`${tx.booking_date}T00:00:00`).toLocaleDateString("en-GB", {
+                  day: "numeric",
+                  month: "short",
+                  year: "numeric",
+                })
               : "—"}
             <AccountBadge label={accountLabel} />
           </p>

@@ -1,21 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import {
-  ArrowDownLeft,
-  Check,
-  ChevronDown,
-  Pencil,
-  Repeat,
-  Wallet,
-} from "lucide-react";
+import { ArrowDownLeft, Check, ChevronDown, Pencil, Repeat, Wallet } from "lucide-react";
 import { toast } from "sonner";
 import { getSupabase, isDemoRoute } from "@/integrations/supabase/client";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 export const Route = createFileRoute("/_authenticated/subscriptions")({
   head: () => ({
@@ -23,14 +12,12 @@ export const Route = createFileRoute("/_authenticated/subscriptions")({
       { title: "Subscriptions — MyFinances" },
       {
         name: "description",
-        content:
-          "Track recurring subscription charges and estimated monthly spend.",
+        content: "Track recurring subscription charges and estimated monthly spend.",
       },
       { property: "og:title", content: "Subscriptions — MyFinances" },
       {
         property: "og:description",
-        content:
-          "Track recurring subscription charges and estimated monthly spend.",
+        content: "Track recurring subscription charges and estimated monthly spend.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -115,38 +102,33 @@ export function SubscriptionsPage() {
         error: userError,
       } = await supabase.auth.getUser();
       if (userError || !user) throw userError ?? new Error("Not signed in");
-      const { error } = await supabase
-        .from("subscription_billing_overrides")
-        .upsert(
-          {
-            user_id: user.id,
-            creditor_name: vars.creditorName,
-            billing_frequency: vars.custom ? null : vars.frequency,
-            custom_interval_value: vars.custom?.value ?? null,
-            custom_interval_unit: vars.custom?.unit ?? null,
-          },
-          { onConflict: "user_id,creditor_name" },
-        );
+      const { error } = await supabase.from("subscription_billing_overrides").upsert(
+        {
+          user_id: user.id,
+          creditor_name: vars.creditorName,
+          billing_frequency: vars.custom ? null : vars.frequency,
+          custom_interval_value: vars.custom?.value ?? null,
+          custom_interval_unit: vars.custom?.unit ?? null,
+        },
+        { onConflict: "user_id,creditor_name" },
+      );
       if (error) throw error;
     },
     onMutate: async (vars) => {
       await queryClient.cancelQueries({ queryKey: ["subscriptions"] });
-      const previous =
-        queryClient.getQueryData<Array<SubscriptionRow>>(["subscriptions"]);
-      queryClient.setQueryData<Array<SubscriptionRow>>(
-        ["subscriptions"],
-        (old) =>
-          old?.map((sub) =>
-            sub.creditor_name === vars.creditorName
-              ? {
-                  ...sub,
-                  billing_frequency: vars.custom ? "Custom" : vars.frequency,
-                  billing_frequency_is_manual: true,
-                  custom_interval_value: vars.custom?.value ?? null,
-                  custom_interval_unit: vars.custom?.unit ?? null,
-                }
-              : sub,
-          ),
+      const previous = queryClient.getQueryData<Array<SubscriptionRow>>(["subscriptions"]);
+      queryClient.setQueryData<Array<SubscriptionRow>>(["subscriptions"], (old) =>
+        old?.map((sub) =>
+          sub.creditor_name === vars.creditorName
+            ? {
+                ...sub,
+                billing_frequency: vars.custom ? "Custom" : vars.frequency,
+                billing_frequency_is_manual: true,
+                custom_interval_value: vars.custom?.value ?? null,
+                custom_interval_unit: vars.custom?.unit ?? null,
+              }
+            : sub,
+        ),
       );
       return { previous };
     },
@@ -175,31 +157,22 @@ export function SubscriptionsPage() {
   const sorted = useMemo(
     () =>
       [...subscriptions].sort(
-        (a, b) =>
-          Math.abs(b.monthly_equivalent_eur ?? 0) -
-          Math.abs(a.monthly_equivalent_eur ?? 0),
+        (a, b) => Math.abs(b.monthly_equivalent_eur ?? 0) - Math.abs(a.monthly_equivalent_eur ?? 0),
       ),
     [subscriptions],
   );
 
   const estimatedMonthlyEur = useMemo(
-    () =>
-      subscriptions.reduce(
-        (sum, sub) => sum + Math.abs(sub.monthly_equivalent_eur ?? 0),
-        0,
-      ),
+    () => subscriptions.reduce((sum, sub) => sum + Math.abs(sub.monthly_equivalent_eur ?? 0), 0),
     [subscriptions],
   );
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-8 md:py-12">
       <header className="mb-8">
-        <h1 className="text-xl font-semibold tracking-tight text-foreground">
-          Subscriptions
-        </h1>
+        <h1 className="text-xl font-semibold tracking-tight text-foreground">Subscriptions</h1>
         <p className="mt-0.5 text-sm text-muted-foreground">
-          Recurring charges grouped by merchant, with auto-detected billing
-          frequency.
+          Recurring charges grouped by merchant, with auto-detected billing frequency.
         </p>
       </header>
 
@@ -231,8 +204,8 @@ export function SubscriptionsPage() {
         </div>
 
         <p className="mt-3 text-xs text-muted-foreground">
-          Based on each subscription's monthly equivalent — yearly charges
-          count as 1/12, quarterly as 1/3. Actual billing may differ.
+          Based on each subscription's monthly equivalent — yearly charges count as 1/12, quarterly
+          as 1/3. Actual billing may differ.
         </p>
       </section>
 
@@ -240,10 +213,7 @@ export function SubscriptionsPage() {
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {query.isPending
           ? Array.from({ length: 6 }).map((_, i) => (
-              <div
-                key={i}
-                className="rounded-2xl border bg-card p-5 card-ring"
-              >
+              <div key={i} className="rounded-2xl border bg-card p-5 card-ring">
                 <div className="h-5 w-3/4 animate-pulse rounded bg-muted" />
                 <div className="mt-4 h-8 w-1/2 animate-pulse rounded bg-muted" />
                 <div className="mt-3 h-4 w-2/3 animate-pulse rounded bg-muted" />
@@ -306,9 +276,7 @@ function SubscriptionCard({
   return (
     <div className="rounded-2xl border bg-card p-5 card-ring">
       <div className="flex items-start justify-between gap-3">
-        <h2 className="truncate font-medium text-foreground">
-          {sub.creditor_name ?? "—"}
-        </h2>
+        <h2 className="truncate font-medium text-foreground">{sub.creditor_name ?? "—"}</h2>
         {sub.category ? (
           <span className="inline-flex shrink-0 rounded-full border border-primary/25 bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
             {sub.category}
@@ -328,9 +296,7 @@ function SubscriptionCard({
           >
             {monthly < 0 && <ArrowDownLeft className="size-5" />}
             {formatMoney(monthly, "EUR")}
-            <span className="text-sm font-normal text-foreground/60">
-              /month
-            </span>
+            <span className="text-sm font-normal text-foreground/60">/month</span>
           </span>
         )}
       </div>
@@ -344,12 +310,7 @@ function SubscriptionCard({
             <span className={positive ? "text-positive" : "text-negative"}>
               {formatMoney(native, currency)}
             </span>
-            {showEur && (
-              <span className="text-foreground/70">
-                {" "}
-                ({formatMoney(eur, "EUR")})
-              </span>
-            )}
+            {showEur && <span className="text-foreground/70"> ({formatMoney(eur, "EUR")})</span>}
           </>
         )}
       </p>
@@ -390,12 +351,8 @@ function FrequencyPicker({
 }) {
   const [open, setOpen] = useState(false);
   const [customOpen, setCustomOpen] = useState(false);
-  const [draftValue, setDraftValue] = useState(
-    customValue != null ? String(customValue) : "3",
-  );
-  const [draftUnit, setDraftUnit] = useState<IntervalUnit>(
-    customUnit ?? "months",
-  );
+  const [draftValue, setDraftValue] = useState(customValue != null ? String(customValue) : "3");
+  const [draftUnit, setDraftUnit] = useState<IntervalUnit>(customUnit ?? "months");
 
   const isCustom = frequency === "Custom";
   const label =

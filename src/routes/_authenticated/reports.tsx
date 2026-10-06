@@ -165,12 +165,8 @@ export function ReportsPage() {
   const monthISO = formatISODate(startOfMonth(month));
   const prevMonth = new Date(month.getFullYear(), month.getMonth() - 1, 1);
   const prevMonthISO = formatISODate(startOfMonth(prevMonth));
-  const nextMonthStartISO = formatISODate(
-    new Date(month.getFullYear(), month.getMonth() + 1, 1),
-  );
-  const dayBeforeMonthISO = formatISODate(
-    new Date(month.getFullYear(), month.getMonth(), 0),
-  );
+  const nextMonthStartISO = formatISODate(new Date(month.getFullYear(), month.getMonth() + 1, 1));
+  const dayBeforeMonthISO = formatISODate(new Date(month.getFullYear(), month.getMonth(), 0));
   const endOfMonthISO = formatISODate(endOfMonth(month));
 
   const endBoundaryQuery = useQuery({
@@ -248,7 +244,8 @@ export function ReportsPage() {
 
   const monthLabel = month.toLocaleDateString("en-GB", { month: "long", year: "numeric" });
   const canGoNext =
-    startOfMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1)) <= startOfMonth(new Date());
+    startOfMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1)) <=
+    startOfMonth(new Date());
 
   const income = incomeExpensesQuery.data?.income_eur ?? 0;
   const expenses = incomeExpensesQuery.data?.expenses_eur ?? 0;
@@ -317,7 +314,9 @@ export function ReportsPage() {
           icon={<ThumbsDown className="size-4" />}
           label="Not worth it"
           sublabel={
-            worthItQuery.data ? `${worthItQuery.data.no} of ${worthItQuery.data.yes + worthItQuery.data.no}` : undefined
+            worthItQuery.data
+              ? `${worthItQuery.data.no} of ${worthItQuery.data.yes + worthItQuery.data.no}`
+              : undefined
           }
           pending={worthItQuery.isPending}
           value={formatEur(worthItQuery.data?.notWorthItTotal ?? 0)}
@@ -333,15 +332,21 @@ export function ReportsPage() {
           <ul className="divide-y">
             <li className="flex items-center justify-between px-4 py-3 text-sm sm:px-5">
               <span className="text-foreground">Bank accounts</span>
-              <span className="font-figure text-foreground">{formatSigned(netWorthDelta.delta.bank)}</span>
+              <span className="font-figure text-foreground">
+                {formatSigned(netWorthDelta.delta.bank)}
+              </span>
             </li>
             <li className="flex items-center justify-between px-4 py-3 text-sm sm:px-5">
               <span className="text-foreground">Portfolio</span>
-              <span className="font-figure text-foreground">{formatSigned(netWorthDelta.delta.portfolio)}</span>
+              <span className="font-figure text-foreground">
+                {formatSigned(netWorthDelta.delta.portfolio)}
+              </span>
             </li>
             <li className="flex items-center justify-between px-4 py-3 text-sm sm:px-5">
               <span className="text-foreground">Crypto</span>
-              <span className="font-figure text-foreground">{formatSigned(netWorthDelta.delta.crypto)}</span>
+              <span className="font-figure text-foreground">
+                {formatSigned(netWorthDelta.delta.crypto)}
+              </span>
             </li>
           </ul>
         </section>
@@ -363,7 +368,10 @@ export function ReportsPage() {
         ) : (
           <ul className="divide-y">
             {topCategories.map((row) => (
-              <li key={row.category} className="flex items-center justify-between px-4 py-3 text-sm sm:px-5">
+              <li
+                key={row.category}
+                className="flex items-center justify-between px-4 py-3 text-sm sm:px-5"
+              >
                 <span className="font-medium text-foreground">{row.category}</span>
                 <span className="font-figure text-foreground">{formatEur(row.spend_eur)}</span>
               </li>
@@ -376,7 +384,9 @@ export function ReportsPage() {
         <div className="flex items-center justify-between px-4 py-3 sm:px-5">
           <div>
             <h2 className="text-sm font-semibold text-foreground">Subscriptions</h2>
-            <p className="mt-0.5 text-xs text-muted-foreground">Current monthly-equivalent total, not historical</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Current monthly-equivalent total, not historical
+            </p>
           </div>
           <span className="font-figure text-sm font-semibold text-foreground">
             {subscriptionsQuery.isPending ? "…" : formatEur(subscriptionsQuery.data ?? 0)}

@@ -1,15 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
-import {
-  ChevronDown,
-  Landmark,
-  Link2,
-  Loader2,
-  Lock,
-  Plus,
-  Trash2,
-} from "lucide-react";
+import { ChevronDown, Landmark, Link2, Loader2, Lock, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { getSupabase, isDemoRoute } from "@/integrations/supabase/client";
 import { AccountBadge, bankNameFromLabel } from "@/components/bank-badge";
@@ -168,8 +160,7 @@ export function AccountsPage() {
           .filter((a) => a.uid !== main.uid && (a.amount ?? 0) !== 0)
           .sort((a, b) => (b.amount_eur ?? 0) - (a.amount_eur ?? 0));
         const subtotalEur =
-          (main.amount_eur ?? 0) +
-          subAccounts.reduce((sum, a) => sum + (a.amount_eur ?? 0), 0);
+          (main.amount_eur ?? 0) + subAccounts.reduce((sum, a) => sum + (a.amount_eur ?? 0), 0);
         return { bank, main, subAccounts, subtotalEur };
       })
       .sort((a, b) => b.subtotalEur - a.subtotalEur);
@@ -205,11 +196,12 @@ export function AccountsPage() {
 
   const connectBank = useMutation({
     mutationFn: async (input: { bankName: string; country: string }) => {
-      if (isDemoRoute()) throw new Error("This is a read-only demo — sign up to connect a real bank.");
-      const { data, error } = await getSupabase().functions.invoke<{ url?: string; error?: string }>(
-        "start-bank-consent",
-        { body: input },
-      );
+      if (isDemoRoute())
+        throw new Error("This is a read-only demo — sign up to connect a real bank.");
+      const { data, error } = await getSupabase().functions.invoke<{
+        url?: string;
+        error?: string;
+      }>("start-bank-consent", { body: input });
       if (error) throw error;
       if (!data?.url) throw new Error(data?.error ?? "No consent URL returned");
       return data.url;
@@ -238,9 +230,7 @@ export function AccountsPage() {
   const [currency, setCurrency] = useState("EUR");
   const [principal, setPrincipal] = useState("");
   const [annualRatePct, setAnnualRatePct] = useState("");
-  const [startDate, setStartDate] = useState(
-    () => new Date().toISOString().slice(0, 10),
-  );
+  const [startDate, setStartDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [maturityDate, setMaturityDate] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
   const [showCdForm, setShowCdForm] = useState(false);
@@ -306,7 +296,7 @@ export function AccountsPage() {
     const principalNum = parseFloat(principal);
     const ratePctNum = parseFloat(annualRatePct);
     if (!label.trim()) {
-      setFormError("Give it a name, e.g. \"House deposit CD\".");
+      setFormError('Give it a name, e.g. "House deposit CD".');
       return;
     }
     if (!Number.isFinite(principalNum) || principalNum <= 0) {
@@ -336,9 +326,7 @@ export function AccountsPage() {
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-8 md:py-12">
       <header className="mb-8">
-        <h1 className="text-xl font-semibold tracking-tight text-foreground">
-          Accounts
-        </h1>
+        <h1 className="text-xl font-semibold tracking-tight text-foreground">Accounts</h1>
         <p className="mt-0.5 text-sm text-muted-foreground">
           Your bank accounts and fixed-term deposits.
         </p>
@@ -368,10 +356,7 @@ export function AccountsPage() {
         )}
 
         {/* Connect a bank — collapsed by default, same pattern as Add CD below. */}
-        <form
-          onSubmit={handleConnectBank}
-          className="mb-4 rounded-2xl border bg-card card-ring"
-        >
+        <form onSubmit={handleConnectBank} className="mb-4 rounded-2xl border bg-card card-ring">
           <button
             type="button"
             onClick={() => setShowConnectForm((v) => !v)}
@@ -390,9 +375,7 @@ export function AccountsPage() {
             <div className="px-5 pb-5">
               <div className="grid gap-3 sm:grid-cols-[auto_1fr]">
                 <div>
-                  <label className="mb-1 block text-xs text-muted-foreground">
-                    Country
-                  </label>
+                  <label className="mb-1 block text-xs text-muted-foreground">Country</label>
                   <select
                     value={bankCountry}
                     onChange={(e) => {
@@ -414,9 +397,7 @@ export function AccountsPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs text-muted-foreground">
-                    Bank
-                  </label>
+                  <label className="mb-1 block text-xs text-muted-foreground">Bank</label>
                   <select
                     value={bankName}
                     onChange={(e) => setBankName(e.target.value)}
@@ -455,8 +436,8 @@ export function AccountsPage() {
                 {connectError && <p className="text-sm text-negative">{connectError}</p>}
               </div>
               <p className="mt-3 text-xs text-muted-foreground">
-                You'll be redirected to log into your bank directly — we never see your
-                bank password.
+                You'll be redirected to log into your bank directly — we never see your bank
+                password.
               </p>
             </div>
           )}
@@ -476,8 +457,7 @@ export function AccountsPage() {
           ) : (
             <ul className="divide-y">
               {bankGroups.map((group) => {
-                const percent =
-                  totalBankEur > 0 ? (group.subtotalEur / totalBankEur) * 100 : 0;
+                const percent = totalBankEur > 0 ? (group.subtotalEur / totalBankEur) * 100 : 0;
                 return (
                   <li key={group.bank} className="px-4 py-3 sm:px-5">
                     {/* Main (EUR) account */}
@@ -546,132 +526,115 @@ export function AccountsPage() {
 
         {/* Add CD form — collapsed by default so it doesn't push the actual
             CD list below the fold on a phone. */}
-        <form
-          onSubmit={handleAddCd}
-          className="mb-4 rounded-2xl border bg-card card-ring"
-        >
+        <form onSubmit={handleAddCd} className="mb-4 rounded-2xl border bg-card card-ring">
           <button
             type="button"
             onClick={() => setShowCdForm((v) => !v)}
             className="flex min-h-11 w-full items-center justify-between gap-3 p-5 text-left"
             aria-expanded={showCdForm}
           >
-            <h3 className="text-sm font-medium text-foreground">
-              Add a certificate of deposit
-            </h3>
+            <h3 className="text-sm font-medium text-foreground">Add a certificate of deposit</h3>
             <ChevronDown
               className={`size-4 shrink-0 text-muted-foreground transition-transform ${showCdForm ? "rotate-180" : ""}`}
             />
           </button>
           {showCdForm && (
-          <div className="px-5 pb-5">
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
-            <div className="lg:col-span-2">
-              <label className="mb-1 block text-xs text-muted-foreground">
-                Name
-              </label>
-              <input
-                type="text"
-                value={label}
-                onChange={(e) => setLabel(e.target.value)}
-                placeholder="e.g. House deposit CD"
-                className="w-full rounded-lg border bg-background px-3 py-2 text-base placeholder:text-muted-foreground/50 focus:ring-2 focus:ring-ring focus:outline-none"
-              />
+            <div className="px-5 pb-5">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
+                <div className="lg:col-span-2">
+                  <label className="mb-1 block text-xs text-muted-foreground">Name</label>
+                  <input
+                    type="text"
+                    value={label}
+                    onChange={(e) => setLabel(e.target.value)}
+                    placeholder="e.g. House deposit CD"
+                    className="w-full rounded-lg border bg-background px-3 py-2 text-base placeholder:text-muted-foreground/50 focus:ring-2 focus:ring-ring focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs text-muted-foreground">
+                    Bank (optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={bankLabel}
+                    onChange={(e) => setBankLabel(e.target.value)}
+                    placeholder="Fineco"
+                    className="w-full rounded-lg border bg-background px-3 py-2 text-base placeholder:text-muted-foreground/50 focus:ring-2 focus:ring-ring focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs text-muted-foreground">Currency</label>
+                  <select
+                    value={currency}
+                    onChange={(e) => setCurrency(e.target.value)}
+                    className="w-full rounded-lg border bg-background px-3 py-2 text-base focus:ring-2 focus:ring-ring focus:outline-none"
+                  >
+                    <option value="EUR">EUR</option>
+                    <option value="USD">USD</option>
+                    <option value="GBP">GBP</option>
+                    <option value="CHF">CHF</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs text-muted-foreground">Principal</label>
+                  <input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    value={principal}
+                    onChange={(e) => setPrincipal(e.target.value)}
+                    placeholder="10000"
+                    className="w-full rounded-lg border bg-background px-3 py-2 text-base placeholder:text-muted-foreground/50 focus:ring-2 focus:ring-ring focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs text-muted-foreground">APY %</label>
+                  <input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    value={annualRatePct}
+                    onChange={(e) => setAnnualRatePct(e.target.value)}
+                    placeholder="3.5"
+                    className="w-full rounded-lg border bg-background px-3 py-2 text-base placeholder:text-muted-foreground/50 focus:ring-2 focus:ring-ring focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs text-muted-foreground">Start date</label>
+                  <input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    className="w-full rounded-lg border bg-background px-3 py-2 text-base focus:ring-2 focus:ring-ring focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs text-muted-foreground">Maturity date</label>
+                  <input
+                    type="date"
+                    value={maturityDate}
+                    onChange={(e) => setMaturityDate(e.target.value)}
+                    className="w-full rounded-lg border bg-background px-3 py-2 text-base focus:ring-2 focus:ring-ring focus:outline-none"
+                  />
+                </div>
+              </div>
+              <div className="mt-4 flex items-center gap-3">
+                <button
+                  type="submit"
+                  disabled={addCd.isPending}
+                  className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+                >
+                  {addCd.isPending ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <Plus className="size-4" />
+                  )}
+                  Add CD
+                </button>
+                {formError && <p className="text-sm text-negative">{formError}</p>}
+              </div>
             </div>
-            <div>
-              <label className="mb-1 block text-xs text-muted-foreground">
-                Bank (optional)
-              </label>
-              <input
-                type="text"
-                value={bankLabel}
-                onChange={(e) => setBankLabel(e.target.value)}
-                placeholder="Fineco"
-                className="w-full rounded-lg border bg-background px-3 py-2 text-base placeholder:text-muted-foreground/50 focus:ring-2 focus:ring-ring focus:outline-none"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs text-muted-foreground">
-                Currency
-              </label>
-              <select
-                value={currency}
-                onChange={(e) => setCurrency(e.target.value)}
-                className="w-full rounded-lg border bg-background px-3 py-2 text-base focus:ring-2 focus:ring-ring focus:outline-none"
-              >
-                <option value="EUR">EUR</option>
-                <option value="USD">USD</option>
-                <option value="GBP">GBP</option>
-                <option value="CHF">CHF</option>
-              </select>
-            </div>
-            <div>
-              <label className="mb-1 block text-xs text-muted-foreground">
-                Principal
-              </label>
-              <input
-                type="number"
-                min={0}
-                step="0.01"
-                value={principal}
-                onChange={(e) => setPrincipal(e.target.value)}
-                placeholder="10000"
-                className="w-full rounded-lg border bg-background px-3 py-2 text-base placeholder:text-muted-foreground/50 focus:ring-2 focus:ring-ring focus:outline-none"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs text-muted-foreground">
-                APY %
-              </label>
-              <input
-                type="number"
-                min={0}
-                step="0.01"
-                value={annualRatePct}
-                onChange={(e) => setAnnualRatePct(e.target.value)}
-                placeholder="3.5"
-                className="w-full rounded-lg border bg-background px-3 py-2 text-base placeholder:text-muted-foreground/50 focus:ring-2 focus:ring-ring focus:outline-none"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs text-muted-foreground">
-                Start date
-              </label>
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="w-full rounded-lg border bg-background px-3 py-2 text-base focus:ring-2 focus:ring-ring focus:outline-none"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs text-muted-foreground">
-                Maturity date
-              </label>
-              <input
-                type="date"
-                value={maturityDate}
-                onChange={(e) => setMaturityDate(e.target.value)}
-                className="w-full rounded-lg border bg-background px-3 py-2 text-base focus:ring-2 focus:ring-ring focus:outline-none"
-              />
-            </div>
-          </div>
-          <div className="mt-4 flex items-center gap-3">
-            <button
-              type="submit"
-              disabled={addCd.isPending}
-              className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
-            >
-              {addCd.isPending ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                <Plus className="size-4" />
-              )}
-              Add CD
-            </button>
-            {formError && <p className="text-sm text-negative">{formError}</p>}
-          </div>
-          </div>
           )}
         </form>
 
@@ -698,21 +661,15 @@ export function AccountsPage() {
                 Math.max(
                   0,
                   ((new Date().getTime() - new Date(cd.start_date).getTime()) /
-                    (new Date(cd.maturity_date).getTime() -
-                      new Date(cd.start_date).getTime())) *
+                    (new Date(cd.maturity_date).getTime() - new Date(cd.start_date).getTime())) *
                     100,
                 ),
               );
               return (
-                <div
-                  key={cd.id}
-                  className="rounded-2xl border bg-card p-5 card-ring"
-                >
+                <div key={cd.id} className="rounded-2xl border bg-card p-5 card-ring">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <h3 className="truncate font-medium text-foreground">
-                        {cd.label}
-                      </h3>
+                      <h3 className="truncate font-medium text-foreground">{cd.label}</h3>
                       <p className="mt-0.5 text-xs text-muted-foreground">
                         {cd.bank_label ? `${cd.bank_label} · ` : ""}
                         {(cd.annual_rate * 100).toFixed(2)}% APY

@@ -32,18 +32,13 @@ const TREND_WINDOW_DAYS = 365;
 function withTrend(
   snapshots: Array<NetWorthSnapshot>,
 ): Array<NetWorthSnapshot & { trend_eur: number | null }> {
-  const window = Math.min(
-    TREND_WINDOW_DAYS,
-    Math.max(1, Math.floor(snapshots.length / 3)),
-  );
+  const window = Math.min(TREND_WINDOW_DAYS, Math.max(1, Math.floor(snapshots.length / 3)));
   return snapshots.map((row, i) => {
     const slice = snapshots.slice(Math.max(0, i + 1 - window), i + 1);
-    const avg =
-      slice.reduce((sum, r) => sum + r.total_eur, 0) / slice.length;
+    const avg = slice.reduce((sum, r) => sum + r.total_eur, 0) / slice.length;
     return { ...row, trend_eur: avg };
   });
 }
-
 
 export const Route = createFileRoute("/_authenticated/")({
   head: () => ({
@@ -51,14 +46,12 @@ export const Route = createFileRoute("/_authenticated/")({
       { title: "Net Worth — MyFinances" },
       {
         name: "description",
-        content:
-          "Track your net worth over time with daily snapshots and currency conversion.",
+        content: "Track your net worth over time with daily snapshots and currency conversion.",
       },
       { property: "og:title", content: "Net Worth — MyFinances" },
       {
         property: "og:description",
-        content:
-          "Track your net worth over time with daily snapshots and currency conversion.",
+        content: "Track your net worth over time with daily snapshots and currency conversion.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -73,9 +66,7 @@ const CURRENCIES: Array<Currency> = ["EUR", "USD", "GBP"];
 async function fetchNetWorth(): Promise<Array<NetWorthSnapshot>> {
   const { data, error } = await getSupabase()
     .from("v_net_worth_daily")
-    .select(
-      "snapshot_date,total_eur,bank_total_eur,portfolio_total_eur,crypto_total_eur",
-    )
+    .select("snapshot_date,total_eur,bank_total_eur,portfolio_total_eur,crypto_total_eur")
     .order("snapshot_date", { ascending: true });
   if (error) throw error;
   return (data ?? []) as Array<NetWorthSnapshot>;
@@ -135,8 +126,7 @@ export function NetWorthPage() {
   }, [currency, fxQuery.data]);
 
   // Conversion: value in target currency = total_eur / rate_to_eur(target).
-  const headline =
-    latest != null && rateToEur != null ? latest.total_eur / rateToEur : null;
+  const headline = latest != null && rateToEur != null ? latest.total_eur / rateToEur : null;
 
   const dayChange =
     latest != null && previous != null && previous.total_eur !== 0
@@ -154,9 +144,7 @@ export function NetWorthPage() {
       {/* Header */}
       <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight text-foreground">
-            Net Worth
-          </h1>
+          <h1 className="text-xl font-semibold tracking-tight text-foreground">Net Worth</h1>
           <p className="mt-0.5 text-sm text-muted-foreground">
             Daily snapshot of everything you own, minus what you owe.
           </p>
@@ -210,10 +198,11 @@ export function NetWorthPage() {
           {latest && (
             <span className="ml-1">
               · as of{" "}
-              {new Date(`${latest.snapshot_date}T00:00:00`).toLocaleDateString(
-                "en-GB",
-                { day: "numeric", month: "long", year: "numeric" },
-              )}
+              {new Date(`${latest.snapshot_date}T00:00:00`).toLocaleDateString("en-GB", {
+                day: "numeric",
+                month: "long",
+                year: "numeric",
+              })}
             </span>
           )}
         </div>
@@ -222,9 +211,7 @@ export function NetWorthPage() {
           {netWorthQuery.isPending ? (
             <div className="h-14 w-64 animate-pulse rounded-lg bg-muted" />
           ) : latest == null ? (
-            <p className="text-sm text-muted-foreground">
-              No snapshots available yet.
-            </p>
+            <p className="text-sm text-muted-foreground">No snapshots available yet.</p>
           ) : headline != null ? (
             <p className="font-figure text-4xl font-semibold tracking-tight text-foreground sm:text-6xl">
               {formatMoney(headline, currency)}
@@ -236,8 +223,7 @@ export function NetWorthPage() {
           )}
           {currency !== "EUR" && headline != null && rateToEur != null && (
             <p className="mt-2 text-xs text-muted-foreground">
-              Converted at 1 {currency} = {rateToEur} EUR (
-              {fxQuery.data?.[currency]?.date})
+              Converted at 1 {currency} = {rateToEur} EUR ({fxQuery.data?.[currency]?.date})
             </p>
           )}
         </div>
@@ -251,9 +237,7 @@ export function NetWorthPage() {
       {/* Chart card */}
       <section className="rounded-2xl border bg-card p-4 card-ring sm:p-6">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2 px-2">
-          <h2 className="text-sm font-semibold text-foreground">
-            Net worth over time
-          </h2>
+          <h2 className="text-sm font-semibold text-foreground">Net worth over time</h2>
           <div className="flex items-center gap-3 text-xs text-muted-foreground">
             <LegendDot color="var(--color-chart-1)" label="Bank" />
             <LegendDot color="var(--color-chart-2)" label="Portfolio" />
@@ -270,10 +254,7 @@ export function NetWorthPage() {
             </div>
           ) : (
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart
-                data={chartData}
-                margin={{ top: 8, right: 8, bottom: 0, left: 8 }}
-              >
+              <AreaChart data={chartData} margin={{ top: 8, right: 8, bottom: 0, left: 8 }}>
                 <CartesianGrid
                   strokeDasharray="3 6"
                   stroke="var(--color-border)"
@@ -292,9 +273,7 @@ export function NetWorthPage() {
                 />
                 <YAxis
                   width={70}
-                  tickFormatter={(v: number) =>
-                    v >= 1000 ? `€${Math.round(v / 1000)}k` : `€${v}`
-                  }
+                  tickFormatter={(v: number) => (v >= 1000 ? `€${Math.round(v / 1000)}k` : `€${v}`)}
                   tick={{
                     fill: "var(--color-muted-foreground)",
                     fontSize: 11,
@@ -363,15 +342,7 @@ export function NetWorthPage() {
   );
 }
 
-function LegendDot({
-  color,
-  label,
-  dashed,
-}: {
-  color: string;
-  label: string;
-  dashed?: boolean;
-}) {
+function LegendDot({ color, label, dashed }: { color: string; label: string; dashed?: boolean }) {
   return (
     <span className="inline-flex items-center gap-1.5">
       <span
@@ -390,13 +361,7 @@ function LegendDot({
   );
 }
 
-function ChangePill({
-  label,
-  value,
-}: {
-  label: string;
-  value: number | null;
-}) {
+function ChangePill({ label, value }: { label: string; value: number | null }) {
   if (value == null) return null;
   const positive = value >= 0;
   const Icon = positive ? ArrowUpRight : ArrowDownRight;
@@ -448,7 +413,11 @@ function NetWorthTooltip({
       </p>
       <div className="mt-2 space-y-0.5 text-xs">
         <TooltipRow color="var(--color-chart-1)" label="Bank" value={point.bank_total_eur} />
-        <TooltipRow color="var(--color-chart-2)" label="Portfolio" value={point.portfolio_total_eur} />
+        <TooltipRow
+          color="var(--color-chart-2)"
+          label="Portfolio"
+          value={point.portfolio_total_eur}
+        />
         <TooltipRow color="var(--color-chart-3)" label="Crypto" value={point.crypto_total_eur} />
         {point.trend_eur != null && (
           <TooltipRow color="var(--color-foreground)" label="Trend" value={point.trend_eur} />
@@ -458,27 +427,14 @@ function NetWorthTooltip({
   );
 }
 
-function TooltipRow({
-  color,
-  label,
-  value,
-}: {
-  color: string;
-  label: string;
-  value: number;
-}) {
+function TooltipRow({ color, label, value }: { color: string; label: string; value: number }) {
   return (
     <div className="flex items-center justify-between gap-4">
       <span className="flex items-center gap-1.5 text-muted-foreground">
-        <span
-          className="inline-block size-1.5 rounded-full"
-          style={{ backgroundColor: color }}
-        />
+        <span className="inline-block size-1.5 rounded-full" style={{ backgroundColor: color }} />
         {label}
       </span>
-      <span className="font-figure text-foreground">
-        {formatMoney(value, "EUR")}
-      </span>
+      <span className="font-figure text-foreground">{formatMoney(value, "EUR")}</span>
     </div>
   );
 }

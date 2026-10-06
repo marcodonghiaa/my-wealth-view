@@ -76,18 +76,14 @@ export function IncomeExpensesPage() {
   const rows = useMemo(
     () =>
       (query.data ?? []).filter(
-        (r): r is { month: string; income_eur: number; expenses_eur: number } =>
-          r.month != null,
+        (r): r is { month: string; income_eur: number; expenses_eur: number } => r.month != null,
       ),
     [query.data],
   );
 
   const now = new Date();
-  const currentMonthKey = `${now.getFullYear()}-${String(
-    now.getMonth() + 1,
-  ).padStart(2, "0")}-01`;
-  const current =
-    rows.find((r) => r.month === currentMonthKey) ?? rows.at(-1) ?? null;
+  const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
+  const current = rows.find((r) => r.month === currentMonthKey) ?? rows.at(-1) ?? null;
 
   const income = current?.income_eur ?? 0;
   const expenses = current?.expenses_eur ?? 0;
@@ -108,9 +104,7 @@ export function IncomeExpensesPage() {
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-8 md:py-12">
       <header className="mb-8">
-        <h1 className="text-xl font-semibold tracking-tight text-foreground">
-          Income vs Expenses
-        </h1>
+        <h1 className="text-xl font-semibold tracking-tight text-foreground">Income vs Expenses</h1>
         <p className="mt-0.5 text-sm text-muted-foreground">
           What came in versus what went out, month over month.
         </p>
@@ -156,9 +150,7 @@ export function IncomeExpensesPage() {
       {/* Chart card */}
       <section className="rounded-2xl border bg-card p-4 card-ring sm:p-6">
         <div className="mb-4 flex items-center justify-between px-2">
-          <h2 className="text-sm font-semibold text-foreground">
-            Monthly trend
-          </h2>
+          <h2 className="text-sm font-semibold text-foreground">Monthly trend</h2>
           <span className="text-xs text-muted-foreground">EUR</span>
         </div>
         <div className="h-80 w-full">
@@ -190,9 +182,7 @@ export function IncomeExpensesPage() {
                 <YAxis
                   width={70}
                   tickFormatter={(v: number) =>
-                    Math.abs(v) >= 1000
-                      ? `€${Math.round(v / 1000)}k`
-                      : `€${v}`
+                    Math.abs(v) >= 1000 ? `€${Math.round(v / 1000)}k` : `€${v}`
                   }
                   tick={{ fill: "var(--color-muted-foreground)", fontSize: 11 }}
                   tickLine={false}
@@ -202,9 +192,7 @@ export function IncomeExpensesPage() {
                   content={<IncomeTooltip />}
                   cursor={{ fill: "var(--color-muted)", fillOpacity: 0.3 }}
                 />
-                <Legend
-                  wrapperStyle={{ fontSize: 12, color: "var(--color-muted-foreground)" }}
-                />
+                <Legend wrapperStyle={{ fontSize: 12, color: "var(--color-muted-foreground)" }} />
                 <Bar
                   name="Income"
                   dataKey="income_eur"
@@ -283,15 +271,12 @@ function IncomeTooltip({
 }) {
   if (!active || !payload?.length || !label) return null;
   const income = payload.find((p) => p.dataKey === "income_eur")?.value ?? 0;
-  const expenses =
-    payload.find((p) => p.dataKey === "expenses_eur")?.value ?? 0;
+  const expenses = payload.find((p) => p.dataKey === "expenses_eur")?.value ?? 0;
   return (
     <div className="rounded-lg border bg-popover px-3 py-2 text-sm shadow-lg">
       <p className="mb-1 text-xs text-muted-foreground">{label}</p>
       <p className="font-figure text-positive">Income {formatEur(income)}</p>
-      <p className="font-figure text-negative">
-        Expenses {formatEur(expenses)}
-      </p>
+      <p className="font-figure text-negative">Expenses {formatEur(expenses)}</p>
       <p className="font-figure mt-1 border-t pt-1 text-foreground">
         Net {formatEur(income - expenses)}
       </p>

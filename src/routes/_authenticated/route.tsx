@@ -1,10 +1,4 @@
-import {
-  createFileRoute,
-  Outlet,
-  Link,
-  redirect,
-  useNavigate,
-} from "@tanstack/react-router";
+import { createFileRoute, Outlet, Link, redirect, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import {
   TrendingUp,
@@ -21,13 +15,7 @@ import {
   HandCoins,
   type LucideIcon,
 } from "lucide-react";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { getSupabase } from "@/integrations/supabase/client";
 import { PushSubscribeButton } from "@/components/push-subscribe";
 
@@ -102,7 +90,6 @@ function AuthenticatedLayout() {
   const [signingOut, setSigningOut] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
-
   // Keep route data in sync with auth transitions (e.g. token expiry).
   useEffect(() => {
     const {
@@ -162,9 +149,7 @@ function AuthenticatedLayout() {
         </nav>
 
         <div className="border-t p-3">
-          <div className="mb-2 truncate px-3 text-xs text-muted-foreground">
-            {user.email}
-          </div>
+          <div className="mb-2 truncate px-3 text-xs text-muted-foreground">{user.email}</div>
           <PushSubscribeButton />
           <button
             type="button"
@@ -227,9 +212,7 @@ function AuthenticatedLayout() {
             </nav>
 
             <div className="border-t p-3">
-              <div className="mb-2 truncate px-3 text-xs text-muted-foreground">
-                {user.email}
-              </div>
+              <div className="mb-2 truncate px-3 text-xs text-muted-foreground">{user.email}</div>
               <PushSubscribeButton />
               <button
                 type="button"
@@ -248,9 +231,7 @@ function AuthenticatedLayout() {
           <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
             <TrendingUp className="size-3.5" />
           </div>
-          <span className="truncate text-sm font-semibold text-sidebar-foreground">
-            MyFinances
-          </span>
+          <span className="truncate text-sm font-semibold text-sidebar-foreground">MyFinances</span>
         </div>
         <button
           type="button"
@@ -275,7 +256,10 @@ function AuthenticatedLayout() {
             to={item.to}
             activeOptions={{ exact: true }}
             className="flex flex-col items-center justify-center gap-1 text-muted-foreground transition-transform active:scale-90"
-            activeProps={{ className: "flex flex-col items-center justify-center gap-1 text-sidebar-primary transition-transform active:scale-90" }}
+            activeProps={{
+              className:
+                "flex flex-col items-center justify-center gap-1 text-sidebar-primary transition-transform active:scale-90",
+            }}
           >
             <item.icon className="size-5" />
             <span className="text-xs font-medium">{item.label}</span>

@@ -1,12 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  ChevronDown,
-  Loader2,
-  Plus,
-  Trash2,
-} from "lucide-react";
+import { ChevronDown, Loader2, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { getSupabase, isDemoRoute } from "@/integrations/supabase/client";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -50,9 +45,7 @@ const MATCH_FIELDS = [
 async function fetchRules(): Promise<RuleRow[]> {
   const { data, error } = await getSupabase()
     .from("category_rules")
-    .select(
-      "id, match_field, match_text, set_category, set_transaction_type, priority, created_at",
-    )
+    .select("id, match_field, match_text, set_category, set_transaction_type, priority, created_at")
     .order("priority", { ascending: true })
     .order("created_at", { ascending: true });
   if (error) throw error;
@@ -117,9 +110,8 @@ export function RulesPage() {
     onMutate: async (id) => {
       await queryClient.cancelQueries({ queryKey: ["category-rules"] });
       const previous = queryClient.getQueryData<RuleRow[]>(["category-rules"]);
-      queryClient.setQueryData<RuleRow[]>(
-        ["category-rules"],
-        (old) => old?.filter((r) => r.id !== id),
+      queryClient.setQueryData<RuleRow[]>(["category-rules"], (old) =>
+        old?.filter((r) => r.id !== id),
       );
       return { previous };
     },
@@ -128,8 +120,7 @@ export function RulesPage() {
       toast.error(err instanceof Error ? err.message : "Failed to delete rule");
     },
     onSuccess: () => toast.success("Rule deleted"),
-    onSettled: () =>
-      void queryClient.invalidateQueries({ queryKey: ["category-rules"] }),
+    onSettled: () => void queryClient.invalidateQueries({ queryKey: ["category-rules"] }),
   });
 
   function handleSubmit(e: React.FormEvent) {
@@ -156,22 +147,16 @@ export function RulesPage() {
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-8 md:py-12">
       <header className="mb-8">
-        <h1 className="text-xl font-semibold tracking-tight text-foreground">
-          Rules
-        </h1>
+        <h1 className="text-xl font-semibold tracking-tight text-foreground">Rules</h1>
         <p className="mt-0.5 text-sm text-muted-foreground">
-          Rules run automatically before AI categorization — if a
-          transaction's chosen field contains your match text, it's
-          categorized instantly, no AI needed.
+          Rules run automatically before AI categorization — if a transaction's chosen field
+          contains your match text, it's categorized instantly, no AI needed.
         </p>
       </header>
 
       {/* Add rule form — collapsed by default so it doesn't push the
           existing rules list below the fold on a phone. */}
-      <form
-        onSubmit={handleSubmit}
-        className="card-ring mb-8 rounded-xl"
-      >
+      <form onSubmit={handleSubmit} className="card-ring mb-8 rounded-xl">
         <button
           type="button"
           onClick={() => setShowForm((v) => !v)}
@@ -184,175 +169,169 @@ export function RulesPage() {
           />
         </button>
         {showForm && (
-        <div className="px-5 pb-5">
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-          <div className="lg:col-span-1">
-            <label className="mb-1 block text-xs text-muted-foreground">
-              If this field
-            </label>
-            <Popover open={fieldOpen} onOpenChange={setFieldOpen}>
-              <PopoverTrigger asChild>
-                <button
-                  type="button"
-                  className="flex w-full items-center justify-between rounded-lg border bg-background px-3 py-2 text-base"
-                >
-                  {fieldLabel(matchField)}
-                  <ChevronDown className="size-3.5 opacity-50" />
-                </button>
-              </PopoverTrigger>
-              <PopoverContent className="w-44 p-1" align="start">
-                {MATCH_FIELDS.map((f) => (
-                  <button
-                    key={f.value}
-                    type="button"
-                    onClick={() => {
-                      setMatchField(f.value);
-                      setFieldOpen(false);
-                    }}
-                    className={cn(
-                      "min-h-11 w-full rounded-md px-2.5 py-1.5 text-left text-sm hover:bg-accent",
-                      f.value === matchField && "bg-accent",
-                    )}
-                  >
-                    {f.label}
-                  </button>
-                ))}
-              </PopoverContent>
-            </Popover>
-          </div>
+          <div className="px-5 pb-5">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+              <div className="lg:col-span-1">
+                <label className="mb-1 block text-xs text-muted-foreground">If this field</label>
+                <Popover open={fieldOpen} onOpenChange={setFieldOpen}>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      className="flex w-full items-center justify-between rounded-lg border bg-background px-3 py-2 text-base"
+                    >
+                      {fieldLabel(matchField)}
+                      <ChevronDown className="size-3.5 opacity-50" />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-44 p-1" align="start">
+                    {MATCH_FIELDS.map((f) => (
+                      <button
+                        key={f.value}
+                        type="button"
+                        onClick={() => {
+                          setMatchField(f.value);
+                          setFieldOpen(false);
+                        }}
+                        className={cn(
+                          "min-h-11 w-full rounded-md px-2.5 py-1.5 text-left text-sm hover:bg-accent",
+                          f.value === matchField && "bg-accent",
+                        )}
+                      >
+                        {f.label}
+                      </button>
+                    ))}
+                  </PopoverContent>
+                </Popover>
+              </div>
 
-          <div className="lg:col-span-2">
-            <label className="mb-1 block text-xs text-muted-foreground">
-              contains this text
-            </label>
-            <input
-              type="text"
-              value={matchText}
-              onChange={(e) => setMatchText(e.target.value)}
-              placeholder="e.g. spotify"
-              className="w-full rounded-lg border bg-background px-3 py-2 text-base placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/50"
-            />
-          </div>
+              <div className="lg:col-span-2">
+                <label className="mb-1 block text-xs text-muted-foreground">
+                  contains this text
+                </label>
+                <input
+                  type="text"
+                  value={matchText}
+                  onChange={(e) => setMatchText(e.target.value)}
+                  placeholder="e.g. spotify"
+                  className="w-full rounded-lg border bg-background px-3 py-2 text-base placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/50"
+                />
+              </div>
 
-          <div className="lg:col-span-1">
-            <label className="mb-1 block text-xs text-muted-foreground">
-              set category (optional)
-            </label>
-            <Popover open={categoryOpen} onOpenChange={setCategoryOpen}>
-              <PopoverTrigger asChild>
-                <button
-                  type="button"
-                  className="flex w-full items-center justify-between rounded-lg border bg-background px-3 py-2 text-base"
-                >
-                  <span className={cn(!category && "text-muted-foreground/60")}>
-                    {category ?? "—"}
-                  </span>
-                  <ChevronDown className="size-3.5 opacity-50" />
-                </button>
-              </PopoverTrigger>
-              <PopoverContent className="w-44 p-1" align="start">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setCategory(null);
-                    setCategoryOpen(false);
-                  }}
-                  className={cn(
-                    "min-h-11 w-full rounded-md px-2.5 py-1.5 text-left text-sm text-muted-foreground hover:bg-accent",
-                    !category && "bg-accent",
-                  )}
-                >
-                  None
-                </button>
-                {CATEGORIES.map((c) => (
-                  <button
-                    key={c}
-                    type="button"
-                    onClick={() => {
-                      setCategory(c);
-                      setCategoryOpen(false);
-                    }}
-                    className={cn(
-                      "min-h-11 w-full rounded-md px-2.5 py-1.5 text-left text-sm hover:bg-accent",
-                      c === category && "bg-accent",
-                    )}
-                  >
-                    {c}
-                  </button>
-                ))}
-              </PopoverContent>
-            </Popover>
-          </div>
+              <div className="lg:col-span-1">
+                <label className="mb-1 block text-xs text-muted-foreground">
+                  set category (optional)
+                </label>
+                <Popover open={categoryOpen} onOpenChange={setCategoryOpen}>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      className="flex w-full items-center justify-between rounded-lg border bg-background px-3 py-2 text-base"
+                    >
+                      <span className={cn(!category && "text-muted-foreground/60")}>
+                        {category ?? "—"}
+                      </span>
+                      <ChevronDown className="size-3.5 opacity-50" />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-44 p-1" align="start">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCategory(null);
+                        setCategoryOpen(false);
+                      }}
+                      className={cn(
+                        "min-h-11 w-full rounded-md px-2.5 py-1.5 text-left text-sm text-muted-foreground hover:bg-accent",
+                        !category && "bg-accent",
+                      )}
+                    >
+                      None
+                    </button>
+                    {CATEGORIES.map((c) => (
+                      <button
+                        key={c}
+                        type="button"
+                        onClick={() => {
+                          setCategory(c);
+                          setCategoryOpen(false);
+                        }}
+                        className={cn(
+                          "min-h-11 w-full rounded-md px-2.5 py-1.5 text-left text-sm hover:bg-accent",
+                          c === category && "bg-accent",
+                        )}
+                      >
+                        {c}
+                      </button>
+                    ))}
+                  </PopoverContent>
+                </Popover>
+              </div>
 
-          <div className="lg:col-span-1">
-            <label className="mb-1 block text-xs text-muted-foreground">
-              set type (optional)
-            </label>
-            <Popover open={typeOpen} onOpenChange={setTypeOpen}>
-              <PopoverTrigger asChild>
-                <button
-                  type="button"
-                  className="flex w-full items-center justify-between rounded-lg border bg-background px-3 py-2 text-base"
-                >
-                  <span className={cn(!type && "text-muted-foreground/60")}>
-                    {type ?? "—"}
-                  </span>
-                  <ChevronDown className="size-3.5 opacity-50" />
-                </button>
-              </PopoverTrigger>
-              <PopoverContent className="w-44 p-1" align="start">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setType(null);
-                    setTypeOpen(false);
-                  }}
-                  className={cn(
-                    "min-h-11 w-full rounded-md px-2.5 py-1.5 text-left text-sm text-muted-foreground hover:bg-accent",
-                    !type && "bg-accent",
-                  )}
-                >
-                  None
-                </button>
-                {TRANSACTION_TYPES.map((t) => (
-                  <button
-                    key={t}
-                    type="button"
-                    onClick={() => {
-                      setType(t);
-                      setTypeOpen(false);
-                    }}
-                    className={cn(
-                      "min-h-11 w-full rounded-md px-2.5 py-1.5 text-left text-sm hover:bg-accent",
-                      t === type && "bg-accent",
-                    )}
-                  >
-                    {t}
-                  </button>
-                ))}
-              </PopoverContent>
-            </Popover>
-          </div>
-        </div>
+              <div className="lg:col-span-1">
+                <label className="mb-1 block text-xs text-muted-foreground">
+                  set type (optional)
+                </label>
+                <Popover open={typeOpen} onOpenChange={setTypeOpen}>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      className="flex w-full items-center justify-between rounded-lg border bg-background px-3 py-2 text-base"
+                    >
+                      <span className={cn(!type && "text-muted-foreground/60")}>{type ?? "—"}</span>
+                      <ChevronDown className="size-3.5 opacity-50" />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-44 p-1" align="start">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setType(null);
+                        setTypeOpen(false);
+                      }}
+                      className={cn(
+                        "min-h-11 w-full rounded-md px-2.5 py-1.5 text-left text-sm text-muted-foreground hover:bg-accent",
+                        !type && "bg-accent",
+                      )}
+                    >
+                      None
+                    </button>
+                    {TRANSACTION_TYPES.map((t) => (
+                      <button
+                        key={t}
+                        type="button"
+                        onClick={() => {
+                          setType(t);
+                          setTypeOpen(false);
+                        }}
+                        className={cn(
+                          "min-h-11 w-full rounded-md px-2.5 py-1.5 text-left text-sm hover:bg-accent",
+                          t === type && "bg-accent",
+                        )}
+                      >
+                        {t}
+                      </button>
+                    ))}
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
 
-        <div className="mt-4 flex items-center gap-3">
-          <button
-            type="submit"
-            disabled={addRule.isPending}
-            className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
-          >
-            {addRule.isPending ? (
-              <Loader2 className="size-4 animate-spin" />
-            ) : (
-              <Plus className="size-4" />
-            )}
-            Add rule
-          </button>
-          {formError && (
-            <p className="text-sm text-destructive">{formError}</p>
-          )}
-        </div>
-        </div>
+            <div className="mt-4 flex items-center gap-3">
+              <button
+                type="submit"
+                disabled={addRule.isPending}
+                className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+              >
+                {addRule.isPending ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <Plus className="size-4" />
+                )}
+                Add rule
+              </button>
+              {formError && <p className="text-sm text-destructive">{formError}</p>}
+            </div>
+          </div>
         )}
       </form>
 
@@ -360,8 +339,7 @@ export function RulesPage() {
       <div className="card-ring rounded-xl">
         <div className="border-b px-5 py-3">
           <h2 className="text-sm font-medium">
-            Existing rules{" "}
-            <span className="text-muted-foreground">({rules.length})</span>
+            Existing rules <span className="text-muted-foreground">({rules.length})</span>
           </h2>
         </div>
 
@@ -372,30 +350,21 @@ export function RulesPage() {
             ))}
           </div>
         ) : rulesQuery.isError ? (
-          <div className="p-5 text-sm text-destructive">
-            Failed to load rules.
-          </div>
+          <div className="p-5 text-sm text-destructive">Failed to load rules.</div>
         ) : rules.length === 0 ? (
           <div className="p-8 text-center text-sm text-muted-foreground">
-            No rules yet. Add your first one above — e.g. any transaction whose
-            creditor contains "spotify" becomes Entertainment / Subscription.
+            No rules yet. Add your first one above — e.g. any transaction whose creditor contains
+            "spotify" becomes Entertainment / Subscription.
           </div>
         ) : (
           <ul className="divide-y">
             {rules.map((rule) => (
-              <li
-                key={rule.id}
-                className="flex flex-wrap items-center gap-x-4 gap-y-2 px-5 py-3.5"
-              >
+              <li key={rule.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 px-5 py-3.5">
                 <div className="min-w-0 flex-1">
                   <p className="text-sm">
-                    <span className="text-muted-foreground">
-                      {fieldLabel(rule.match_field)}
-                    </span>{" "}
+                    <span className="text-muted-foreground">{fieldLabel(rule.match_field)}</span>{" "}
                     contains{" "}
-                    <span className="font-medium text-foreground">
-                      “{rule.match_text}”
-                    </span>
+                    <span className="font-medium text-foreground">“{rule.match_text}”</span>
                   </p>
                 </div>
                 <div className="flex items-center gap-2">

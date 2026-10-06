@@ -140,9 +140,7 @@ export function SpendingPage() {
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-8 md:py-12">
       <header className="mb-8">
-        <h1 className="text-xl font-semibold tracking-tight text-foreground">
-          Spend by Category
-        </h1>
+        <h1 className="text-xl font-semibold tracking-tight text-foreground">Spend by Category</h1>
         <p className="mt-0.5 text-sm text-muted-foreground">
           Where your money went, broken down per category.
         </p>
@@ -161,9 +159,7 @@ export function SpendingPage() {
       <div className="mb-6 flex items-center justify-between rounded-xl border bg-card p-2 card-ring">
         <button
           type="button"
-          onClick={() =>
-            setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))
-          }
+          onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))}
           aria-label="Previous month"
           className="flex size-11 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
         >
@@ -172,9 +168,7 @@ export function SpendingPage() {
         <span className="text-sm font-medium text-foreground">{monthLabel}</span>
         <button
           type="button"
-          onClick={() =>
-            setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))
-          }
+          onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))}
           disabled={!canGoNext}
           aria-label="Next month"
           className="flex size-11 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-40"
@@ -199,10 +193,7 @@ export function SpendingPage() {
               </h2>
               <span className="text-xs text-muted-foreground">EUR</span>
             </div>
-            <div
-              className="w-full"
-              style={{ height: Math.max(220, rows.length * 44) }}
-            >
+            <div className="w-full" style={{ height: Math.max(220, rows.length * 44) }}>
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
                   data={rows}
@@ -231,7 +222,10 @@ export function SpendingPage() {
                     tickLine={false}
                     axisLine={false}
                   />
-                  <Tooltip content={<SpendTooltip />} cursor={{ fill: "var(--color-muted)", fillOpacity: 0.3 }} />
+                  <Tooltip
+                    content={<SpendTooltip />}
+                    cursor={{ fill: "var(--color-muted)", fillOpacity: 0.3 }}
+                  />
                   <Bar dataKey="spend_eur" radius={[0, 6, 6, 0]} maxBarSize={26}>
                     {rows.map((row) => (
                       <Cell key={row.category} fill="var(--color-primary)" />
@@ -250,19 +244,13 @@ export function SpendingPage() {
                   key={row.category}
                   className="flex items-center justify-between px-4 py-3 text-sm sm:px-5"
                 >
-                  <span className="font-medium text-foreground">
-                    {row.category}
-                  </span>
-                  <span className="font-figure text-foreground">
-                    {formatEur(row.spend_eur)}
-                  </span>
+                  <span className="font-medium text-foreground">{row.category}</span>
+                  <span className="font-figure text-foreground">{formatEur(row.spend_eur)}</span>
                 </li>
               ))}
               <li className="flex items-center justify-between border-t px-4 py-3 text-sm font-semibold sm:px-5">
                 <span className="text-foreground">Total</span>
-                <span className="font-figure text-foreground">
-                  {formatEur(total)}
-                </span>
+                <span className="font-figure text-foreground">{formatEur(total)}</span>
               </li>
             </ul>
           </section>
@@ -273,8 +261,8 @@ export function SpendingPage() {
         <section className="mt-6 overflow-hidden rounded-2xl border bg-card card-ring">
           <div className="border-b px-4 py-3 sm:px-5">
             <h2 className="text-sm font-semibold text-foreground">
-              Not worth it — {formatEur(regretTotal)} across {regretCount}{" "}
-              purchase{regretCount === 1 ? "" : "s"}
+              Not worth it — {formatEur(regretTotal)} across {regretCount} purchase
+              {regretCount === 1 ? "" : "s"}
             </h2>
             <p className="mt-0.5 text-xs text-muted-foreground">
               From your "worth it?" check-ins, all time.
@@ -288,13 +276,9 @@ export function SpendingPage() {
               >
                 <span className="font-medium text-foreground">
                   {row.category}{" "}
-                  <span className="text-xs text-muted-foreground">
-                    ({row.count})
-                  </span>
+                  <span className="text-xs text-muted-foreground">({row.count})</span>
                 </span>
-                <span className="font-figure text-negative">
-                  {formatEur(row.total)}
-                </span>
+                <span className="font-figure text-negative">{formatEur(row.total)}</span>
               </li>
             ))}
           </ul>
@@ -308,13 +292,7 @@ interface TooltipEntry {
   payload?: { category: string; spend_eur: number };
 }
 
-function SpendTooltip({
-  active,
-  payload,
-}: {
-  active?: boolean;
-  payload?: Array<TooltipEntry>;
-}) {
+function SpendTooltip({ active, payload }: { active?: boolean; payload?: Array<TooltipEntry> }) {
   if (!active || !payload?.length) return null;
   const point = payload.at(0)?.payload;
   if (!point) return null;

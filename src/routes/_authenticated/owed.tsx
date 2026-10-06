@@ -63,9 +63,7 @@ async function fetchOwed(): Promise<Array<OwedRow>> {
   if (error) throw error;
   // personal_amount is only ever set below the full amount by SplitEditor,
   // but guard anyway in case it's ever equal (no real split, nothing owed).
-  return ((data ?? []) as Array<OwedRow>).filter(
-    (r) => (r.personal_amount ?? 0) < (r.amount ?? 0),
-  );
+  return ((data ?? []) as Array<OwedRow>).filter((r) => (r.personal_amount ?? 0) < (r.amount ?? 0));
 }
 
 export function OwedPage() {
@@ -78,7 +76,13 @@ export function OwedPage() {
   const totalOutstandingEur = outstanding.reduce((sum, r) => sum + owedEur(r), 0);
 
   const toggleSettled = useMutation({
-    mutationFn: async ({ entryReference, settled: next }: { entryReference: string; settled: boolean }) => {
+    mutationFn: async ({
+      entryReference,
+      settled: next,
+    }: {
+      entryReference: string;
+      settled: boolean;
+    }) => {
       if (isDemoRoute()) throw new Error("This is a read-only demo — sign up to make changes.");
       const { error } = await getSupabase()
         .from("transactions")
@@ -142,7 +146,10 @@ export function OwedPage() {
                 {outstanding.map((r) => {
                   const owed = (r.amount ?? 0) - (r.personal_amount ?? 0);
                   return (
-                    <li key={r.entry_reference} className="flex items-center justify-between gap-3 px-4 py-3 text-sm sm:px-5">
+                    <li
+                      key={r.entry_reference}
+                      className="flex items-center justify-between gap-3 px-4 py-3 text-sm sm:px-5"
+                    >
                       <div className="min-w-0">
                         <div className="truncate font-medium text-foreground">
                           {r.creditor_name ?? "—"}
@@ -172,7 +179,10 @@ export function OwedPage() {
                         <button
                           type="button"
                           onClick={() =>
-                            toggleSettled.mutate({ entryReference: r.entry_reference, settled: true })
+                            toggleSettled.mutate({
+                              entryReference: r.entry_reference,
+                              settled: true,
+                            })
                           }
                           disabled={toggleSettled.isPending}
                           className="min-h-9 rounded-lg border px-3 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent disabled:opacity-50"
@@ -190,17 +200,24 @@ export function OwedPage() {
           {settled.length > 0 && (
             <section className="mt-6 overflow-hidden rounded-2xl border bg-card card-ring">
               <div className="border-b px-4 py-3 sm:px-5">
-                <h2 className="text-sm font-semibold text-foreground">Settled ({settled.length})</h2>
+                <h2 className="text-sm font-semibold text-foreground">
+                  Settled ({settled.length})
+                </h2>
               </div>
               <ul className="divide-y">
                 {settled.map((r) => {
                   const owed = (r.amount ?? 0) - (r.personal_amount ?? 0);
                   return (
-                    <li key={r.entry_reference} className="flex items-center justify-between gap-3 px-4 py-3 text-sm opacity-60 sm:px-5">
+                    <li
+                      key={r.entry_reference}
+                      className="flex items-center justify-between gap-3 px-4 py-3 text-sm opacity-60 sm:px-5"
+                    >
                       <div className="min-w-0">
                         <div className="truncate font-medium text-foreground">
                           {r.creditor_name ?? "—"}
-                          {r.owed_by && <span className="text-muted-foreground"> · {r.owed_by}</span>}
+                          {r.owed_by && (
+                            <span className="text-muted-foreground"> · {r.owed_by}</span>
+                          )}
                         </div>
                       </div>
                       <div className="flex shrink-0 items-center gap-3">
@@ -210,7 +227,10 @@ export function OwedPage() {
                         <button
                           type="button"
                           onClick={() =>
-                            toggleSettled.mutate({ entryReference: r.entry_reference, settled: false })
+                            toggleSettled.mutate({
+                              entryReference: r.entry_reference,
+                              settled: false,
+                            })
                           }
                           disabled={toggleSettled.isPending}
                           className="min-h-9 rounded-lg border px-3 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent disabled:opacity-50"

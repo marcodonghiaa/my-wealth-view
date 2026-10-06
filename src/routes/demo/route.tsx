@@ -26,8 +26,7 @@ export const Route = createFileRoute("/demo")({
       { title: "Live Demo — MyFinances" },
       {
         name: "description",
-        content:
-          "A read-only walkthrough of MyFinances, populated with sample data.",
+        content: "A read-only walkthrough of MyFinances, populated with sample data.",
       },
     ],
   }),
@@ -203,9 +202,7 @@ function DemoLayout() {
           <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
             <TrendingUp className="size-3.5" />
           </div>
-          <span className="truncate text-sm font-semibold text-sidebar-foreground">
-            MyFinances
-          </span>
+          <span className="truncate text-sm font-semibold text-sidebar-foreground">MyFinances</span>
         </div>
         <a
           href={REPO_URL}
@@ -229,7 +226,10 @@ function DemoLayout() {
             to={item.to}
             activeOptions={{ exact: true }}
             className="flex flex-col items-center justify-center gap-1 text-muted-foreground transition-transform active:scale-90"
-            activeProps={{ className: "flex flex-col items-center justify-center gap-1 text-sidebar-primary transition-transform active:scale-90" }}
+            activeProps={{
+              className:
+                "flex flex-col items-center justify-center gap-1 text-sidebar-primary transition-transform active:scale-90",
+            }}
           >
             <item.icon className="size-5" />
             <span className="text-xs font-medium">{item.label}</span>
@@ -249,8 +249,7 @@ function DemoLayout() {
       {/* Main content */}
       <main className="min-w-0 flex-1 pt-[calc(3.5rem+env(safe-area-inset-top))] pb-[calc(4rem+env(safe-area-inset-bottom))] md:pt-0 md:pb-0 md:pl-64">
         <div className="sticky top-[calc(3.5rem+env(safe-area-inset-top))] z-20 border-b bg-primary/10 px-4 py-2 text-center text-xs font-medium text-primary md:top-0">
-          You're viewing a live demo with sample data — everything here is
-          read-only.{" "}
+          You're viewing a live demo with sample data — everything here is read-only.{" "}
           <a
             href={REPO_URL}
             target="_blank"
