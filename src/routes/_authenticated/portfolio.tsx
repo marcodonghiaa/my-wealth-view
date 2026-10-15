@@ -151,7 +151,7 @@ export function PortfolioPage() {
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-8 md:py-12">
       <header className="mb-8">
-        <h1 className="text-xl font-semibold tracking-tight text-foreground">Portfolio</h1>
+        <h1 className="ios-large-title">Portfolio</h1>
         <p className="mt-0.5 text-sm text-muted-foreground">
           Your investment holdings and allocation.
         </p>
@@ -178,7 +178,7 @@ export function PortfolioPage() {
           {query.isPending ? (
             <div className="h-14 w-64 animate-pulse rounded-lg bg-muted" />
           ) : (
-            <p className="font-figure text-4xl font-semibold tracking-tight text-foreground sm:text-6xl">
+            <p className="font-figure text-4xl font-bold tracking-tight text-foreground sm:text-6xl">
               {formatEur(totalEur)}
             </p>
           )}
@@ -275,7 +275,7 @@ export function PortfolioPage() {
                   {/* Desktop table */}
                   <div className="hidden overflow-x-auto md:block">
                     <table className="w-full text-sm">
-                      <thead className="bg-muted/50 text-left text-xs uppercase tracking-wide text-muted-foreground">
+                      <thead className="bg-muted/50 text-left text-xs font-medium text-muted-foreground">
                         <tr>
                           <th className="px-4 py-2.5 font-medium sm:px-5">Holding</th>
                           <th className="px-4 py-2.5 font-medium sm:px-5">Shares</th>

@@ -90,7 +90,7 @@ export function IncomePage() {
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-8 md:py-12">
       <header className="mb-8">
-        <h1 className="text-xl font-semibold tracking-tight text-foreground">Income</h1>
+        <h1 className="ios-large-title">Income</h1>
         <p className="mt-0.5 text-sm text-muted-foreground">
           Real income only — currency exchanges and wallet top-ups don't count.
         </p>
@@ -130,7 +130,7 @@ export function IncomePage() {
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           Total income · {monthLabel}
         </div>
-        <p className="font-figure mt-2 text-4xl font-semibold tracking-tight text-positive sm:text-5xl">
+        <p className="font-figure mt-2 text-4xl font-bold tracking-tight text-positive sm:text-5xl">
           {formatEur(total)}
         </p>
       </section>
