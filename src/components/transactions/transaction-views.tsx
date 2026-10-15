@@ -1,4 +1,3 @@
-import { ArrowDownLeft, ArrowUpRight } from "lucide-react";
 import { AccountBadge, CurrencyBadge } from "@/components/bank-badge";
 import {
   formatAmountPlain,
@@ -90,14 +89,9 @@ export function TransactionRowView({
         ) : (
           <span
             className={`inline-flex items-center justify-end gap-1 font-figure font-medium ${
-              positive ? "text-positive" : "text-negative"
+              positive ? "text-positive" : "text-foreground"
             }`}
           >
-            {positive ? (
-              <ArrowUpRight className="size-3.5" />
-            ) : (
-              <ArrowDownLeft className="size-3.5" />
-            )}
             {formatAmountPlain(native)}
             {showEur && (
               <span className="ml-0.5 text-sm opacity-80">
@@ -147,7 +141,9 @@ export function TransactionCardView({
           />
         </label>
         <div className="min-w-0">
-          <p className="truncate text-sm font-medium text-foreground">{tx.creditor_name ?? "—"}</p>
+          <p className="truncate text-[0.9375rem] font-medium text-foreground">
+            {tx.creditor_name ?? "—"}
+          </p>
           <p className="mt-0.5 flex items-center gap-1.5 truncate text-xs text-muted-foreground">
             {formatBookingDate(tx.booking_date)}
             <AccountBadge label={accountLabel} />
@@ -162,15 +158,10 @@ export function TransactionCardView({
           ) : (
             <>
               <div
-                className={`inline-flex items-center justify-end gap-1 font-figure text-sm font-medium ${
-                  positive ? "text-positive" : "text-negative"
+                className={`inline-flex items-center justify-end gap-1 font-figure text-[0.9375rem] font-semibold ${
+                  positive ? "text-positive" : "text-foreground"
                 }`}
               >
-                {positive ? (
-                  <ArrowUpRight className="size-3.5" />
-                ) : (
-                  <ArrowDownLeft className="size-3.5" />
-                )}
                 {formatAmountPlain(native)}
               </div>
               {showEur && (
@@ -186,7 +177,7 @@ export function TransactionCardView({
         <CategoryPicker tx={tx} onSelect={onSelectCategory} saving={savingCategory} />
         <TypePicker tx={tx} onSelect={onSelectType} saving={savingType} />
         <SplitEditor tx={tx} onSave={onSaveSplit} saving={savingSplit} />
-        <CurrencyBadge currency={currency} />
+        {currency !== "EUR" && <CurrencyBadge currency={currency} />}
       </div>
     </li>
   );

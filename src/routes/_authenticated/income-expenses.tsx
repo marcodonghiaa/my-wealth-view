@@ -104,7 +104,7 @@ export function IncomeExpensesPage() {
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-8 md:py-12">
       <header className="mb-8">
-        <h1 className="text-xl font-semibold tracking-tight text-foreground">Income vs Expenses</h1>
+        <h1 className="ios-large-title">Income vs Expenses</h1>
         <p className="mt-0.5 text-sm text-muted-foreground">
           What came in versus what went out, month over month.
         </p>
@@ -243,7 +243,7 @@ function HeadlineCard({
           <div className="h-8 w-28 animate-pulse rounded-lg bg-muted" />
         ) : (
           <p
-            className={`font-figure text-2xl font-semibold tracking-tight sm:text-3xl ${
+            className={`font-figure text-2xl font-bold tracking-tight sm:text-3xl ${
               tone === "positive" ? "text-positive" : "text-negative"
             }`}
           >

@@ -253,7 +253,7 @@ export function ReportsPage() {
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-8 md:py-12">
       <header className="mb-8">
-        <h1 className="text-xl font-semibold tracking-tight text-foreground">Monthly Report</h1>
+        <h1 className="ios-large-title">Monthly Report</h1>
         <p className="mt-0.5 text-sm text-muted-foreground">
           Net worth, income vs expenses, and spending — one month at a time.
         </p>
@@ -423,7 +423,7 @@ function HeadlineCard({
           <div className="h-8 w-28 animate-pulse rounded-lg bg-muted" />
         ) : (
           <p
-            className={`font-figure text-2xl font-semibold tracking-tight sm:text-3xl ${
+            className={`font-figure text-2xl font-bold tracking-tight sm:text-3xl ${
               TONE_TEXT[tone]
             }`}
           >

@@ -144,7 +144,7 @@ export function RulesPage() {
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-8 md:py-12">
       <header className="mb-8">
-        <h1 className="text-xl font-semibold tracking-tight text-foreground">Rules</h1>
+        <h1 className="ios-large-title">Rules</h1>
         <p className="mt-0.5 text-sm text-muted-foreground">
           Rules run automatically before AI categorization — if a transaction's chosen field
           contains your match text, it's categorized instantly, no AI needed.
@@ -153,7 +153,7 @@ export function RulesPage() {
 
       {/* Add rule form — collapsed by default so it doesn't push the
           existing rules list below the fold on a phone. */}
-      <form onSubmit={handleSubmit} className="card-ring mb-8 rounded-xl">
+      <form onSubmit={handleSubmit} className="card-ring mb-8 rounded-2xl bg-card">
         <button
           type="button"
           onClick={() => setShowForm((v) => !v)}
@@ -333,7 +333,7 @@ export function RulesPage() {
       </form>
 
       {/* Rules list */}
-      <div className="card-ring rounded-xl">
+      <div className="card-ring overflow-hidden rounded-2xl bg-card">
         <div className="border-b px-5 py-3">
           <h2 className="text-sm font-medium">
             Existing rules <span className="text-muted-foreground">({rules.length})</span>
