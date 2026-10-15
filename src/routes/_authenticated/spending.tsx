@@ -12,6 +12,7 @@ import {
   YAxis,
 } from "recharts";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { shareSummary } from "@/lib/chart-summary";
 import { supabase } from "@/integrations/supabase/client";
 import { formatISODate } from "@/lib/date";
 
@@ -193,7 +194,15 @@ export function SpendingPage() {
               </h2>
               <span className="text-xs text-muted-foreground">EUR</span>
             </div>
-            <div className="w-full" style={{ height: Math.max(220, rows.length * 44) }}>
+            <div
+              className="w-full"
+              style={{ height: Math.max(220, rows.length * 44) }}
+              role="img"
+              aria-label={shareSummary(
+                "Spend by category",
+                rows.map((r) => ({ label: r.category, value: r.spend_eur })),
+              )}
+            >
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
                   data={rows}

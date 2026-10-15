@@ -22,6 +22,10 @@ export const txId = (tx: TxKey): string => `${tx.account_uid ?? ""}|${tx.entry_r
 
 export const isSameTx = (a: TxKey | undefined, b: TxKey): boolean => !!a && txId(a) === txId(b);
 
+// Income rows have no merchant name when the bank sends none; never show a bare dash.
+export const incomeTitle = (tx: Pick<TransactionRow, "creditor_name" | "category">): string =>
+  tx.creditor_name?.trim() || tx.category?.trim() || "Unlabelled income";
+
 export interface AccountRow {
   uid: string;
   label: string | null;

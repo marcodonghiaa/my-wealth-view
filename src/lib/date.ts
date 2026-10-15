@@ -8,3 +8,21 @@ export function formatISODate(date: Date): string {
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 }
+
+const SHORT_RANGE_DAYS = 180;
+
+// Daily snapshots need day-level ticks; month-only labels repeat ("Sept 26" x3).
+export function axisDateFormatter(
+  firstIso: string | undefined,
+  lastIso: string | undefined,
+): (iso: string) => string {
+  const spanDays =
+    firstIso && lastIso
+      ? (Date.parse(`${lastIso}T00:00:00`) - Date.parse(`${firstIso}T00:00:00`)) / 86_400_000
+      : 0;
+  const options: Intl.DateTimeFormatOptions =
+    spanDays > SHORT_RANGE_DAYS
+      ? { month: "short", year: "2-digit" }
+      : { day: "numeric", month: "short" };
+  return (iso) => new Date(`${iso}T00:00:00`).toLocaleDateString("en-GB", options);
+}
