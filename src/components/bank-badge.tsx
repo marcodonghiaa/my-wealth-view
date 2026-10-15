@@ -17,13 +17,9 @@ export function bankNameFromLabel(label: string): string {
   return parts.join(" ");
 }
 
-export function bankColor(bankName: string): string | null {
-  return BANK_COLOR[bankName] ?? null;
-}
-
 export function AccountBadge({ label }: { label: string }) {
   const bankName = bankNameFromLabel(label);
-  const color = bankColor(bankName);
+  const color = BANK_COLOR[bankName];
   return (
     <span
       title={label}
