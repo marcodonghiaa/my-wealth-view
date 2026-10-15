@@ -153,7 +153,7 @@ export function RulesPage() {
 
       {/* Add rule form — collapsed by default so it doesn't push the
           existing rules list below the fold on a phone. */}
-      <form onSubmit={handleSubmit} className="card-ring mb-8 rounded-xl">
+      <form onSubmit={handleSubmit} className="card-ring mb-8 rounded-2xl bg-card">
         <button
           type="button"
           onClick={() => setShowForm((v) => !v)}
@@ -333,7 +333,7 @@ export function RulesPage() {
       </form>
 
       {/* Rules list */}
-      <div className="card-ring rounded-xl">
+      <div className="card-ring overflow-hidden rounded-2xl bg-card">
         <div className="border-b px-5 py-3">
           <h2 className="text-sm font-medium">
             Existing rules <span className="text-muted-foreground">({rules.length})</span>

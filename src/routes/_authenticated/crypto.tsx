@@ -176,7 +176,7 @@ export function CryptoPage() {
           {query.isPending ? (
             <div className="h-14 w-64 animate-pulse rounded-lg bg-muted" />
           ) : (
-            <p className="font-figure text-4xl font-semibold tracking-tight text-foreground sm:text-6xl">
+            <p className="font-figure text-4xl font-bold tracking-tight text-foreground sm:text-6xl">
               {formatEur(totalEur)}
             </p>
           )}
@@ -242,7 +242,7 @@ export function CryptoPage() {
           <section className="hidden overflow-hidden rounded-2xl border bg-card card-ring md:block">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead className="bg-muted/50 text-left text-xs uppercase tracking-wide text-muted-foreground">
+                <thead className="bg-muted/50 text-left text-xs font-medium text-muted-foreground">
                   <tr>
                     <th className="px-4 py-3 font-medium sm:px-5">Holding</th>
                     <th className="px-4 py-3 font-medium sm:px-5">Amount</th>

@@ -130,7 +130,7 @@ export function IncomePage() {
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           Total income · {monthLabel}
         </div>
-        <p className="font-figure mt-2 text-4xl font-semibold tracking-tight text-positive sm:text-5xl">
+        <p className="font-figure mt-2 text-4xl font-bold tracking-tight text-positive sm:text-5xl">
           {formatEur(total)}
         </p>
       </section>

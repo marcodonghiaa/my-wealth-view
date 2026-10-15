@@ -243,7 +243,7 @@ function HeadlineCard({
           <div className="h-8 w-28 animate-pulse rounded-lg bg-muted" />
         ) : (
           <p
-            className={`font-figure text-2xl font-semibold tracking-tight sm:text-3xl ${
+            className={`font-figure text-2xl font-bold tracking-tight sm:text-3xl ${
               tone === "positive" ? "text-positive" : "text-negative"
             }`}
           >

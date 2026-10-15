@@ -113,7 +113,7 @@ export function OwedPage() {
 
       <section className="mb-6 rounded-2xl border bg-card p-6 card-ring sm:p-8">
         <div className="text-sm text-muted-foreground">Outstanding (EUR)</div>
-        <p className="font-figure mt-2 text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">
+        <p className="font-figure mt-2 text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
           {formatMoney(totalOutstandingEur, "EUR")}
         </p>
       </section>
