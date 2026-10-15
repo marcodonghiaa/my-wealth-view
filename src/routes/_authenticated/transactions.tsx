@@ -292,7 +292,7 @@ export function TransactionsPage() {
     staleTime: 60_000,
   });
 
-  const transactions = txQuery.data ?? [];
+  const transactions = useMemo(() => txQuery.data ?? [], [txQuery.data]);
 
   // Arrived via a "worth it?" push: force fresh data (the cache may be stale
   // from before this notification's transaction existed) and jump to it.
@@ -316,7 +316,6 @@ export function TransactionsPage() {
     if (tx && tx.worth_it == null) setSpotlightTx(tx);
     const timer = setTimeout(() => setHighlightRef(null), 3000);
     return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [highlightRef, txQuery.isPending, transactions]);
 
   const categories = useMemo(() => {

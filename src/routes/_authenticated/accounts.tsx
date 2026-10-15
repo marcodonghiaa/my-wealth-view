@@ -127,8 +127,8 @@ export function AccountsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const bankAccounts = bankQuery.data ?? [];
-  const cds = cdQuery.data ?? [];
+  const bankAccounts = useMemo(() => bankQuery.data ?? [], [bankQuery.data]);
+  const cds = useMemo(() => cdQuery.data ?? [], [cdQuery.data]);
 
   const totalBankEur = useMemo(
     () => bankAccounts.reduce((sum, a) => sum + (a.amount_eur ?? 0), 0),

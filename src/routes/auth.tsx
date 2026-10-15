@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Github, Loader2, LockKeyhole, TrendingUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -44,13 +44,16 @@ function AuthPage() {
   const navigate = useNavigate();
   const { next } = Route.useSearch();
 
-  const goNext = (replace = true) => {
-    if (next) {
-      window.location.replace(next);
-      return Promise.resolve();
-    }
-    return navigate({ to: "/", replace });
-  };
+  const goNext = useCallback(
+    (replace = true) => {
+      if (next) {
+        window.location.replace(next);
+        return Promise.resolve();
+      }
+      return navigate({ to: "/", replace });
+    },
+    [next, navigate],
+  );
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -80,7 +83,7 @@ function AuthPage() {
     return () => {
       cancelled = true;
     };
-  }, [navigate]);
+  }, [goNext]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

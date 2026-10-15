@@ -150,7 +150,7 @@ export function SubscriptionsPage() {
     },
   });
 
-  const subscriptions = query.data ?? [];
+  const subscriptions = useMemo(() => query.data ?? [], [query.data]);
 
   const sorted = useMemo(
     () =>
