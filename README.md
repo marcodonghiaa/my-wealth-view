@@ -6,11 +6,15 @@ A self-hosted net worth dashboard. Bank accounts, investments and crypto in one 
 
 - **Net Worth**: total over time (bank + portfolio + crypto), in EUR, USD or GBP
 - **Transactions**: full register with inline categories and a "worth it?" check
-- **Subscriptions**: recurring charges with detected billing frequency and true monthly cost
+- **Subscriptions**: recurring charges with detected billing frequency and true monthly cost; one-off charges are listed separately and left out of the estimate
 - **Spending** and **Income vs Expenses**: monthly breakdowns
 - **Portfolio** and **Crypto**: holdings, allocation and live-priced value
 
 This is the frontend. The data pipeline (bank sync, FX rates, AI categorization, pricing, setup wizard) is in [myfinances](https://github.com/marcodonghiaa/myfinances). Start there to self-host.
+
+## Look and feel
+
+iOS-style design: system font, grouped lists, large titles, translucent bars, a bottom tab bar on phones. Light and dark themes follow the system setting (no toggle). Account numbers are masked until tapped, charts carry text alternatives, and translucency falls back to solid when the OS asks for reduced transparency.
 
 ## Stack
 
@@ -28,7 +32,7 @@ cp .env.example .env   # your Supabase URL + publishable key
 bun run dev
 ```
 
-Without a `.env`, the app falls back to the maintainer's Supabase project, so set your own.
+Set your own `.env`: in a browser on a self-hosted domain the app throws rather than silently connecting to the maintainer's Supabase project.
 
 ## Scripts
 
