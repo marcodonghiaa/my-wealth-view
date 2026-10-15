@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ChevronDown, Landmark, Link2, Loader2, Lock, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { assertHttpsUrl } from "@/lib/consent-url";
 import { AccountBadge, bankNameFromLabel } from "@/components/bank-badge";
 
 export const Route = createFileRoute("/_authenticated/accounts")({
@@ -202,7 +203,7 @@ export function AccountsPage() {
       }>("start-bank-consent", { body: input });
       if (error) throw error;
       if (!data?.url) throw new Error(data?.error ?? "No consent URL returned");
-      return data.url;
+      return assertHttpsUrl(data.url);
     },
     onSuccess: (url) => {
       window.location.href = url;
