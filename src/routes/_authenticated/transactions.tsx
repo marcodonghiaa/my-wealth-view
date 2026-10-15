@@ -11,6 +11,8 @@ import {
   startOfMonth,
   type AccountRow,
   type TransactionRow,
+  isSameTx,
+  txId,
 } from "@/lib/transactions";
 import { BulkCategoryPicker } from "@/components/transactions/pickers";
 import {
@@ -146,15 +148,14 @@ export function TransactionsPage() {
 
   const accounts = accountsQuery.data ?? {};
 
-  const filteredRefs = useMemo(() => filtered.map((tx) => tx.entry_reference), [filtered]);
-  const allFilteredSelected =
-    filteredRefs.length > 0 && filteredRefs.every((ref) => selected.has(ref));
+  const filteredIds = useMemo(() => filtered.map(txId), [filtered]);
+  const allFilteredSelected = filteredIds.length > 0 && filteredIds.every((id) => selected.has(id));
 
-  function toggleOne(entryReference: string) {
+  function toggleOne(id: string) {
     setSelected((prev) => {
       const next = new Set(prev);
-      if (next.has(entryReference)) next.delete(entryReference);
-      else next.add(entryReference);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
   }
@@ -163,10 +164,10 @@ export function TransactionsPage() {
     setSelected((prev) => {
       if (allFilteredSelected) {
         const next = new Set(prev);
-        for (const ref of filteredRefs) next.delete(ref);
+        for (const id of filteredIds) next.delete(id);
         return next;
       }
-      return new Set([...prev, ...filteredRefs]);
+      return new Set([...prev, ...filteredIds]);
     });
   }
 
@@ -177,21 +178,16 @@ export function TransactionsPage() {
 
   const viewProps = (tx: TransactionRow): TransactionViewProps => ({
     tx,
-    selected: selected.has(tx.entry_reference),
-    onToggleSelect: () => toggleOne(tx.entry_reference),
-    savingCategory:
-      updateCategory.isPending && updateCategory.variables?.entryReference === tx.entry_reference,
-    onSelectCategory: (next) =>
-      updateCategory.mutate({ entryReference: tx.entry_reference, value: next }),
-    savingType: updateType.isPending && updateType.variables?.entryReference === tx.entry_reference,
-    onSelectType: (next) => updateType.mutate({ entryReference: tx.entry_reference, value: next }),
+    selected: selected.has(txId(tx)),
+    onToggleSelect: () => toggleOne(txId(tx)),
+    savingCategory: updateCategory.isPending && isSameTx(updateCategory.variables?.tx, tx),
+    onSelectCategory: (next) => updateCategory.mutate({ tx, value: next }),
+    savingType: updateType.isPending && isSameTx(updateType.variables?.tx, tx),
+    onSelectType: (next) => updateType.mutate({ tx, value: next }),
     accountLabel: tx.account_uid ? (accounts[tx.account_uid]?.label ?? "Unknown account") : "—",
-    onAnswerWorthIt: (worthIt) =>
-      answerWorthIt.mutate({ entryReference: tx.entry_reference, value: worthIt }),
-    savingSplit:
-      updateSplit.isPending && updateSplit.variables?.entryReference === tx.entry_reference,
-    onSaveSplit: (personalAmount, owedBy) =>
-      updateSplit.mutate({ entryReference: tx.entry_reference, personalAmount, owedBy }),
+    onAnswerWorthIt: (worthIt) => answerWorthIt.mutate({ tx, value: worthIt }),
+    savingSplit: updateSplit.isPending && isSameTx(updateSplit.variables?.tx, tx),
+    onSaveSplit: (personalAmount, owedBy) => updateSplit.mutate({ tx, personalAmount, owedBy }),
     highlighted: tx.entry_reference === highlightRef,
   });
 
@@ -216,7 +212,7 @@ export function TransactionsPage() {
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-8 md:py-12">
       <WorthItSpotlight
         tx={spotlightTx}
-        onAnswer={(entryReference, value) => answerWorthIt.mutate({ entryReference, value })}
+        onAnswer={(tx, value) => answerWorthIt.mutate({ tx, value })}
         onClose={() => setSpotlightTx(null)}
       />
 
@@ -294,7 +290,7 @@ export function TransactionsPage() {
           <BulkCategoryPicker
             onSelect={(next) =>
               bulkUpdateCategory.mutate({
-                entryReferences: Array.from(selected),
+                txs: transactions.filter((tx) => selected.has(txId(tx))),
                 category: next,
               })
             }

@@ -15,6 +15,13 @@ export interface TransactionRow {
   owed_by: string | null;
 }
 
+// A transaction's identity is the pair: the same reference can occur in two accounts.
+export type TxKey = Pick<TransactionRow, "account_uid" | "entry_reference">;
+
+export const txId = (tx: TxKey): string => `${tx.account_uid ?? ""}|${tx.entry_reference}`;
+
+export const isSameTx = (a: TxKey | undefined, b: TxKey): boolean => !!a && txId(a) === txId(b);
+
 export interface AccountRow {
   uid: string;
   label: string | null;

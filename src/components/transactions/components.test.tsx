@@ -59,7 +59,7 @@ describe("WorthItSpotlight", () => {
     const onClose = vi.fn();
     render(<WorthItSpotlight tx={tx()} onAnswer={onAnswer} onClose={onClose} />);
     await userEvent.click(screen.getByRole("button", { name: "No" }));
-    expect(onAnswer).toHaveBeenCalledWith("r1", "no");
+    expect(onAnswer).toHaveBeenCalledWith(tx(), "no");
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 

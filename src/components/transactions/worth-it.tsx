@@ -55,7 +55,7 @@ export function WorthItSpotlight({
   onClose,
 }: {
   tx: TransactionRow | null;
-  onAnswer: (entryReference: string, worthIt: "yes" | "no") => void;
+  onAnswer: (tx: TransactionRow, worthIt: "yes" | "no") => void;
   onClose: () => void;
 }) {
   return (
@@ -80,7 +80,7 @@ export function WorthItSpotlight({
             <button
               type="button"
               onClick={() => {
-                onAnswer(tx.entry_reference, "no");
+                onAnswer(tx, "no");
                 onClose();
               }}
               className="min-h-11 flex-1 rounded-lg border border-negative/30 bg-negative/10 text-sm font-semibold text-negative transition-colors hover:bg-negative/20"
@@ -90,7 +90,7 @@ export function WorthItSpotlight({
             <button
               type="button"
               onClick={() => {
-                onAnswer(tx.entry_reference, "yes");
+                onAnswer(tx, "yes");
                 onClose();
               }}
               className="min-h-11 flex-1 rounded-lg border border-positive/30 bg-positive/10 text-sm font-semibold text-positive transition-colors hover:bg-positive/20"
