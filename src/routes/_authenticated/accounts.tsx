@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { ChevronDown, Landmark, Link2, Loader2, Lock, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { MaskedIban } from "@/components/masked-iban";
 import { supabase } from "@/integrations/supabase/client";
 import { assertHttpsUrl } from "@/lib/consent-url";
 import { AccountBadge, bankNameFromLabel } from "@/components/bank-badge";
@@ -464,7 +465,11 @@ export function AccountsPage() {
                           {group.bank}
                         </div>
                         <div className="mt-0.5 truncate text-xs text-muted-foreground">
-                          {group.main.iban ?? group.main.currency}
+                          {group.main.iban ? (
+                            <MaskedIban iban={group.main.iban} />
+                          ) : (
+                            group.main.currency
+                          )}
                         </div>
                       </div>
                       <div className="shrink-0 text-right">

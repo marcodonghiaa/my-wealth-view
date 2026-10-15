@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import { Briefcase } from "lucide-react";
+import { shareSummary } from "@/lib/chart-summary";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated/portfolio")({
@@ -200,7 +201,14 @@ export function PortfolioPage() {
             <div className="mb-4 px-2">
               <h2 className="text-sm font-semibold text-foreground">Allocation by type</h2>
             </div>
-            <div className="h-80 w-full">
+            <div
+              className="h-80 w-full"
+              role="img"
+              aria-label={shareSummary(
+                "Allocation by type",
+                groups.map((g) => ({ label: g.type, value: g.totalEur })),
+              )}
+            >
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie

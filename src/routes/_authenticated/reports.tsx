@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatISODate } from "@/lib/date";
+import { TONE_TEXT, toneOf, type Tone } from "@/lib/tone";
 
 export const Route = createFileRoute("/_authenticated/reports")({
   head: () => ({
@@ -298,7 +299,7 @@ export function ReportsPage() {
                 ? formatEur(netWorthDelta.end.total_eur ?? 0)
                 : "—"
           }
-          tone={!netWorthDelta?.delta || netWorthDelta.delta.total >= 0 ? "positive" : "negative"}
+          tone={netWorthDelta?.delta ? toneOf(netWorthDelta.delta.total) : "neutral"}
         />
         <HeadlineCard
           icon={<ArrowLeftRight className="size-4" />}
@@ -306,7 +307,7 @@ export function ReportsPage() {
           sublabel="net"
           pending={incomeExpensesQuery.isPending}
           value={formatSigned(net)}
-          tone={net >= 0 ? "positive" : "negative"}
+          tone={toneOf(net)}
         />
         <HeadlineCard
           icon={<ThumbsDown className="size-4" />}
@@ -318,7 +319,7 @@ export function ReportsPage() {
           }
           pending={worthItQuery.isPending}
           value={formatEur(worthItQuery.data?.notWorthItTotal ?? 0)}
-          tone="negative"
+          tone={worthItQuery.data?.notWorthItTotal ? "negative" : "neutral"}
         />
       </div>
 
@@ -408,7 +409,7 @@ function HeadlineCard({
   sublabel: string | undefined;
   value: string;
   pending: boolean;
-  tone: "positive" | "negative";
+  tone: Tone;
 }) {
   return (
     <section className="rounded-2xl border bg-card p-5 card-ring">
@@ -423,7 +424,7 @@ function HeadlineCard({
         ) : (
           <p
             className={`font-figure text-2xl font-semibold tracking-tight sm:text-3xl ${
-              tone === "positive" ? "text-positive" : "text-negative"
+              TONE_TEXT[tone]
             }`}
           >
             {value}

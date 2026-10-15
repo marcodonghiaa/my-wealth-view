@@ -5,6 +5,7 @@ import { ArrowDownLeft, Check, ChevronDown, Pencil, Repeat, Wallet } from "lucid
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { estimatedMonthlyEur, splitSubscriptions } from "@/lib/subscriptions";
 
 export const Route = createFileRoute("/_authenticated/subscriptions")({
   head: () => ({
@@ -152,17 +153,28 @@ export function SubscriptionsPage() {
 
   const subscriptions = useMemo(() => query.data ?? [], [query.data]);
 
-  const sorted = useMemo(
-    () =>
-      [...subscriptions].sort(
-        (a, b) => Math.abs(b.monthly_equivalent_eur ?? 0) - Math.abs(a.monthly_equivalent_eur ?? 0),
-      ),
-    [subscriptions],
-  );
+  const { recurring, oneOff } = useMemo(() => {
+    const byCost = (a: SubscriptionRow, b: SubscriptionRow) =>
+      Math.abs(b.monthly_equivalent_eur ?? 0) - Math.abs(a.monthly_equivalent_eur ?? 0);
+    const split = splitSubscriptions(subscriptions);
+    return { recurring: split.recurring.sort(byCost), oneOff: split.oneOff.sort(byCost) };
+  }, [subscriptions]);
 
-  const estimatedMonthlyEur = useMemo(
-    () => subscriptions.reduce((sum, sub) => sum + Math.abs(sub.monthly_equivalent_eur ?? 0), 0),
-    [subscriptions],
+  const monthlyTotal = useMemo(() => estimatedMonthlyEur(recurring), [recurring]);
+
+  const renderCard = (sub: SubscriptionRow) => (
+    <SubscriptionCard
+      key={sub.creditor_name}
+      sub={sub}
+      onSelectFrequency={(frequency) => {
+        if (!sub.creditor_name) return;
+        frequencyMutation.mutate({ creditorName: sub.creditor_name, frequency });
+      }}
+      onSelectCustom={(value, unit) => {
+        if (!sub.creditor_name) return;
+        frequencyMutation.mutate({ creditorName: sub.creditor_name, custom: { value, unit } });
+      }}
+    />
   );
 
   return (
@@ -195,7 +207,7 @@ export function SubscriptionsPage() {
             <div className="h-14 w-64 animate-pulse rounded-lg bg-muted" />
           ) : (
             <p className="font-figure text-4xl font-semibold tracking-tight text-foreground sm:text-6xl">
-              ~{formatMoney(estimatedMonthlyEur, "EUR")}
+              ~{formatMoney(monthlyTotal, "EUR")}
               <span className="text-foreground/60">/month</span>
             </p>
           )}
@@ -203,7 +215,7 @@ export function SubscriptionsPage() {
 
         <p className="mt-3 text-xs text-muted-foreground">
           Based on each subscription's monthly equivalent — yearly charges count as 1/12, quarterly
-          as 1/3. Actual billing may differ.
+          as 1/3. Single charges are listed separately and not counted. Actual billing may differ.
         </p>
       </section>
 
@@ -217,32 +229,28 @@ export function SubscriptionsPage() {
                 <div className="mt-3 h-4 w-2/3 animate-pulse rounded bg-muted" />
               </div>
             ))
-          : sorted.map((sub) => (
-              <SubscriptionCard
-                key={sub.creditor_name}
-                sub={sub}
-                onSelectFrequency={(frequency) => {
-                  if (!sub.creditor_name) return;
-                  frequencyMutation.mutate({
-                    creditorName: sub.creditor_name,
-                    frequency,
-                  });
-                }}
-                onSelectCustom={(value, unit) => {
-                  if (!sub.creditor_name) return;
-                  frequencyMutation.mutate({
-                    creditorName: sub.creditor_name,
-                    custom: { value, unit },
-                  });
-                }}
-              />
-            ))}
+          : recurring.map(renderCard)}
       </section>
 
-      {!query.isPending && sorted.length === 0 && (
+      {!query.isPending && recurring.length === 0 && (
         <div className="mt-8 rounded-2xl border border-dashed bg-card/50 p-12 text-center text-sm text-muted-foreground">
-          No subscription charges found yet.
+          {oneOff.length === 0
+            ? "No subscription charges found yet."
+            : "No recurring charges yet. Set a billing frequency on a charge below to count it."}
         </div>
+      )}
+
+      {oneOff.length > 0 && (
+        <details className="group mt-8">
+          <summary className="flex min-h-11 cursor-pointer items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground">
+            <ChevronDown className="size-4 transition-transform group-open:rotate-180" />
+            One-off charges ({oneOff.length})
+          </summary>
+          <p className="mt-1 mb-4 text-xs text-muted-foreground">
+            Charged once so far, so not counted in the monthly total. Set a frequency to count one.
+          </p>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{oneOff.map(renderCard)}</div>
+        </details>
       )}
     </div>
   );
@@ -356,7 +364,7 @@ function FrequencyPicker({
   const label =
     isCustom && customValue != null && customUnit
       ? customIntervalLabel(customValue, customUnit)
-      : (frequency ?? "Unconfirmed");
+      : (frequency ?? "Set frequency");
 
   function openCustomForm() {
     setDraftValue(customValue != null ? String(customValue) : "3");
@@ -388,12 +396,12 @@ function FrequencyPicker({
               ? isManual
                 ? `${label} — manually set`
                 : `${label} — auto-detected`
-              : "Not enough history to detect — click to set manually"
+              : "Not enough history to detect — set the billing frequency"
           }
           className={`inline-flex min-h-11 items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
             frequency
               ? "border border-border text-foreground/80 hover:border-primary/50 hover:text-foreground"
-              : "border border-dashed border-muted-foreground/40 text-muted-foreground hover:border-primary/50 hover:text-foreground"
+              : "border border-warning/60 bg-warning/10 text-warning hover:bg-warning/20"
           }`}
         >
           {label}

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ChevronLeft, ChevronRight, ArrowDownLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatISODate } from "@/lib/date";
+import { incomeTitle } from "@/lib/transactions";
 
 export const Route = createFileRoute("/_authenticated/income")({
   head: () => ({
@@ -153,9 +154,7 @@ export function IncomePage() {
                 className="flex items-center justify-between gap-3 px-4 py-3 text-sm sm:px-5"
               >
                 <div className="min-w-0">
-                  <div className="truncate font-medium text-foreground">
-                    {r.creditor_name ?? "—"}
-                  </div>
+                  <div className="truncate font-medium text-foreground">{incomeTitle(r)}</div>
                   <div className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground">
                     {r.booking_date
                       ? new Date(`${r.booking_date}T00:00:00`).toLocaleDateString("en-GB", {

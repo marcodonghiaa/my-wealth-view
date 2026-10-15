@@ -12,7 +12,10 @@ import {
   YAxis,
 } from "recharts";
 import { ArrowDownRight, ArrowUpRight, Wallet } from "lucide-react";
+import { trendSummary } from "@/lib/chart-summary";
 import { supabase } from "@/integrations/supabase/client";
+import { axisDateFormatter } from "@/lib/date";
+import { TONE_PILL, toneOf } from "@/lib/tone";
 
 export type NetWorthSnapshot = {
   snapshot_date: string;
@@ -95,13 +98,6 @@ function formatMoney(value: number, currency: Currency): string {
   }).format(value);
 }
 
-function formatAxisDate(iso: string): string {
-  return new Date(`${iso}T00:00:00`).toLocaleDateString("en-GB", {
-    month: "short",
-    year: "2-digit",
-  });
-}
-
 export function NetWorthPage() {
   const [currency, setCurrency] = useState<Currency>("EUR");
 
@@ -134,6 +130,9 @@ export function NetWorthPage() {
       : null;
 
   const first = snapshots.at(0);
+  const sinceLabel = first
+    ? `since ${new Date(`${first.snapshot_date}T00:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}`
+    : "all time";
   const periodChange =
     latest != null && first != null && first.total_eur !== 0
       ? (latest.total_eur - first.total_eur) / first.total_eur
@@ -230,7 +229,7 @@ export function NetWorthPage() {
 
         <div className="mt-5 flex flex-wrap gap-3">
           <ChangePill label="vs previous day" value={dayChange} />
-          <ChangePill label="all time" value={periodChange} />
+          <ChangePill label={sinceLabel} value={periodChange} />
         </div>
       </section>
 
@@ -245,7 +244,17 @@ export function NetWorthPage() {
             <LegendDot color="var(--color-foreground)" label="Trend" dashed />
           </div>
         </div>
-        <div className="h-80 w-full">
+        <div
+          className="h-80 w-full"
+          role="img"
+          aria-label={
+            first && latest
+              ? trendSummary("Net worth over time", first.total_eur, latest.total_eur, (v) =>
+                  formatMoney(v, "EUR"),
+                )
+              : "Net worth over time"
+          }
+        >
           {netWorthQuery.isPending ? (
             <div className="h-full w-full animate-pulse rounded-xl bg-muted/50" />
           ) : snapshots.length === 0 ? (
@@ -262,7 +271,7 @@ export function NetWorthPage() {
                 />
                 <XAxis
                   dataKey="snapshot_date"
-                  tickFormatter={formatAxisDate}
+                  tickFormatter={axisDateFormatter(first?.snapshot_date, latest?.snapshot_date)}
                   tick={{
                     fill: "var(--color-muted-foreground)",
                     fontSize: 11,
@@ -270,6 +279,7 @@ export function NetWorthPage() {
                   tickLine={false}
                   axisLine={false}
                   minTickGap={40}
+                  interval="preserveStartEnd"
                 />
                 <YAxis
                   width={70}
@@ -361,21 +371,21 @@ function LegendDot({ color, label, dashed }: { color: string; label: string; das
   );
 }
 
+// Moves under half a percent are noise: show them without alarm colour.
+const NOISE_BAND = 0.005;
+
 function ChangePill({ label, value }: { label: string; value: number | null }) {
   if (value == null) return null;
-  const positive = value >= 0;
-  const Icon = positive ? ArrowUpRight : ArrowDownRight;
+  const Icon = value >= 0 ? ArrowUpRight : ArrowDownRight;
   return (
     <span
       className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium ${
-        positive
-          ? "border-positive/30 bg-positive/10 text-positive"
-          : "border-negative/30 bg-negative/10 text-negative"
+        TONE_PILL[toneOf(value, NOISE_BAND)]
       }`}
     >
       <Icon className="size-3.5" />
       <span className="font-figure">
-        {positive ? "+" : ""}
+        {value >= 0 ? "+" : ""}
         {(value * 100).toFixed(2)}%
       </span>
       <span className="text-muted-foreground">{label}</span>
