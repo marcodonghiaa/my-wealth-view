@@ -15,7 +15,7 @@ import {
   HandCoins,
   type LucideIcon,
 } from "lucide-react";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { supabase } from "@/integrations/supabase/client";
 import { PushSubscribeButton } from "@/components/push-subscribe";
 
@@ -111,8 +111,8 @@ function AuthenticatedLayout() {
   return (
     <div className="flex min-h-dvh bg-background">
       {/* Sidebar */}
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r bg-sidebar md:flex">
-        <div className="flex h-16 items-center gap-2.5 border-b px-5">
+      <aside className="glass fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r md:flex">
+        <div className="flex h-14 items-center gap-2.5 px-5">
           <div className="flex size-8 items-center justify-center rounded-lg bg-primary/15 text-primary">
             <TrendingUp className="size-4" />
           </div>
@@ -124,7 +124,7 @@ function AuthenticatedLayout() {
         <nav className="flex-1 space-y-4 px-3 py-4">
           {NAV_GROUPS.map((group) => (
             <div key={group.label}>
-              <div className="px-3 pb-1.5 text-xs font-semibold tracking-wider text-muted-foreground/60 uppercase">
+              <div className="px-3 pb-1.5 text-xs font-medium tracking-wide text-muted-foreground uppercase">
                 {group.label}
               </div>
               <div className="space-y-1">
@@ -133,10 +133,10 @@ function AuthenticatedLayout() {
                     key={item.label}
                     to={item.to}
                     activeOptions={{ exact: true }}
-                    className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                    className="flex items-center gap-3 rounded-lg px-3 py-2 text-[0.9375rem] text-foreground/80 transition-colors hover:bg-accent hover:text-foreground"
                     activeProps={{
                       className:
-                        "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium bg-sidebar-accent text-sidebar-primary",
+                        "flex items-center gap-3 rounded-lg px-3 py-2 text-[0.9375rem] font-medium bg-sidebar-accent text-sidebar-primary",
                     }}
                   >
                     <item.icon className="size-4" />
@@ -163,121 +163,104 @@ function AuthenticatedLayout() {
         </div>
       </aside>
 
-      {/* Mobile top bar — padded for the notch/status bar so its content
-          never sits under it on a home-screen install (safe-area-inset-top
-          is 0 on a normal browser tab, so this is a no-op there). Primary
-          nav lives in the bottom tab bar below; this Sheet is reached via
-          the "More" tab for the items that don't fit. */}
-      <div className="fixed inset-x-0 top-0 z-30 grid h-[calc(3.5rem+env(safe-area-inset-top))] grid-cols-[minmax(0,1fr)_auto] items-center gap-2 border-b bg-sidebar px-4 pt-[env(safe-area-inset-top)] md:hidden">
-        <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
-          <SheetContent
-            side="left"
-            className="flex w-72 flex-col gap-0 border-r bg-sidebar p-0 [&>button]:size-11"
-          >
-            <SheetHeader className="border-b p-4">
-              <SheetTitle className="flex items-center gap-2.5 text-sm font-semibold text-sidebar-foreground">
-                <span className="flex size-8 items-center justify-center rounded-lg bg-primary/15 text-primary">
-                  <TrendingUp className="size-4" />
-                </span>
-                MyFinances
-              </SheetTitle>
-            </SheetHeader>
-
-            <nav className="flex-1 space-y-4 overflow-y-auto px-3 py-3">
-              {NAV_GROUPS.map((group) => (
-                <div key={group.label}>
-                  <div className="px-3 pb-1.5 text-xs font-semibold tracking-wider text-muted-foreground/60 uppercase">
-                    {group.label}
-                  </div>
-                  <div className="space-y-1">
-                    {group.items.map((item) => (
-                      <Link
-                        key={item.label}
-                        to={item.to}
-                        activeOptions={{ exact: true }}
-                        onClick={() => setMenuOpen(false)}
-                        className="flex min-h-11 items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
-                        activeProps={{
-                          className:
-                            "flex min-h-11 items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium bg-sidebar-accent text-sidebar-primary",
-                        }}
-                      >
-                        <item.icon className="size-4 shrink-0" />
-                        {item.label}
-                      </Link>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </nav>
-
-            <div className="border-t p-3">
-              <div className="mb-2 truncate px-3 text-xs text-muted-foreground">{user.email}</div>
-              <PushSubscribeButton />
-              <button
-                type="button"
-                onClick={handleSignOut}
-                disabled={signingOut}
-                className="flex min-h-11 w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground disabled:opacity-50"
-              >
-                <LogOut className="size-4" />
-                {signingOut ? "Signing out…" : "Sign out"}
-              </button>
-            </div>
-          </SheetContent>
-        </Sheet>
-
-        <div className="flex min-w-0 items-center gap-2">
-          <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
-            <TrendingUp className="size-3.5" />
-          </div>
-          <span className="truncate text-sm font-semibold text-sidebar-foreground">MyFinances</span>
-        </div>
-        <button
-          type="button"
-          onClick={handleSignOut}
-          disabled={signingOut}
-          className="flex size-11 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-foreground disabled:opacity-50"
-          aria-label="Sign out"
-        >
-          <LogOut className="size-5" />
-        </button>
+      {/* Mobile top bar: padded for the notch (safe-area-inset-top is 0 in a normal tab).
+          Page titles are large titles inside each page; this bar only names the app. */}
+      <div className="glass fixed inset-x-0 top-0 z-30 flex h-[calc(2.75rem+env(safe-area-inset-top))] items-center justify-center border-b pt-[env(safe-area-inset-top)] md:hidden">
+        <span className="text-[0.9375rem] font-semibold text-foreground">MyFinances</span>
       </div>
 
-      {/* Mobile bottom tab bar — primary nav on an installed/home-screen app.
-          iOS HIG: max 5 items, icon + label, current tab visually distinct. */}
+      {/* Mobile bottom tab bar: max 5 items, icon + label, current tab in the tint colour. */}
       <nav
         aria-label="Primary"
-        className="fixed inset-x-0 bottom-0 z-30 grid h-[calc(4rem+env(safe-area-inset-bottom))] grid-cols-5 border-t bg-sidebar pb-[env(safe-area-inset-bottom)] md:hidden"
+        className="glass fixed inset-x-0 bottom-0 z-30 grid h-[calc(3.25rem+env(safe-area-inset-bottom))] grid-cols-5 border-t pb-[env(safe-area-inset-bottom)] md:hidden"
       >
         {TAB_BAR_ITEMS.map((item) => (
           <Link
             key={item.label}
             to={item.to}
             activeOptions={{ exact: true }}
-            className="flex flex-col items-center justify-center gap-1 text-muted-foreground transition-transform active:scale-90"
+            className="flex flex-col items-center justify-center gap-0.5 text-muted-foreground transition-opacity active:opacity-60"
             activeProps={{
               className:
-                "flex flex-col items-center justify-center gap-1 text-sidebar-primary transition-transform active:scale-90",
+                "flex flex-col items-center justify-center gap-0.5 text-primary transition-opacity active:opacity-60",
             }}
           >
-            <item.icon className="size-5" />
-            <span className="text-xs font-medium">{item.label}</span>
+            <item.icon className="size-6" />
+            <span className="text-[0.6875rem] font-medium">{item.label}</span>
           </Link>
         ))}
         <button
           type="button"
           onClick={() => setMenuOpen(true)}
-          aria-label="More"
-          className="flex flex-col items-center justify-center gap-1 text-muted-foreground transition-transform active:scale-90"
+          aria-haspopup="dialog"
+          className="flex flex-col items-center justify-center gap-0.5 text-muted-foreground transition-opacity active:opacity-60"
         >
-          <MoreHorizontal className="size-5" />
-          <span className="text-xs font-medium">More</span>
+          <MoreHorizontal className="size-6" />
+          <span className="text-[0.6875rem] font-medium">More</span>
         </button>
       </nav>
 
+      {/* More: bottom sheet with the full nav as grouped lists. */}
+      <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
+        <SheetContent
+          side="bottom"
+          onOpenAutoFocus={(e) => e.preventDefault()}
+          className="max-h-[88dvh] gap-0 overflow-y-auto rounded-t-3xl border-0 bg-background p-0 pb-[env(safe-area-inset-bottom)] [&>button]:size-11"
+        >
+          <div aria-hidden className="mx-auto mt-2 h-1 w-9 rounded-full bg-muted-foreground/40" />
+          <SheetHeader className="px-5 pt-3 pb-2 text-left">
+            <SheetTitle className="ios-large-title !text-2xl">Menu</SheetTitle>
+          </SheetHeader>
+
+          <nav className="space-y-5 px-4 pt-2 pb-3">
+            {NAV_GROUPS.map((group) => (
+              <div key={group.label}>
+                <div className="ios-section-title">{group.label}</div>
+                <div className="divide-y overflow-hidden rounded-xl bg-card">
+                  {group.items.map((item) => (
+                    <Link
+                      key={item.label}
+                      to={item.to}
+                      activeOptions={{ exact: true }}
+                      onClick={() => setMenuOpen(false)}
+                      className="flex min-h-11 items-center gap-3 px-4 py-2.5 text-[0.9375rem] text-foreground active:bg-accent"
+                      activeProps={{
+                        className:
+                          "flex min-h-11 items-center gap-3 px-4 py-2.5 text-[0.9375rem] font-medium text-primary active:bg-accent",
+                      }}
+                    >
+                      <item.icon className="size-5 shrink-0" />
+                      {item.label}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            ))}
+
+            <div>
+              <div className="ios-section-title">Account</div>
+              <div className="divide-y overflow-hidden rounded-xl bg-card">
+                <div className="truncate px-4 py-3 text-sm text-muted-foreground">{user.email}</div>
+                <div className="px-1 py-1">
+                  <PushSubscribeButton />
+                </div>
+                <button
+                  type="button"
+                  onClick={handleSignOut}
+                  disabled={signingOut}
+                  className="flex min-h-11 w-full items-center gap-3 px-4 py-2.5 text-[0.9375rem] text-negative active:bg-accent disabled:opacity-50"
+                >
+                  <LogOut className="size-5" />
+                  {signingOut ? "Signing out…" : "Sign out"}
+                </button>
+              </div>
+            </div>
+          </nav>
+        </SheetContent>
+      </Sheet>
+
       {/* Main content */}
-      <main className="min-w-0 flex-1 pt-[calc(3.5rem+env(safe-area-inset-top))] pb-[calc(4rem+env(safe-area-inset-bottom))] md:pt-0 md:pb-0 md:pl-64">
+      <main className="min-w-0 flex-1 pt-[calc(2.75rem+env(safe-area-inset-top))] pb-[calc(3.25rem+env(safe-area-inset-bottom))] md:pt-0 md:pb-0 md:pl-64">
         <Outlet />
       </main>
     </div>

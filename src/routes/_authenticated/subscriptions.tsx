@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { ArrowDownLeft, Check, ChevronDown, Pencil, Repeat, Wallet } from "lucide-react";
+import { Check, ChevronDown, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -180,9 +180,9 @@ export function SubscriptionsPage() {
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-8 md:py-12">
       <header className="mb-8">
-        <h1 className="text-xl font-semibold tracking-tight text-foreground">Subscriptions</h1>
+        <h1 className="ios-large-title">Subscriptions</h1>
         <p className="mt-0.5 text-sm text-muted-foreground">
-          Recurring charges grouped by merchant, with auto-detected billing frequency.
+          Recurring charges grouped by merchant.
         </p>
       </header>
 
@@ -196,9 +196,8 @@ export function SubscriptionsPage() {
       )}
 
       {/* Estimated monthly cost */}
-      <section className="mb-6 rounded-2xl border bg-card p-6 card-ring sm:p-8">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Wallet className="size-4 text-primary" />
+      <section className="mb-6 rounded-2xl bg-card p-5 card-ring sm:p-7">
+        <div className="text-[0.8125rem] text-muted-foreground">
           Estimated monthly recurring cost
         </div>
 
@@ -206,9 +205,9 @@ export function SubscriptionsPage() {
           {query.isPending ? (
             <div className="h-14 w-64 animate-pulse rounded-lg bg-muted" />
           ) : (
-            <p className="font-figure text-4xl font-semibold tracking-tight text-foreground sm:text-6xl">
+            <p className="font-figure text-5xl font-bold tracking-tight text-foreground sm:text-6xl">
               ~{formatMoney(monthlyTotal, "EUR")}
-              <span className="text-foreground/60">/month</span>
+              <span className="text-xl font-medium text-muted-foreground"> /month</span>
             </p>
           )}
         </div>
@@ -219,18 +218,26 @@ export function SubscriptionsPage() {
         </p>
       </section>
 
-      {/* Subscription cards */}
-      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {query.isPending
-          ? Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="rounded-2xl border bg-card p-5 card-ring">
-                <div className="h-5 w-3/4 animate-pulse rounded bg-muted" />
-                <div className="mt-4 h-8 w-1/2 animate-pulse rounded bg-muted" />
-                <div className="mt-3 h-4 w-2/3 animate-pulse rounded bg-muted" />
+      {/* Recurring subscriptions: one grouped list */}
+      {query.isPending ? (
+        <ul className="divide-y overflow-hidden rounded-2xl bg-card">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <li key={i} className="flex items-center gap-3 px-4 py-3">
+              <div className="size-10 animate-pulse rounded-[0.6rem] bg-muted" />
+              <div className="flex-1 space-y-2">
+                <div className="h-4 w-1/2 animate-pulse rounded bg-muted" />
+                <div className="h-3 w-3/4 animate-pulse rounded bg-muted" />
               </div>
-            ))
-          : recurring.map(renderCard)}
-      </section>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        recurring.length > 0 && (
+          <ul className="divide-y overflow-hidden rounded-2xl bg-card">
+            {recurring.map(renderCard)}
+          </ul>
+        )
+      )}
 
       {!query.isPending && recurring.length === 0 && (
         <div className="mt-8 rounded-2xl border border-dashed bg-card/50 p-12 text-center text-sm text-muted-foreground">
@@ -242,14 +249,14 @@ export function SubscriptionsPage() {
 
       {oneOff.length > 0 && (
         <details className="group mt-8">
-          <summary className="flex min-h-11 cursor-pointer items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground">
+          <summary className="ios-section-title flex min-h-11 cursor-pointer list-none items-center gap-2">
             <ChevronDown className="size-4 transition-transform group-open:rotate-180" />
             One-off charges ({oneOff.length})
           </summary>
-          <p className="mt-1 mb-4 text-xs text-muted-foreground">
+          <p className="mb-3 px-4 text-[0.8125rem] text-muted-foreground">
             Charged once so far, so not counted in the monthly total. Set a frequency to count one.
           </p>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{oneOff.map(renderCard)}</div>
+          <ul className="divide-y overflow-hidden rounded-2xl bg-card">{oneOff.map(renderCard)}</ul>
         </details>
       )}
     </div>
@@ -267,61 +274,46 @@ function SubscriptionCard({
 }) {
   const native = signedNativeAmount(sub);
   const currency = sub.currency ?? "EUR";
-  const eur = sub.signed_amount_eur;
-  const showEur = currency !== "EUR" && eur != null;
-  const positive = (native ?? 0) >= 0;
   const monthly = sub.monthly_equivalent_eur;
+  const name = sub.creditor_name ?? "—";
   const lastCharged = sub.last_charged
     ? new Date(`${sub.last_charged}T00:00:00`).toLocaleDateString("en-GB", {
         day: "numeric",
         month: "short",
-        year: "numeric",
       })
-    : "—";
+    : null;
+  const details = [
+    sub.category,
+    `billed ${sub.charge_count ?? 0}x`,
+    native != null && currency !== "EUR" ? formatMoney(Math.abs(native), currency) : null,
+  ].filter(Boolean);
 
   return (
-    <div className="rounded-2xl border bg-card p-5 card-ring">
-      <div className="flex items-start justify-between gap-3">
-        <h2 className="truncate font-medium text-foreground">{sub.creditor_name ?? "—"}</h2>
-        {sub.category ? (
-          <span className="inline-flex shrink-0 rounded-full border border-primary/25 bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
-            {sub.category}
-          </span>
-        ) : null}
-      </div>
-
-      {/* Monthly equivalent — the headline figure per card */}
-      <div className="mt-4 font-figure text-2xl font-semibold tracking-tight">
-        {monthly == null ? (
-          <span className="text-muted-foreground">—</span>
-        ) : (
-          <span
-            className={`inline-flex items-center gap-1.5 ${
-              monthly >= 0 ? "text-positive" : "text-negative"
-            }`}
-          >
-            {monthly < 0 && <ArrowDownLeft className="size-5" />}
-            {formatMoney(monthly, "EUR")}
-            <span className="text-sm font-normal text-foreground/60">/month</span>
-          </span>
-        )}
-      </div>
-
-      {/* Last actual charge */}
-      <p className="mt-1.5 text-xs text-muted-foreground">
-        Last charged {lastCharged}
-        {native != null && (
-          <>
-            {" · "}
-            <span className={positive ? "text-positive" : "text-negative"}>
-              {formatMoney(native, currency)}
+    <li className="px-4 py-3">
+      <div className="flex items-center gap-3">
+        <span
+          aria-hidden
+          className="flex size-10 shrink-0 items-center justify-center rounded-[0.6rem] bg-primary/15 text-[0.9375rem] font-semibold text-primary"
+        >
+          {name.slice(0, 1).toUpperCase()}
+        </span>
+        <div className="min-w-0 flex-1">
+          <h2 className="truncate text-[0.9375rem] font-medium text-foreground">{name}</h2>
+          <p className="truncate text-[0.8125rem] text-muted-foreground">{details.join(" · ")}</p>
+        </div>
+        <div className="shrink-0 text-right font-figure text-[0.9375rem] font-semibold">
+          {monthly == null ? (
+            <span className="text-muted-foreground">—</span>
+          ) : (
+            <span className={monthly > 0 ? "text-positive" : "text-foreground"}>
+              {monthly > 0 ? "+" : ""}
+              {formatMoney(Math.abs(monthly), "EUR")}
+              <span className="text-[0.8125rem] font-normal text-muted-foreground"> /mo</span>
             </span>
-            {showEur && <span className="text-foreground/70"> ({formatMoney(eur, "EUR")})</span>}
-          </>
-        )}
-      </p>
-
-      <div className="mt-4 flex items-center gap-3 text-xs text-muted-foreground">
+          )}
+        </div>
+      </div>
+      <div className="mt-1 flex items-center gap-3 pl-[3.25rem]">
         <FrequencyPicker
           frequency={sub.billing_frequency}
           isManual={sub.billing_frequency_is_manual === true}
@@ -330,13 +322,11 @@ function SubscriptionCard({
           onSelect={onSelectFrequency}
           onSelectCustom={onSelectCustom}
         />
-        <span>·</span>
-        <span className="inline-flex items-center gap-1">
-          <Repeat className="size-3.5" />
-          billed {sub.charge_count ?? 0}x
-        </span>
+        {lastCharged && (
+          <span className="text-[0.8125rem] text-muted-foreground">Last {lastCharged}</span>
+        )}
       </div>
-    </div>
+    </li>
   );
 }
 

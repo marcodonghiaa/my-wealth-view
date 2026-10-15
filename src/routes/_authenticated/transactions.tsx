@@ -217,7 +217,7 @@ export function TransactionsPage() {
       />
 
       <header className="mb-8">
-        <h1 className="text-xl font-semibold tracking-tight text-foreground">Transactions</h1>
+        <h1 className="ios-large-title">Transactions</h1>
         <p className="mt-0.5 text-sm text-muted-foreground">
           Every transaction for the selected month, newest first.
         </p>
@@ -262,16 +262,16 @@ export function TransactionsPage() {
             type="search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by merchant…"
+            placeholder="Search"
             aria-label="Search by merchant"
-            className="h-10 w-full rounded-lg border bg-card pr-3 pl-9 text-base text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-ring focus:outline-none"
+            className="h-11 w-full rounded-xl bg-muted pr-3 pl-9 text-base text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-ring focus:outline-none"
           />
         </div>
         <select
           value={category}
           onChange={(e) => setCategory(e.target.value)}
           aria-label="Filter by category"
-          className="h-10 rounded-lg border bg-card px-3 text-base text-foreground focus:ring-2 focus:ring-ring focus:outline-none"
+          className="h-11 rounded-xl bg-muted px-3 text-base text-foreground focus:ring-2 focus:ring-ring focus:outline-none"
         >
           <option value="all">All categories</option>
           {categories.hasUncategorized && <option value={UNCATEGORIZED}>Uncategorized</option>}

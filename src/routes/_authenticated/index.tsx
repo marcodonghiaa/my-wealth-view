@@ -11,9 +11,10 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { ArrowDownRight, ArrowUpRight, Wallet } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight } from "lucide-react";
 import { trendSummary } from "@/lib/chart-summary";
 import { supabase } from "@/integrations/supabase/client";
+import { SegmentedControl } from "@/components/segmented-control";
 import { axisDateFormatter } from "@/lib/date";
 import { TONE_PILL, toneOf } from "@/lib/tone";
 
@@ -143,40 +144,19 @@ export function NetWorthPage() {
       {/* Header */}
       <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight text-foreground">Net Worth</h1>
+          <h1 className="ios-large-title">Net Worth</h1>
           <p className="mt-0.5 text-sm text-muted-foreground">
             Daily snapshot of everything you own, minus what you owe.
           </p>
         </div>
 
-        {/* Currency toggle -- sliding highlight, not a hard background swap */}
-        <div
-          role="group"
-          aria-label="Display currency"
-          className="relative grid grid-cols-3 rounded-lg border bg-card p-1"
-        >
-          <div
-            aria-hidden
-            className="absolute inset-y-1 left-1 w-[calc((100%-0.5rem)/3)] rounded-md bg-primary transition-transform duration-200 ease-out"
-            style={{
-              transform: `translateX(${CURRENCIES.indexOf(currency) * 100}%)`,
-            }}
+        <div className="w-full sm:w-auto">
+          <SegmentedControl
+            label="Display currency"
+            options={CURRENCIES.map((c) => ({ value: c, label: c }))}
+            value={currency}
+            onChange={setCurrency}
           />
-          {CURRENCIES.map((c) => (
-            <button
-              key={c}
-              type="button"
-              onClick={() => setCurrency(c)}
-              aria-pressed={currency === c}
-              className={`relative z-10 min-h-11 rounded-md px-3.5 py-1.5 text-xs font-semibold tracking-wide transition-colors ${
-                currency === c
-                  ? "text-primary-foreground"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {c}
-            </button>
-          ))}
         </div>
       </header>
 
@@ -190,9 +170,8 @@ export function NetWorthPage() {
       )}
 
       {/* Headline card */}
-      <section className="mb-6 rounded-2xl border bg-card p-6 card-ring sm:p-8">
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
-          <Wallet className="size-4 text-primary" />
+      <section className="mb-6 rounded-2xl bg-card p-5 card-ring sm:p-7">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[0.8125rem] text-muted-foreground">
           Total net worth
           {latest && (
             <span className="ml-1">
@@ -212,7 +191,7 @@ export function NetWorthPage() {
           ) : latest == null ? (
             <p className="text-sm text-muted-foreground">No snapshots available yet.</p>
           ) : headline != null ? (
-            <p className="font-figure text-4xl font-semibold tracking-tight text-foreground sm:text-6xl">
+            <p className="font-figure text-5xl font-bold tracking-tight text-foreground sm:text-6xl">
               {formatMoney(headline, currency)}
             </p>
           ) : (
@@ -234,9 +213,9 @@ export function NetWorthPage() {
       </section>
 
       {/* Chart card */}
-      <section className="rounded-2xl border bg-card p-4 card-ring sm:p-6">
+      <section className="rounded-2xl bg-card p-4 card-ring sm:p-6">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2 px-2">
-          <h2 className="text-sm font-semibold text-foreground">Net worth over time</h2>
+          <h2 className="text-[0.9375rem] font-semibold text-foreground">Net worth over time</h2>
           <div className="flex items-center gap-3 text-xs text-muted-foreground">
             <LegendDot color="var(--color-chart-1)" label="Bank" />
             <LegendDot color="var(--color-chart-2)" label="Portfolio" />

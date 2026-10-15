@@ -96,7 +96,7 @@ export function OwedPage() {
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-8 md:py-12">
       <header className="mb-8">
-        <h1 className="text-xl font-semibold tracking-tight text-foreground">Owed</h1>
+        <h1 className="ios-large-title">Owed</h1>
         <p className="mt-0.5 text-sm text-muted-foreground">
           Transactions you fronted for others — split off your spend from the Transactions page.
         </p>

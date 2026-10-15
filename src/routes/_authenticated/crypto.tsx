@@ -149,7 +149,7 @@ export function CryptoPage() {
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-8 md:py-12">
       <header className="mb-8">
-        <h1 className="text-xl font-semibold tracking-tight text-foreground">Crypto</h1>
+        <h1 className="ios-large-title">Crypto</h1>
         <p className="mt-0.5 text-sm text-muted-foreground">
           Your cryptocurrency holdings and allocation.
         </p>
