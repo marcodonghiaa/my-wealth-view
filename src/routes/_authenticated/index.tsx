@@ -115,7 +115,7 @@ export function NetWorthPage() {
     staleTime: 5 * 60_000,
   });
 
-  const snapshots = netWorthQuery.data ?? [];
+  const snapshots = useMemo(() => netWorthQuery.data ?? [], [netWorthQuery.data]);
   const chartData = useMemo(() => withTrend(snapshots), [snapshots]);
   const latest = snapshots.at(-1);
   const previous = snapshots.at(-2);

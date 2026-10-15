@@ -2,19 +2,21 @@
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "./types";
 import { brokeredPreviewStorage } from "./previewAuthStorage";
+import { resolveSupabaseConfig } from "./config";
 
-// Falls back to the reference deployment's own project when VITE_SUPABASE_*
-// isn't set at build time -- Lovable's hosting builds this repo through its
-// own pipeline (not the Docker path in .env.example) and doesn't set these,
-// so a hard throw here takes production down. Self-hosters who DO set them
-// via Docker build args get their own project as intended.
-const usingFallback =
-  !import.meta.env["VITE_SUPABASE_URL"] || !import.meta.env["VITE_SUPABASE_PUBLISHABLE_KEY"];
-const SUPABASE_URL =
-  import.meta.env["VITE_SUPABASE_URL"] || "https://diwezyrtlwdbrsgegkay.supabase.co";
-const SUPABASE_PUBLISHABLE_KEY =
-  import.meta.env["VITE_SUPABASE_PUBLISHABLE_KEY"] ||
-  "sb_publishable_TUrIFr1vCjdFi7UF81VWhA_Qu8FiCe1";
+// Falls back to the reference deployment's project only where that is expected (Lovable
+// hosting, the Vite dev server, SSR). A browser on any other host with missing
+// VITE_SUPABASE_* throws instead of sending logins to the maintainer's project.
+const {
+  url: SUPABASE_URL,
+  key: SUPABASE_PUBLISHABLE_KEY,
+  usingFallback,
+} = resolveSupabaseConfig({
+  url: import.meta.env["VITE_SUPABASE_URL"],
+  key: import.meta.env["VITE_SUPABASE_PUBLISHABLE_KEY"],
+  hostname: typeof window === "undefined" ? undefined : window.location.hostname,
+  dev: import.meta.env.DEV,
+});
 
 if (usingFallback) {
   console.warn(

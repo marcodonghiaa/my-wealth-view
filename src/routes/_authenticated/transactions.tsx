@@ -1,28 +1,31 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
-import {
-  ArrowDownLeft,
-  ArrowUpRight,
-  ChevronLeft,
-  ChevronRight,
-  Search,
-  ThumbsDown,
-  ThumbsUp,
-} from "lucide-react";
-import { toast } from "sonner";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
+import { ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { AccountBadge, CurrencyBadge } from "@/components/bank-badge";
 import { formatISODate } from "@/lib/date";
-import { CATEGORIES, TRANSACTION_TYPES } from "@/lib/categories";
+import {
+  UNCATEGORIZED,
+  filterTransactions,
+  listCategories,
+  startOfMonth,
+  type AccountRow,
+  type TransactionRow,
+  isSameTx,
+  txId,
+} from "@/lib/transactions";
+import { BulkCategoryPicker } from "@/components/transactions/pickers";
+import {
+  useBulkCategoryMutation,
+  useSplitMutation,
+  useTransactionFieldMutation,
+} from "@/components/transactions/mutations";
+import {
+  TransactionCardView,
+  TransactionRowView,
+  type TransactionViewProps,
+} from "@/components/transactions/transaction-views";
+import { WorthItSpotlight } from "@/components/transactions/worth-it";
 
 export const Route = createFileRoute("/_authenticated/transactions")({
   head: () => ({
@@ -43,51 +46,6 @@ export const Route = createFileRoute("/_authenticated/transactions")({
   }),
   component: TransactionsPage,
 });
-
-interface TransactionRow {
-  entry_reference: string;
-  account_uid: string | null;
-  booking_date: string | null;
-  category: string | null;
-  transaction_type: string | null;
-  creditor_name: string | null;
-  currency: string | null;
-  amount: number | null;
-  signed_amount_eur: number | null;
-  credit_debit_indicator: string | null;
-  created_at: string | null;
-  worth_it: string | null;
-  personal_amount: number | null;
-  owed_by: string | null;
-}
-
-// Mirrors the allowlist in the backend's notify-worth-it.js — kept in sync by hand,
-// the two repos don't share code.
-const WORTH_IT_CATEGORIES = ["Shopping", "Entertainment", "Dine Out", "Experiences"];
-const WORTH_IT_MIN_AMOUNT = 15;
-const WORTH_IT_MIN_AGE_HOURS = 3;
-
-function isWorthItEligible(tx: TransactionRow): boolean {
-  return (
-    tx.credit_debit_indicator === "DBIT" &&
-    tx.worth_it == null &&
-    tx.category != null &&
-    WORTH_IT_CATEGORIES.includes(tx.category) &&
-    (tx.amount ?? 0) >= WORTH_IT_MIN_AMOUNT &&
-    tx.created_at != null &&
-    Date.now() - new Date(tx.created_at).getTime() >= WORTH_IT_MIN_AGE_HOURS * 3600_000
-  );
-}
-
-interface AccountRow {
-  uid: string;
-  label: string | null;
-  currency: string;
-}
-
-function startOfMonth(date: Date): Date {
-  return new Date(date.getFullYear(), date.getMonth(), 1);
-}
 
 async function fetchTransactionsForMonth(month: Date): Promise<Array<TransactionRow>> {
   const start = formatISODate(startOfMonth(month));
@@ -115,111 +73,6 @@ async function fetchAccounts(): Promise<Record<string, AccountRow>> {
   return map;
 }
 
-function formatMoney(value: number, currency: string): string {
-  return new Intl.NumberFormat("en-IE", {
-    style: "currency",
-    currency,
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value);
-}
-
-/** Amount without a currency symbol — the Currency column states it instead. */
-function formatAmountPlain(value: number): string {
-  return new Intl.NumberFormat("en-IE", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-    signDisplay: "never",
-  }).format(Math.abs(value));
-}
-
-/** Signed amount in the transaction's own currency. */
-function nativeSignedAmount(tx: TransactionRow): number | null {
-  if (tx.amount == null) return null;
-  const sign = (tx.signed_amount_eur ?? tx.amount) < 0 ? -1 : 1;
-  return sign * Math.abs(tx.amount);
-}
-
-const UNCATEGORIZED = "__uncategorized__";
-
-// Shared shape behind updateCategory/updateType/answerWorthIt: update one column
-// on one transaction, with optimistic cache update + rollback.
-function useTransactionFieldMutation<K extends "category" | "transaction_type" | "worth_it">(
-  queryClient: ReturnType<typeof useQueryClient>,
-  monthKey: string,
-  column: K,
-  opts: { errorMessage: string; successMessage?: (value: TransactionRow[K]) => string },
-) {
-  type Vars = { entryReference: string; value: TransactionRow[K] };
-  type Context = { previous: Array<TransactionRow> | undefined };
-
-  return useMutation<void, Error, Vars, Context>({
-    mutationFn: async ({ entryReference, value }) => {
-      const { error } = await supabase
-        .from("transactions")
-        .update({ [column]: value } as never)
-        .eq("entry_reference", entryReference);
-      if (error) throw error;
-    },
-    onMutate: async ({ entryReference, value }) => {
-      await queryClient.cancelQueries({ queryKey: ["transactions", monthKey] });
-      const previous = queryClient.getQueryData<Array<TransactionRow>>(["transactions", monthKey]);
-      queryClient.setQueryData<Array<TransactionRow>>(["transactions", monthKey], (old) =>
-        old
-          ? old.map((row) =>
-              row.entry_reference === entryReference ? { ...row, [column]: value } : row,
-            )
-          : old,
-      );
-      return { previous };
-    },
-    onError: (error, _vars, context) => {
-      if (context?.previous) queryClient.setQueryData(["transactions", monthKey], context.previous);
-      toast.error(opts.errorMessage, { description: error.message });
-    },
-    onSuccess: (_data, vars) => {
-      if (opts.successMessage) toast.success(opts.successMessage(vars.value));
-    },
-  });
-}
-
-// Splitting updates personal_amount + owed_by together, so it's a separate
-// mutation rather than another useTransactionFieldMutation call -- same
-// optimistic-update/rollback shape either way.
-function useSplitMutation(queryClient: ReturnType<typeof useQueryClient>, monthKey: string) {
-  type Vars = { entryReference: string; personalAmount: number | null; owedBy: string | null };
-  type Context = { previous: Array<TransactionRow> | undefined };
-
-  return useMutation<void, Error, Vars, Context>({
-    mutationFn: async ({ entryReference, personalAmount, owedBy }) => {
-      const { error } = await supabase
-        .from("transactions")
-        .update({ personal_amount: personalAmount, owed_by: owedBy })
-        .eq("entry_reference", entryReference);
-      if (error) throw error;
-    },
-    onMutate: async ({ entryReference, personalAmount, owedBy }) => {
-      await queryClient.cancelQueries({ queryKey: ["transactions", monthKey] });
-      const previous = queryClient.getQueryData<Array<TransactionRow>>(["transactions", monthKey]);
-      queryClient.setQueryData<Array<TransactionRow>>(["transactions", monthKey], (old) =>
-        old
-          ? old.map((row) =>
-              row.entry_reference === entryReference
-                ? { ...row, personal_amount: personalAmount, owed_by: owedBy }
-                : row,
-            )
-          : old,
-      );
-      return { previous };
-    },
-    onError: (error, _vars, context) => {
-      if (context?.previous) queryClient.setQueryData(["transactions", monthKey], context.previous);
-      toast.error("Couldn't save split", { description: error.message });
-    },
-    onSuccess: () => toast.success("Split saved"),
-  });
-}
-
 export function TransactionsPage() {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<string>("all");
@@ -244,41 +97,9 @@ export function TransactionsPage() {
 
   const updateSplit = useSplitMutation(queryClient, monthKey);
 
-  const bulkUpdateCategory = useMutation({
-    mutationFn: async ({
-      entryReferences,
-      category: next,
-    }: {
-      entryReferences: Array<string>;
-      category: string;
-    }) => {
-      const { error } = await supabase
-        .from("transactions")
-        .update({ category: next })
-        .in("entry_reference", entryReferences);
-      if (error) throw error;
-    },
-    onSuccess: (_data, vars) => {
-      queryClient.setQueryData<Array<TransactionRow>>(["transactions", monthKey], (old) =>
-        old
-          ? old.map((row) =>
-              vars.entryReferences.includes(row.entry_reference)
-                ? { ...row, category: vars.category }
-                : row,
-            )
-          : old,
-      );
-      toast.success(
-        `Set ${vars.entryReferences.length} transaction${vars.entryReferences.length === 1 ? "" : "s"} to ${vars.category}`,
-      );
-      setSelected(new Set());
-    },
-    onError: (error) => {
-      toast.error("Couldn't update categories", {
-        description: (error as Error).message,
-      });
-    },
-  });
+  const bulkUpdateCategory = useBulkCategoryMutation(queryClient, monthKey, () =>
+    setSelected(new Set()),
+  );
 
   const accountsQuery = useQuery({
     queryKey: ["accounts"],
@@ -292,7 +113,7 @@ export function TransactionsPage() {
     staleTime: 60_000,
   });
 
-  const transactions = txQuery.data ?? [];
+  const transactions = useMemo(() => txQuery.data ?? [], [txQuery.data]);
 
   // Arrived via a "worth it?" push: force fresh data (the cache may be stale
   // from before this notification's transaction existed) and jump to it.
@@ -316,44 +137,25 @@ export function TransactionsPage() {
     if (tx && tx.worth_it == null) setSpotlightTx(tx);
     const timer = setTimeout(() => setHighlightRef(null), 3000);
     return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [highlightRef, txQuery.isPending, transactions]);
 
-  const categories = useMemo(() => {
-    const set = new Set<string>();
-    let hasUncategorized = false;
-    for (const tx of transactions) {
-      if (tx.category) set.add(tx.category);
-      else hasUncategorized = true;
-    }
-    return {
-      list: Array.from(set).sort((a, b) => a.localeCompare(b)),
-      hasUncategorized,
-    };
-  }, [transactions]);
+  const categories = useMemo(() => listCategories(transactions), [transactions]);
 
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return transactions.filter((tx) => {
-      if (category === UNCATEGORIZED && tx.category != null) return false;
-      if (category !== "all" && category !== UNCATEGORIZED && tx.category !== category)
-        return false;
-      if (q && !(tx.creditor_name ?? "").toLowerCase().includes(q)) return false;
-      return true;
-    });
-  }, [transactions, search, category]);
+  const filtered = useMemo(
+    () => filterTransactions(transactions, search, category),
+    [transactions, search, category],
+  );
 
   const accounts = accountsQuery.data ?? {};
 
-  const filteredRefs = useMemo(() => filtered.map((tx) => tx.entry_reference), [filtered]);
-  const allFilteredSelected =
-    filteredRefs.length > 0 && filteredRefs.every((ref) => selected.has(ref));
+  const filteredIds = useMemo(() => filtered.map(txId), [filtered]);
+  const allFilteredSelected = filteredIds.length > 0 && filteredIds.every((id) => selected.has(id));
 
-  function toggleOne(entryReference: string) {
+  function toggleOne(id: string) {
     setSelected((prev) => {
       const next = new Set(prev);
-      if (next.has(entryReference)) next.delete(entryReference);
-      else next.add(entryReference);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
       return next;
     });
   }
@@ -362,10 +164,10 @@ export function TransactionsPage() {
     setSelected((prev) => {
       if (allFilteredSelected) {
         const next = new Set(prev);
-        for (const ref of filteredRefs) next.delete(ref);
+        for (const id of filteredIds) next.delete(id);
         return next;
       }
-      return new Set([...prev, ...filteredRefs]);
+      return new Set([...prev, ...filteredIds]);
     });
   }
 
@@ -373,6 +175,21 @@ export function TransactionsPage() {
     setSelected(new Set());
     setMonth(next);
   }
+
+  const viewProps = (tx: TransactionRow): TransactionViewProps => ({
+    tx,
+    selected: selected.has(txId(tx)),
+    onToggleSelect: () => toggleOne(txId(tx)),
+    savingCategory: updateCategory.isPending && isSameTx(updateCategory.variables?.tx, tx),
+    onSelectCategory: (next) => updateCategory.mutate({ tx, value: next }),
+    savingType: updateType.isPending && isSameTx(updateType.variables?.tx, tx),
+    onSelectType: (next) => updateType.mutate({ tx, value: next }),
+    accountLabel: tx.account_uid ? (accounts[tx.account_uid]?.label ?? "Unknown account") : "—",
+    onAnswerWorthIt: (worthIt) => answerWorthIt.mutate({ tx, value: worthIt }),
+    savingSplit: updateSplit.isPending && isSameTx(updateSplit.variables?.tx, tx),
+    onSaveSplit: (personalAmount, owedBy) => updateSplit.mutate({ tx, personalAmount, owedBy }),
+    highlighted: tx.entry_reference === highlightRef,
+  });
 
   const monthLabel = month.toLocaleDateString("en-GB", {
     month: "long",
@@ -393,54 +210,11 @@ export function TransactionsPage() {
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-8 md:py-12">
-      <Dialog
-        open={spotlightTx != null}
-        onOpenChange={(open) => {
-          if (!open) setSpotlightTx(null);
-        }}
-      >
-        {spotlightTx && (
-          <DialogContent className="max-w-sm text-center">
-            <DialogHeader>
-              <DialogTitle className="text-center text-xl">Worth it?</DialogTitle>
-              <DialogDescription className="text-center">
-                {spotlightTx.creditor_name ?? "A purchase"} · {spotlightTx.category}
-              </DialogDescription>
-            </DialogHeader>
-            <p className="font-figure py-4 text-4xl font-semibold text-foreground">
-              {formatMoney(Math.abs(spotlightTx.amount ?? 0), spotlightTx.currency ?? "EUR")}
-            </p>
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={() => {
-                  answerWorthIt.mutate({
-                    entryReference: spotlightTx.entry_reference,
-                    value: "no",
-                  });
-                  setSpotlightTx(null);
-                }}
-                className="min-h-11 flex-1 rounded-lg border border-negative/30 bg-negative/10 text-sm font-semibold text-negative transition-colors hover:bg-negative/20"
-              >
-                No
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  answerWorthIt.mutate({
-                    entryReference: spotlightTx.entry_reference,
-                    value: "yes",
-                  });
-                  setSpotlightTx(null);
-                }}
-                className="min-h-11 flex-1 rounded-lg border border-positive/30 bg-positive/10 text-sm font-semibold text-positive transition-colors hover:bg-positive/20"
-              >
-                Yes
-              </button>
-            </div>
-          </DialogContent>
-        )}
-      </Dialog>
+      <WorthItSpotlight
+        tx={spotlightTx}
+        onAnswer={(tx, value) => answerWorthIt.mutate({ tx, value })}
+        onClose={() => setSpotlightTx(null)}
+      />
 
       <header className="mb-8">
         <h1 className="text-xl font-semibold tracking-tight text-foreground">Transactions</h1>
@@ -516,7 +290,7 @@ export function TransactionsPage() {
           <BulkCategoryPicker
             onSelect={(next) =>
               bulkUpdateCategory.mutate({
-                entryReferences: Array.from(selected),
+                txs: transactions.filter((tx) => selected.has(txId(tx))),
                 category: next,
               })
             }
@@ -549,50 +323,7 @@ export function TransactionsPage() {
         ) : (
           <ul className="divide-y md:hidden">
             {filtered.map((tx) => (
-              <TransactionCardView
-                key={tx.entry_reference}
-                tx={tx}
-                selected={selected.has(tx.entry_reference)}
-                onToggleSelect={() => toggleOne(tx.entry_reference)}
-                savingCategory={
-                  updateCategory.isPending &&
-                  updateCategory.variables?.entryReference === tx.entry_reference
-                }
-                onSelectCategory={(next) =>
-                  updateCategory.mutate({
-                    entryReference: tx.entry_reference,
-                    value: next,
-                  })
-                }
-                savingType={
-                  updateType.isPending &&
-                  updateType.variables?.entryReference === tx.entry_reference
-                }
-                onSelectType={(next) =>
-                  updateType.mutate({
-                    entryReference: tx.entry_reference,
-                    value: next,
-                  })
-                }
-                accountLabel={
-                  tx.account_uid ? (accounts[tx.account_uid]?.label ?? "Unknown account") : "—"
-                }
-                onAnswerWorthIt={(worthIt) =>
-                  answerWorthIt.mutate({ entryReference: tx.entry_reference, value: worthIt })
-                }
-                savingSplit={
-                  updateSplit.isPending &&
-                  updateSplit.variables?.entryReference === tx.entry_reference
-                }
-                onSaveSplit={(personalAmount, owedBy) =>
-                  updateSplit.mutate({
-                    entryReference: tx.entry_reference,
-                    personalAmount,
-                    owedBy,
-                  })
-                }
-                highlighted={tx.entry_reference === highlightRef}
-              />
+              <TransactionCardView key={tx.entry_reference} {...viewProps(tx)} />
             ))}
           </ul>
         )}
@@ -641,50 +372,7 @@ export function TransactionsPage() {
                 </tr>
               ) : (
                 filtered.map((tx) => (
-                  <TransactionRowView
-                    key={tx.entry_reference}
-                    tx={tx}
-                    selected={selected.has(tx.entry_reference)}
-                    onToggleSelect={() => toggleOne(tx.entry_reference)}
-                    savingCategory={
-                      updateCategory.isPending &&
-                      updateCategory.variables?.entryReference === tx.entry_reference
-                    }
-                    onSelectCategory={(next) =>
-                      updateCategory.mutate({
-                        entryReference: tx.entry_reference,
-                        value: next,
-                      })
-                    }
-                    savingType={
-                      updateType.isPending &&
-                      updateType.variables?.entryReference === tx.entry_reference
-                    }
-                    onSelectType={(next) =>
-                      updateType.mutate({
-                        entryReference: tx.entry_reference,
-                        value: next,
-                      })
-                    }
-                    accountLabel={
-                      tx.account_uid ? (accounts[tx.account_uid]?.label ?? "Unknown account") : "—"
-                    }
-                    onAnswerWorthIt={(worthIt) =>
-                      answerWorthIt.mutate({ entryReference: tx.entry_reference, value: worthIt })
-                    }
-                    savingSplit={
-                      updateSplit.isPending &&
-                      updateSplit.variables?.entryReference === tx.entry_reference
-                    }
-                    onSaveSplit={(personalAmount, owedBy) =>
-                      updateSplit.mutate({
-                        entryReference: tx.entry_reference,
-                        personalAmount,
-                        owedBy,
-                      })
-                    }
-                    highlighted={tx.entry_reference === highlightRef}
-                  />
+                  <TransactionRowView key={tx.entry_reference} {...viewProps(tx)} />
                 ))
               )}
             </tbody>
@@ -692,512 +380,5 @@ export function TransactionsPage() {
         </div>
       </section>
     </div>
-  );
-}
-
-function CategoryPicker({
-  tx,
-  onSelect,
-  saving,
-}: {
-  tx: TransactionRow;
-  onSelect: (category: string) => void;
-  saving: boolean;
-}) {
-  const [open, setOpen] = useState(false);
-
-  return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <button
-          type="button"
-          aria-label={`Change category for ${tx.creditor_name ?? "transaction"}`}
-          disabled={saving}
-          className="-m-2 inline-flex min-h-11 cursor-pointer items-center p-2 disabled:opacity-60"
-        >
-          {tx.category ? (
-            <span className="inline-flex rounded-full border border-primary/25 bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary transition-colors hover:bg-primary/20">
-              {tx.category}
-            </span>
-          ) : (
-            <span className="inline-flex rounded-full border border-dashed px-2.5 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-accent">
-              Uncategorized
-            </span>
-          )}
-        </button>
-      </PopoverTrigger>
-      <PopoverContent align="start" className="w-48 p-1">
-        <div className="max-h-72 overflow-y-auto">
-          {CATEGORIES.map((c) => (
-            <button
-              key={c}
-              type="button"
-              onClick={() => {
-                setOpen(false);
-                if (c !== tx.category) onSelect(c);
-              }}
-              className={`block min-h-11 w-full rounded-md px-2.5 py-1.5 text-left text-sm transition-colors hover:bg-accent ${
-                c === tx.category ? "font-medium text-primary" : "text-foreground"
-              }`}
-            >
-              {c}
-            </button>
-          ))}
-        </div>
-      </PopoverContent>
-    </Popover>
-  );
-}
-
-function BulkCategoryPicker({
-  onSelect,
-  disabled,
-}: {
-  onSelect: (category: string) => void;
-  disabled: boolean;
-}) {
-  const [open, setOpen] = useState(false);
-
-  return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <button
-          type="button"
-          disabled={disabled}
-          className="inline-flex h-9 items-center rounded-lg border bg-background px-3 text-sm font-medium text-foreground transition-colors hover:bg-accent disabled:opacity-60"
-        >
-          {disabled ? "Saving…" : "Set category…"}
-        </button>
-      </PopoverTrigger>
-      <PopoverContent align="start" className="w-48 p-1">
-        <div className="max-h-72 overflow-y-auto">
-          {CATEGORIES.map((c) => (
-            <button
-              key={c}
-              type="button"
-              onClick={() => {
-                setOpen(false);
-                onSelect(c);
-              }}
-              className="block min-h-11 w-full rounded-md px-2.5 py-1.5 text-left text-sm text-foreground transition-colors hover:bg-accent"
-            >
-              {c}
-            </button>
-          ))}
-        </div>
-      </PopoverContent>
-    </Popover>
-  );
-}
-
-function TypePicker({
-  tx,
-  onSelect,
-  saving,
-}: {
-  tx: TransactionRow;
-  onSelect: (type: string) => void;
-  saving: boolean;
-}) {
-  const [open, setOpen] = useState(false);
-
-  return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <button
-          type="button"
-          aria-label={`Change type for ${tx.creditor_name ?? "transaction"}`}
-          disabled={saving}
-          className="-m-2 inline-flex min-h-11 cursor-pointer items-center p-2 disabled:opacity-60"
-        >
-          {tx.transaction_type ? (
-            <span className="inline-flex rounded-full border border-border bg-card px-2.5 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-accent">
-              {tx.transaction_type}
-            </span>
-          ) : (
-            <span className="inline-flex rounded-full border border-dashed px-2.5 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-accent">
-              —
-            </span>
-          )}
-        </button>
-      </PopoverTrigger>
-      <PopoverContent align="start" className="w-48 p-1">
-        <div className="max-h-72 overflow-y-auto">
-          {TRANSACTION_TYPES.map((t) => (
-            <button
-              key={t}
-              type="button"
-              onClick={() => {
-                setOpen(false);
-                if (t !== tx.transaction_type) onSelect(t);
-              }}
-              className={`block min-h-11 w-full rounded-md px-2.5 py-1.5 text-left text-sm transition-colors hover:bg-accent ${
-                t === tx.transaction_type ? "font-medium text-primary" : "text-foreground"
-              }`}
-            >
-              {t}
-            </button>
-          ))}
-        </div>
-      </PopoverContent>
-    </Popover>
-  );
-}
-
-// Lets you record that only part of a transaction was actually yours (e.g.
-// you fronted a group flight booking) -- personal_amount is what counts
-// toward your spend analytics, the rest shows on the Owed dashboard as a
-// receivable from whoever owed_by names.
-function SplitEditor({
-  tx,
-  onSave,
-  saving,
-}: {
-  tx: TransactionRow;
-  onSave: (personalAmount: number | null, owedBy: string | null) => void;
-  saving: boolean;
-}) {
-  const [open, setOpen] = useState(false);
-  const fullAmount = Math.abs(tx.amount ?? 0);
-  const [shareInput, setShareInput] = useState(() => String(tx.personal_amount ?? fullAmount));
-  const [owedByInput, setOwedByInput] = useState(tx.owed_by ?? "");
-
-  const isSplit = tx.personal_amount != null && tx.personal_amount < fullAmount;
-  const owed = isSplit ? fullAmount - (tx.personal_amount as number) : 0;
-
-  return (
-    <Popover
-      open={open}
-      onOpenChange={(next) => {
-        if (next) {
-          setShareInput(String(tx.personal_amount ?? fullAmount));
-          setOwedByInput(tx.owed_by ?? "");
-        }
-        setOpen(next);
-      }}
-    >
-      <PopoverTrigger asChild>
-        <button
-          type="button"
-          aria-label={`Split ${tx.creditor_name ?? "transaction"}`}
-          disabled={saving}
-          className="-m-2 inline-flex min-h-11 cursor-pointer items-center p-2 disabled:opacity-60"
-        >
-          {isSplit ? (
-            <span className="inline-flex rounded-full border border-primary/25 bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary transition-colors hover:bg-primary/20">
-              Split · owed {formatMoney(owed, tx.currency ?? "EUR")}
-            </span>
-          ) : (
-            <span className="inline-flex rounded-full border border-dashed px-2.5 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-accent">
-              Split…
-            </span>
-          )}
-        </button>
-      </PopoverTrigger>
-      <PopoverContent align="start" className="w-64 space-y-2.5 p-3">
-        <div>
-          <label className="mb-1 block text-xs font-medium text-muted-foreground">
-            Your share ({tx.currency ?? "EUR"}, full amount {formatAmountPlain(fullAmount)})
-          </label>
-          <input
-            type="number"
-            step="0.01"
-            min="0"
-            max={fullAmount}
-            value={shareInput}
-            onChange={(e) => setShareInput(e.target.value)}
-            className="h-10 w-full rounded-lg border bg-background px-3 text-sm text-foreground focus:ring-2 focus:ring-ring focus:outline-none"
-          />
-        </div>
-        <div>
-          <label className="mb-1 block text-xs font-medium text-muted-foreground">
-            Owed by (optional)
-          </label>
-          <input
-            type="text"
-            placeholder="e.g. Anna, Luca"
-            value={owedByInput}
-            onChange={(e) => setOwedByInput(e.target.value)}
-            className="h-10 w-full rounded-lg border bg-background px-3 text-sm text-foreground focus:ring-2 focus:ring-ring focus:outline-none"
-          />
-        </div>
-        <div className="flex gap-2 pt-1">
-          {isSplit && (
-            <button
-              type="button"
-              onClick={() => {
-                setOpen(false);
-                onSave(null, null);
-              }}
-              className="min-h-9 flex-1 rounded-lg border px-3 text-sm text-muted-foreground transition-colors hover:bg-accent"
-            >
-              Clear
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={() => {
-              const parsed = Number(shareInput);
-              if (!Number.isFinite(parsed) || parsed < 0 || parsed > fullAmount) return;
-              setOpen(false);
-              // Full amount = same as unset, keeps the "NULL means whole
-              // thing is mine" convention the schema/views rely on.
-              onSave(
-                parsed === fullAmount ? null : parsed,
-                parsed === fullAmount ? null : owedByInput.trim() || null,
-              );
-            }}
-            className="min-h-9 flex-1 rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground transition-colors hover:opacity-90"
-          >
-            Save
-          </button>
-        </div>
-      </PopoverContent>
-    </Popover>
-  );
-}
-
-function WorthItPrompt({
-  tx,
-  onAnswer,
-}: {
-  tx: TransactionRow;
-  onAnswer: (worthIt: "yes" | "no") => void;
-}) {
-  if (tx.worth_it) {
-    return (
-      <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-        {tx.worth_it === "yes" ? (
-          <ThumbsUp className="size-3 text-positive" />
-        ) : (
-          <ThumbsDown className="size-3 text-negative" />
-        )}
-        {tx.worth_it === "yes" ? "Worth it" : "Not worth it"}
-      </span>
-    );
-  }
-  if (!isWorthItEligible(tx)) return null;
-  return (
-    <span className="inline-flex items-center gap-2 text-xs text-muted-foreground">
-      Worth it?
-      <button
-        type="button"
-        onClick={() => onAnswer("yes")}
-        className="min-h-11 rounded-md px-2 py-1 font-medium text-positive transition-colors hover:bg-positive/10"
-      >
-        Yes
-      </button>
-      <button
-        type="button"
-        onClick={() => onAnswer("no")}
-        className="min-h-11 rounded-md px-2 py-1 font-medium text-negative transition-colors hover:bg-negative/10"
-      >
-        No
-      </button>
-    </span>
-  );
-}
-
-function TransactionRowView({
-  tx,
-  accountLabel,
-  onSelectCategory,
-  savingCategory,
-  onSelectType,
-  savingType,
-  selected,
-  onToggleSelect,
-  onAnswerWorthIt,
-  savingSplit,
-  onSaveSplit,
-  highlighted,
-}: {
-  tx: TransactionRow;
-  accountLabel: string;
-  onSelectCategory: (category: string) => void;
-  savingCategory: boolean;
-  onSelectType: (type: string) => void;
-  savingType: boolean;
-  selected: boolean;
-  onToggleSelect: () => void;
-  onAnswerWorthIt: (worthIt: "yes" | "no") => void;
-  savingSplit: boolean;
-  onSaveSplit: (personalAmount: number | null, owedBy: string | null) => void;
-  highlighted?: boolean;
-}) {
-  const native = nativeSignedAmount(tx);
-  const currency = tx.currency ?? "EUR";
-  const positive = (native ?? 0) >= 0;
-  const eur = tx.signed_amount_eur;
-  const showEur = currency !== "EUR" && eur != null;
-
-  return (
-    <tr
-      data-entry-ref={tx.entry_reference}
-      className={`border-b transition-colors last:border-0 hover:bg-accent/40 ${selected ? "bg-primary/5" : ""} ${highlighted ? "ring-2 ring-inset ring-primary" : ""}`}
-    >
-      <td className="px-4 py-3">
-        <label className="-m-3.5 inline-flex size-11 cursor-pointer items-center justify-center p-3.5">
-          <input
-            type="checkbox"
-            aria-label={`Select ${tx.creditor_name ?? "transaction"}`}
-            checked={selected}
-            onChange={onToggleSelect}
-            className="size-4 rounded border-border accent-primary"
-          />
-        </label>
-      </td>
-      <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">
-        {tx.booking_date
-          ? new Date(`${tx.booking_date}T00:00:00`).toLocaleDateString("en-GB", {
-              day: "numeric",
-              month: "short",
-              year: "numeric",
-            })
-          : "—"}
-      </td>
-      <td className="max-w-48 px-4 py-3">
-        <div className="truncate font-medium text-foreground">{tx.creditor_name ?? "—"}</div>
-        <WorthItPrompt tx={tx} onAnswer={onAnswerWorthIt} />
-      </td>
-      <td className="px-4 py-3">
-        <CategoryPicker tx={tx} onSelect={onSelectCategory} saving={savingCategory} />
-      </td>
-      <td className="px-4 py-3">
-        <TypePicker tx={tx} onSelect={onSelectType} saving={savingType} />
-      </td>
-      <td className="px-4 py-3">
-        <SplitEditor tx={tx} onSave={onSaveSplit} saving={savingSplit} />
-      </td>
-      <td className="px-4 py-3">
-        <AccountBadge label={accountLabel} />
-      </td>
-      <td className="px-4 py-3">
-        <CurrencyBadge currency={currency} />
-      </td>
-      <td className="px-4 py-3 text-right whitespace-nowrap">
-        {native == null ? (
-          <span className="text-muted-foreground">—</span>
-        ) : (
-          <span
-            className={`inline-flex items-center justify-end gap-1 font-figure font-medium ${
-              positive ? "text-positive" : "text-negative"
-            }`}
-          >
-            {positive ? (
-              <ArrowUpRight className="size-3.5" />
-            ) : (
-              <ArrowDownLeft className="size-3.5" />
-            )}
-            {formatAmountPlain(native)}
-            {showEur && (
-              <span className="ml-0.5 text-sm opacity-80">
-                ({formatMoney(eur as number, "EUR")})
-              </span>
-            )}
-          </span>
-        )}
-      </td>
-    </tr>
-  );
-}
-
-function TransactionCardView({
-  tx,
-  accountLabel,
-  onSelectCategory,
-  savingCategory,
-  onSelectType,
-  savingType,
-  selected,
-  onToggleSelect,
-  onAnswerWorthIt,
-  savingSplit,
-  onSaveSplit,
-  highlighted,
-}: {
-  tx: TransactionRow;
-  accountLabel: string;
-  onSelectCategory: (category: string) => void;
-  savingCategory: boolean;
-  onSelectType: (type: string) => void;
-  savingType: boolean;
-  selected: boolean;
-  onToggleSelect: () => void;
-  onAnswerWorthIt: (worthIt: "yes" | "no") => void;
-  savingSplit: boolean;
-  onSaveSplit: (personalAmount: number | null, owedBy: string | null) => void;
-  highlighted?: boolean;
-}) {
-  const native = nativeSignedAmount(tx);
-  const currency = tx.currency ?? "EUR";
-  const positive = (native ?? 0) >= 0;
-  const eur = tx.signed_amount_eur;
-  const showEur = currency !== "EUR" && eur != null;
-
-  return (
-    <li
-      data-entry-ref={tx.entry_reference}
-      className={`px-4 py-3 ${selected ? "bg-primary/5" : ""} ${highlighted ? "ring-2 ring-inset ring-primary" : ""}`}
-    >
-      <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-3">
-        <label className="-m-3.5 -mt-3 inline-flex size-11 shrink-0 cursor-pointer items-center justify-center p-3.5">
-          <input
-            type="checkbox"
-            aria-label={`Select ${tx.creditor_name ?? "transaction"}`}
-            checked={selected}
-            onChange={onToggleSelect}
-            className="size-4 rounded border-border accent-primary"
-          />
-        </label>
-        <div className="min-w-0">
-          <p className="truncate text-sm font-medium text-foreground">{tx.creditor_name ?? "—"}</p>
-          <p className="mt-0.5 flex items-center gap-1.5 truncate text-xs text-muted-foreground">
-            {tx.booking_date
-              ? new Date(`${tx.booking_date}T00:00:00`).toLocaleDateString("en-GB", {
-                  day: "numeric",
-                  month: "short",
-                  year: "numeric",
-                })
-              : "—"}
-            <AccountBadge label={accountLabel} />
-          </p>
-          <div className="mt-0.5">
-            <WorthItPrompt tx={tx} onAnswer={onAnswerWorthIt} />
-          </div>
-        </div>
-        <div className="shrink-0 text-right">
-          {native == null ? (
-            <span className="text-sm text-muted-foreground">—</span>
-          ) : (
-            <>
-              <div
-                className={`inline-flex items-center justify-end gap-1 font-figure text-sm font-medium ${
-                  positive ? "text-positive" : "text-negative"
-                }`}
-              >
-                {positive ? (
-                  <ArrowUpRight className="size-3.5" />
-                ) : (
-                  <ArrowDownLeft className="size-3.5" />
-                )}
-                {formatAmountPlain(native)}
-              </div>
-              {showEur && (
-                <div className="font-figure text-xs text-muted-foreground">
-                  {formatMoney(eur as number, "EUR")}
-                </div>
-              )}
-            </>
-          )}
-        </div>
-      </div>
-      <div className="mt-2 flex flex-wrap items-center gap-2">
-        <CategoryPicker tx={tx} onSelect={onSelectCategory} saving={savingCategory} />
-        <TypePicker tx={tx} onSelect={onSelectType} saving={savingType} />
-        <SplitEditor tx={tx} onSave={onSaveSplit} saving={savingSplit} />
-        <CurrencyBadge currency={currency} />
-      </div>
-    </li>
   );
 }
