@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Upload } from "lucide-react";
 import { MAX_CHARS } from "@/lib/import/parse-csv";
+import { SplitwiseReview } from "@/components/import/splitwise-review";
 import { classifyRows, summarize } from "@/lib/import/splitwise-classify";
 import { parseSplitwiseCsv, type SplitwiseFile } from "@/lib/import/splitwise-parse";
 import { hasErrors, validateSplitwise, type Issue } from "@/lib/import/splitwise-validate";
@@ -28,6 +29,8 @@ interface Loaded {
 export function SplitwisePanel() {
   const [loaded, setLoaded] = useState<Loaded | null>(null);
   const [group, setGroup] = useState("");
+  // The name the review works with: it follows the input only when the user leaves the field.
+  const [settledGroup, setSettledGroup] = useState("");
   const [me, setMe] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -40,7 +43,9 @@ export function SplitwisePanel() {
         throw new Error("The file is too large (limit is 2 MB). Is it the right file?");
       const parsed = parseSplitwiseCsv(await file.text());
       setLoaded({ file: parsed, issues: validateSplitwise(parsed) });
-      setGroup(groupFromFileName(file.name));
+      const name = groupFromFileName(file.name);
+      setGroup(name);
+      setSettledGroup(name);
     } catch (err) {
       setLoaded(null);
       setError(readError(err));
@@ -48,10 +53,11 @@ export function SplitwisePanel() {
   }
 
   const blocked = loaded ? hasErrors(loaded.issues) : false;
-  const summary = useMemo(
-    () => (loaded && me !== null && !blocked ? summarize(classifyRows(loaded.file, me)) : null),
+  const classified = useMemo(
+    () => (loaded && me !== null && !blocked ? classifyRows(loaded.file, me) : null),
     [loaded, me, blocked],
   );
+  const summary = useMemo(() => (classified ? summarize(classified) : null), [classified]);
   const currency = loaded?.file.rows[0]?.currency ?? "";
 
   return (
@@ -106,6 +112,7 @@ export function SplitwisePanel() {
                   value={group}
                   maxLength={GROUP_MAX}
                   onChange={(e) => setGroup(e.target.value)}
+                  onBlur={() => setSettledGroup(group)}
                   className="w-full rounded-lg border bg-background px-3 py-2 text-base focus:ring-2 focus:ring-ring focus:outline-none"
                 />
               </label>
@@ -154,6 +161,9 @@ export function SplitwisePanel() {
             </li>
           </ul>
         </div>
+      )}
+      {classified && settledGroup.trim() !== "" && (
+        <SplitwiseReview rows={classified} group={settledGroup} />
       )}
     </div>
   );

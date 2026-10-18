@@ -1,5 +1,11 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+// The bank review is tested on its own; here it only needs something to read.
+vi.mock("./splitwise-review", () => ({
+  SplitwiseReview: ({ group }: { group: string }) => <p>review of {group}</p>,
+}));
+
 import { SplitwisePanel } from "./splitwise-panel";
 
 const CSV = [
@@ -74,5 +80,18 @@ describe("SplitwisePanel", () => {
       target: { files: [big] },
     });
     expect((await screen.findByRole("alert")).textContent).toMatch(/too large/);
+  });
+
+  // protects=the bank is not re-read on every letter typed; fails_when=the review follows the
+  // draft name instead of the finished one
+  it("passes the group name to the review only when typing is done", async () => {
+    render(<SplitwisePanel />);
+    upload(CSV);
+    fireEvent.change(await screen.findByLabelText(/Which one are you/), { target: { value: "0" } });
+    const input = screen.getByLabelText(/Group name/);
+    fireEvent.change(input, { target: { value: "trip" } });
+    expect(screen.getByText("review of berkeley")).toBeTruthy();
+    fireEvent.blur(input);
+    expect(screen.getByText("review of trip")).toBeTruthy();
   });
 });
