@@ -1,16 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { colorForAsset } from "./crypto-colors";
+import { colorsForAssets } from "./crypto-colors";
 
-describe("colorForAsset", () => {
+describe("colorsForAssets", () => {
   it("gives Bitcoin orange and Ethereum purple, whatever their position", () => {
-    expect(colorForAsset("BTC", 3)).toBe(colorForAsset("btc", 0));
-    expect(colorForAsset("BTC", 0)).not.toBe(colorForAsset("ETH", 0));
-    expect(colorForAsset("BTC", 0)).toBe("#f7931a");
-    expect(colorForAsset("ETH", 0)).toBe("#8b5cf6");
+    const [a, b] = colorsForAssets(["ETH", "btc"]);
+    expect(a).toBe("#8b5cf6");
+    expect(b).toBe("#f7931a");
   });
 
-  it("falls back to the rotating chart palette for other assets", () => {
-    expect(colorForAsset("SOL", 1)).toBe("var(--color-chart-2)");
-    expect(colorForAsset("SOL", 6)).toBe("var(--color-chart-2)");
+  it("gives every asset its own colour, so none is confused with Bitcoin or Ethereum", () => {
+    const symbols = ["BTC", "SOL", "ETH", "ADA", "XRP", "DOT", "LINK", "AVAX"];
+    const colors = colorsForAssets(symbols);
+    expect(new Set(colors).size).toBe(symbols.length);
   });
 });
