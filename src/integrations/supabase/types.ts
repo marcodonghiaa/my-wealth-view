@@ -217,36 +217,69 @@ export type Database = {
       };
       net_worth_history: {
         Row: {
+          batch_id: string | null;
           bonds_eur: number;
           cash_eur: number;
           created_at: string;
           crypto_eur: number;
           liabilities_eur: number;
+          other_eur: number;
           snapshot_date: string;
           stocks_eur: number;
           total_eur: number;
           user_id: string;
         };
         Insert: {
+          batch_id?: string | null;
           bonds_eur?: number;
           cash_eur?: number;
           created_at?: string;
           crypto_eur?: number;
           liabilities_eur?: number;
+          other_eur?: number;
           snapshot_date: string;
           stocks_eur?: number;
           total_eur: number;
           user_id: string;
         };
         Update: {
+          batch_id?: string | null;
           bonds_eur?: number;
           cash_eur?: number;
           created_at?: string;
           crypto_eur?: number;
           liabilities_eur?: number;
+          other_eur?: number;
           snapshot_date?: string;
           stocks_eur?: number;
           total_eur?: number;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
+      spend_history: {
+        Row: {
+          batch_id: string | null;
+          category: string;
+          created_at: string;
+          month: string;
+          spend_eur: number;
+          user_id: string;
+        };
+        Insert: {
+          batch_id?: string | null;
+          category: string;
+          created_at?: string;
+          month: string;
+          spend_eur: number;
+          user_id: string;
+        };
+        Update: {
+          batch_id?: string | null;
+          category?: string;
+          created_at?: string;
+          month?: string;
+          spend_eur?: number;
           user_id?: string;
         };
         Relationships: [];
