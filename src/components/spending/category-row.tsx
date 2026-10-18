@@ -4,11 +4,25 @@ import { ChevronDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatISODate } from "@/lib/date";
 
-interface CategoryTx {
+interface BankRow {
   entry_reference: string;
   booking_date: string | null;
   creditor_name: string | null;
   personal_signed_amount_eur: number | null;
+}
+
+interface ShareRow {
+  id: string;
+  booking_date: string;
+  description: string;
+  amount_eur: number | null;
+}
+
+interface CategoryTx {
+  key: string;
+  booking_date: string | null;
+  label: string;
+  amountEur: number;
 }
 
 const UNCATEGORIZED = "Uncategorized";
@@ -16,14 +30,15 @@ const UNCATEGORIZED = "Uncategorized";
 const formatEur = (value: number) =>
   new Intl.NumberFormat("en-IE", { style: "currency", currency: "EUR" }).format(value);
 
-// Same rows the category total is built from (personal share of real spend), for one month.
+// Same rows the category total is built from, for one month: the personal share of real bank
+// spend, plus my Splitwise shares that are not already inside a bank transaction.
 async function fetchCategoryTransactions(
   category: string,
   month: Date,
 ): Promise<Array<CategoryTx>> {
   const start = formatISODate(month);
   const end = formatISODate(new Date(month.getFullYear(), month.getMonth() + 1, 1));
-  const query = supabase
+  const bankQuery = supabase
     .from("v_transactions_eur")
     .select("entry_reference,booking_date,creditor_name,personal_signed_amount_eur")
     .eq("flow_type", "spend")
@@ -31,11 +46,34 @@ async function fetchCategoryTransactions(
     .gte("booking_date", start)
     .lt("booking_date", end)
     .order("booking_date", { ascending: false });
-  const { data, error } = await (category === UNCATEGORIZED
-    ? query.is("category", null)
-    : query.eq("category", category));
-  if (error) throw error;
-  return (data ?? []) as Array<CategoryTx>;
+  const shareQuery = supabase
+    .from("v_splitwise_eur")
+    .select("id,booking_date,description,amount_eur")
+    .gte("booking_date", start)
+    .lt("booking_date", end);
+  const isNone = category === UNCATEGORIZED;
+  const [bank, shares] = await Promise.all([
+    isNone ? bankQuery.is("category", null) : bankQuery.eq("category", category),
+    isNone ? shareQuery.is("category", null) : shareQuery.eq("category", category),
+  ]);
+  if (bank.error) throw bank.error;
+  if (shares.error) throw shares.error;
+
+  const fromBank = ((bank.data ?? []) as Array<BankRow>).map((tx) => ({
+    key: tx.entry_reference,
+    booking_date: tx.booking_date,
+    label: tx.creditor_name ?? "—",
+    amountEur: Math.abs(tx.personal_signed_amount_eur ?? 0),
+  }));
+  const fromShares = ((shares.data ?? []) as Array<ShareRow>).map((s) => ({
+    key: `share-${s.id}`,
+    booking_date: s.booking_date,
+    label: `Splitwise: ${s.description}`,
+    amountEur: s.amount_eur ?? 0,
+  }));
+  return [...fromBank, ...fromShares].sort((a, b) =>
+    (b.booking_date ?? "").localeCompare(a.booking_date ?? ""),
+  );
 }
 
 export function CategoryRow({
@@ -82,7 +120,7 @@ export function CategoryRow({
             </li>
           )}
           {txQuery.data?.map((tx) => (
-            <li key={tx.entry_reference} className="flex items-center gap-3 py-2 text-[0.8125rem]">
+            <li key={tx.key} className="flex items-center gap-3 py-2 text-[0.8125rem]">
               <span className="w-14 shrink-0 text-muted-foreground">
                 {tx.booking_date
                   ? new Date(`${tx.booking_date}T00:00:00`).toLocaleDateString("en-GB", {
@@ -91,11 +129,9 @@ export function CategoryRow({
                     })
                   : "—"}
               </span>
-              <span className="min-w-0 flex-1 truncate text-foreground">
-                {tx.creditor_name ?? "—"}
-              </span>
+              <span className="min-w-0 flex-1 truncate text-foreground">{tx.label}</span>
               <span className="font-figure shrink-0 text-foreground">
-                {formatEur(Math.abs(tx.personal_signed_amount_eur ?? 0))}
+                {formatEur(tx.amountEur)}
               </span>
             </li>
           ))}

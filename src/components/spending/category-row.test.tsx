@@ -11,9 +11,11 @@ const LIDL = {
   personal_signed_amount_eur: -12.5,
 };
 let rows: Array<typeof LIDL> = [LIDL];
+const SHARE = { id: "s1", booking_date: "2026-10-05", description: "Dinner", amount_eur: 7.5 };
+let shares: Array<typeof SHARE> = [];
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
-    from: () => {
+    from: (table: string) => {
       const q = {
         select: () => q,
         gte: () => q,
@@ -23,7 +25,8 @@ vi.mock("@/integrations/supabase/client", () => ({
         is: (col: string, val: unknown) => (calls.push([col, val]), q),
         lt2: () => q,
         order: () => q,
-        then: (resolve: (v: unknown) => void) => resolve({ data: rows, error: null }),
+        then: (resolve: (v: unknown) => void) =>
+          resolve({ data: table === "v_splitwise_eur" ? shares : rows, error: null }),
       };
       return q;
     },
@@ -65,5 +68,29 @@ describe("CategoryRow", () => {
     await userEvent.click(screen.getByRole("button", { name: /Groceries/ }));
     expect(await screen.findByText(/total was imported/)).toBeInTheDocument();
     rows = [LIDL];
+  });
+
+  // protects=the list adds up to the category total; fails_when=Splitwise shares are in the
+  // total but missing from the list, or the list is not newest first
+  it("lists Splitwise shares with the bank transactions, newest first", async () => {
+    shares = [SHARE];
+    renderRow("Groceries");
+    await userEvent.click(screen.getByRole("button", { name: /Groceries/ }));
+    const dinner = await screen.findByText("Splitwise: Dinner");
+    const lidl = screen.getByText("Lidl");
+    expect(screen.getByText("€7.50")).toBeInTheDocument();
+    expect(dinner.compareDocumentPosition(lidl) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    shares = [];
+  });
+
+  it("does not call a month empty when only shares exist", async () => {
+    rows = [];
+    shares = [SHARE];
+    renderRow("Groceries");
+    await userEvent.click(screen.getByRole("button", { name: /Groceries/ }));
+    expect(await screen.findByText("Splitwise: Dinner")).toBeInTheDocument();
+    expect(screen.queryByText(/total was imported/)).toBeNull();
+    rows = [LIDL];
+    shares = [];
   });
 });

@@ -1,7 +1,22 @@
 import { useEffect, useMemo, useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { CATEGORIES } from "@/lib/categories";
 import type { ClassifiedRow } from "@/lib/import/splitwise-classify";
+import {
+  browserStorage,
+  clearLastImport,
+  loadLastImport,
+  refreshKeys,
+  saveLastImport,
+  type LastImport,
+} from "@/lib/import/last-import";
+import {
+  runSplitwiseImport,
+  undoSplitwiseImport,
+  type RpcClient,
+} from "@/lib/import/splitwise-commit";
 import { fingerprintRows, matchBank, type BankTx } from "@/lib/import/splitwise-match";
 import { planWrite } from "@/lib/import/splitwise-plan";
 import {
@@ -21,30 +36,14 @@ const PAGE_LIMIT = 1000;
 
 const addDays = (iso: string, days: number) =>
   new Date(Date.parse(`${iso}T00:00:00Z`) + days * 86_400_000).toISOString().slice(0, 10);
+const BUTTON =
+  "inline-flex min-h-11 items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50";
 const money = (cents: number) => (cents / 100).toFixed(2);
 
 interface Loaded {
   bank: Array<BankTx>;
   fx: Array<FxRow>;
   existing: Map<string, { accountUid: string; entryReference: string }>;
-}
-
-interface ExistingRow {
-  fingerprint: string;
-  linked_account_uid: string | null;
-  linked_entry_reference: string | null;
-}
-
-// The new table is not in the generated types until the migration is applied.
-interface ExistingReader {
-  from(table: string): {
-    select(columns: string): {
-      eq(
-        column: string,
-        value: string,
-      ): PromiseLike<{ data: Array<ExistingRow> | null; error: { message: string } | null }>;
-    };
-  };
 }
 
 async function load(rows: Array<ClassifiedRow>, group: string): Promise<Loaded> {
@@ -71,7 +70,7 @@ async function load(rows: Array<ClassifiedRow>, group: string): Promise<Loaded> 
           .gte("date", addDays(first, -FX_DAYS_BEFORE))
           .lte("date", last)
           .limit(PAGE_LIMIT),
-    (supabase as unknown as ExistingReader)
+    supabase
       .from("splitwise_expenses")
       .select("fingerprint, linked_account_uid, linked_entry_reference")
       .eq("group_name", group),
@@ -107,6 +106,23 @@ export function SplitwiseReview({ rows, group }: { rows: Array<ClassifiedRow>; g
   // What the user changed by hand; everything else follows the default (sure matches ticked).
   const [manualTicks, setChoices] = useState<Map<number, boolean>>(new Map());
   const [includeUnmatched, setIncludeUnmatched] = useState(false);
+  const queryClient = useQueryClient();
+  const [userId, setUserId] = useState<string | null>(null);
+  const [last, setLast] = useState<LastImport | null>(null);
+  const [done, setDone] = useState<string | null>(null);
+
+  useEffect(() => {
+    void supabase.auth.getUser().then(({ data }) => setUserId(data.user?.id ?? null));
+  }, []);
+  // Undo survives leaving the page: the last import is remembered per user.
+  useEffect(() => {
+    setLast(userId ? loadLastImport(browserStorage(), userId, "splitwise") : null);
+  }, [userId]);
+
+  const refresh = () =>
+    Promise.all(
+      refreshKeys("splitwise").map((queryKey) => queryClient.invalidateQueries({ queryKey })),
+    );
 
   useEffect(() => {
     let current = true;
@@ -170,6 +186,35 @@ export function SplitwiseReview({ rows, group }: { rows: Array<ClassifiedRow>; g
       rate,
     ],
   );
+
+  const importShares = useMutation({
+    mutationFn: async () => {
+      if (!plan || !userId) throw new Error("You are signed out. Sign in again.");
+      const result = await runSplitwiseImport(supabase as unknown as RpcClient, plan);
+      return { ...result, owner: userId };
+    },
+    onSuccess: ({ batchId, shares, links, owner }) => {
+      const entry = { batchId, count: shares };
+      saveLastImport(browserStorage(), owner, "splitwise", entry);
+      setLast(entry);
+      setDone(`Imported ${shares} shares and updated ${links} bank transactions.`);
+      void refresh();
+    },
+  });
+
+  const undo = useMutation({
+    mutationFn: async () => {
+      if (!last) return;
+      await undoSplitwiseImport(supabase as unknown as RpcClient, last.batchId);
+    },
+    onSuccess: () => {
+      if (userId) clearLastImport(browserStorage(), userId, "splitwise");
+      setLast(null);
+      setDone(null);
+      importShares.reset();
+      void refresh();
+    },
+  });
 
   const byRow = new Map(rows.map((r) => [r.row, r]));
   const bankByKey = new Map(
@@ -279,7 +324,59 @@ export function SplitwiseReview({ rows, group }: { rows: Array<ClassifiedRow>; g
             {p}
           </p>
         ))}
+        <p className="mt-2 text-muted-foreground">
+          Importing again replaces this group's shares in these dates.
+        </p>
+        <div className="mt-3">
+          <button
+            type="button"
+            className={BUTTON}
+            disabled={
+              plan.problems.length > 0 ||
+              (plan.shares.length === 0 && plan.links.length === 0) ||
+              importShares.isPending ||
+              importShares.isSuccess
+            }
+            onClick={() => importShares.mutate()}
+          >
+            {importShares.isPending && <Loader2 className="size-4 animate-spin" />}
+            Import {plan.shares.length} shares
+          </button>
+        </div>
+        {importShares.error && (
+          <p role="alert" className="mt-2 text-negative">
+            Import failed: {importShares.error.message}
+          </p>
+        )}
+        {done && (
+          <p role="status" className="mt-2">
+            {done}
+          </p>
+        )}
       </div>
+
+      {last && (
+        <div className="rounded-2xl border bg-card p-5 text-sm card-ring">
+          Last Splitwise import: {last.count} shares. Undo removes them and puts the bank
+          transactions it changed back, but shares it replaced are not restored.
+          <div className="mt-3">
+            <button
+              type="button"
+              className={BUTTON}
+              disabled={undo.isPending}
+              onClick={() => undo.mutate()}
+            >
+              {undo.isPending && <Loader2 className="size-4 animate-spin" />}
+              Undo this import
+            </button>
+          </div>
+          {undo.error && (
+            <p role="alert" className="mt-2 text-negative">
+              Undo failed: {undo.error.message}
+            </p>
+          )}
+        </div>
+      )}
     </div>
   );
 }
