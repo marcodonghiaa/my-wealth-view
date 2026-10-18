@@ -1,0 +1,131 @@
+import {
+  Area,
+  AreaChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
+import { allocationSeries, type AllocationPoint, type HistoryRow } from "@/lib/net-worth";
+import { axisDateFormatter, formatISODate } from "@/lib/date";
+
+const CLASSES = [
+  { key: "stocks", label: "Stocks", color: "var(--color-chart-2)" },
+  { key: "bonds", label: "Bonds", color: "var(--color-chart-4)" },
+  { key: "crypto", label: "Crypto", color: "var(--color-chart-3)" },
+  { key: "cash", label: "Cash", color: "var(--color-chart-1)" },
+] as const;
+
+export function AllocationChart({ history }: { history: Array<HistoryRow> }) {
+  const data = allocationSeries(history);
+  if (data.length < 2) return null;
+  const fmtTick = axisDateFormatter(data[0]?.snapshot_date, data.at(-1)?.snapshot_date);
+
+  return (
+    <section className="mt-6 rounded-2xl bg-card p-4 card-ring sm:p-6">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2 px-2">
+        <h2 className="text-[0.9375rem] font-semibold text-foreground">
+          Asset allocation over time
+        </h2>
+        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+          {CLASSES.map((c) => (
+            <span key={c.key} className="inline-flex items-center gap-1.5">
+              <span
+                className="inline-block size-2 rounded-full"
+                style={{ backgroundColor: c.color }}
+              />
+              {c.label}
+            </span>
+          ))}
+        </div>
+      </div>
+      <div
+        className="h-64 w-full"
+        role="img"
+        aria-label="Asset allocation over time, share of stocks, bonds, crypto and cash"
+      >
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart
+            data={data}
+            stackOffset="expand"
+            margin={{ top: 8, right: 8, bottom: 0, left: 8 }}
+          >
+            <CartesianGrid strokeDasharray="3 6" stroke="var(--color-border)" vertical={false} />
+            <XAxis
+              dataKey="ts"
+              type="number"
+              scale="time"
+              domain={["dataMin", "dataMax"]}
+              tickFormatter={(ts: number) => fmtTick(formatISODate(new Date(ts)))}
+              tick={{ fill: "var(--color-muted-foreground)", fontSize: 11 }}
+              tickLine={false}
+              axisLine={false}
+              minTickGap={40}
+            />
+            <YAxis
+              width={44}
+              tickFormatter={(v: number) => `${Math.round(v * 100)}%`}
+              tick={{ fill: "var(--color-muted-foreground)", fontSize: 11 }}
+              tickLine={false}
+              axisLine={false}
+            />
+            <Tooltip
+              content={<AllocationTooltip />}
+              cursor={{ stroke: "var(--color-primary)", strokeOpacity: 0.3 }}
+            />
+            {CLASSES.map((c) => (
+              <Area
+                key={c.key}
+                type="monotone"
+                dataKey={c.key}
+                name={c.label}
+                stackId="mix"
+                stroke={c.color}
+                strokeWidth={1.5}
+                fill={c.color}
+                fillOpacity={0.55}
+                dot={false}
+              />
+            ))}
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
+      <p className="mt-2 px-2 text-xs text-muted-foreground">
+        From your imported monthly history. Live snapshots don't split stocks from bonds.
+      </p>
+    </section>
+  );
+}
+
+function AllocationTooltip({
+  active,
+  payload,
+}: {
+  active?: boolean;
+  payload?: Array<{ payload?: AllocationPoint }>;
+}) {
+  const point = payload?.at(0)?.payload;
+  if (!active || !point) return null;
+  return (
+    <div className="rounded-lg border bg-popover px-3 py-2 shadow-lg">
+      <p className="text-xs text-muted-foreground">
+        {new Date(point.ts).toLocaleDateString("en-GB", { month: "short", year: "numeric" })}
+      </p>
+      <div className="mt-1 space-y-0.5 text-xs">
+        {CLASSES.map((c) => (
+          <p key={c.key} className="flex items-center justify-between gap-4">
+            <span className="inline-flex items-center gap-1.5">
+              <span
+                className="inline-block size-2 rounded-full"
+                style={{ backgroundColor: c.color }}
+              />
+              {c.label}
+            </span>
+            <span className="font-figure">{point[c.key].toFixed(1)}%</span>
+          </p>
+        ))}
+      </div>
+    </div>
+  );
+}

@@ -215,6 +215,42 @@ export type Database = {
         };
         Relationships: [];
       };
+      net_worth_history: {
+        Row: {
+          bonds_eur: number;
+          cash_eur: number;
+          created_at: string;
+          crypto_eur: number;
+          liabilities_eur: number;
+          snapshot_date: string;
+          stocks_eur: number;
+          total_eur: number;
+          user_id: string;
+        };
+        Insert: {
+          bonds_eur?: number;
+          cash_eur?: number;
+          created_at?: string;
+          crypto_eur?: number;
+          liabilities_eur?: number;
+          snapshot_date: string;
+          stocks_eur?: number;
+          total_eur: number;
+          user_id: string;
+        };
+        Update: {
+          bonds_eur?: number;
+          cash_eur?: number;
+          created_at?: string;
+          crypto_eur?: number;
+          liabilities_eur?: number;
+          snapshot_date?: string;
+          stocks_eur?: number;
+          total_eur?: number;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
       net_worth_snapshots: {
         Row: {
           account_uid: string | null;
