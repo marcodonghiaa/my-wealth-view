@@ -34,6 +34,10 @@ bun run dev
 
 Set your own `.env`: in a browser on a self-hosted domain the app throws rather than silently connecting to the maintainer's Supabase project.
 
+## Deploy on Vercel
+
+Import the repo in Vercel (framework: Other, defaults for build). Vercel sets `VERCEL=1`, which switches the Nitro preset to `vercel` in `vite.config.ts`. Add `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY` (and `VITE_VAPID_PUBLIC_KEY` for push) as environment variables, then add the Vercel domain under Supabase → Authentication → URL Configuration so login redirects work. Every merge to `main` deploys; every PR gets a preview URL.
+
 ## Scripts
 
 `bun run dev` · `bun run build` · `bun run test` · `bun run lint` · `bun run format`
