@@ -15,8 +15,8 @@ import { ArrowDownRight, ArrowUpRight } from "lucide-react";
 import { trendSummary } from "@/lib/chart-summary";
 import { supabase } from "@/integrations/supabase/client";
 import { SegmentedControl } from "@/components/segmented-control";
-import { axisDateFormatter } from "@/lib/date";
-import { periodBaseline } from "@/lib/net-worth";
+import { axisDateFormatter, formatISODate } from "@/lib/date";
+import { chartPoints, periodBaseline, withHistory, type HistoryRow } from "@/lib/net-worth";
 import { TONE_PILL, toneOf } from "@/lib/tone";
 
 export type NetWorthSnapshot = {
@@ -34,9 +34,9 @@ export type FxRate = { date: string; currency: string; rate_to_eur: number };
 // window that would stay empty for the first year of usage).
 const TREND_WINDOW_DAYS = 365;
 
-function withTrend(
-  snapshots: Array<NetWorthSnapshot>,
-): Array<NetWorthSnapshot & { trend_eur: number | null }> {
+function withTrend<T extends NetWorthSnapshot>(
+  snapshots: Array<T>,
+): Array<T & { trend_eur: number | null }> {
   const window = Math.min(TREND_WINDOW_DAYS, Math.max(1, Math.floor(snapshots.length / 3)));
   return snapshots.map((row, i) => {
     const slice = snapshots.slice(Math.max(0, i + 1 - window), i + 1);
@@ -77,6 +77,15 @@ async function fetchNetWorth(): Promise<Array<NetWorthSnapshot>> {
   return (data ?? []) as Array<NetWorthSnapshot>;
 }
 
+async function fetchHistory(): Promise<Array<HistoryRow>> {
+  const { data, error } = await supabase
+    .from("net_worth_history")
+    .select("snapshot_date,stocks_eur,bonds_eur,crypto_eur,cash_eur,liabilities_eur,total_eur")
+    .order("snapshot_date", { ascending: true });
+  if (error) throw error;
+  return (data ?? []) as Array<HistoryRow>;
+}
+
 async function fetchLatestFxRates(): Promise<Record<string, FxRate>> {
   // Latest fx_rates row per non-EUR currency.
   const { data, error } = await supabase
@@ -107,6 +116,8 @@ export function NetWorthPage() {
     queryKey: ["net-worth-daily"],
     queryFn: fetchNetWorth,
   });
+  // Optional extra: absent table or empty history just means no pre-snapshot data.
+  const historyQuery = useQuery({ queryKey: ["net-worth-history"], queryFn: fetchHistory });
   const fxQuery = useQuery({
     queryKey: ["fx-rates-latest"],
     queryFn: fetchLatestFxRates,
@@ -114,7 +125,11 @@ export function NetWorthPage() {
   });
 
   const snapshots = useMemo(() => netWorthQuery.data ?? [], [netWorthQuery.data]);
-  const chartData = useMemo(() => withTrend(snapshots), [snapshots]);
+  const chartData = useMemo(
+    () => withTrend(chartPoints(withHistory(historyQuery.data ?? [], snapshots))),
+    [historyQuery.data, snapshots],
+  );
+  const chartFirst = chartData.at(0);
   const latest = snapshots.at(-1);
   const previous = snapshots.at(-2);
 
@@ -222,14 +237,21 @@ export function NetWorthPage() {
             <LegendDot color="var(--color-chart-2)" label="Portfolio" />
             <LegendDot color="var(--color-chart-3)" label="Crypto" />
             <LegendDot color="var(--color-foreground)" label="Trend" dashed />
+            {chartData.some((p) => p.estimated_eur != null) && (
+              <LegendDot
+                color="var(--color-muted-foreground)"
+                label="No data (straight line)"
+                dashed
+              />
+            )}
           </div>
         </div>
         <div
           className="h-80 w-full"
           role="img"
           aria-label={
-            first && latest
-              ? trendSummary("Net worth over time", first.total_eur, latest.total_eur, (v) =>
+            chartFirst && latest
+              ? trendSummary("Net worth over time", chartFirst.total_eur, latest.total_eur, (v) =>
                   formatMoney(v, "EUR"),
                 )
               : "Net worth over time"
@@ -250,8 +272,16 @@ export function NetWorthPage() {
                   vertical={false}
                 />
                 <XAxis
-                  dataKey="snapshot_date"
-                  tickFormatter={axisDateFormatter(first?.snapshot_date, latest?.snapshot_date)}
+                  dataKey="ts"
+                  type="number"
+                  scale="time"
+                  domain={["dataMin", "dataMax"]}
+                  tickFormatter={(ts: number) =>
+                    axisDateFormatter(
+                      chartFirst?.snapshot_date,
+                      latest?.snapshot_date,
+                    )(formatISODate(new Date(ts)))
+                  }
                   tick={{
                     fill: "var(--color-muted-foreground)",
                     fontSize: 11,
@@ -311,6 +341,17 @@ export function NetWorthPage() {
                   fill="var(--color-chart-3)"
                   fillOpacity={0.55}
                   dot={false}
+                />
+                <Line
+                  type="linear"
+                  dataKey="estimated_eur"
+                  name="Estimate"
+                  stroke="var(--color-muted-foreground)"
+                  strokeWidth={1.5}
+                  strokeDasharray="2 4"
+                  dot={false}
+                  activeDot={false}
+                  connectNulls
                 />
                 <Line
                   type="monotone"
@@ -384,15 +425,15 @@ function NetWorthTooltip({
 }: {
   active?: boolean;
   payload?: Array<TooltipEntry>;
-  label?: string;
+  label?: number;
 }) {
-  if (!active || !payload?.length || !label) return null;
+  if (!active || !payload?.length || label == null) return null;
   const point = payload.at(0)?.payload;
   if (!point) return null;
   return (
     <div className="rounded-lg border bg-popover px-3 py-2 shadow-lg">
       <p className="text-xs text-muted-foreground">
-        {new Date(`${label}T00:00:00`).toLocaleDateString("en-GB", {
+        {new Date(label).toLocaleDateString("en-GB", {
           day: "numeric",
           month: "short",
           year: "numeric",
