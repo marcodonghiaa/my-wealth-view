@@ -1,9 +1,11 @@
-// Snapshots before this day hold only a fraction of today's net worth (investments were
-// added on 4 Sept 2026), so "change since the start" measured from them reads as +3000%.
-export const TRACKING_START = "2026-09-04";
+// Optional YYYY-MM-DD from which "change since the start" is measured. Set it when your first
+// snapshots only held part of your net worth (e.g. before investments were added), which would
+// otherwise read as a huge percentage. Unset: measure from the very first snapshot.
+export const NET_WORTH_START: string | undefined = import.meta.env["VITE_NET_WORTH_START"];
 
 export function periodBaseline<T extends { snapshot_date: string }>(
   snapshots: Array<T>,
+  start: string | undefined = NET_WORTH_START,
 ): T | undefined {
-  return snapshots.find((s) => s.snapshot_date >= TRACKING_START);
+  return start ? snapshots.find((s) => s.snapshot_date >= start) : snapshots.at(0);
 }
