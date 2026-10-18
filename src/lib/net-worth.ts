@@ -107,3 +107,31 @@ export function allocationSeries(history: Array<HistoryRow>): Array<AllocationPo
     ];
   });
 }
+
+// Latest vs the last row on or before targetIso. Null when that row is more than maxStaleDays
+// older than the target (a hole in the data, so the number would be misleading).
+export function changeOver(
+  rows: Array<{ snapshot_date: string; total_eur: number }>,
+  targetIso: string,
+  maxStaleDays = GAP_DAYS,
+): number | null {
+  const latest = rows.at(-1);
+  const base = rows.filter((r) => r.snapshot_date <= targetIso).at(-1);
+  if (!latest || !base || base.total_eur === 0) return null;
+  const stale =
+    (Date.parse(`${targetIso}T00:00:00`) - Date.parse(`${base.snapshot_date}T00:00:00`)) / DAY_MS;
+  if (stale > maxStaleDays) return null;
+  return latest.total_eur / base.total_eur - 1;
+}
+
+// Same day one month earlier, clamped to that month's last day (31 Mar -> 28 Feb).
+export function monthAgo(iso: string): string {
+  const [y = 0, m = 1, d = 1] = iso.split("-").map(Number);
+  const prevLast = new Date(Date.UTC(y, m - 1, 0));
+  const day = Math.min(d, prevLast.getUTCDate());
+  return `${prevLast.getUTCFullYear()}-${String(prevLast.getUTCMonth() + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
+export function yearStart(iso: string): string {
+  return `${Number(iso.slice(0, 4)) - 1}-12-31`;
+}

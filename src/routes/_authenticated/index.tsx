@@ -17,7 +17,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { AllocationChart } from "@/components/allocation-chart";
 import { SegmentedControl } from "@/components/segmented-control";
 import { axisDateFormatter, formatISODate } from "@/lib/date";
-import { chartPoints, periodBaseline, withHistory, type HistoryRow } from "@/lib/net-worth";
+import {
+  changeOver,
+  chartPoints,
+  monthAgo,
+  withHistory,
+  yearStart,
+  type HistoryRow,
+} from "@/lib/net-worth";
 import { TONE_PILL, toneOf } from "@/lib/tone";
 
 export type NetWorthSnapshot = {
@@ -147,14 +154,14 @@ export function NetWorthPage() {
       ? (latest.total_eur - previous.total_eur) / previous.total_eur
       : null;
 
-  const first = periodBaseline(snapshots);
-  const sinceLabel = first
-    ? `since ${new Date(`${first.snapshot_date}T00:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}`
-    : "all time";
-  const periodChange =
-    latest != null && first != null && first.total_eur !== 0
-      ? (latest.total_eur - first.total_eur) / first.total_eur
-      : null;
+  // Monthly and YTD read from the merged series so they reach back into imported history.
+  const series = useMemo(
+    () => withHistory(historyQuery.data ?? [], snapshots),
+    [historyQuery.data, snapshots],
+  );
+  const latestIso = series.at(-1)?.snapshot_date;
+  const monthChange = latestIso ? changeOver(series, monthAgo(latestIso)) : null;
+  const ytdChange = latestIso ? changeOver(series, yearStart(latestIso)) : null;
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-8 md:py-12">
@@ -224,8 +231,9 @@ export function NetWorthPage() {
         </div>
 
         <div className="mt-5 flex flex-wrap gap-3">
-          <ChangePill label="vs previous day" value={dayChange} />
-          <ChangePill label={sinceLabel} value={periodChange} />
+          <ChangePill label="daily" value={dayChange} />
+          <ChangePill label="monthly" value={monthChange} />
+          <ChangePill label="YTD" value={ytdChange} />
         </div>
       </section>
 
