@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const upsert = vi.fn(async () => ({ error: null }));
 vi.mock("@/integrations/supabase/client", () => ({
@@ -12,8 +12,10 @@ vi.mock("@/integrations/supabase/client", () => ({
 
 import { ImportWizard } from "./import-wizard";
 
+beforeEach(() => localStorage.clear());
+
 function setup() {
-  render(
+  return render(
     <QueryClientProvider client={new QueryClient()}>
       <ImportWizard />
     </QueryClientProvider>,
@@ -42,6 +44,17 @@ describe("ImportWizard", () => {
     fireEvent.click(await screen.findByRole("button", { name: /Import 1 rows/ }));
     fireEvent.click(await screen.findByRole("button", { name: /Undo this import/ }));
     await waitFor(() => expect(screen.queryByText(/Undo this import/)).toBeNull());
+  });
+
+  // protects=Undo is still there after leaving the page; fails_when=the last import is forgotten
+  it("offers Undo again after the page is reopened", async () => {
+    const first = setup();
+    upload("Month,Total\n2024-02,100\n");
+    fireEvent.click(await screen.findByRole("button", { name: /Import 1 rows/ }));
+    await screen.findByRole("button", { name: /Undo this import/ });
+    first.unmount();
+    setup();
+    expect(await screen.findByRole("button", { name: /Undo this import/ })).toBeTruthy();
   });
 
   it("rejects an oversized file without reading it", async () => {
