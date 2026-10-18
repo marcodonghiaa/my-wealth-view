@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { allocationSeries, chartPoints, periodBaseline, withHistory } from "./net-worth";
+import {
+  allocationSeries,
+  changeOver,
+  chartPoints,
+  monthAgo,
+  yearStart,
+  periodBaseline,
+  withHistory,
+} from "./net-worth";
 
 const snap = (snapshot_date: string, total_eur: number) => ({ snapshot_date, total_eur });
 
@@ -146,5 +154,36 @@ describe("allocationSeries", () => {
     expect(allocationSeries([h("2025-01-31", 1, 0, 0, 0)])[0]?.ts).toBe(
       Date.parse("2025-01-31T00:00:00"),
     );
+  });
+});
+
+describe("changeOver / period targets", () => {
+  const r = (d: string, t: number) => ({ snapshot_date: d, total_eur: t });
+
+  it("compares the latest row with the last row on or before the target", () => {
+    const rows = [r("2026-09-04", 100), r("2026-09-18", 110), r("2026-10-18", 120)];
+    expect(changeOver(rows, "2026-09-18")).toBeCloseTo(120 / 110 - 1);
+  });
+
+  it("is null when the nearest earlier row is too old to mean anything", () => {
+    expect(changeOver([r("2025-01-01", 100), r("2026-10-18", 120)], "2026-09-18")).toBeNull();
+  });
+
+  it("is null when nothing exists on or before the target", () => {
+    expect(changeOver([r("2026-10-01", 100), r("2026-10-18", 120)], "2026-09-18")).toBeNull();
+  });
+
+  it("is null for a zero base", () => {
+    expect(changeOver([r("2026-09-18", 0), r("2026-10-18", 5)], "2026-09-18")).toBeNull();
+  });
+
+  it("monthAgo clamps to the end of a shorter month", () => {
+    expect(monthAgo("2026-03-31")).toBe("2026-02-28");
+    expect(monthAgo("2026-10-18")).toBe("2026-09-18");
+    expect(monthAgo("2026-01-15")).toBe("2025-12-15");
+  });
+
+  it("yearStart is the last day of the previous year", () => {
+    expect(yearStart("2026-10-18")).toBe("2025-12-31");
   });
 });
