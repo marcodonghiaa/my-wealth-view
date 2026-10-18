@@ -6,7 +6,7 @@ import { SegmentedControl } from "@/components/segmented-control";
 import { supabase } from "@/integrations/supabase/client";
 import { runImport, undoImport, type ImportKind, type Writer } from "@/lib/import/commit";
 import { guessColumns, type Role } from "@/lib/import/guess-columns";
-import { parseCsv, type ParsedCsv } from "@/lib/import/parse-csv";
+import { MAX_CHARS, parseCsv, type ParsedCsv } from "@/lib/import/parse-csv";
 import { planNetWorth, planSpend } from "@/lib/import/plan";
 
 const KINDS: Array<{ value: ImportKind; label: string }> = [
@@ -60,6 +60,9 @@ export function ImportWizard() {
     setError(null);
     if (!file) return;
     try {
+      // Check the size before reading it all into memory.
+      if (file.size > MAX_CHARS)
+        throw new Error("The file is too large (limit is 2 MB). Is it the right file?");
       const parsed = parseCsv(await file.text());
       setCsv(parsed);
       setMapping(guessColumns(parsed.headers));
@@ -76,7 +79,7 @@ export function ImportWizard() {
       const { data, error: userError } = await supabase.auth.getUser();
       if (userError || !data.user) throw new Error("You are signed out. Sign in again.");
       const batchId = await runImport(supabase as unknown as Writer, kind, data.user.id, plan.rows);
-      return { batchId, count: plan.rows.length, kind, userId: data.user.id };
+      return { batchId, count: plan.rows.length, kind };
     },
     onSuccess: ({ batchId, count }) => {
       setDone({ batchId, count, kind });

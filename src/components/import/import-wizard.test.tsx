@@ -36,6 +36,24 @@ describe("ImportWizard", () => {
     expect(await screen.findByText(/Undo this import/)).toBeTruthy();
   });
 
+  it("removes the import when Undo is pressed", async () => {
+    setup();
+    upload("Month,Total\n2024-02,100\n");
+    fireEvent.click(await screen.findByRole("button", { name: /Import 1 rows/ }));
+    fireEvent.click(await screen.findByRole("button", { name: /Undo this import/ }));
+    await waitFor(() => expect(screen.queryByText(/Undo this import/)).toBeNull());
+  });
+
+  it("rejects an oversized file without reading it", async () => {
+    setup();
+    const big = new File(["x"], "big.csv", { type: "text/csv" });
+    Object.defineProperty(big, "size", { value: 3_000_000 });
+    fireEvent.change(document.querySelector("input[type=file]") as HTMLInputElement, {
+      target: { files: [big] },
+    });
+    expect((await screen.findByRole("alert")).textContent).toMatch(/too large/);
+  });
+
   it("shows a plain message for an empty file", async () => {
     setup();
     upload("   ");

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CHUNK_SIZE, runImport, undoImport, type Writer } from "./commit";
+import { runImport, undoImport, type Writer } from "./commit";
 
 interface Call {
   op: "upsert" | "delete";
@@ -69,26 +69,16 @@ describe("runImport", () => {
     });
   });
 
-  it("writes large imports in chunks", async () => {
-    const { writer, calls } = fakeWriter();
-    const rows = Array.from({ length: CHUNK_SIZE + 1 }, (_, i) => ({
-      month: "2024-02-01",
-      category: `c${i}`,
-      spend_eur: 1,
-    }));
-    await runImport(writer, "spend", "u1", rows);
-    expect(calls.map((c) => c.rows?.length)).toEqual([CHUNK_SIZE, 1]);
-  });
-
-  it("removes what it already wrote and throws when a chunk fails", async () => {
-    const { writer, calls } = fakeWriter(2);
-    const rows = Array.from({ length: CHUNK_SIZE + 1 }, (_, i) => ({
+  it("writes everything in one request, so a failure leaves nothing half-written", async () => {
+    const { writer, calls } = fakeWriter(1);
+    const rows = Array.from({ length: 1200 }, (_, i) => ({
       month: "2024-02-01",
       category: `c${i}`,
       spend_eur: 1,
     }));
     await expect(runImport(writer, "spend", "u1", rows)).rejects.toThrow("boom");
-    expect(calls.at(-1)).toMatchObject({ op: "delete", table: "spend_history" });
+    expect(calls).toHaveLength(1);
+    expect(calls[0]?.rows).toHaveLength(1200);
   });
 
   it("refuses an empty import", async () => {

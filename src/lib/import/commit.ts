@@ -15,11 +15,10 @@ const TARGETS: Record<ImportKind, { table: string; conflict: string }> = {
   spend: { table: "spend_history", conflict: "user_id,month,category" },
 };
 
-export const CHUNK_SIZE = 500;
-
 /**
  * Writes rows for one user, all tagged with a new batch id, replacing rows that share the same
- * key. Returns the batch id. If a chunk fails, the chunks already written are removed.
+ * key. Returns the batch id. One request, so it is all-or-nothing: parseCsv caps the file at
+ * 5000 rows, which fits a single request.
  */
 export async function runImport(
   writer: Writer,
@@ -31,16 +30,8 @@ export async function runImport(
   const { table, conflict } = TARGETS[kind];
   const batchId = crypto.randomUUID();
   const tagged = rows.map((row) => ({ ...row, user_id: userId, batch_id: batchId }));
-
-  for (let start = 0; start < tagged.length; start += CHUNK_SIZE) {
-    const { error } = await writer
-      .from(table)
-      .upsert(tagged.slice(start, start + CHUNK_SIZE), { onConflict: conflict });
-    if (error) {
-      await undoImport(writer, kind, userId, batchId).catch(() => undefined);
-      throw new Error(error.message);
-    }
-  }
+  const { error } = await writer.from(table).upsert(tagged, { onConflict: conflict });
+  if (error) throw new Error(error.message);
   return batchId;
 }
 
