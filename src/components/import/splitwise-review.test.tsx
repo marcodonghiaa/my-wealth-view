@@ -164,7 +164,14 @@ describe("SplitwiseReview", () => {
     expect(select.value).toBe("");
     expect(screen.getByText(/1 without a category/)).toBeTruthy();
     // protects=an unknown row cannot go unnoticed; fails_when=no alert is shown for it
-    expect((await screen.findByRole("alert")).textContent).toMatch(/1 expense was not recognised/);
+    const alert = (await screen.findByRole("alert")).textContent ?? "";
+    expect(alert).toMatch(/1 expense was not recognised/);
+    // protects=the user knows the AI fills the gap overnight; fails_when=text still says Uncategorized
+    expect(alert).toMatch(/AI will categorize it overnight/);
+    expect(alert).not.toMatch(/Uncategorized/);
+    expect(
+      screen.getByText(/1 without a category will be categorized by the AI overnight/),
+    ).toBeTruthy();
     fireEvent.change(select, { target: { value: "Others" } });
     await waitFor(() => expect(screen.queryByRole("alert")).toBeNull());
   });

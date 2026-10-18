@@ -293,8 +293,9 @@ export function SplitwiseReview({ rows, group }: { rows: Array<ClassifiedRow>; g
             {uncategorised === 1
               ? "1 expense was not recognised."
               : `${uncategorised} expenses were not recognised.`}{" "}
-            Choose a category for them (the highlighted ones, at the top), or pick Others. Left as
-            they are, they show as Uncategorized.
+            Choose a category for them (the highlighted ones, at the top), or pick Others. If you
+            leave them empty, the AI will categorize {uncategorised === 1 ? "it" : "them"}{" "}
+            overnight.
           </p>
         )}
         <CategoryTable
@@ -369,7 +370,8 @@ export function SplitwiseReview({ rows, group }: { rows: Array<ClassifiedRow>; g
         <p>
           {plan.shares.length} shares of expenses, {plan.links.length} bank transactions updated (
           {confirmed.length} ticked).
-          {uncategorised > 0 && ` ${uncategorised} without a category will show as Uncategorized.`}
+          {uncategorised > 0 &&
+            ` ${uncategorised} without a category will be categorized by the AI overnight.`}
         </p>
         {plan.problems.map((p, i) => (
           <p key={i} role="alert" className="mt-1 text-negative">
