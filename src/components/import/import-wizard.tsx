@@ -1,10 +1,18 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { SegmentedControl } from "@/components/segmented-control";
 import { supabase } from "@/integrations/supabase/client";
 import { runImport, undoImport, type ImportKind, type Writer } from "@/lib/import/commit";
+import {
+  browserStorage,
+  clearLastImport,
+  loadLastImport,
+  refreshKeys,
+  saveLastImport,
+  type LastImport,
+} from "@/lib/import/last-import";
 import { guessColumns, type Role } from "@/lib/import/guess-columns";
 import { MAX_CHARS, parseCsv, type ParsedCsv } from "@/lib/import/parse-csv";
 import { planNetWorth, planSpend } from "@/lib/import/plan";
@@ -46,9 +54,19 @@ export function ImportWizard() {
   const [csv, setCsv] = useState<ParsedCsv | null>(null);
   const [mapping, setMapping] = useState<Record<Role, number | null> | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [done, setDone] = useState<{ batchId: string; count: number; kind: ImportKind } | null>(
-    null,
-  );
+  const [userId, setUserId] = useState<string | null>(null);
+  const [last, setLast] = useState<LastImport | null>(null);
+
+  useEffect(() => {
+    void supabase.auth.getUser().then(({ data }) => setUserId(data.user?.id ?? null));
+  }, []);
+  // Undo survives leaving the page: the last import is remembered per user and kind.
+  useEffect(() => {
+    setLast(userId ? loadLastImport(browserStorage(), userId, kind) : null);
+  }, [userId, kind]);
+
+  const refresh = (k: ImportKind) =>
+    Promise.all(refreshKeys(k).map((queryKey) => queryClient.invalidateQueries({ queryKey })));
 
   const plan = useMemo(() => {
     if (!csv || !mapping) return null;
@@ -56,7 +74,6 @@ export function ImportWizard() {
   }, [csv, mapping, kind]);
 
   async function onFile(file: File | undefined) {
-    setDone(null);
     setError(null);
     if (!file) return;
     try {
@@ -79,11 +96,13 @@ export function ImportWizard() {
       const { data, error: userError } = await supabase.auth.getUser();
       if (userError || !data.user) throw new Error("You are signed out. Sign in again.");
       const batchId = await runImport(supabase as unknown as Writer, kind, data.user.id, plan.rows);
-      return { batchId, count: plan.rows.length, kind };
+      return { batchId, count: plan.rows.length, kind, userId: data.user.id };
     },
-    onSuccess: ({ batchId, count }) => {
-      setDone({ batchId, count, kind });
-      void queryClient.invalidateQueries();
+    onSuccess: ({ batchId, count, kind: importedKind, userId: owner }) => {
+      const entry = { batchId, count };
+      saveLastImport(browserStorage(), owner, importedKind, entry);
+      setLast(entry);
+      void refresh(importedKind);
       toast.success(`Imported ${count} rows`);
     },
     onError: (err) => toast.error(fileError(err)),
@@ -91,14 +110,13 @@ export function ImportWizard() {
 
   const undo = useMutation({
     mutationFn: async () => {
-      if (!done) return;
-      const { data } = await supabase.auth.getUser();
-      if (!data.user) throw new Error("You are signed out. Sign in again.");
-      await undoImport(supabase as unknown as Writer, done.kind, data.user.id, done.batchId);
+      if (!last || !userId) return;
+      await undoImport(supabase as unknown as Writer, kind, userId, last.batchId);
     },
     onSuccess: () => {
-      setDone(null);
-      void queryClient.invalidateQueries();
+      if (userId) clearLastImport(browserStorage(), userId, kind);
+      setLast(null);
+      void refresh(kind);
       toast.success("Import removed");
     },
     onError: (err) => toast.error(fileError(err)),
@@ -113,10 +131,7 @@ export function ImportWizard() {
         label="What are you importing?"
         options={KINDS}
         value={kind}
-        onChange={(value) => {
-          setKind(value);
-          setDone(null);
-        }}
+        onChange={setKind}
       />
 
       <div className="rounded-2xl border bg-card p-5 card-ring">
@@ -211,7 +226,7 @@ export function ImportWizard() {
           <button
             type="button"
             className={BUTTON}
-            disabled={plan.rows.length === 0 || importRows.isPending || done !== null}
+            disabled={plan.rows.length === 0 || importRows.isPending}
             onClick={() => importRows.mutate()}
           >
             {importRows.isPending && <Loader2 className="size-4 animate-spin" />}
@@ -220,9 +235,10 @@ export function ImportWizard() {
         </div>
       )}
 
-      {done && (
+      {last && (
         <div role="status" className="rounded-2xl border bg-card p-5 text-sm card-ring">
-          Imported {done.count} rows. Undo removes them, but values they replaced are not restored.
+          Last import: {last.count} rows. Undo removes them, but values they replaced are not
+          restored.
           <div className="mt-3">
             <button
               type="button"
