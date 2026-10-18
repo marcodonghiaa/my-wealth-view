@@ -42,11 +42,11 @@ export function SplitEditor({
           className="-m-2 inline-flex min-h-11 cursor-pointer items-center p-2 disabled:opacity-60"
         >
           {isSplit ? (
-            <span className="inline-flex rounded-full border border-primary/25 bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary transition-colors hover:bg-primary/20">
+            <span className="inline-flex min-w-24 justify-center rounded-full border border-primary/25 bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary transition-colors hover:bg-primary/20">
               Split · owed {formatMoney(owed, tx.currency ?? "EUR")}
             </span>
           ) : (
-            <span className="inline-flex rounded-full border border-dashed px-2.5 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-accent">
+            <span className="inline-flex min-w-24 justify-center rounded-full border border-dashed px-2.5 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-accent">
               Split…
             </span>
           )}

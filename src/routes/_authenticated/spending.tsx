@@ -13,6 +13,7 @@ import {
 } from "recharts";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { shareSummary } from "@/lib/chart-summary";
+import { CategoryRow } from "@/components/spending/category-row";
 import { supabase } from "@/integrations/supabase/client";
 import { formatISODate } from "@/lib/date";
 
@@ -250,13 +251,12 @@ export function SpendingPage() {
           <section className="overflow-hidden rounded-2xl border bg-card card-ring">
             <ul className="divide-y">
               {rows.map((row) => (
-                <li
+                <CategoryRow
                   key={row.category}
-                  className="flex items-center justify-between px-4 py-3 text-sm sm:px-5"
-                >
-                  <span className="font-medium text-foreground">{row.category}</span>
-                  <span className="font-figure text-foreground">{formatEur(row.spend_eur)}</span>
-                </li>
+                  category={row.category}
+                  total={row.spend_eur}
+                  month={month}
+                />
               ))}
               <li className="flex items-center justify-between border-t px-4 py-3 text-sm font-semibold sm:px-5">
                 <span className="text-foreground">Total</span>

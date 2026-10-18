@@ -16,6 +16,7 @@ import { trendSummary } from "@/lib/chart-summary";
 import { supabase } from "@/integrations/supabase/client";
 import { SegmentedControl } from "@/components/segmented-control";
 import { axisDateFormatter } from "@/lib/date";
+import { periodBaseline } from "@/lib/net-worth";
 import { TONE_PILL, toneOf } from "@/lib/tone";
 
 export type NetWorthSnapshot = {
@@ -130,7 +131,7 @@ export function NetWorthPage() {
       ? (latest.total_eur - previous.total_eur) / previous.total_eur
       : null;
 
-  const first = snapshots.at(0);
+  const first = periodBaseline(snapshots);
   const sinceLabel = first
     ? `since ${new Date(`${first.snapshot_date}T00:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}`
     : "all time";

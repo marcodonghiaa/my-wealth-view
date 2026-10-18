@@ -7,6 +7,7 @@ import {
   formatMoney,
   isWorthItEligible,
   listCategories,
+  nameRefunds,
   nativeSignedAmount,
   startOfMonth,
   type TransactionRow,
@@ -28,6 +29,7 @@ const tx = (over: Partial<TransactionRow> = {}): TransactionRow => ({
   personal_amount: null,
   owed_by: null,
   flow_type: "spend",
+  refund_of: null,
   ...over,
 });
 
@@ -156,5 +158,35 @@ describe("filterTransactions", () => {
 
   it("treats a missing merchant as empty text", () => {
     expect(refs(filterTransactions(rows, "zzz", "all"))).toEqual([]);
+  });
+});
+
+describe("nameRefunds", () => {
+  it("names a nameless refund after the charge it reverses", () => {
+    const charge = tx({ entry_reference: "c1", creditor_name: "Tweethuntr" });
+    const refund = tx({
+      entry_reference: "r1",
+      creditor_name: null,
+      flow_type: "refunded",
+      refund_of: "c1",
+      credit_debit_indicator: "CRDT",
+    });
+    expect(nameRefunds([charge, refund]).map((r) => r.creditor_name)).toEqual([
+      "Tweethuntr",
+      "Refund: Tweethuntr",
+    ]);
+  });
+
+  it("falls back to a plain label when the charge is not in the list", () => {
+    const refund = tx({ creditor_name: null, flow_type: "refunded", refund_of: "gone" });
+    expect(nameRefunds([refund])[0]!.creditor_name).toBe("Refund");
+  });
+
+  it("leaves named and non-refund rows alone", () => {
+    const rows = [
+      tx(),
+      tx({ entry_reference: "r2", creditor_name: "Shop", flow_type: "refunded", refund_of: "x" }),
+    ];
+    expect(nameRefunds(rows)).toEqual(rows);
   });
 });
