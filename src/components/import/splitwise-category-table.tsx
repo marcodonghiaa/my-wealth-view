@@ -48,7 +48,7 @@ export function CategoryTable({
               aria-label={`Category for ${r.description.trim()}`}
               value={category ?? ""}
               onChange={(e) => onPick(r.row, e.target.value === "" ? null : e.target.value)}
-              className="rounded-lg border bg-background px-2 py-1 text-base focus:ring-2 focus:ring-ring focus:outline-none"
+              className={`rounded-lg border bg-background px-2 py-1 text-base focus:ring-2 focus:ring-ring focus:outline-none ${category === null ? "border-amber-500" : ""}`}
             >
               <option value="">Choose…</option>
               {CATEGORIES.map((c) => (

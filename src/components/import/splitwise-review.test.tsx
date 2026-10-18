@@ -163,6 +163,10 @@ describe("SplitwiseReview", () => {
     const select = (await screen.findByLabelText("Category for zzz qq")) as HTMLSelectElement;
     expect(select.value).toBe("");
     expect(screen.getByText(/1 without a category/)).toBeTruthy();
+    // protects=an unknown row cannot go unnoticed; fails_when=no alert is shown for it
+    expect((await screen.findByRole("alert")).textContent).toMatch(/1 expense was not recognised/);
+    fireEvent.change(select, { target: { value: "Others" } });
+    await waitFor(() => expect(screen.queryByRole("alert")).toBeNull());
   });
 
   // protects=a correction can become a rule for next time; fails_when=the rule is not saved with

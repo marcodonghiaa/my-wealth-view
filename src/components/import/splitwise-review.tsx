@@ -285,6 +285,18 @@ export function SplitwiseReview({ rows, group }: { rows: Array<ClassifiedRow>; g
           Read from your rules and the description. Rows nobody recognised are first: choose a
           category for them. After a change you can save it as a rule for next time.
         </p>
+        {uncategorised > 0 && (
+          <p
+            role="alert"
+            className="mb-3 rounded-lg border border-amber-500/50 bg-amber-500/10 px-3 py-2 text-foreground"
+          >
+            {uncategorised === 1
+              ? "1 expense was not recognised."
+              : `${uncategorised} expenses were not recognised.`}{" "}
+            Choose a category for them (the highlighted ones, at the top), or pick Others. Left as
+            they are, they show as Uncategorized.
+          </p>
+        )}
         <CategoryTable
           rows={categorised}
           categoryOf={categoryOf}
