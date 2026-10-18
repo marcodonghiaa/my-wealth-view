@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { CATEGORIES } from "@/lib/categories";
+import { CategoryTable } from "@/components/import/splitwise-category-table";
 import type { ClassifiedRow } from "@/lib/import/splitwise-classify";
 import {
   browserStorage,
@@ -19,13 +19,8 @@ import {
 } from "@/lib/import/splitwise-commit";
 import { fingerprintRows, matchBank, type BankTx } from "@/lib/import/splitwise-match";
 import { planWrite } from "@/lib/import/splitwise-plan";
-import {
-  categoryChoices,
-  defaultSelection,
-  makeRate,
-  toBankTx,
-  type FxRow,
-} from "@/lib/import/splitwise-review";
+import { categorizeRow, ruleTextFor, type UserRule } from "@/lib/import/splitwise-categorize";
+import { defaultSelection, makeRate, toBankTx, type FxRow } from "@/lib/import/splitwise-review";
 
 // Bank rows are read from 30 days before the first expense (late-entered ones) to a week after
 // the last one. The database returns at most 1000 rows per call, so more than that is refused.
@@ -44,6 +39,7 @@ interface Loaded {
   bank: Array<BankTx>;
   fx: Array<FxRow>;
   existing: Map<string, { accountUid: string; entryReference: string }>;
+  rules: Array<UserRule>;
 }
 
 async function load(rows: Array<ClassifiedRow>, group: string): Promise<Loaded> {
@@ -52,7 +48,7 @@ async function load(rows: Array<ClassifiedRow>, group: string): Promise<Loaded> 
   const last = dates[dates.length - 1] ?? "";
   const currencies = [...new Set(rows.map((r) => r.currency))].filter((c) => c !== "EUR");
 
-  const [bank, fx, existing] = await Promise.all([
+  const [bank, fx, existing, rules] = await Promise.all([
     supabase
       .from("transactions")
       .select(
@@ -74,9 +70,13 @@ async function load(rows: Array<ClassifiedRow>, group: string): Promise<Loaded> 
       .from("splitwise_expenses")
       .select("fingerprint, linked_account_uid, linked_entry_reference")
       .eq("group_name", group),
+    supabase
+      .from("category_rules")
+      .select("match_text, set_category, priority")
+      .order("priority", { ascending: true }),
   ]);
 
-  const failed = bank.error ?? fx.error ?? existing.error;
+  const failed = bank.error ?? fx.error ?? existing.error ?? rules.error;
   if (failed) throw new Error(failed.message);
   if ((bank.data ?? []).length >= PAGE_LIMIT || (fx.data ?? []).length >= PAGE_LIMIT) {
     throw new Error("Too many bank transactions in these dates to review safely.");
@@ -84,6 +84,7 @@ async function load(rows: Array<ClassifiedRow>, group: string): Promise<Loaded> 
   return {
     bank: (bank.data ?? []).flatMap((r) => toBankTx(r) ?? []),
     fx: fx.data ?? [],
+    rules: rules.data ?? [],
     existing: new Map(
       (existing.data ?? []).flatMap((e) =>
         e.linked_account_uid && e.linked_entry_reference
@@ -102,7 +103,10 @@ async function load(rows: Array<ClassifiedRow>, group: string): Promise<Loaded> 
 export function SplitwiseReview({ rows, group }: { rows: Array<ClassifiedRow>; group: string }) {
   const [loaded, setLoaded] = useState<Loaded | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [overrides, setOverrides] = useState<Record<string, string>>({});
+  // Category changes made by hand (null = cleared), and rules saved during this review.
+  const [picked, setPicked] = useState<Map<number, string | null>>(new Map());
+  const [extraRules, setExtraRules] = useState<Array<UserRule>>([]);
+  const [remembered, setRemembered] = useState<Set<number>>(new Set());
   // What the user changed by hand; everything else follows the default (sure matches ticked).
   const [manualTicks, setChoices] = useState<Map<number, boolean>>(new Map());
   const [includeUnmatched, setIncludeUnmatched] = useState(false);
@@ -141,8 +145,16 @@ export function SplitwiseReview({ rows, group }: { rows: Array<ClassifiedRow>; g
   const fingerprints = useMemo(() => fingerprintRows(rows), [rows]);
   const rate = useMemo(() => makeRate(loaded?.fx ?? []), [loaded]);
   const matches = useMemo(
-    () => (loaded ? matchBank(rows, loaded.bank, rate) : []),
-    [loaded, rows, rate],
+    () =>
+      // An expense linked by an earlier import keeps that link: it is not matched again.
+      loaded
+        ? matchBank(
+            rows.filter((_, i) => !loaded.existing.has(fingerprints[i] ?? "")),
+            loaded.bank,
+            rate,
+          )
+        : [],
+    [loaded, rows, fingerprints, rate],
   );
   const ticked = useMemo(() => {
     const picked = defaultSelection(matches);
@@ -153,7 +165,26 @@ export function SplitwiseReview({ rows, group }: { rows: Array<ClassifiedRow>; g
     return picked;
   }, [matches, manualTicks]);
 
-  const choices = useMemo(() => categoryChoices(rows), [rows]);
+  // Only expenses that become a share need a category.
+  const categorised = useMemo(
+    () =>
+      rows.filter(
+        (r) => (r.kind === "paid_by_other" || r.kind === "paid_by_me") && (r.shareCents ?? 0) > 0,
+      ),
+    [rows],
+  );
+  const rules = useMemo(() => [...(loaded?.rules ?? []), ...extraRules], [loaded, extraRules]);
+  const categoryOf = useMemo(
+    () =>
+      new Map(
+        categorised.map((r) => [
+          r.row,
+          picked.has(r.row) ? (picked.get(r.row) ?? null) : categorizeRow(r, rules).category,
+        ]),
+      ),
+    [categorised, picked, rules],
+  );
+  const uncategorised = [...categoryOf.values()].filter((c) => c === null).length;
 
   const confirmed = matches.filter((m) => ticked.has(m.row));
   const plan = useMemo(
@@ -166,26 +197,33 @@ export function SplitwiseReview({ rows, group }: { rows: Array<ClassifiedRow>; g
             confirmed: matches.filter((m) => ticked.has(m.row)),
             existingLinks: loaded.existing,
             includeUnmatchedPaidByMe: includeUnmatched,
-            categoryFor: (row) =>
-              overrides[row.category] ??
-              choices.find((c) => c.source === row.category)?.suggested ??
-              "Others",
+            categoryFor: (row) => categoryOf.get(row.row) ?? null,
             rate,
           })
         : null,
-    [
-      loaded,
-      group,
-      rows,
-      fingerprints,
-      matches,
-      ticked,
-      includeUnmatched,
-      overrides,
-      choices,
-      rate,
-    ],
+    [loaded, group, rows, fingerprints, matches, ticked, includeUnmatched, categoryOf, rate],
   );
+
+  const rememberRule = useMutation({
+    mutationFn: async ({ row, category }: { row: ClassifiedRow; category: string }) => {
+      if (!userId) throw new Error("You are signed out. Sign in again.");
+      const rule = {
+        match_text: ruleTextFor(row.description),
+        set_category: category,
+        priority: 100,
+      };
+      const { error } = await supabase
+        .from("category_rules")
+        .insert({ ...rule, match_field: "any", user_id: userId });
+      if (error) throw new Error(error.message);
+      return { row: row.row, rule };
+    },
+    onSuccess: ({ row, rule }) => {
+      setExtraRules([...extraRules, rule]);
+      setRemembered(new Set(remembered).add(row));
+      void queryClient.invalidateQueries({ queryKey: ["category-rules"] });
+    },
+  });
 
   const importShares = useMutation({
     mutationFn: async () => {
@@ -242,25 +280,25 @@ export function SplitwiseReview({ rows, group }: { rows: Array<ClassifiedRow>; g
   return (
     <div className="space-y-6">
       <div className="rounded-2xl border bg-card p-5 text-sm card-ring">
-        <h2 className="mb-2 font-semibold">Categories</h2>
-        <div className="grid gap-3 sm:grid-cols-2">
-          {choices.map((c) => (
-            <label key={c.source} className="block">
-              <span className="mb-1 block text-muted-foreground">{c.source}</span>
-              <select
-                value={overrides[c.source] ?? c.suggested}
-                onChange={(e) => setOverrides({ ...overrides, [c.source]: e.target.value })}
-                className="w-full rounded-lg border bg-background px-3 py-2 text-base focus:ring-2 focus:ring-ring focus:outline-none"
-              >
-                {CATEGORIES.map((cat) => (
-                  <option key={cat} value={cat}>
-                    {cat}
-                  </option>
-                ))}
-              </select>
-            </label>
-          ))}
-        </div>
+        <h2 className="mb-1 font-semibold">Categories</h2>
+        <p className="mb-3 text-muted-foreground">
+          Read from your rules and the description. Rows nobody recognised are first: choose a
+          category for them. After a change you can save it as a rule for next time.
+        </p>
+        <CategoryTable
+          rows={categorised}
+          categoryOf={categoryOf}
+          picked={picked}
+          remembered={remembered}
+          onPick={(row, category) => setPicked(new Map(picked).set(row, category))}
+          onRemember={(row, category) => rememberRule.mutate({ row, category })}
+          saving={rememberRule.isPending}
+        />
+        {rememberRule.error && (
+          <p role="alert" className="mt-2 text-negative">
+            Could not save the rule: {rememberRule.error.message}
+          </p>
+        )}
       </div>
 
       <div className="rounded-2xl border bg-card p-5 text-sm card-ring">
@@ -319,6 +357,7 @@ export function SplitwiseReview({ rows, group }: { rows: Array<ClassifiedRow>; g
         <p>
           {plan.shares.length} shares of expenses, {plan.links.length} bank transactions updated (
           {confirmed.length} ticked).
+          {uncategorised > 0 && ` ${uncategorised} without a category will show as Uncategorized.`}
         </p>
         {plan.problems.map((p, i) => (
           <p key={i} role="alert" className="mt-1 text-negative">

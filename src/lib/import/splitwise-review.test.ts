@@ -1,11 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  categoryChoices,
-  defaultSelection,
-  makeRate,
-  toBankTx,
-  type BankRowFromDb,
-} from "./splitwise-review";
+import { defaultSelection, makeRate, toBankTx, type BankRowFromDb } from "./splitwise-review";
 
 const dbRow = (over: Partial<BankRowFromDb> = {}): BankRowFromDb => ({
   account_uid: "acc",
@@ -59,20 +53,6 @@ describe("toBankTx", () => {
     expect(toBankTx(dbRow({ booking_date: null }))).toBeNull();
     expect(toBankTx(dbRow({ account_uid: null }))).toBeNull();
     expect(toBankTx(dbRow({ credit_debit_indicator: null }))).toBeNull();
-  });
-});
-
-describe("categoryChoices", () => {
-  it("lists each Splitwise category once with the app's suggestion", () => {
-    const rows = [
-      { category: "Dining out" },
-      { category: "Groceries" },
-      { category: "Dining out" },
-    ];
-    expect(categoryChoices(rows)).toEqual([
-      { source: "Dining out", suggested: "Dine Out" },
-      { source: "Groceries", suggested: "Groceries" },
-    ]);
   });
 });
 

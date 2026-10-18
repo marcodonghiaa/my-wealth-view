@@ -1,4 +1,3 @@
-import { suggestCategory, type AppCategory } from "./suggest-category";
 import type { BankMatch, BankTx, RateToEur } from "./splitwise-match";
 
 // Small pure helpers for the Splitwise review screen: they turn database rows into what the
@@ -53,17 +52,6 @@ export function makeRate(rows: Array<FxRow>): RateToEur {
     const before = list.filter((r) => r.date <= date);
     return before[before.length - 1]?.rate_to_eur ?? null;
   };
-}
-
-export interface CategoryChoice {
-  source: string;
-  suggested: AppCategory;
-}
-
-/** Each Splitwise category once, with the app category suggested for it. */
-export function categoryChoices(rows: Array<{ category: string }>): Array<CategoryChoice> {
-  const sources = [...new Set(rows.map((r) => r.category))];
-  return sources.map((source) => ({ source, suggested: suggestCategory(source) }));
 }
 
 /** Matches that start ticked: only the sure ones. Doubtful ones wait for the user. */

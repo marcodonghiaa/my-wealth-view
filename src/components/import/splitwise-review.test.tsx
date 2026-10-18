@@ -5,7 +5,13 @@ import { classifyRows } from "@/lib/import/splitwise-classify";
 import { parseSplitwiseCsv } from "@/lib/import/splitwise-parse";
 
 type Answer = { data: unknown[]; error: { message: string } | null };
-const tables: { transactions: Answer; fx_rates: Answer; splitwise_expenses: Answer } = {
+const tables: {
+  transactions: Answer;
+  fx_rates: Answer;
+  splitwise_expenses: Answer;
+  category_rules: Answer;
+} = {
+  category_rules: { data: [], error: null },
   transactions: { data: [], error: null },
   fx_rates: { data: [], error: null },
   splitwise_expenses: { data: [], error: null },
@@ -13,6 +19,7 @@ const tables: { transactions: Answer; fx_rates: Answer; splitwise_expenses: Answ
 
 // Every query method returns the same chain; awaiting it gives the table's canned answer.
 const rpc = vi.fn();
+const insertRule = vi.fn();
 
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
@@ -20,7 +27,12 @@ vi.mock("@/integrations/supabase/client", () => ({
     rpc: (...args: unknown[]) => rpc(...args),
     from: (table: string) => {
       const chain: { [method: string]: unknown } = {};
-      for (const m of ["select", "gte", "lte", "in", "limit", "eq"]) chain[m] = () => chain;
+      for (const m of ["select", "gte", "lte", "in", "limit", "eq", "order"])
+        chain[m] = () => chain;
+      chain["insert"] = (row: unknown) => {
+        insertRule(row);
+        return Promise.resolve({ error: null });
+      };
       chain["then"] = (resolve: (v: unknown) => unknown) =>
         resolve(tables[table as keyof typeof tables]);
       return chain;
@@ -69,6 +81,8 @@ beforeEach(() => {
     error: null,
   };
   tables.splitwise_expenses = { data: [], error: null };
+  tables.category_rules = { data: [], error: null };
+  insertRule.mockReset();
 });
 
 describe("SplitwiseReview", () => {
@@ -101,12 +115,73 @@ describe("SplitwiseReview", () => {
     expect(screen.getByText(/2 shares of expenses, 0 bank transactions updated/)).toBeTruthy();
   });
 
-  it("lets the category be changed", async () => {
+  // protects=each row gets its own category from its description; fails_when=rows are grouped by
+  // the Splitwise category again, or a user rule is ignored
+  it("shows a category for each row, read from its description", async () => {
     show();
-    const select = (await screen.findByLabelText("Dining out")) as HTMLSelectElement;
-    expect(select.value).toBe("Dine Out");
-    fireEvent.change(select, { target: { value: "Shopping" } });
-    expect(select.value).toBe("Shopping");
+    expect(((await screen.findByLabelText("Category for Dinner")) as HTMLSelectElement).value).toBe(
+      "Dine Out",
+    );
+    expect((screen.getByLabelText("Category for Taxi") as HTMLSelectElement).value).toBe(
+      "Transports",
+    );
+  });
+
+  it("applies the user's own rules before the built-in words", async () => {
+    tables.category_rules = {
+      data: [{ match_text: "dinner", set_category: "Housing", priority: 100 }],
+      error: null,
+    };
+    show();
+    expect(((await screen.findByLabelText("Category for Dinner")) as HTMLSelectElement).value).toBe(
+      "Housing",
+    );
+  });
+
+  it("lets a category be changed and sends the chosen one on Import", async () => {
+    show();
+    fireEvent.change(await screen.findByLabelText("Category for Dinner"), {
+      target: { value: "Shopping" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /^Import/ }));
+    await waitFor(() => expect(rpc).toHaveBeenCalledTimes(1));
+    const shares = (
+      rpc.mock.calls[0]?.[1] as { p_shares: Array<{ description: string; category: string }> }
+    ).p_shares;
+    expect(shares.find((s) => s.description === "Dinner")?.category).toBe("Shopping");
+  });
+
+  // protects=unknown rows are visible and counted; fails_when=they silently become Others
+  it("leaves an unrecognised row to choose and says how many", async () => {
+    const odd = CSV.replace("Dinner,Dining out", "zzz qq,General");
+    const oddRows = classifyRows(parseSplitwiseCsv(odd), 0);
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <SplitwiseReview rows={oddRows} group="berkeley" />
+      </QueryClientProvider>,
+    );
+    const select = (await screen.findByLabelText("Category for zzz qq")) as HTMLSelectElement;
+    expect(select.value).toBe("");
+    expect(screen.getByText(/1 without a category/)).toBeTruthy();
+  });
+
+  // protects=a correction can become a rule for next time; fails_when=the rule is not saved with
+  // the right text and category, or is offered for rows the user did not change
+  it("saves a correction as a rule for the description", async () => {
+    show();
+    expect(screen.queryByRole("button", { name: /Remember/ })).toBeNull();
+    fireEvent.change(await screen.findByLabelText("Category for Dinner"), {
+      target: { value: "Shopping" },
+    });
+    fireEvent.click(await screen.findByRole("button", { name: /Remember/ }));
+    await waitFor(() => expect(insertRule).toHaveBeenCalledTimes(1));
+    expect(insertRule.mock.calls[0]?.[0]).toMatchObject({
+      match_field: "any",
+      match_text: "dinner",
+      set_category: "Shopping",
+      user_id: "u1",
+    });
+    expect(await screen.findByText(/Rule saved/)).toBeTruthy();
   });
 
   it("shows a database error", async () => {
@@ -185,5 +260,23 @@ describe("SplitwiseReview", () => {
     const box = await screen.findByRole("checkbox", { name: /Also count the 1 expenses/ });
     fireEvent.click(box);
     expect(screen.getByText(/2 shares of expenses, 0 bank transactions updated/)).toBeTruthy();
+  });
+
+  // protects=a re-import keeps the link made the first time; fails_when=an already linked
+  // expense is matched again to another bank transaction
+  it("does not propose a new match for an expense that is already linked", async () => {
+    tables.splitwise_expenses = {
+      data: [
+        {
+          fingerprint: "2026-08-17|Taxi|2000|USD|1000#1",
+          linked_account_uid: "acc",
+          linked_entry_reference: "old",
+        },
+      ],
+      error: null,
+    };
+    show();
+    expect(await screen.findByText(/No matches found/)).toBeTruthy();
+    expect(screen.queryByRole("checkbox", { name: /Taxi/ })).toBeNull();
   });
 });
