@@ -176,4 +176,14 @@ describe("SplitwiseReview", () => {
     show();
     expect(await screen.findByRole("button", { name: /Undo this import/ })).toBeTruthy();
   });
+
+  // protects=the "not in your bank" count; fails_when=an expense whose match was unticked is not
+  // counted, though it is recorded when the box is ticked
+  it("counts an expense with an unticked match as not in the bank", async () => {
+    show();
+    fireEvent.click(await screen.findByRole("checkbox", { name: /Taxi/ }));
+    const box = await screen.findByRole("checkbox", { name: /Also count the 1 expenses/ });
+    fireEvent.click(box);
+    expect(screen.getByText(/2 shares of expenses, 0 bank transactions updated/)).toBeTruthy();
+  });
 });

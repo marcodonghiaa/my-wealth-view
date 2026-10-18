@@ -220,12 +220,13 @@ export function SplitwiseReview({ rows, group }: { rows: Array<ClassifiedRow>; g
   const bankByKey = new Map(
     (loaded?.bank ?? []).map((t) => [`${t.accountUid}|${t.entryReference}`, t]),
   );
-  const matchedRows = new Set(matches.map((m) => m.row));
+  // An unticked match is not a link, so that expense counts as not in the bank.
+  const linkedRows = new Set(confirmed.map((m) => m.row));
   const unmatched = rows.filter(
     (r, i) =>
       r.kind === "paid_by_me" &&
       (r.shareCents ?? 0) > 0 &&
-      !matchedRows.has(r.row) &&
+      !linkedRows.has(r.row) &&
       !loaded?.existing.has(fingerprints[i] ?? ""),
   );
 
