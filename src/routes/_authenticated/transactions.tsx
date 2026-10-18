@@ -9,6 +9,7 @@ import {
   Search,
   ThumbsDown,
   ThumbsUp,
+  Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -21,6 +22,7 @@ import {
 } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { AccountBadge, CurrencyBadge } from "@/components/bank-badge";
+import { RefundedBadge } from "@/components/refunded-badge";
 import { formatISODate } from "@/lib/date";
 import { CATEGORIES, TRANSACTION_TYPES } from "@/lib/categories";
 
@@ -59,6 +61,7 @@ interface TransactionRow {
   worth_it: string | null;
   personal_amount: number | null;
   owed_by: string | null;
+  flow_type: string | null;
 }
 
 // Mirrors the allowlist in the backend's notify-worth-it.js — kept in sync by hand,
@@ -95,11 +98,11 @@ async function fetchTransactionsForMonth(month: Date): Promise<Array<Transaction
   const { data, error } = await supabase
     .from("v_transactions_eur")
     .select(
-      "entry_reference,account_uid,booking_date,category,transaction_type,creditor_name,currency,amount,signed_amount_eur,credit_debit_indicator,created_at,worth_it,personal_amount,owed_by",
+      "entry_reference,account_uid,booking_date,category,transaction_type,creditor_name,currency,amount,signed_amount_eur,credit_debit_indicator,created_at,worth_it,personal_amount,owed_by,flow_type",
     )
     .gte("booking_date", start)
     .lt("booking_date", end)
-    .eq("flow_type", "spend")
+    .in("flow_type", ["spend", "refunded"])
     .neq("amount", 0)
     .order("booking_date", { ascending: false })
     .order("entry_reference", { ascending: false });
@@ -277,6 +280,39 @@ export function TransactionsPage() {
       toast.error("Couldn't update categories", {
         description: (error as Error).message,
       });
+    },
+  });
+
+  // Soft delete: the bank sync re-pulls recent history, so a hard delete would come back.
+  const setDeleted = useMutation({
+    mutationFn: async ({
+      entryReferences,
+      deleted,
+    }: {
+      entryReferences: Array<string>;
+      deleted: boolean;
+    }) => {
+      const { error } = await supabase
+        .from("transactions")
+        .update({ deleted_at: deleted ? new Date().toISOString() : null })
+        .in("entry_reference", entryReferences);
+      if (error) throw error;
+    },
+    onSuccess: (_data, vars) => {
+      void queryClient.invalidateQueries({ queryKey: ["transactions"] });
+      if (!vars.deleted) return;
+      setSelected(new Set());
+      const count = vars.entryReferences.length;
+      toast.success(`Deleted ${count} transaction${count === 1 ? "" : "s"}`, {
+        action: {
+          label: "Undo",
+          onClick: () =>
+            setDeleted.mutate({ entryReferences: vars.entryReferences, deleted: false }),
+        },
+      });
+    },
+    onError: (error) => {
+      toast.error("Couldn't update transactions", { description: error.message });
     },
   });
 
@@ -522,6 +558,17 @@ export function TransactionsPage() {
             }
             disabled={bulkUpdateCategory.isPending}
           />
+          <button
+            type="button"
+            onClick={() =>
+              setDeleted.mutate({ entryReferences: Array.from(selected), deleted: true })
+            }
+            disabled={setDeleted.isPending}
+            className="inline-flex min-h-11 items-center gap-1.5 rounded-lg px-3 text-sm font-medium text-negative transition-colors hover:bg-negative/10 disabled:opacity-50"
+          >
+            <Trash2 className="size-4" />
+            Delete
+          </button>
           <button
             type="button"
             onClick={() => setSelected(new Set())}
@@ -1058,6 +1105,7 @@ function TransactionRowView({
       </td>
       <td className="max-w-48 px-4 py-3">
         <div className="truncate font-medium text-foreground">{tx.creditor_name ?? "—"}</div>
+        <RefundedBadge flowType={tx.flow_type} />
         <WorthItPrompt tx={tx} onAnswer={onAnswerWorthIt} />
       </td>
       <td className="px-4 py-3">
@@ -1163,6 +1211,7 @@ function TransactionCardView({
             <AccountBadge label={accountLabel} />
           </p>
           <div className="mt-0.5">
+            <RefundedBadge flowType={tx.flow_type} />
             <WorthItPrompt tx={tx} onAnswer={onAnswerWorthIt} />
           </div>
         </div>

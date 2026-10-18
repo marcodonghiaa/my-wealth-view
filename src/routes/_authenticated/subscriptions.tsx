@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { ArrowDownLeft, Check, ChevronDown, Pencil, Repeat, Wallet } from "lucide-react";
+import { ArrowDownLeft, Check, ChevronDown, Pencil, Repeat, Trash2, Wallet } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -150,6 +150,44 @@ export function SubscriptionsPage() {
     },
   });
 
+  // Hides a merchant from this page without touching its transactions.
+  const dismissMutation = useMutation({
+    mutationFn: async ({
+      creditorName,
+      dismissed,
+    }: {
+      creditorName: string;
+      dismissed: boolean;
+    }) => {
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+      if (userError || !user) throw userError ?? new Error("Not signed in");
+      const { error } = await supabase
+        .from("subscription_billing_overrides")
+        .upsert(
+          { user_id: user.id, creditor_name: creditorName, dismissed },
+          { onConflict: "user_id,creditor_name" },
+        );
+      if (error) throw error;
+    },
+    onSuccess: (_data, vars) => {
+      void queryClient.invalidateQueries({ queryKey: ["subscriptions"] });
+      if (!vars.dismissed) return;
+      toast.success(`Removed ${vars.creditorName}`, {
+        action: {
+          label: "Undo",
+          onClick: () =>
+            dismissMutation.mutate({ creditorName: vars.creditorName, dismissed: false }),
+        },
+      });
+    },
+    onError: (error) => {
+      toast.error("Couldn't update subscription", { description: error.message });
+    },
+  });
+
   const subscriptions = query.data ?? [];
 
   const sorted = useMemo(
@@ -221,6 +259,10 @@ export function SubscriptionsPage() {
               <SubscriptionCard
                 key={sub.creditor_name}
                 sub={sub}
+                onDismiss={() => {
+                  if (!sub.creditor_name) return;
+                  dismissMutation.mutate({ creditorName: sub.creditor_name, dismissed: true });
+                }}
                 onSelectFrequency={(frequency) => {
                   if (!sub.creditor_name) return;
                   frequencyMutation.mutate({
@@ -250,10 +292,12 @@ export function SubscriptionsPage() {
 
 function SubscriptionCard({
   sub,
+  onDismiss,
   onSelectFrequency,
   onSelectCustom,
 }: {
   sub: SubscriptionRow;
+  onDismiss: () => void;
   onSelectFrequency: (frequency: string) => void;
   onSelectCustom: (value: number, unit: IntervalUnit) => void;
 }) {
@@ -275,11 +319,21 @@ function SubscriptionCard({
     <div className="rounded-2xl border bg-card p-5 card-ring">
       <div className="flex items-start justify-between gap-3">
         <h2 className="truncate font-medium text-foreground">{sub.creditor_name ?? "—"}</h2>
-        {sub.category ? (
-          <span className="inline-flex shrink-0 rounded-full border border-primary/25 bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
-            {sub.category}
-          </span>
-        ) : null}
+        <div className="flex shrink-0 items-center gap-1">
+          {sub.category ? (
+            <span className="inline-flex rounded-full border border-primary/25 bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
+              {sub.category}
+            </span>
+          ) : null}
+          <button
+            type="button"
+            onClick={onDismiss}
+            aria-label={`Remove ${sub.creditor_name ?? "subscription"}`}
+            className="-my-3 -mr-3 inline-flex size-11 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-negative focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+          >
+            <Trash2 className="size-4" />
+          </button>
+        </div>
       </div>
 
       {/* Monthly equivalent — the headline figure per card */}

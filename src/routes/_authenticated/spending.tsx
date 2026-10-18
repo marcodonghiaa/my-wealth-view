@@ -72,7 +72,8 @@ async function fetchRegretSpend(): Promise<Array<RegretGroup>> {
   const { data, error } = await supabase
     .from("transactions")
     .select("category,amount,personal_amount")
-    .eq("worth_it", "no");
+    .eq("worth_it", "no")
+    .is("deleted_at", null);
   if (error) throw error;
   const byCategory = new Map<string, RegretGroup>();
   for (const row of (data ?? []) as Array<RegretRow>) {

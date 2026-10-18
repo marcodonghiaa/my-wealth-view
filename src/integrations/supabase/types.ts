@@ -396,6 +396,7 @@ export type Database = {
           creditor_name: string;
           custom_interval_unit: string | null;
           custom_interval_value: number | null;
+          dismissed: boolean;
           user_id: string;
         };
         Insert: {
@@ -404,6 +405,7 @@ export type Database = {
           creditor_name: string;
           custom_interval_unit?: string | null;
           custom_interval_value?: number | null;
+          dismissed?: boolean;
           user_id: string;
         };
         Update: {
@@ -412,6 +414,7 @@ export type Database = {
           creditor_name?: string;
           custom_interval_unit?: string | null;
           custom_interval_value?: number | null;
+          dismissed?: boolean;
           user_id?: string;
         };
         Relationships: [];
@@ -429,6 +432,8 @@ export type Database = {
           currency: string;
           debtor_name: string | null;
           entry_reference: string;
+          deleted_at: string | null;
+          refund_of: string | null;
           flow_type: string | null;
           owed_by: string | null;
           owed_settled: boolean;
@@ -454,6 +459,8 @@ export type Database = {
           currency: string;
           debtor_name?: string | null;
           entry_reference: string;
+          deleted_at?: string | null;
+          refund_of?: string | null;
           flow_type?: string | null;
           owed_by?: string | null;
           owed_settled?: boolean;
@@ -479,6 +486,8 @@ export type Database = {
           currency?: string;
           debtor_name?: string | null;
           entry_reference?: string;
+          deleted_at?: string | null;
+          refund_of?: string | null;
           flow_type?: string | null;
           owed_by?: string | null;
           owed_settled?: boolean;
@@ -663,6 +672,7 @@ export type Database = {
           owed_settled: boolean | null;
           personal_amount: number | null;
           personal_signed_amount_eur: number | null;
+          refund_of: string | null;
           settled_at: string | null;
           signed_amount_eur: number | null;
           transaction_type: string | null;

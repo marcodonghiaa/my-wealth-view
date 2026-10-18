@@ -144,6 +144,7 @@ async function fetchWorthItForMonth(
     .from("transactions")
     .select("amount,personal_amount,worth_it")
     .not("worth_it", "is", null)
+    .is("deleted_at", null)
     .gte("booking_date", startISO)
     .lt("booking_date", endExclusiveISO);
   if (error) throw error;
