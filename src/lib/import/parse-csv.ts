@@ -15,7 +15,7 @@ export function parseCsv(text: string): ParsedCsv {
   if (text.length > MAX_CHARS) {
     throw new Error("The file is too large (limit is 2 MB). Is it the right file?");
   }
-  const clean = text.replace(/^﻿/, "");
+  const clean = text.replace(/^\uFEFF/, "");
   if (clean.trim() === "") throw new Error("The file is empty.");
 
   const result = Papa.parse<Array<string>>(clean, {
