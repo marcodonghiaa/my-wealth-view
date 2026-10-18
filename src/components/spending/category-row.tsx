@@ -76,6 +76,11 @@ export function CategoryRow({
           {txQuery.isError && (
             <li className="py-2 text-xs text-negative">Couldn't load transactions.</li>
           )}
+          {txQuery.data?.length === 0 && (
+            <li className="py-2 text-xs text-muted-foreground">
+              No individual transactions: this month's total was imported.
+            </li>
+          )}
           {txQuery.data?.map((tx) => (
             <li key={tx.entry_reference} className="flex items-center gap-3 py-2 text-[0.8125rem]">
               <span className="w-14 shrink-0 text-muted-foreground">
