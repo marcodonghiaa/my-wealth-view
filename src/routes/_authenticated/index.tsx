@@ -14,6 +14,7 @@ import {
 import { ArrowDownRight, ArrowUpRight } from "lucide-react";
 import { trendSummary } from "@/lib/chart-summary";
 import { supabase } from "@/integrations/supabase/client";
+import { AllocationChart } from "@/components/allocation-chart";
 import { SegmentedControl } from "@/components/segmented-control";
 import { axisDateFormatter, formatISODate } from "@/lib/date";
 import { chartPoints, periodBaseline, withHistory, type HistoryRow } from "@/lib/net-worth";
@@ -369,6 +370,8 @@ export function NetWorthPage() {
           )}
         </div>
       </section>
+
+      <AllocationChart history={historyQuery.data ?? []} />
     </div>
   );
 }

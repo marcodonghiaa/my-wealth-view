@@ -77,3 +77,33 @@ export function chartPoints<T extends NetWorthRow>(rows: Array<T>): Array<ChartP
   }
   return points;
 }
+
+export type AllocationPoint = {
+  snapshot_date: string;
+  ts: number;
+  stocks: number;
+  bonds: number;
+  crypto: number;
+  cash: number;
+};
+
+// Percent of gross assets per class. Liabilities (tax reserve) are left out so the mix describes
+// what you hold, not what you owe. Only imported history has the stocks/bonds split; live
+// snapshots lump them together as "portfolio".
+export function allocationSeries(history: Array<HistoryRow>): Array<AllocationPoint> {
+  return history.flatMap((h) => {
+    const gross = h.stocks_eur + h.bonds_eur + h.crypto_eur + h.cash_eur;
+    if (gross <= 0) return [];
+    const pct = (v: number) => (v / gross) * 100;
+    return [
+      {
+        snapshot_date: h.snapshot_date,
+        ts: Date.parse(`${h.snapshot_date}T00:00:00`),
+        stocks: pct(h.stocks_eur),
+        bonds: pct(h.bonds_eur),
+        crypto: pct(h.crypto_eur),
+        cash: pct(h.cash_eur),
+      },
+    ];
+  });
+}

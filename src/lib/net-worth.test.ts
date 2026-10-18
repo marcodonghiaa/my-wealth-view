@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { chartPoints, periodBaseline, withHistory } from "./net-worth";
+import { allocationSeries, chartPoints, periodBaseline, withHistory } from "./net-worth";
 
 const snap = (snapshot_date: string, total_eur: number) => ({ snapshot_date, total_eur });
 
@@ -95,5 +95,44 @@ describe("chartPoints", () => {
 
   it("adds a numeric time for the axis", () => {
     expect(chartPoints([row("2025-11-30", 1)])[0]?.ts).toBe(Date.parse("2025-11-30T00:00:00"));
+  });
+});
+
+describe("allocationSeries", () => {
+  const h = (d: string, s: number, b: number, c: number, cash: number, liab = 0) => ({
+    snapshot_date: d,
+    stocks_eur: s,
+    bonds_eur: b,
+    crypto_eur: c,
+    cash_eur: cash,
+    liabilities_eur: liab,
+    total_eur: s + b + c + cash - liab,
+  });
+
+  it("gives each class its share of gross assets, summing to 100", () => {
+    const [p] = allocationSeries([h("2025-01-31", 50, 25, 15, 10, 7)]);
+    expect(p).toMatchObject({
+      snapshot_date: "2025-01-31",
+      stocks: 50,
+      bonds: 25,
+      crypto: 15,
+      cash: 10,
+    });
+  });
+
+  it("ignores liabilities so shares do not depend on the tax reserve", () => {
+    const [a] = allocationSeries([h("2025-01-31", 50, 50, 0, 0, 0)]);
+    const [b] = allocationSeries([h("2025-01-31", 50, 50, 0, 0, 40)]);
+    expect(a).toEqual(b);
+  });
+
+  it("skips months with no assets instead of dividing by zero", () => {
+    expect(allocationSeries([h("2024-02-29", 0, 0, 0, 0)])).toEqual([]);
+  });
+
+  it("adds a numeric time for the axis", () => {
+    expect(allocationSeries([h("2025-01-31", 1, 0, 0, 0)])[0]?.ts).toBe(
+      Date.parse("2025-01-31T00:00:00"),
+    );
   });
 });
