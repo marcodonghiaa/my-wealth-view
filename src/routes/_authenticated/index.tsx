@@ -82,7 +82,9 @@ async function fetchNetWorth(): Promise<Array<NetWorthSnapshot>> {
 async function fetchHistory(): Promise<Array<HistoryRow>> {
   const { data, error } = await supabase
     .from("net_worth_history")
-    .select("snapshot_date,stocks_eur,bonds_eur,crypto_eur,cash_eur,liabilities_eur,total_eur")
+    .select(
+      "snapshot_date,stocks_eur,bonds_eur,crypto_eur,cash_eur,other_eur,liabilities_eur,total_eur",
+    )
     .order("snapshot_date", { ascending: true });
   if (error) throw error;
   return (data ?? []) as Array<HistoryRow>;

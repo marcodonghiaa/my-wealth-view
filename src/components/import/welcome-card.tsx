@@ -16,7 +16,7 @@ async function fetchWelcomeFacts() {
   if (accounts.error) throw accounts.error;
   return {
     accounts: accounts.count ?? 0,
-    dismissed: user.data.user?.user_metadata?.welcome_dismissed === true,
+    dismissed: user.data.user?.user_metadata?.["welcome_dismissed"] === true,
   };
 }
 
