@@ -14,6 +14,7 @@ export interface TransactionRow {
   personal_amount: number | null;
   owed_by: string | null;
   flow_type: string | null;
+  refund_of: string | null;
 }
 
 // A transaction's identity is the pair: the same reference can occur in two accounts.
@@ -26,6 +27,19 @@ export const isSameTx = (a: TxKey | undefined, b: TxKey): boolean => !!a && txId
 // Income rows have no merchant name when the bank sends none; never show a bare dash.
 export const incomeTitle = (tx: Pick<TransactionRow, "creditor_name" | "category">): string =>
   tx.creditor_name?.trim() || tx.category?.trim() || "Unlabelled income";
+
+// A card refund arrives without a merchant; name it after the charge it reverses so the
+// pair reads as two linked entries.
+export function nameRefunds(rows: Array<TransactionRow>): Array<TransactionRow> {
+  const byRef = new Map(rows.map((r) => [r.entry_reference, r]));
+  return rows.map((r) => {
+    if (r.flow_type !== "refunded" || r.creditor_name || !r.refund_of) {
+      return r.flow_type === "refunded" && !r.creditor_name ? { ...r, creditor_name: "Refund" } : r;
+    }
+    const original = byRef.get(r.refund_of)?.creditor_name;
+    return { ...r, creditor_name: original ? `Refund: ${original}` : "Refund" };
+  });
+}
 
 export interface AccountRow {
   uid: string;

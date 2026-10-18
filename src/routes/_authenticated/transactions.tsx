@@ -8,6 +8,7 @@ import {
   UNCATEGORIZED,
   filterTransactions,
   listCategories,
+  nameRefunds,
   startOfMonth,
   type AccountRow,
   type TransactionRow,
@@ -54,7 +55,7 @@ async function fetchTransactionsForMonth(month: Date): Promise<Array<Transaction
   const { data, error } = await supabase
     .from("v_transactions_eur")
     .select(
-      "entry_reference,account_uid,booking_date,category,transaction_type,creditor_name,currency,amount,signed_amount_eur,credit_debit_indicator,created_at,worth_it,personal_amount,owed_by,flow_type",
+      "entry_reference,account_uid,booking_date,category,transaction_type,creditor_name,currency,amount,signed_amount_eur,credit_debit_indicator,created_at,worth_it,personal_amount,owed_by,flow_type,refund_of",
     )
     .gte("booking_date", start)
     .lt("booking_date", end)
@@ -116,7 +117,7 @@ export function TransactionsPage() {
     staleTime: 60_000,
   });
 
-  const transactions = useMemo(() => txQuery.data ?? [], [txQuery.data]);
+  const transactions = useMemo(() => nameRefunds(txQuery.data ?? []), [txQuery.data]);
 
   // Arrived via a "worth it?" push: force fresh data (the cache may be stale
   // from before this notification's transaction existed) and jump to it.
@@ -366,7 +367,6 @@ export function TransactionsPage() {
                 <th className="px-4 py-3 font-medium">Type</th>
                 <th className="px-4 py-3 font-medium">Split</th>
                 <th className="px-4 py-3 font-medium">Account</th>
-                <th className="px-4 py-3 font-medium">Currency</th>
                 <th className="px-4 py-3 text-right font-medium">Amount</th>
               </tr>
             </thead>
@@ -374,14 +374,14 @@ export function TransactionsPage() {
               {txQuery.isPending ? (
                 Array.from({ length: 8 }).map((_, i) => (
                   <tr key={i} className="border-b last:border-0">
-                    <td colSpan={9} className="px-4 py-3">
+                    <td colSpan={8} className="px-4 py-3">
                       <div className="h-5 animate-pulse rounded bg-muted" />
                     </td>
                   </tr>
                 ))
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="px-4 py-12 text-center text-sm text-muted-foreground">
+                  <td colSpan={8} className="px-4 py-12 text-center text-sm text-muted-foreground">
                     {transactions.length === 0
                       ? `No transactions for ${monthLabel}.`
                       : "No transactions match your filters."}

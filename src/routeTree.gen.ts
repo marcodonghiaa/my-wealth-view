@@ -16,7 +16,6 @@ import { Route as AuthenticatedAccountsRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedCryptoRouteImport } from './routes/_authenticated/crypto'
 import { Route as AuthenticatedIncomeRouteImport } from './routes/_authenticated/income'
 import { Route as AuthenticatedIncomeExpensesRouteImport } from './routes/_authenticated/income-expenses'
-import { Route as AuthenticatedOwedRouteImport } from './routes/_authenticated/owed'
 import { Route as AuthenticatedPortfolioRouteImport } from './routes/_authenticated/portfolio'
 import { Route as AuthenticatedReportsRouteImport } from './routes/_authenticated/reports'
 import { Route as AuthenticatedRulesRouteImport } from './routes/_authenticated/rules'
@@ -59,11 +58,6 @@ const AuthenticatedIncomeExpensesRoute =
     path: '/income-expenses',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
-const AuthenticatedOwedRoute = AuthenticatedOwedRouteImport.update({
-  id: '/owed',
-  path: '/owed',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
 const AuthenticatedPortfolioRoute = AuthenticatedPortfolioRouteImport.update({
   id: '/portfolio',
   path: '/portfolio',
@@ -104,7 +98,6 @@ export interface FileRoutesByFullPath {
   '/crypto': typeof AuthenticatedCryptoRoute
   '/income': typeof AuthenticatedIncomeRoute
   '/income-expenses': typeof AuthenticatedIncomeExpensesRoute
-  '/owed': typeof AuthenticatedOwedRoute
   '/portfolio': typeof AuthenticatedPortfolioRoute
   '/reports': typeof AuthenticatedReportsRoute
   '/rules': typeof AuthenticatedRulesRoute
@@ -118,7 +111,6 @@ export interface FileRoutesByTo {
   '/crypto': typeof AuthenticatedCryptoRoute
   '/income': typeof AuthenticatedIncomeRoute
   '/income-expenses': typeof AuthenticatedIncomeExpensesRoute
-  '/owed': typeof AuthenticatedOwedRoute
   '/portfolio': typeof AuthenticatedPortfolioRoute
   '/reports': typeof AuthenticatedReportsRoute
   '/rules': typeof AuthenticatedRulesRoute
@@ -135,7 +127,6 @@ export interface FileRoutesById {
   '/_authenticated/crypto': typeof AuthenticatedCryptoRoute
   '/_authenticated/income': typeof AuthenticatedIncomeRoute
   '/_authenticated/income-expenses': typeof AuthenticatedIncomeExpensesRoute
-  '/_authenticated/owed': typeof AuthenticatedOwedRoute
   '/_authenticated/portfolio': typeof AuthenticatedPortfolioRoute
   '/_authenticated/reports': typeof AuthenticatedReportsRoute
   '/_authenticated/rules': typeof AuthenticatedRulesRoute
@@ -153,7 +144,6 @@ export interface FileRouteTypes {
     | '/crypto'
     | '/income'
     | '/income-expenses'
-    | '/owed'
     | '/portfolio'
     | '/reports'
     | '/rules'
@@ -167,7 +157,6 @@ export interface FileRouteTypes {
     | '/crypto'
     | '/income'
     | '/income-expenses'
-    | '/owed'
     | '/portfolio'
     | '/reports'
     | '/rules'
@@ -183,7 +172,6 @@ export interface FileRouteTypes {
     | '/_authenticated/crypto'
     | '/_authenticated/income'
     | '/_authenticated/income-expenses'
-    | '/_authenticated/owed'
     | '/_authenticated/portfolio'
     | '/_authenticated/reports'
     | '/_authenticated/rules'
@@ -249,13 +237,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedIncomeExpensesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/owed': {
-      id: '/_authenticated/owed'
-      path: '/owed'
-      fullPath: '/owed'
-      preLoaderRoute: typeof AuthenticatedOwedRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
     '/_authenticated/portfolio': {
       id: '/_authenticated/portfolio'
       path: '/portfolio'
@@ -306,7 +287,6 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedCryptoRoute: typeof AuthenticatedCryptoRoute
   AuthenticatedIncomeRoute: typeof AuthenticatedIncomeRoute
   AuthenticatedIncomeExpensesRoute: typeof AuthenticatedIncomeExpensesRoute
-  AuthenticatedOwedRoute: typeof AuthenticatedOwedRoute
   AuthenticatedPortfolioRoute: typeof AuthenticatedPortfolioRoute
   AuthenticatedReportsRoute: typeof AuthenticatedReportsRoute
   AuthenticatedRulesRoute: typeof AuthenticatedRulesRoute
@@ -321,7 +301,6 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedCryptoRoute: AuthenticatedCryptoRoute,
   AuthenticatedIncomeRoute: AuthenticatedIncomeRoute,
   AuthenticatedIncomeExpensesRoute: AuthenticatedIncomeExpensesRoute,
-  AuthenticatedOwedRoute: AuthenticatedOwedRoute,
   AuthenticatedPortfolioRoute: AuthenticatedPortfolioRoute,
   AuthenticatedReportsRoute: AuthenticatedReportsRoute,
   AuthenticatedRulesRoute: AuthenticatedRulesRoute,

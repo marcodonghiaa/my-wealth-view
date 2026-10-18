@@ -82,9 +82,6 @@ export function TransactionRowView({
       <td className="px-4 py-3">
         <AccountBadge label={accountLabel} />
       </td>
-      <td className="px-4 py-3">
-        <CurrencyBadge currency={currency} />
-      </td>
       <td className="px-4 py-3 text-right whitespace-nowrap">
         {native == null ? (
           <span className="text-muted-foreground">—</span>
@@ -95,6 +92,7 @@ export function TransactionRowView({
             }`}
           >
             {formatAmountPlain(native)}
+            <span className="text-xs font-normal text-muted-foreground">{currency}</span>
             {showEur && (
               <span className="ml-0.5 text-sm opacity-80">
                 ({formatMoney(eur as number, "EUR")})
