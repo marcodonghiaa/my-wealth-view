@@ -45,6 +45,7 @@ vi.mock("@/integrations/supabase/client", () => ({
 
 import {
   useBulkCategoryMutation,
+  useDeleteMutation,
   useSplitMutation,
   useTransactionFieldMutation,
 } from "./mutations";
@@ -65,6 +66,7 @@ const row = (account_uid: string, entry_reference: string): TransactionRow => ({
   worth_it: null,
   personal_amount: null,
   owed_by: null,
+  flow_type: "spend",
 });
 
 function setup() {
@@ -137,5 +139,33 @@ describe("transaction mutations are scoped to one account", () => {
       a2: { entry_reference: ["r2", "r3"] },
     });
     expect(cached().map((r) => r.category)).toEqual(["Health", "Others"]);
+  });
+
+  it("soft delete stamps deleted_at per account and undo clears it", async () => {
+    const { queryClient, wrapper } = setup();
+    const { result } = renderHook(() => useDeleteMutation(queryClient, vi.fn()), { wrapper });
+    act(() =>
+      result.current.mutate({
+        txs: [
+          { account_uid: "a1", entry_reference: "r1" },
+          { account_uid: "a2", entry_reference: "r1" },
+        ],
+        deleted: true,
+      }),
+    );
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(calls).toHaveLength(2);
+    expect(calls.map((c) => c.eq["account_uid"]).sort()).toEqual(["a1", "a2"]);
+    expect(typeof (calls[0]!.update as { deleted_at: unknown }).deleted_at).toBe("string");
+
+    calls.length = 0;
+    act(() =>
+      result.current.mutate({
+        txs: [{ account_uid: "a1", entry_reference: "r1" }],
+        deleted: false,
+      }),
+    );
+    await waitFor(() => expect(calls).toHaveLength(1));
+    expect(calls[0]!.update).toEqual({ deleted_at: null });
   });
 });

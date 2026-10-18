@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, Search } from "lucide-react";
+import { ChevronLeft, ChevronRight, Search, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatISODate } from "@/lib/date";
 import {
@@ -17,6 +17,7 @@ import {
 import { BulkCategoryPicker } from "@/components/transactions/pickers";
 import {
   useBulkCategoryMutation,
+  useDeleteMutation,
   useSplitMutation,
   useTransactionFieldMutation,
 } from "@/components/transactions/mutations";
@@ -53,11 +54,11 @@ async function fetchTransactionsForMonth(month: Date): Promise<Array<Transaction
   const { data, error } = await supabase
     .from("v_transactions_eur")
     .select(
-      "entry_reference,account_uid,booking_date,category,transaction_type,creditor_name,currency,amount,signed_amount_eur,credit_debit_indicator,created_at,worth_it,personal_amount,owed_by",
+      "entry_reference,account_uid,booking_date,category,transaction_type,creditor_name,currency,amount,signed_amount_eur,credit_debit_indicator,created_at,worth_it,personal_amount,owed_by,flow_type",
     )
     .gte("booking_date", start)
     .lt("booking_date", end)
-    .eq("flow_type", "spend")
+    .in("flow_type", ["spend", "refunded"])
     .neq("amount", 0)
     .order("booking_date", { ascending: false })
     .order("entry_reference", { ascending: false });
@@ -100,6 +101,8 @@ export function TransactionsPage() {
   const bulkUpdateCategory = useBulkCategoryMutation(queryClient, monthKey, () =>
     setSelected(new Set()),
   );
+
+  const deleteTxs = useDeleteMutation(queryClient, () => setSelected(new Set()));
 
   const accountsQuery = useQuery({
     queryKey: ["accounts"],
@@ -296,6 +299,20 @@ export function TransactionsPage() {
             }
             disabled={bulkUpdateCategory.isPending}
           />
+          <button
+            type="button"
+            onClick={() =>
+              deleteTxs.mutate({
+                txs: transactions.filter((tx) => selected.has(txId(tx))),
+                deleted: true,
+              })
+            }
+            disabled={deleteTxs.isPending}
+            className="inline-flex min-h-11 items-center gap-1.5 rounded-lg px-3 text-sm font-medium text-negative transition-colors hover:bg-negative/10 disabled:opacity-50"
+          >
+            <Trash2 className="size-4" />
+            Delete
+          </button>
           <button
             type="button"
             onClick={() => setSelected(new Set())}

@@ -1,4 +1,5 @@
 import { AccountBadge, CurrencyBadge } from "@/components/bank-badge";
+import { RefundedBadge } from "@/components/refunded-badge";
 import {
   formatAmountPlain,
   formatBookingDate,
@@ -66,6 +67,7 @@ export function TransactionRowView({
       </td>
       <td className="max-w-48 px-4 py-3">
         <div className="truncate font-medium text-foreground">{tx.creditor_name ?? "—"}</div>
+        <RefundedBadge flowType={tx.flow_type} />
         <WorthItPrompt tx={tx} onAnswer={onAnswerWorthIt} />
       </td>
       <td className="px-4 py-3">
@@ -149,6 +151,7 @@ export function TransactionCardView({
             <AccountBadge label={accountLabel} />
           </p>
           <div className="mt-0.5">
+            <RefundedBadge flowType={tx.flow_type} />
             <WorthItPrompt tx={tx} onAnswer={onAnswerWorthIt} />
           </div>
         </div>

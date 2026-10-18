@@ -21,6 +21,7 @@ const tx = (over: Partial<TransactionRow> = {}): TransactionRow => ({
   worth_it: null,
   personal_amount: null,
   owed_by: null,
+  flow_type: "spend",
   ...over,
 });
 
