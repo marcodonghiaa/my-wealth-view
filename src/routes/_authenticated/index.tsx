@@ -26,6 +26,9 @@ import {
   yearStart,
   type HistoryRow,
 } from "@/lib/net-worth";
+import { FriendsCreditLine } from "@/components/splitwise/balances-view";
+import { friendsCreditEur as friendsCreditEurOf } from "@/lib/import/splitwise-balances";
+import { useSplitwiseBalances } from "@/lib/use-splitwise-balances";
 import { TONE_PILL, toneOf } from "@/lib/tone";
 
 export type NetWorthSnapshot = {
@@ -144,6 +147,8 @@ export function NetWorthPage() {
   const latest = snapshots.at(-1);
   const previous = snapshots.at(-2);
 
+  const friends = useSplitwiseBalances();
+
   const rateToEur = useMemo(() => {
     if (currency === "EUR") return 1;
     return fxQuery.data?.[currency]?.rate_to_eur ?? null;
@@ -151,6 +156,11 @@ export function NetWorthPage() {
 
   // Conversion: value in target currency = total_eur / rate_to_eur(target).
   const headline = latest != null && rateToEur != null ? latest.total_eur / rateToEur : null;
+
+  const friendsCreditEur = useMemo(
+    () => friendsCreditEurOf(friends.rows, friends.rate),
+    [friends.rows, friends.rate],
+  );
 
   const dayChange =
     latest != null && previous != null && previous.total_eur !== 0
@@ -236,6 +246,14 @@ export function NetWorthPage() {
             </p>
           )}
         </div>
+
+        {rateToEur != null && (
+          <FriendsCreditLine
+            creditEur={friendsCreditEur}
+            netWorthEur={latest?.total_eur ?? null}
+            format={(eur) => formatMoney(eur / rateToEur, currency)}
+          />
+        )}
 
         <div className="mt-5 flex flex-wrap gap-3">
           <ChangePill label="daily" value={dayChange} />

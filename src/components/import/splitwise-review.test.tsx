@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { classifyRows } from "@/lib/import/splitwise-classify";
+import { balancesFromFile } from "@/lib/import/splitwise-balances";
 import { parseSplitwiseCsv } from "@/lib/import/splitwise-parse";
 
 type Answer = { data: unknown[]; error: { message: string } | null };
@@ -85,6 +86,16 @@ beforeEach(() => {
   insertRule.mockReset();
 });
 
+const showWithBalances = () =>
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <SplitwiseReview
+        rows={rows}
+        group="berkeley"
+        balances={balancesFromFile(parseSplitwiseCsv(CSV), 0)}
+      />
+    </QueryClientProvider>,
+  );
 describe("SplitwiseReview", () => {
   // protects=a sure match is offered and counted; fails_when=matching or planning is not wired
   it("offers the bank match ticked and counts what will be recorded", async () => {
@@ -125,6 +136,26 @@ describe("SplitwiseReview", () => {
     expect((screen.getByLabelText("Category for Taxi") as HTMLSelectElement).value).toBe(
       "Transports",
     );
+  });
+
+  // protects=the friends' balances are stored with the import; fails_when=they are not sent, or a
+  // failure to store them hides that the shares were imported
+  it("also stores the group balances after a successful import", async () => {
+    showWithBalances();
+    fireEvent.click(await screen.findByRole("button", { name: /^Import/ }));
+    await waitFor(() => expect(rpc).toHaveBeenCalledTimes(2));
+    expect(rpc.mock.calls[1]?.[0]).toBe("save_splitwise_balances");
+    expect(rpc.mock.calls[1]?.[1]).toMatchObject({ p_group: "berkeley" });
+    expect(await screen.findByText(/Imported 2 shares/)).toBeTruthy();
+  });
+
+  it("keeps the import and warns when the balances cannot be stored", async () => {
+    rpc.mockResolvedValueOnce({ data: { shares: 2, links: 1 }, error: null });
+    rpc.mockResolvedValueOnce({ data: null, error: { message: "boom" } });
+    showWithBalances();
+    fireEvent.click(await screen.findByRole("button", { name: /^Import/ }));
+    expect(await screen.findByText(/Imported 2 shares/)).toBeTruthy();
+    expect((await screen.findByText(/balances were not saved/)).textContent).toMatch(/boom/);
   });
 
   it("applies the user's own rules before the built-in words", async () => {

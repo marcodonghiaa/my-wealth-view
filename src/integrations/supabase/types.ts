@@ -458,6 +458,36 @@ export type Database = {
         };
         Relationships: [];
       };
+      splitwise_balances: {
+        Row: {
+          balance: number;
+          currency: string;
+          group_name: string;
+          is_me: boolean;
+          person: string;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          balance: number;
+          currency: string;
+          group_name: string;
+          is_me?: boolean;
+          person: string;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          balance?: number;
+          currency?: string;
+          group_name?: string;
+          is_me?: boolean;
+          person?: string;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
       splitwise_expenses: {
         Row: {
           amount: number;
@@ -841,6 +871,10 @@ export type Database = {
           p_shares: Json;
           p_to: string;
         };
+        Returns: Json;
+      };
+      save_splitwise_balances: {
+        Args: { p_balances: Json; p_group: string };
         Returns: Json;
       };
       undo_splitwise_import: {

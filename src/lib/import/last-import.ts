@@ -68,5 +68,6 @@ export function refreshKeys(kind: ImportSource): Array<Array<string>> {
     ["income-vs-expenses"],
     ["reports-income-expenses"],
     ["transactions"],
+    ["splitwise-balances"],
   ];
 }

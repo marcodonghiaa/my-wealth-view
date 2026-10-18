@@ -64,6 +64,7 @@ describe("refreshKeys", () => {
       "income-vs-expenses",
       "reports-income-expenses",
       "transactions",
+      "splitwise-balances",
     ]) {
       expect(keys).toContainEqual([k]);
     }

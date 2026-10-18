@@ -18,6 +18,7 @@ import {
   type RpcClient,
 } from "@/lib/import/splitwise-commit";
 import { fingerprintRows, matchBank, type BankTx } from "@/lib/import/splitwise-match";
+import { saveBalances, type FileBalances } from "@/lib/import/splitwise-balances";
 import { planWrite } from "@/lib/import/splitwise-plan";
 import { categorizeRow, ruleTextFor, type UserRule } from "@/lib/import/splitwise-categorize";
 import { defaultSelection, makeRate, toBankTx, type FxRow } from "@/lib/import/splitwise-review";
@@ -100,7 +101,15 @@ async function load(rows: Array<ClassifiedRow>, group: string): Promise<Loaded> 
   };
 }
 
-export function SplitwiseReview({ rows, group }: { rows: Array<ClassifiedRow>; group: string }) {
+export function SplitwiseReview({
+  rows,
+  group,
+  balances = null,
+}: {
+  rows: Array<ClassifiedRow>;
+  group: string;
+  balances?: FileBalances | null;
+}) {
   const [loaded, setLoaded] = useState<Loaded | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   // Category changes made by hand (null = cleared), and rules saved during this review.
@@ -228,14 +237,29 @@ export function SplitwiseReview({ rows, group }: { rows: Array<ClassifiedRow>; g
   const importShares = useMutation({
     mutationFn: async () => {
       if (!plan || !userId) throw new Error("You are signed out. Sign in again.");
-      const result = await runSplitwiseImport(supabase as unknown as RpcClient, plan);
-      return { ...result, owner: userId };
+      const client = supabase as unknown as RpcClient;
+      const result = await runSplitwiseImport(client, plan);
+      // The shares are already written; a failure here must not hide that.
+      let balancesError: string | null = null;
+      if (balances) {
+        try {
+          await saveBalances(client, group, balances);
+        } catch (err) {
+          balancesError = err instanceof Error ? err.message : "unknown error";
+        }
+      }
+      return { ...result, owner: userId, balancesError };
     },
-    onSuccess: ({ batchId, shares, links, owner }) => {
+    onSuccess: ({ batchId, shares, links, owner, balancesError }) => {
       const entry = { batchId, count: shares };
       saveLastImport(browserStorage(), owner, "splitwise", entry);
       setLast(entry);
-      setDone(`Imported ${shares} shares and updated ${links} bank transactions.`);
+      setDone(
+        `Imported ${shares} shares and updated ${links} bank transactions.` +
+          (balancesError
+            ? ` The friends' balances were not saved (${balancesError}); import again to retry.`
+            : ""),
+      );
       void refresh();
     },
   });

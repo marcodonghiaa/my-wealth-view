@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Upload } from "lucide-react";
 import { MAX_CHARS } from "@/lib/import/parse-csv";
 import { SplitwiseReview } from "@/components/import/splitwise-review";
+import { balancesFromFile } from "@/lib/import/splitwise-balances";
 import { classifyRows, summarize } from "@/lib/import/splitwise-classify";
 import { parseSplitwiseCsv, type SplitwiseFile } from "@/lib/import/splitwise-parse";
 import { hasErrors, validateSplitwise, type Issue } from "@/lib/import/splitwise-validate";
@@ -163,7 +164,11 @@ export function SplitwisePanel() {
         </div>
       )}
       {classified && settledGroup.trim() !== "" && (
-        <SplitwiseReview rows={classified} group={settledGroup} />
+        <SplitwiseReview
+          rows={classified}
+          group={settledGroup}
+          balances={loaded && me !== null ? balancesFromFile(loaded.file, me) : null}
+        />
       )}
     </div>
   );
