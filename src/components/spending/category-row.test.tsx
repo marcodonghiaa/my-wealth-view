@@ -4,6 +4,13 @@ import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 const calls: Array<[string, unknown]> = [];
+const LIDL = {
+  entry_reference: "r1",
+  booking_date: "2026-10-03",
+  creditor_name: "Lidl",
+  personal_signed_amount_eur: -12.5,
+};
+let rows: Array<typeof LIDL> = [LIDL];
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
     from: () => {
@@ -16,18 +23,7 @@ vi.mock("@/integrations/supabase/client", () => ({
         is: (col: string, val: unknown) => (calls.push([col, val]), q),
         lt2: () => q,
         order: () => q,
-        then: (resolve: (v: unknown) => void) =>
-          resolve({
-            data: [
-              {
-                entry_reference: "r1",
-                booking_date: "2026-10-03",
-                creditor_name: "Lidl",
-                personal_signed_amount_eur: -12.5,
-              },
-            ],
-            error: null,
-          }),
+        then: (resolve: (v: unknown) => void) => resolve({ data: rows, error: null }),
       };
       return q;
     },
@@ -61,5 +57,13 @@ describe("CategoryRow", () => {
     await userEvent.click(screen.getByRole("button", { name: /Uncategorized/ }));
     await screen.findByText("Lidl");
     expect(calls).toContainEqual(["category", null]);
+  });
+
+  it("explains an empty list as an imported monthly total", async () => {
+    rows = [];
+    renderRow("Groceries");
+    await userEvent.click(screen.getByRole("button", { name: /Groceries/ }));
+    expect(await screen.findByText(/total was imported/)).toBeInTheDocument();
+    rows = [LIDL];
   });
 });
