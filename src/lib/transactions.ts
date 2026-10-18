@@ -13,6 +13,7 @@ export interface TransactionRow {
   worth_it: string | null;
   personal_amount: number | null;
   owed_by: string | null;
+  flow_type: string | null;
 }
 
 // A transaction's identity is the pair: the same reference can occur in two accounts.

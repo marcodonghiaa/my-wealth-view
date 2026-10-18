@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { Check, ChevronDown, Pencil } from "lucide-react";
+import { Check, ChevronDown, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -151,6 +151,44 @@ export function SubscriptionsPage() {
     },
   });
 
+  // Hides a merchant from this page without touching its transactions.
+  const dismissMutation = useMutation({
+    mutationFn: async ({
+      creditorName,
+      dismissed,
+    }: {
+      creditorName: string;
+      dismissed: boolean;
+    }) => {
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+      if (userError || !user) throw userError ?? new Error("Not signed in");
+      const { error } = await supabase
+        .from("subscription_billing_overrides")
+        .upsert(
+          { user_id: user.id, creditor_name: creditorName, dismissed },
+          { onConflict: "user_id,creditor_name" },
+        );
+      if (error) throw error;
+    },
+    onSuccess: (_data, vars) => {
+      void queryClient.invalidateQueries({ queryKey: ["subscriptions"] });
+      if (!vars.dismissed) return;
+      toast.success(`Removed ${vars.creditorName}`, {
+        action: {
+          label: "Undo",
+          onClick: () =>
+            dismissMutation.mutate({ creditorName: vars.creditorName, dismissed: false }),
+        },
+      });
+    },
+    onError: (error) => {
+      toast.error("Couldn't update subscription", { description: error.message });
+    },
+  });
+
   const subscriptions = useMemo(() => query.data ?? [], [query.data]);
 
   const { recurring, oneOff } = useMemo(() => {
@@ -166,6 +204,10 @@ export function SubscriptionsPage() {
     <SubscriptionCard
       key={sub.creditor_name}
       sub={sub}
+      onDismiss={() => {
+        if (!sub.creditor_name) return;
+        dismissMutation.mutate({ creditorName: sub.creditor_name, dismissed: true });
+      }}
       onSelectFrequency={(frequency) => {
         if (!sub.creditor_name) return;
         frequencyMutation.mutate({ creditorName: sub.creditor_name, frequency });
@@ -265,10 +307,12 @@ export function SubscriptionsPage() {
 
 function SubscriptionCard({
   sub,
+  onDismiss,
   onSelectFrequency,
   onSelectCustom,
 }: {
   sub: SubscriptionRow;
+  onDismiss: () => void;
   onSelectFrequency: (frequency: string) => void;
   onSelectCustom: (value: number, unit: IntervalUnit) => void;
 }) {
@@ -325,6 +369,14 @@ function SubscriptionCard({
         {lastCharged && (
           <span className="text-[0.8125rem] text-muted-foreground">Last {lastCharged}</span>
         )}
+        <button
+          type="button"
+          onClick={onDismiss}
+          aria-label={`Remove ${name}`}
+          className="-my-2 -mr-3 ml-auto inline-flex size-11 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-negative focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+        >
+          <Trash2 className="size-4" />
+        </button>
       </div>
     </li>
   );

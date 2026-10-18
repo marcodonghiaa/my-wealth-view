@@ -1,6 +1,7 @@
 import { useMutation, type QueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import type { TablesUpdate } from "@/integrations/supabase/types";
 import { txId, type TransactionRow, type TxKey } from "@/lib/transactions";
 
 // account_uid is part of the primary key; filtering on the reference alone would also
@@ -87,32 +88,32 @@ export function useSplitMutation(queryClient: QueryClient, monthKey: string) {
   });
 }
 
+// One statement per account so the reference list can't match another account's rows.
+async function updateTxs(txs: Array<TxKey>, patch: TablesUpdate<"transactions">) {
+  const refsByAccount = new Map<string | null, Array<string>>();
+  for (const tx of txs) {
+    refsByAccount.set(tx.account_uid, [
+      ...(refsByAccount.get(tx.account_uid) ?? []),
+      tx.entry_reference,
+    ]);
+  }
+  for (const [accountUid, refs] of refsByAccount) {
+    const query = supabase.from("transactions").update(patch).in("entry_reference", refs);
+    const { error } = await (accountUid
+      ? query.eq("account_uid", accountUid)
+      : query.is("account_uid", null));
+    if (error) throw error;
+  }
+}
+
 export function useBulkCategoryMutation(
   queryClient: QueryClient,
   monthKey: string,
   onDone: () => void,
 ) {
   return useMutation({
-    mutationFn: async ({ txs, category: next }: { txs: Array<TxKey>; category: string }) => {
-      // One statement per account so the reference list can't match another account's rows.
-      const refsByAccount = new Map<string | null, Array<string>>();
-      for (const tx of txs) {
-        refsByAccount.set(tx.account_uid, [
-          ...(refsByAccount.get(tx.account_uid) ?? []),
-          tx.entry_reference,
-        ]);
-      }
-      for (const [accountUid, refs] of refsByAccount) {
-        const query = supabase
-          .from("transactions")
-          .update({ category: next })
-          .in("entry_reference", refs);
-        const { error } = await (accountUid
-          ? query.eq("account_uid", accountUid)
-          : query.is("account_uid", null));
-        if (error) throw error;
-      }
-    },
+    mutationFn: ({ txs, category: next }: { txs: Array<TxKey>; category: string }) =>
+      updateTxs(txs, { category: next }),
     onSuccess: (_data, vars) => {
       const ids = new Set(vars.txs.map(txId));
       queryClient.setQueryData<Array<TransactionRow>>(["transactions", monthKey], (old) =>
@@ -131,4 +132,28 @@ export function useBulkCategoryMutation(
       });
     },
   });
+}
+
+// Soft delete: the bank sync re-pulls recent history, so a hard delete would come back.
+// deleted: false is the undo.
+export function useDeleteMutation(queryClient: QueryClient, onDone: () => void) {
+  const mutation = useMutation({
+    mutationFn: ({ txs, deleted }: { txs: Array<TxKey>; deleted: boolean }) =>
+      updateTxs(txs, { deleted_at: deleted ? new Date().toISOString() : null }),
+    onSuccess: (_data, vars) => {
+      void queryClient.invalidateQueries({ queryKey: ["transactions"] });
+      if (!vars.deleted) return;
+      onDone();
+      toast.success(`Deleted ${vars.txs.length} transaction${vars.txs.length === 1 ? "" : "s"}`, {
+        action: {
+          label: "Undo",
+          onClick: () => mutation.mutate({ txs: vars.txs, deleted: false }),
+        },
+      });
+    },
+    onError: (error) => {
+      toast.error("Couldn't update transactions", { description: error.message });
+    },
+  });
+  return mutation;
 }
