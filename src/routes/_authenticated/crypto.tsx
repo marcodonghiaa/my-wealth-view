@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import { Bitcoin } from "lucide-react";
 import { shareSummary } from "@/lib/chart-summary";
-import { colorForAsset } from "@/lib/crypto-colors";
+import { colorsForAssets } from "@/lib/crypto-colors";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated/crypto")({
@@ -125,6 +125,7 @@ export function CryptoPage() {
 
   const rows = useMemo(() => query.data ?? [], [query.data]);
   const assets = useMemo(() => groupBySymbol(rows), [rows]);
+  const assetColors = useMemo(() => colorsForAssets(assets.map((a) => a.symbol)), [assets]);
 
   const totalEur = useMemo(() => assets.reduce((sum, a) => sum + a.valueEur, 0), [assets]);
 
@@ -219,7 +220,7 @@ export function CryptoPage() {
                     {assets.map((asset, i) => (
                       <Cell
                         key={i}
-                        fill={colorForAsset(asset.symbol, i)}
+                        fill={assetColors[i]}
                         stroke="var(--color-card)"
                         strokeWidth={2}
                       />
