@@ -404,7 +404,7 @@ export function NetWorthPage() {
         </div>
       </section>
 
-      <AllocationChart history={historyQuery.data ?? []} />
+      <AllocationChart history={historyQuery.data ?? []} snapshots={snapshots} />
     </div>
   );
 }

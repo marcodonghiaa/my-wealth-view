@@ -1,3 +1,5 @@
+import { formatISODate } from "./date";
+
 // Optional YYYY-MM-DD from which "change since the start" is measured. Set it when your first
 // snapshots only held part of your net worth (e.g. before investments were added), which would
 // otherwise read as a huge percentage. Unset: measure from the very first snapshot.
@@ -80,6 +82,32 @@ export function chartPoints<T extends NetWorthRow>(rows: Array<T>): Array<ChartP
   return points;
 }
 
+// Rows for the allocation chart: imported months, then live snapshots from the baseline on.
+// Live snapshots only split portfolio, crypto and bank, so the portfolio counts as stocks (the
+// holdings here are stocks and ETFs) and bank balances as cash.
+export function allocationHistory(
+  history: Array<HistoryRow>,
+  snapshots: Array<NetWorthRow>,
+  start: string | undefined = NET_WORTH_START,
+): Array<HistoryRow> {
+  const base = periodBaseline(snapshots, start);
+  const live = base ? snapshots.filter((s) => s.snapshot_date >= base.snapshot_date) : [];
+  const firstLive = live.at(0)?.snapshot_date;
+  const past = history.filter((h) => !firstLive || h.snapshot_date < firstLive);
+  return [
+    ...past,
+    ...live.map((s) => ({
+      snapshot_date: s.snapshot_date,
+      stocks_eur: s.portfolio_total_eur,
+      bonds_eur: 0,
+      crypto_eur: s.crypto_total_eur,
+      cash_eur: s.bank_total_eur,
+      liabilities_eur: 0,
+      total_eur: s.total_eur,
+    })),
+  ];
+}
+
 export type AllocationPoint = {
   snapshot_date: string;
   ts: number;
@@ -109,6 +137,38 @@ export function allocationSeries(history: Array<HistoryRow>): Array<AllocationPo
         cash: pct(h.cash_eur),
         other: pct(other),
       },
+    ];
+  });
+}
+
+export type AllocationPlotPoint = {
+  snapshot_date: string;
+  ts: number;
+  stocks: number | null;
+  bonds: number | null;
+  crypto: number | null;
+  cash: number | null;
+  other: number | null;
+};
+
+// Adds an empty point in the middle of any hole wider than GAP_DAYS, so the chart stops where
+// there is no data instead of drawing a mix that was never recorded.
+export function breakAtGaps(points: Array<AllocationPoint>): Array<AllocationPlotPoint> {
+  return points.flatMap((p, i) => {
+    const prev = points[i - 1];
+    if (!prev || (p.ts - prev.ts) / DAY_MS <= GAP_DAYS) return [p];
+    const ts = Math.round((p.ts + prev.ts) / 2);
+    return [
+      {
+        snapshot_date: formatISODate(new Date(ts)),
+        ts,
+        stocks: null,
+        bonds: null,
+        crypto: null,
+        cash: null,
+        other: null,
+      },
+      p,
     ];
   });
 }

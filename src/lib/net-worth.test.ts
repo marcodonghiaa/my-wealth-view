@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  allocationHistory,
   allocationSeries,
+  breakAtGaps,
   changeOver,
   chartPoints,
   monthAgo,
@@ -185,5 +187,83 @@ describe("changeOver / period targets", () => {
 
   it("yearStart is the last day of the previous year", () => {
     expect(yearStart("2026-10-18")).toBe("2025-12-31");
+  });
+});
+
+describe("allocationHistory", () => {
+  const hist = (d: string) => ({
+    snapshot_date: d,
+    stocks_eur: 60,
+    bonds_eur: 20,
+    crypto_eur: 10,
+    cash_eur: 10,
+    liabilities_eur: 0,
+    total_eur: 100,
+  });
+  const live = (d: string) => ({
+    snapshot_date: d,
+    total_eur: 1000,
+    bank_total_eur: 100,
+    portfolio_total_eur: 800,
+    crypto_total_eur: 100,
+  });
+
+  // protects=the allocation chart reaches today; fails_when=live snapshots are not appended
+  it("keeps the imported months and appends live snapshots as stocks, crypto and cash", () => {
+    const rows = allocationHistory([hist("2025-11-30")], [live("2026-09-04"), live("2026-09-05")]);
+    expect(rows.map((r) => r.snapshot_date)).toEqual(["2025-11-30", "2026-09-04", "2026-09-05"]);
+    expect(rows[1]).toMatchObject({
+      stocks_eur: 800,
+      bonds_eur: 0,
+      crypto_eur: 100,
+      cash_eur: 100,
+    });
+  });
+
+  // protects=partial early snapshots do not distort the mix; fails_when=the start date is ignored
+  it("leaves out live snapshots before the configured start", () => {
+    const rows = allocationHistory([], [live("2026-09-02"), live("2026-09-04")], "2026-09-04");
+    expect(rows.map((r) => r.snapshot_date)).toEqual(["2026-09-04"]);
+  });
+
+  it("drops imported months that overlap the live snapshots", () => {
+    const rows = allocationHistory([hist("2026-09-30")], [live("2026-09-04")]);
+    expect(rows.map((r) => r.snapshot_date)).toEqual(["2026-09-04"]);
+  });
+
+  it("is the imported history alone when there are no snapshots", () => {
+    expect(allocationHistory([hist("2025-11-30")], [])).toEqual([hist("2025-11-30")]);
+  });
+});
+
+describe("breakAtGaps", () => {
+  const pt = (d: string) => ({
+    snapshot_date: d,
+    ts: Date.parse(`${d}T00:00:00`),
+    stocks: 50,
+    bonds: 0,
+    crypto: 0,
+    cash: 50,
+    other: 0,
+  });
+
+  // protects=no mix is drawn where there is no data; fails_when=the gap is joined by a smear
+  it("puts an empty point inside a hole so the areas stop and restart", () => {
+    const out = breakAtGaps([pt("2025-11-30"), pt("2026-09-04")]);
+    expect(out).toHaveLength(3);
+    expect(out[1]).toMatchObject({
+      stocks: null,
+      bonds: null,
+      crypto: null,
+      cash: null,
+      other: null,
+    });
+    expect(out[1]?.ts).toBeGreaterThan(out[0]?.ts ?? 0);
+    expect(out[1]?.ts).toBeLessThan(out[2]?.ts ?? 0);
+  });
+
+  it("leaves normal monthly steps alone", () => {
+    const rows = [pt("2025-10-31"), pt("2025-11-30"), pt("2025-12-31")];
+    expect(breakAtGaps(rows)).toEqual(rows);
   });
 });
