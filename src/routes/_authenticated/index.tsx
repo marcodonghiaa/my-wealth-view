@@ -14,6 +14,7 @@ import {
 import { ArrowDownRight, ArrowUpRight } from "lucide-react";
 import { trendSummary } from "@/lib/chart-summary";
 import { supabase } from "@/integrations/supabase/client";
+import { WelcomeCard } from "@/components/import/welcome-card";
 import { AllocationChart } from "@/components/allocation-chart";
 import { SegmentedControl } from "@/components/segmented-control";
 import { axisDateFormatter, formatISODate } from "@/lib/date";
@@ -176,6 +177,10 @@ export function NetWorthPage() {
           />
         </div>
       </header>
+
+      {netWorthQuery.isSuccess && historyQuery.isSuccess && (
+        <WelcomeCard snapshots={snapshots.length} history={historyQuery.data.length} />
+      )}
 
       {netWorthQuery.isError && (
         <div
