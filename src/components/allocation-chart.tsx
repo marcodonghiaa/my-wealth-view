@@ -15,11 +15,14 @@ const CLASSES = [
   { key: "bonds", label: "Bonds", color: "var(--color-chart-4)" },
   { key: "crypto", label: "Crypto", color: "var(--color-chart-3)" },
   { key: "cash", label: "Cash", color: "var(--color-chart-1)" },
+  { key: "other", label: "Unallocated", color: "var(--color-muted-foreground)" },
 ] as const;
 
 export function AllocationChart({ history }: { history: Array<HistoryRow> }) {
   const data = allocationSeries(history);
   if (data.length < 2) return null;
+  // The grey band only appears when some imported total has no split.
+  const classes = CLASSES.filter((c) => c.key !== "other" || data.some((d) => d.other > 0));
   const fmtTick = axisDateFormatter(data[0]?.snapshot_date, data.at(-1)?.snapshot_date);
 
   return (
@@ -29,7 +32,7 @@ export function AllocationChart({ history }: { history: Array<HistoryRow> }) {
           Asset allocation over time
         </h2>
         <div className="flex items-center gap-3 text-xs text-muted-foreground">
-          {CLASSES.map((c) => (
+          {classes.map((c) => (
             <span key={c.key} className="inline-flex items-center gap-1.5">
               <span
                 className="inline-block size-2 rounded-full"
@@ -43,7 +46,7 @@ export function AllocationChart({ history }: { history: Array<HistoryRow> }) {
       <div
         className="h-64 w-full"
         role="img"
-        aria-label="Asset allocation over time, share of stocks, bonds, crypto and cash"
+        aria-label="Asset allocation over time, share of stocks, bonds, crypto, cash and unallocated"
       >
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart
@@ -71,10 +74,10 @@ export function AllocationChart({ history }: { history: Array<HistoryRow> }) {
               axisLine={false}
             />
             <Tooltip
-              content={<AllocationTooltip />}
+              content={<AllocationTooltip classes={classes} />}
               cursor={{ stroke: "var(--color-primary)", strokeOpacity: 0.3 }}
             />
-            {CLASSES.map((c) => (
+            {classes.map((c) => (
               <Area
                 key={c.key}
                 type="monotone"
@@ -101,7 +104,9 @@ export function AllocationChart({ history }: { history: Array<HistoryRow> }) {
 function AllocationTooltip({
   active,
   payload,
+  classes,
 }: {
+  classes: ReadonlyArray<(typeof CLASSES)[number]>;
   active?: boolean;
   payload?: Array<{ payload?: AllocationPoint }>;
 }) {
@@ -113,7 +118,7 @@ function AllocationTooltip({
         {new Date(point.ts).toLocaleDateString("en-GB", { month: "short", year: "numeric" })}
       </p>
       <div className="mt-1 space-y-0.5 text-xs">
-        {CLASSES.map((c) => (
+        {classes.map((c) => (
           <p key={c.key} className="flex items-center justify-between gap-4">
             <span className="inline-flex items-center gap-1.5">
               <span

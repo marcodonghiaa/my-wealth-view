@@ -120,6 +120,18 @@ describe("allocationSeries", () => {
     });
   });
 
+  // protects=imported totals with no split show up as their own band; fails_when=other_eur is
+  // dropped or missing rows break the sum; no_claim=how the band is drawn
+  it("counts an unallocated amount as its own share of gross assets", () => {
+    const [p] = allocationSeries([{ ...h("2025-01-31", 50, 0, 0, 0), other_eur: 50 }]);
+    expect(p).toMatchObject({ stocks: 50, other: 50 });
+  });
+
+  it("treats a row without other_eur as nothing unallocated", () => {
+    const [p] = allocationSeries([h("2025-01-31", 50, 0, 0, 50)]);
+    expect(p?.other).toBe(0);
+  });
+
   it("ignores liabilities so shares do not depend on the tax reserve", () => {
     const [a] = allocationSeries([h("2025-01-31", 50, 50, 0, 0, 0)]);
     const [b] = allocationSeries([h("2025-01-31", 50, 50, 0, 0, 40)]);

@@ -14,6 +14,7 @@ import {
 import { ArrowDownRight, ArrowUpRight } from "lucide-react";
 import { trendSummary } from "@/lib/chart-summary";
 import { supabase } from "@/integrations/supabase/client";
+import { WelcomeCard } from "@/components/import/welcome-card";
 import { AllocationChart } from "@/components/allocation-chart";
 import { SegmentedControl } from "@/components/segmented-control";
 import { axisDateFormatter, formatISODate } from "@/lib/date";
@@ -81,7 +82,9 @@ async function fetchNetWorth(): Promise<Array<NetWorthSnapshot>> {
 async function fetchHistory(): Promise<Array<HistoryRow>> {
   const { data, error } = await supabase
     .from("net_worth_history")
-    .select("snapshot_date,stocks_eur,bonds_eur,crypto_eur,cash_eur,liabilities_eur,total_eur")
+    .select(
+      "snapshot_date,stocks_eur,bonds_eur,crypto_eur,cash_eur,other_eur,liabilities_eur,total_eur",
+    )
     .order("snapshot_date", { ascending: true });
   if (error) throw error;
   return (data ?? []) as Array<HistoryRow>;
@@ -176,6 +179,10 @@ export function NetWorthPage() {
           />
         </div>
       </header>
+
+      {netWorthQuery.isSuccess && historyQuery.isSuccess && (
+        <WelcomeCard snapshots={snapshots.length} history={historyQuery.data.length} />
+      )}
 
       {netWorthQuery.isError && (
         <div

@@ -26,6 +26,8 @@ export type HistoryRow = {
   crypto_eur: number;
   cash_eur: number;
   liabilities_eur: number;
+  // A total with no per-class split (CSV import). Absent on rows from before the column existed.
+  other_eur?: number;
   total_eur: number;
 };
 
@@ -85,6 +87,7 @@ export type AllocationPoint = {
   bonds: number;
   crypto: number;
   cash: number;
+  other: number;
 };
 
 // Percent of gross assets per class. Liabilities (tax reserve) are left out so the mix describes
@@ -92,7 +95,8 @@ export type AllocationPoint = {
 // snapshots lump them together as "portfolio".
 export function allocationSeries(history: Array<HistoryRow>): Array<AllocationPoint> {
   return history.flatMap((h) => {
-    const gross = h.stocks_eur + h.bonds_eur + h.crypto_eur + h.cash_eur;
+    const other = h.other_eur ?? 0;
+    const gross = h.stocks_eur + h.bonds_eur + h.crypto_eur + h.cash_eur + other;
     if (gross <= 0) return [];
     const pct = (v: number) => (v / gross) * 100;
     return [
@@ -103,6 +107,7 @@ export function allocationSeries(history: Array<HistoryRow>): Array<AllocationPo
         bonds: pct(h.bonds_eur),
         crypto: pct(h.crypto_eur),
         cash: pct(h.cash_eur),
+        other: pct(other),
       },
     ];
   });

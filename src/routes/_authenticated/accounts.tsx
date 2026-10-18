@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { ChevronDown, Landmark, Link2, Loader2, Lock, Plus, Trash2 } from "lucide-react";
@@ -325,7 +325,10 @@ export function AccountsPage() {
       <header className="mb-8">
         <h1 className="ios-large-title">Accounts</h1>
         <p className="mt-0.5 text-sm text-muted-foreground">
-          Your bank accounts and fixed-term deposits.
+          Your bank accounts and fixed-term deposits.{" "}
+          <Link to="/import" className="text-primary underline-offset-2 hover:underline">
+            Import data
+          </Link>
         </p>
       </header>
 
