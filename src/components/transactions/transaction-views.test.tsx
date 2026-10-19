@@ -28,6 +28,8 @@ const props = (): TransactionViewProps => ({
   onAnswerWorthIt: vi.fn(),
   savingSplit: false,
   onSaveSplit: vi.fn(),
+  onRename: vi.fn(),
+  savingRename: false,
 });
 
 // protects=a Splitwise share cannot be edited, selected or deleted like a bank row (those writes

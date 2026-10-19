@@ -113,6 +113,12 @@ export function TransactionsPage() {
     errorMessage: "Couldn't save answer",
   });
 
+  const renameTx = useTransactionFieldMutation(queryClient, monthKey, "creditor_name", {
+    errorMessage: "Couldn't rename",
+    successMessage: () => "Renamed",
+    writeColumn: "custom_name",
+  });
+
   const updateSplit = useSplitMutation(queryClient, monthKey);
 
   const bulkUpdateCategory = useBulkCategoryMutation(queryClient, monthKey, () =>
@@ -221,6 +227,8 @@ export function TransactionsPage() {
     onAnswerWorthIt: (worthIt) => answerWorthIt.mutate({ tx, value: worthIt }),
     savingSplit: updateSplit.isPending && isSameTx(updateSplit.variables?.tx, tx),
     onSaveSplit: (personalAmount, owedBy) => updateSplit.mutate({ tx, personalAmount, owedBy }),
+    savingRename: renameTx.isPending && isSameTx(renameTx.variables?.tx, tx),
+    onRename: (name) => renameTx.mutate({ tx, value: name }),
     highlighted: tx.entry_reference === highlightRef,
   });
 

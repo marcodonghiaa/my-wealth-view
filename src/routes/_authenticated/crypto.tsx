@@ -158,28 +158,64 @@ export function CryptoPage() {
         </div>
       )}
 
-      {/* Headline */}
-      <section className="mb-6 rounded-2xl border bg-card p-6 card-ring sm:p-8">
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
-          <Bitcoin className="size-4 text-primary" />
-          Total crypto value
-          {asOf && <span className="ml-1">· as of {formatDate(asOf)}</span>}
-        </div>
+      {/* Headline + allocation side by side */}
+      <section className="mb-6 grid items-center gap-6 rounded-2xl border bg-card p-6 card-ring sm:p-8 md:grid-cols-2">
+        <div>
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
+            <Bitcoin className="size-4 text-primary" />
+            Total crypto value
+            {asOf && <span className="ml-1">· as of {formatDate(asOf)}</span>}
+          </div>
 
-        <div className="mt-3 min-h-16">
-          {query.isPending ? (
-            <div className="h-14 w-64 animate-pulse rounded-lg bg-muted" />
-          ) : (
-            <p className="font-figure text-4xl font-bold tracking-tight text-foreground sm:text-6xl">
-              {formatEur(totalEur)}
-            </p>
-          )}
-        </div>
+          <div className="mt-3 min-h-16">
+            {query.isPending ? (
+              <div className="h-14 w-64 animate-pulse rounded-lg bg-muted" />
+            ) : (
+              <p className="font-figure text-4xl font-bold tracking-tight text-foreground sm:text-6xl">
+                {formatEur(totalEur)}
+              </p>
+            )}
+          </div>
 
-        <p className="mt-3 text-xs text-muted-foreground">
-          Ledger holdings are entered manually; Coinbase syncs automatically. The same asset held in
-          multiple places is combined into one line below.
-        </p>
+          <p className="mt-3 text-xs text-muted-foreground">
+            Ledger holdings are entered manually; Coinbase syncs automatically. The same asset held
+            in multiple places is combined into one line below.
+          </p>
+        </div>
+        {!query.isPending && assets.length > 0 && (
+          <div
+            className="h-56 w-full md:h-64"
+            role="img"
+            aria-label={shareSummary(
+              "Allocation by holding",
+              assets.map((a) => ({ label: a.symbol, value: a.valueEur })),
+            )}
+          >
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={assets}
+                  dataKey="valueEur"
+                  nameKey="symbol"
+                  innerRadius="55%"
+                  outerRadius="80%"
+                  paddingAngle={2}
+                  cornerRadius={6}
+                >
+                  {assets.map((asset, i) => (
+                    <Cell
+                      key={i}
+                      fill={assetColors[i]}
+                      stroke="var(--color-card)"
+                      strokeWidth={2}
+                    />
+                  ))}
+                </Pie>
+                <Tooltip content={<CryptoTooltip totalEur={totalEur} />} />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        )}
       </section>
 
       {query.isPending ? (
@@ -193,45 +229,6 @@ export function CryptoPage() {
         </div>
       ) : (
         <>
-          {/* Allocation chart */}
-          <section className="mb-6 rounded-2xl border bg-card p-4 card-ring sm:p-6">
-            <div className="mb-4 px-2">
-              <h2 className="text-sm font-semibold text-foreground">Allocation by holding</h2>
-            </div>
-            <div
-              className="h-80 w-full"
-              role="img"
-              aria-label={shareSummary(
-                "Allocation by holding",
-                assets.map((a) => ({ label: a.symbol, value: a.valueEur })),
-              )}
-            >
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={assets}
-                    dataKey="valueEur"
-                    nameKey="symbol"
-                    innerRadius="55%"
-                    outerRadius="80%"
-                    paddingAngle={2}
-                    cornerRadius={6}
-                  >
-                    {assets.map((asset, i) => (
-                      <Cell
-                        key={i}
-                        fill={assetColors[i]}
-                        stroke="var(--color-card)"
-                        strokeWidth={2}
-                      />
-                    ))}
-                  </Pie>
-                  <Tooltip content={<CryptoTooltip totalEur={totalEur} />} />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          </section>
-
           {/* Desktop table */}
           <section className="hidden overflow-hidden rounded-2xl border bg-card card-ring md:block">
             <div className="overflow-x-auto">

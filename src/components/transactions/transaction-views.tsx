@@ -8,6 +8,7 @@ import {
   nativeSignedAmount,
   type TransactionRow,
 } from "@/lib/transactions";
+import { NameEditor } from "./name-editor";
 import { CategoryPicker, TypePicker } from "./pickers";
 import { SplitEditor } from "./split-editor";
 import { WorthItPrompt } from "./worth-it";
@@ -24,6 +25,8 @@ export interface TransactionViewProps {
   onAnswerWorthIt: (worthIt: "yes" | "no") => void;
   savingSplit: boolean;
   onSaveSplit: (personalAmount: number | null, owedBy: string | null) => void;
+  onRename: (name: string | null) => void;
+  savingRename: boolean;
   highlighted?: boolean;
 }
 
@@ -39,6 +42,8 @@ export function TransactionRowView({
   onAnswerWorthIt,
   savingSplit,
   onSaveSplit,
+  onRename,
+  savingRename,
   highlighted,
 }: TransactionViewProps) {
   const native = nativeSignedAmount(tx);
@@ -71,7 +76,13 @@ export function TransactionRowView({
         {formatBookingDate(tx.booking_date)}
       </td>
       <td className="max-w-48 px-4 py-3">
-        <div className="truncate font-medium text-foreground">{tx.creditor_name ?? "—"}</div>
+        <div className="truncate font-medium text-foreground">
+          {share ? (
+            (tx.creditor_name ?? "—")
+          ) : (
+            <NameEditor name={tx.creditor_name} onSave={onRename} saving={savingRename} />
+          )}
+        </div>
         <RefundedBadge flowType={tx.flow_type} />
         {!share && <WorthItPrompt tx={tx} onAnswer={onAnswerWorthIt} />}
       </td>
@@ -126,6 +137,8 @@ export function TransactionCardView({
   onAnswerWorthIt,
   savingSplit,
   onSaveSplit,
+  onRename,
+  savingRename,
   highlighted,
 }: TransactionViewProps) {
   const native = nativeSignedAmount(tx);
@@ -156,7 +169,11 @@ export function TransactionCardView({
         )}
         <div className="min-w-0">
           <p className="truncate text-[0.9375rem] font-medium text-foreground">
-            {tx.creditor_name ?? "—"}
+            {share ? (
+              (tx.creditor_name ?? "—")
+            ) : (
+              <NameEditor name={tx.creditor_name} onSave={onRename} saving={savingRename} />
+            )}
           </p>
           <p className="mt-0.5 flex items-center gap-1.5 truncate text-xs text-muted-foreground">
             {formatBookingDate(tx.booking_date)}

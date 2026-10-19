@@ -16,11 +16,19 @@ function forTx<Q extends { eq: (c: string, v: string) => Q; is: (c: string, v: n
 
 // Shared shape behind updateCategory/updateType/answerWorthIt: update one column
 // on one transaction, with optimistic cache update + rollback.
-export function useTransactionFieldMutation<K extends "category" | "transaction_type" | "worth_it">(
+// writeColumn: the column to write when it differs from the one shown (a rename is stored in
+// custom_name so the bank sync never overwrites it); the list is refetched to show the result.
+export function useTransactionFieldMutation<
+  K extends "category" | "transaction_type" | "worth_it" | "creditor_name",
+>(
   queryClient: QueryClient,
   monthKey: string,
   column: K,
-  opts: { errorMessage: string; successMessage?: (value: TransactionRow[K]) => string },
+  opts: {
+    errorMessage: string;
+    successMessage?: (value: TransactionRow[K]) => string;
+    writeColumn?: string;
+  },
 ) {
   type Vars = { tx: TxKey; value: TransactionRow[K] };
   type Context = { previous: Array<TransactionRow> | undefined };
@@ -28,7 +36,7 @@ export function useTransactionFieldMutation<K extends "category" | "transaction_
   return useMutation<void, Error, Vars, Context>({
     mutationFn: async ({ tx, value }) => {
       const { error } = await forTx(
-        supabase.from("transactions").update({ [column]: value } as never),
+        supabase.from("transactions").update({ [opts.writeColumn ?? column]: value } as never),
         tx,
       );
       if (error) throw error;
@@ -47,6 +55,10 @@ export function useTransactionFieldMutation<K extends "category" | "transaction_
     },
     onSuccess: (_data, vars) => {
       if (opts.successMessage) toast.success(opts.successMessage(vars.value));
+    },
+    onSettled: () => {
+      if (opts.writeColumn)
+        void queryClient.invalidateQueries({ queryKey: ["transactions", monthKey] });
     },
   });
 }

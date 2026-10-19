@@ -103,6 +103,28 @@ describe("transaction mutations are scoped to one account", () => {
     expect(cached().map((r) => r.category)).toEqual(["Health", "Others"]);
   });
 
+  // protects=a rename survives the nightly sync (stored apart from the bank's own name) and shows at once;
+  // fails_when=the rename overwrites creditor_name, or the cached row keeps the old name
+  it("rename writes custom_name, shows it at once, and an empty name clears it", async () => {
+    const { queryClient, wrapper, cached } = setup();
+    const { result } = renderHook(
+      () =>
+        useTransactionFieldMutation(queryClient, MONTH, "creditor_name", {
+          errorMessage: "fail",
+          writeColumn: "custom_name",
+        }),
+      { wrapper },
+    );
+    await act(() =>
+      result.current.mutateAsync({
+        tx: { account_uid: "a1", entry_reference: "r1" },
+        value: "Spotify",
+      }),
+    );
+    expect(calls[0]?.update).toEqual({ custom_name: "Spotify" });
+    expect(cached().map((r) => r.creditor_name)).toEqual(["Spotify", "Shop"]);
+  });
+
   it("split update filters on account and reference, and changes only that cached row", async () => {
     const { queryClient, wrapper, cached } = setup();
     const { result } = renderHook(() => useSplitMutation(queryClient, MONTH), { wrapper });
