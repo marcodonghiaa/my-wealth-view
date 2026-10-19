@@ -1,3 +1,4 @@
+import { isDemoMode } from "@/lib/demo/mode";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Bell, BellOff } from "lucide-react";
@@ -37,7 +38,9 @@ export function PushSubscribeButton() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    const ok = isStandalone() && "serviceWorker" in navigator && "PushManager" in window;
+    // No push registration in the demo: it would talk to the browser vendor's push service.
+    const ok =
+      !isDemoMode() && isStandalone() && "serviceWorker" in navigator && "PushManager" in window;
     setSupported(ok);
     if ("Notification" in window) setPermission(Notification.permission);
     if (!ok) return;

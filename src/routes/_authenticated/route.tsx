@@ -18,6 +18,7 @@ import {
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { supabase } from "@/integrations/supabase/client";
 import { PushSubscribeButton } from "@/components/push-subscribe";
+import { DemoBadge } from "@/components/demo-badge";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -260,6 +261,8 @@ function AuthenticatedLayout() {
           </nav>
         </SheetContent>
       </Sheet>
+
+      <DemoBadge />
 
       {/* Main content */}
       <main className="min-w-0 flex-1 pt-[calc(2.75rem+env(safe-area-inset-top))] pb-[calc(3.25rem+env(safe-area-inset-bottom))] md:pt-0 md:pb-0 md:pl-64">
