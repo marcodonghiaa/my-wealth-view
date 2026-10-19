@@ -2,6 +2,8 @@
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "./types";
 import { resolveSupabaseConfig } from "./config";
+import { getDemoClient } from "@/lib/demo/fake-client";
+import { isDemoMode } from "@/lib/demo/mode";
 
 // Falls back to the reference deployment's project only where that is expected (the Vite dev
 // server, SSR). A browser on any other host with missing
@@ -28,9 +30,24 @@ if (usingFallback) {
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
-export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+const realClient = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
   },
 });
+
+// Every screen uses this one object. In demo mode each call is answered by the in-memory fake
+// instead, so the demo cannot reach the real database, bank functions or login.
+export const supabase = new Proxy(realClient, {
+  get(_target, prop) {
+    const target = isDemoMode() ? getDemoClient() : realClient;
+    const value: unknown = Reflect.get(target, prop);
+    return typeof value === "function" ? value.bind(target) : value;
+  },
+});
+
+/** Called when entering the demo: stop a stored real login from refreshing its token in the background. */
+export function pauseRealClient(): void {
+  void realClient.auth.stopAutoRefresh();
+}

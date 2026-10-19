@@ -1,7 +1,8 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import { Github, Loader2, LockKeyhole, TrendingUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { exitDemoMode } from "@/lib/demo/mode";
 
 export function safeNext(value: unknown): string | undefined {
   if (typeof value !== "string" || !value.startsWith("/")) return undefined;
@@ -18,6 +19,8 @@ export function safeNext(value: unknown): string | undefined {
 
 export const Route = createFileRoute("/auth")({
   ssr: false,
+  // Arriving here always ends a demo visit, so a real sign-in never shares a tab with fake data.
+  beforeLoad: () => exitDemoMode(),
   validateSearch: (s: Record<string, unknown>) => {
     const next = safeNext(s["next"]);
     return next ? { next } : {};
@@ -179,7 +182,13 @@ function AuthPage() {
             </form>
           )}
 
-          <div className="mt-5 border-t pt-4 text-center">
+          <div className="mt-5 space-y-3 border-t pt-4 text-center">
+            <Link
+              to="/demo"
+              className="flex w-full items-center justify-center rounded-lg border border-input px-4 py-2.5 text-sm font-semibold text-foreground transition-colors hover:bg-accent"
+            >
+              Try the demo
+            </Link>
             <a
               href="https://github.com/marcodonghiaa/my-wealth-view"
               target="_blank"
