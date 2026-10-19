@@ -14,6 +14,7 @@ import {
   type AllocationPlotPoint,
   type HistoryRow,
   type NetWorthRow,
+  type ReconstructedRow,
 } from "@/lib/net-worth";
 import { axisDateFormatter, formatISODate } from "@/lib/date";
 
@@ -28,11 +29,15 @@ const CLASSES = [
 export function AllocationChart({
   history,
   snapshots,
+  reconstructed = [],
 }: {
   history: Array<HistoryRow>;
   snapshots: Array<NetWorthRow>;
+  reconstructed?: Array<ReconstructedRow>;
 }) {
-  const data = breakAtGaps(allocationSeries(allocationHistory(history, snapshots)));
+  const data = breakAtGaps(
+    allocationSeries(allocationHistory(history, snapshots, undefined, reconstructed)),
+  );
   if (data.length < 2) return null;
   // The grey band only appears when some imported total has no split.
   const classes = CLASSES.filter((c) => c.key !== "other" || data.some((d) => (d.other ?? 0) > 0));
@@ -108,8 +113,10 @@ export function AllocationChart({
         </ResponsiveContainer>
       </div>
       <p className="mt-2 px-2 text-xs text-muted-foreground">
-        Imported monthly history, then daily snapshots (portfolio shown as stocks). Gaps are periods
-        with no data.
+        Imported monthly history, then daily snapshots (portfolio shown as stocks).
+        {reconstructed.length > 0 &&
+          " Months rebuilt from statements cover stocks, bond funds and cash only: no crypto or CDs."}{" "}
+        Gaps are periods with no data.
       </p>
     </section>
   );

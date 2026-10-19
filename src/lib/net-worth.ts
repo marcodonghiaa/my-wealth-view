@@ -82,20 +82,42 @@ export function chartPoints<T extends NetWorthRow>(rows: Array<T>): Array<ChartP
   return points;
 }
 
-// Rows for the allocation chart: imported months, then live snapshots from the baseline on.
-// Live snapshots only split portfolio, crypto and bank, so the portfolio counts as stocks (the
-// holdings here are stocks and ETFs) and bank balances as cash.
+// A month rebuilt from bank and broker statements (stocks, bond-like funds and cash only).
+export type ReconstructedRow = {
+  snapshot_date: string;
+  stocks_eur: number;
+  bonds_eur: number;
+  cash_eur: number;
+};
+
+// Rows for the allocation chart: imported months, rebuilt months for what falls between, then
+// live snapshots from the baseline on. Live snapshots only split portfolio, crypto and bank, so
+// the portfolio counts as stocks (the holdings here are stocks and ETFs) and bank balances as
+// cash. A rebuilt month never replaces an imported or live one.
 export function allocationHistory(
   history: Array<HistoryRow>,
   snapshots: Array<NetWorthRow>,
   start: string | undefined = NET_WORTH_START,
+  reconstructed: Array<ReconstructedRow> = [],
 ): Array<HistoryRow> {
   const base = periodBaseline(snapshots, start);
   const live = base ? snapshots.filter((s) => s.snapshot_date >= base.snapshot_date) : [];
   const firstLive = live.at(0)?.snapshot_date;
   const past = history.filter((h) => !firstLive || h.snapshot_date < firstLive);
+  const imported = new Set(past.map((h) => h.snapshot_date));
+  const rebuilt = reconstructed
+    .filter((r) => !imported.has(r.snapshot_date) && (!firstLive || r.snapshot_date < firstLive))
+    .map((r) => ({
+      snapshot_date: r.snapshot_date,
+      stocks_eur: r.stocks_eur,
+      bonds_eur: r.bonds_eur,
+      crypto_eur: 0,
+      cash_eur: r.cash_eur,
+      liabilities_eur: 0,
+      total_eur: r.stocks_eur + r.bonds_eur + r.cash_eur,
+    }));
   return [
-    ...past,
+    ...[...past, ...rebuilt].sort((a, b) => a.snapshot_date.localeCompare(b.snapshot_date)),
     ...live.map((s) => ({
       snapshot_date: s.snapshot_date,
       stocks_eur: s.portfolio_total_eur,

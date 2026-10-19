@@ -25,6 +25,7 @@ import {
   withHistory,
   yearStart,
   type HistoryRow,
+  type ReconstructedRow,
 } from "@/lib/net-worth";
 import { FriendsCreditLine } from "@/components/splitwise/balances-view";
 import { friendsCreditEur as friendsCreditEurOf } from "@/lib/import/splitwise-balances";
@@ -100,6 +101,15 @@ async function fetchHistory(): Promise<Array<HistoryRow>> {
   return (data ?? []) as Array<HistoryRow>;
 }
 
+async function fetchReconstructed(): Promise<Array<ReconstructedRow>> {
+  const { data, error } = await supabase
+    .from("net_worth_reconstructed")
+    .select("snapshot_date,stocks_eur,bonds_eur,cash_eur")
+    .order("snapshot_date", { ascending: true });
+  if (error) throw error;
+  return data ?? [];
+}
+
 async function fetchLatestFxRates(): Promise<Record<string, FxRate>> {
   // Latest fx_rates row per non-EUR currency.
   const { data, error } = await supabase
@@ -132,6 +142,10 @@ export function NetWorthPage() {
   });
   // Optional extra: absent table or empty history just means no pre-snapshot data.
   const historyQuery = useQuery({ queryKey: ["net-worth-history"], queryFn: fetchHistory });
+  const reconstructedQuery = useQuery({
+    queryKey: ["net-worth-reconstructed"],
+    queryFn: fetchReconstructed,
+  });
   const fxQuery = useQuery({
     queryKey: ["fx-rates-latest"],
     queryFn: fetchLatestFxRates,
@@ -404,7 +418,11 @@ export function NetWorthPage() {
         </div>
       </section>
 
-      <AllocationChart history={historyQuery.data ?? []} snapshots={snapshots} />
+      <AllocationChart
+        history={historyQuery.data ?? []}
+        snapshots={snapshots}
+        reconstructed={reconstructedQuery.data ?? []}
+      />
     </div>
   );
 }

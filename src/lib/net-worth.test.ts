@@ -231,6 +231,32 @@ describe("allocationHistory", () => {
     expect(rows.map((r) => r.snapshot_date)).toEqual(["2026-09-04"]);
   });
 
+  const rec = (d: string) => ({ snapshot_date: d, stocks_eur: 70, bonds_eur: 10, cash_eur: 20 });
+
+  // protects=the months between history and live data are filled from statements; fails_when=
+  // rebuilt rows are ignored, or override a month the user already imported
+  it("fills the months between the imported history and the live snapshots", () => {
+    const rows = allocationHistory([hist("2025-11-30")], [live("2026-09-04")], undefined, [
+      rec("2025-11-30"),
+      rec("2025-12-31"),
+      rec("2026-08-31"),
+      rec("2026-09-30"),
+    ]);
+    expect(rows.map((r) => r.snapshot_date)).toEqual([
+      "2025-11-30",
+      "2025-12-31",
+      "2026-08-31",
+      "2026-09-04",
+    ]);
+    expect(rows[0]).toEqual(hist("2025-11-30"));
+    expect(rows[1]).toMatchObject({ stocks_eur: 70, bonds_eur: 10, cash_eur: 20, crypto_eur: 0 });
+  });
+
+  it("uses rebuilt months when there are no snapshots at all", () => {
+    const rows = allocationHistory([], [], undefined, [rec("2026-08-31")]);
+    expect(rows.map((r) => r.snapshot_date)).toEqual(["2026-08-31"]);
+  });
+
   it("is the imported history alone when there are no snapshots", () => {
     expect(allocationHistory([hist("2025-11-30")], [])).toEqual([hist("2025-11-30")]);
   });

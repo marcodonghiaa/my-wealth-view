@@ -458,6 +458,36 @@ export type Database = {
         };
         Relationships: [];
       };
+      net_worth_reconstructed: {
+        Row: {
+          bonds_eur: number;
+          cash_eur: number;
+          created_at: string;
+          snapshot_date: string;
+          source: string;
+          stocks_eur: number;
+          user_id: string;
+        };
+        Insert: {
+          bonds_eur: number;
+          cash_eur: number;
+          created_at?: string;
+          snapshot_date: string;
+          source?: string;
+          stocks_eur: number;
+          user_id: string;
+        };
+        Update: {
+          bonds_eur?: number;
+          cash_eur?: number;
+          created_at?: string;
+          snapshot_date?: string;
+          source?: string;
+          stocks_eur?: number;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
       splitwise_balances: {
         Row: {
           balance: number;
