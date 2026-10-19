@@ -11,6 +11,8 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatISODate } from "@/lib/date";
+import { onOrBefore, withHistory } from "@/lib/net-worth";
+import { fetchHistory, fetchNetWorth, fetchReconstructed } from "@/lib/net-worth-queries";
 import { TONE_TEXT, toneOf, type Tone } from "@/lib/tone";
 
 export const Route = createFileRoute("/_authenticated/reports")({
@@ -52,29 +54,6 @@ function formatEur(value: number): string {
 
 function formatSigned(value: number): string {
   return `${value >= 0 ? "+" : ""}${formatEur(value)}`;
-}
-
-interface NetWorthDailyRow {
-  snapshot_date: string;
-  total_eur: number | null;
-  bank_total_eur: number | null;
-  portfolio_total_eur: number | null;
-  crypto_total_eur: number | null;
-}
-
-// Latest snapshot at or before the given date -- used for both the
-// end-of-month figure and, applied to the day before the month started,
-// the start-of-month baseline. No new view needed: v_net_worth_daily
-// already has one row per day per user.
-async function fetchNetWorthBoundary(onOrBefore: string): Promise<NetWorthDailyRow | null> {
-  const { data, error } = await supabase
-    .from("v_net_worth_daily")
-    .select("snapshot_date,total_eur,bank_total_eur,portfolio_total_eur,crypto_total_eur")
-    .lte("snapshot_date", onOrBefore)
-    .order("snapshot_date", { ascending: false })
-    .limit(1);
-  if (error) throw error;
-  return (data?.[0] as NetWorthDailyRow | undefined) ?? null;
 }
 
 interface IncomeExpenseRow {
@@ -169,14 +148,17 @@ export function ReportsPage() {
   const dayBeforeMonthISO = formatISODate(new Date(month.getFullYear(), month.getMonth(), 0));
   const endOfMonthISO = formatISODate(endOfMonth(month));
 
-  const endBoundaryQuery = useQuery({
-    queryKey: ["reports-net-worth-boundary", endOfMonthISO],
-    queryFn: () => fetchNetWorthBoundary(endOfMonthISO),
+  // Same sources and keys as the Net Worth page: imported months, rebuilt months, live days.
+  const liveQuery = useQuery({ queryKey: ["net-worth-daily"], queryFn: fetchNetWorth });
+  const historyQuery = useQuery({ queryKey: ["net-worth-history"], queryFn: fetchHistory });
+  const rebuiltQuery = useQuery({
+    queryKey: ["net-worth-reconstructed"],
+    queryFn: fetchReconstructed,
   });
-  const startBoundaryQuery = useQuery({
-    queryKey: ["reports-net-worth-boundary", dayBeforeMonthISO],
-    queryFn: () => fetchNetWorthBoundary(dayBeforeMonthISO),
-  });
+  const netWorthRows = useMemo(
+    () => withHistory(historyQuery.data ?? [], liveQuery.data ?? [], undefined, rebuiltQuery.data),
+    [historyQuery.data, liveQuery.data, rebuiltQuery.data],
+  );
   const incomeExpensesQuery = useQuery({
     queryKey: ["reports-income-expenses", monthISO],
     queryFn: () => fetchIncomeExpenses(monthISO),
@@ -199,21 +181,21 @@ export function ReportsPage() {
   });
 
   const netWorthDelta = useMemo(() => {
-    const end = endBoundaryQuery.data;
-    const start = startBoundaryQuery.data;
+    const end = onOrBefore(netWorthRows, endOfMonthISO);
+    const start = onOrBefore(netWorthRows, dayBeforeMonthISO);
     if (!end) return null;
     if (!start) return { end, start: null, delta: null };
     return {
       end,
       start,
       delta: {
-        total: (end.total_eur ?? 0) - (start.total_eur ?? 0),
-        bank: (end.bank_total_eur ?? 0) - (start.bank_total_eur ?? 0),
-        portfolio: (end.portfolio_total_eur ?? 0) - (start.portfolio_total_eur ?? 0),
-        crypto: (end.crypto_total_eur ?? 0) - (start.crypto_total_eur ?? 0),
+        total: end.total_eur - start.total_eur,
+        bank: end.bank_total_eur - start.bank_total_eur,
+        portfolio: end.portfolio_total_eur - start.portfolio_total_eur,
+        crypto: end.crypto_total_eur - start.crypto_total_eur,
       },
     };
-  }, [endBoundaryQuery.data, startBoundaryQuery.data]);
+  }, [netWorthRows, endOfMonthISO, dayBeforeMonthISO]);
 
   const topCategories = useMemo(
     () =>
@@ -292,7 +274,7 @@ export function ReportsPage() {
           }
           label="Net worth"
           sublabel={netWorthDelta?.delta ? "change this month" : undefined}
-          pending={endBoundaryQuery.isPending || startBoundaryQuery.isPending}
+          pending={liveQuery.isPending || historyQuery.isPending || rebuiltQuery.isPending}
           value={
             netWorthDelta?.delta
               ? formatSigned(netWorthDelta.delta.total)

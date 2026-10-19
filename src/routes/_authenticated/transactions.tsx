@@ -7,10 +7,13 @@ import { formatISODate } from "@/lib/date";
 import {
   UNCATEGORIZED,
   filterTransactions,
+  isSplitwiseShare,
   listCategories,
+  mergeShares,
   nameRefunds,
   startOfMonth,
   type AccountRow,
+  type SplitwiseShare,
   type TransactionRow,
   isSameTx,
   txId,
@@ -67,6 +70,19 @@ async function fetchTransactionsForMonth(month: Date): Promise<Array<Transaction
   return (data ?? []) as Array<TransactionRow>;
 }
 
+// My share of Splitwise expenses in the month (shares already paid by card are bank rows).
+async function fetchSharesForMonth(month: Date): Promise<Array<SplitwiseShare>> {
+  const start = formatISODate(startOfMonth(month));
+  const end = formatISODate(new Date(month.getFullYear(), month.getMonth() + 1, 1));
+  const { data, error } = await supabase
+    .from("v_splitwise_eur")
+    .select("id,booking_date,category,description,group_name,currency,amount,amount_eur")
+    .gte("booking_date", start)
+    .lt("booking_date", end);
+  if (error) throw error;
+  return (data ?? []) as Array<SplitwiseShare>;
+}
+
 async function fetchAccounts(): Promise<Record<string, AccountRow>> {
   const { data, error } = await supabase.from("accounts").select("uid,label,currency");
   if (error) throw error;
@@ -97,6 +113,12 @@ export function TransactionsPage() {
     errorMessage: "Couldn't save answer",
   });
 
+  const renameTx = useTransactionFieldMutation(queryClient, monthKey, "creditor_name", {
+    errorMessage: "Couldn't rename",
+    successMessage: () => "Renamed",
+    writeColumn: "custom_name",
+  });
+
   const updateSplit = useSplitMutation(queryClient, monthKey);
 
   const bulkUpdateCategory = useBulkCategoryMutation(queryClient, monthKey, () =>
@@ -117,7 +139,16 @@ export function TransactionsPage() {
     staleTime: 60_000,
   });
 
-  const transactions = useMemo(() => nameRefunds(txQuery.data ?? []), [txQuery.data]);
+  const sharesQuery = useQuery({
+    queryKey: ["splitwise-shares", monthKey],
+    queryFn: () => fetchSharesForMonth(month),
+    staleTime: 60_000,
+  });
+
+  const transactions = useMemo(
+    () => mergeShares(nameRefunds(txQuery.data ?? []), sharesQuery.data ?? []),
+    [txQuery.data, sharesQuery.data],
+  );
 
   // Arrived via a "worth it?" push: force fresh data (the cache may be stale
   // from before this notification's transaction existed) and jump to it.
@@ -152,7 +183,11 @@ export function TransactionsPage() {
 
   const accounts = accountsQuery.data ?? {};
 
-  const filteredIds = useMemo(() => filtered.map(txId), [filtered]);
+  // Shares cannot be bulk edited or deleted: they are not rows of the transactions table.
+  const filteredIds = useMemo(
+    () => filtered.filter((tx) => !isSplitwiseShare(tx)).map(txId),
+    [filtered],
+  );
   const allFilteredSelected = filteredIds.length > 0 && filteredIds.every((id) => selected.has(id));
 
   function toggleOne(id: string) {
@@ -192,6 +227,8 @@ export function TransactionsPage() {
     onAnswerWorthIt: (worthIt) => answerWorthIt.mutate({ tx, value: worthIt }),
     savingSplit: updateSplit.isPending && isSameTx(updateSplit.variables?.tx, tx),
     onSaveSplit: (personalAmount, owedBy) => updateSplit.mutate({ tx, personalAmount, owedBy }),
+    savingRename: renameTx.isPending && isSameTx(renameTx.variables?.tx, tx),
+    onRename: (name) => renameTx.mutate({ tx, value: name }),
     highlighted: tx.entry_reference === highlightRef,
   });
 

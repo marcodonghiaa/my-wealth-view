@@ -13,6 +13,10 @@ const KEYWORDS: Array<[AppCategory, RegExp]> = [
   ["Experiences", /\b(travel|viagg|hotel|holiday|vacanz|concert|event)/],
   ["Shopping", /\b(shop|cloth|abbigliament|amazon)/],
   ["Services", /\b(bill|bolletta|utilit|insurance|assicur|internet|phone|telefon)/],
+  [
+    "Taxes",
+    /\b(tax(es)?\b|tasse|tassa|imposta|imposte|f24|agenzia (delle )?entrate|erario|irs\b|hmrc|inps|iva\b)/,
+  ],
   ["Income", /\b(salary|stipendio|income|entrate)/],
   ["Transfer", /\b(transfer|trasferiment)/],
 ];

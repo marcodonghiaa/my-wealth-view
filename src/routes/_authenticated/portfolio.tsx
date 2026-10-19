@@ -175,23 +175,59 @@ export function PortfolioPage() {
         </div>
       )}
 
-      {/* Headline */}
-      <section className="mb-6 rounded-2xl border bg-card p-6 card-ring sm:p-8">
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
-          <Briefcase className="size-4 text-primary" />
-          Total portfolio value
-          {asOf && <span className="ml-1">· as of {formatDate(asOf)}</span>}
-        </div>
+      {/* Headline + allocation side by side */}
+      <section className="mb-6 grid items-center gap-6 rounded-2xl border bg-card p-6 card-ring sm:p-8 md:grid-cols-2">
+        <div>
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
+            <Briefcase className="size-4 text-primary" />
+            Total portfolio value
+            {asOf && <span className="ml-1">· as of {formatDate(asOf)}</span>}
+          </div>
 
-        <div className="mt-3 min-h-16">
-          {query.isPending ? (
-            <div className="h-14 w-64 animate-pulse rounded-lg bg-muted" />
-          ) : (
-            <p className="font-figure text-4xl font-bold tracking-tight text-foreground sm:text-6xl">
-              {formatEur(totalEur)}
-            </p>
-          )}
+          <div className="mt-3 min-h-16">
+            {query.isPending ? (
+              <div className="h-14 w-64 animate-pulse rounded-lg bg-muted" />
+            ) : (
+              <p className="font-figure text-4xl font-bold tracking-tight text-foreground sm:text-6xl">
+                {formatEur(totalEur)}
+              </p>
+            )}
+          </div>
         </div>
+        {!query.isPending && holdings.length > 0 && (
+          <div
+            className="h-56 w-full md:h-64"
+            role="img"
+            aria-label={shareSummary(
+              "Allocation by type",
+              groups.map((g) => ({ label: g.type, value: g.totalEur })),
+            )}
+          >
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={groups}
+                  dataKey="totalEur"
+                  nameKey="type"
+                  innerRadius="55%"
+                  outerRadius="80%"
+                  paddingAngle={2}
+                  cornerRadius={6}
+                >
+                  {groups.map((g) => (
+                    <Cell
+                      key={g.type}
+                      fill={colorForType(g.type)}
+                      stroke="var(--color-card)"
+                      strokeWidth={2}
+                    />
+                  ))}
+                </Pie>
+                <Tooltip content={<TypeTooltip totalEur={totalEur} />} />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        )}
       </section>
 
       {query.isPending ? (
@@ -205,45 +241,6 @@ export function PortfolioPage() {
         </div>
       ) : (
         <>
-          {/* Allocation by type */}
-          <section className="mb-6 rounded-2xl border bg-card p-4 card-ring sm:p-6">
-            <div className="mb-4 px-2">
-              <h2 className="text-sm font-semibold text-foreground">Allocation by type</h2>
-            </div>
-            <div
-              className="h-80 w-full"
-              role="img"
-              aria-label={shareSummary(
-                "Allocation by type",
-                groups.map((g) => ({ label: g.type, value: g.totalEur })),
-              )}
-            >
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={groups}
-                    dataKey="totalEur"
-                    nameKey="type"
-                    innerRadius="55%"
-                    outerRadius="80%"
-                    paddingAngle={2}
-                    cornerRadius={6}
-                  >
-                    {groups.map((g) => (
-                      <Cell
-                        key={g.type}
-                        fill={colorForType(g.type)}
-                        stroke="var(--color-card)"
-                        strokeWidth={2}
-                      />
-                    ))}
-                  </Pie>
-                  <Tooltip content={<TypeTooltip totalEur={totalEur} />} />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          </section>
-
           {/* Holdings grouped by type */}
           <div className="space-y-4">
             {groups.map((group) => {

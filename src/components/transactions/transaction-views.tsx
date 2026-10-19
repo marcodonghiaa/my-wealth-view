@@ -4,9 +4,11 @@ import {
   formatAmountPlain,
   formatBookingDate,
   formatMoney,
+  isSplitwiseShare,
   nativeSignedAmount,
   type TransactionRow,
 } from "@/lib/transactions";
+import { NameEditor } from "./name-editor";
 import { CategoryPicker, TypePicker } from "./pickers";
 import { SplitEditor } from "./split-editor";
 import { WorthItPrompt } from "./worth-it";
@@ -23,6 +25,8 @@ export interface TransactionViewProps {
   onAnswerWorthIt: (worthIt: "yes" | "no") => void;
   savingSplit: boolean;
   onSaveSplit: (personalAmount: number | null, owedBy: string | null) => void;
+  onRename: (name: string | null) => void;
+  savingRename: boolean;
   highlighted?: boolean;
 }
 
@@ -38,6 +42,8 @@ export function TransactionRowView({
   onAnswerWorthIt,
   savingSplit,
   onSaveSplit,
+  onRename,
+  savingRename,
   highlighted,
 }: TransactionViewProps) {
   const native = nativeSignedAmount(tx);
@@ -45,6 +51,8 @@ export function TransactionRowView({
   const positive = (native ?? 0) >= 0;
   const eur = tx.signed_amount_eur;
   const showEur = currency !== "EUR" && eur != null;
+  // A Splitwise share lives in its own table: nothing here can edit, select or delete it.
+  const share = isSplitwiseShare(tx);
 
   return (
     <tr
@@ -52,35 +60,47 @@ export function TransactionRowView({
       className={`border-b transition-colors last:border-0 hover:bg-accent/40 ${selected ? "bg-primary/5" : ""} ${highlighted ? "ring-2 ring-inset ring-primary" : ""}`}
     >
       <td className="px-4 py-3">
-        <label className="-m-3.5 inline-flex size-11 cursor-pointer items-center justify-center p-3.5">
-          <input
-            type="checkbox"
-            aria-label={`Select ${tx.creditor_name ?? "transaction"}`}
-            checked={selected}
-            onChange={onToggleSelect}
-            className="size-4 rounded border-border accent-primary"
-          />
-        </label>
+        {!share && (
+          <label className="-m-3.5 inline-flex size-11 cursor-pointer items-center justify-center p-3.5">
+            <input
+              type="checkbox"
+              aria-label={`Select ${tx.creditor_name ?? "transaction"}`}
+              checked={selected}
+              onChange={onToggleSelect}
+              className="size-4 rounded border-border accent-primary"
+            />
+          </label>
+        )}
       </td>
       <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">
         {formatBookingDate(tx.booking_date)}
       </td>
       <td className="max-w-48 px-4 py-3">
-        <div className="truncate font-medium text-foreground">{tx.creditor_name ?? "—"}</div>
+        <div className="truncate font-medium text-foreground">
+          {share ? (
+            (tx.creditor_name ?? "—")
+          ) : (
+            <NameEditor name={tx.creditor_name} onSave={onRename} saving={savingRename} />
+          )}
+        </div>
         <RefundedBadge flowType={tx.flow_type} />
-        <WorthItPrompt tx={tx} onAnswer={onAnswerWorthIt} />
+        {!share && <WorthItPrompt tx={tx} onAnswer={onAnswerWorthIt} />}
       </td>
       <td className="px-4 py-3">
-        <CategoryPicker tx={tx} onSelect={onSelectCategory} saving={savingCategory} />
+        {share ? (
+          <span className="text-muted-foreground">{tx.category ?? "—"}</span>
+        ) : (
+          <CategoryPicker tx={tx} onSelect={onSelectCategory} saving={savingCategory} />
+        )}
       </td>
       <td className="px-4 py-3">
-        <TypePicker tx={tx} onSelect={onSelectType} saving={savingType} />
+        {!share && <TypePicker tx={tx} onSelect={onSelectType} saving={savingType} />}
       </td>
       <td className="px-4 py-3">
-        <SplitEditor tx={tx} onSave={onSaveSplit} saving={savingSplit} />
+        {!share && <SplitEditor tx={tx} onSave={onSaveSplit} saving={savingSplit} />}
       </td>
       <td className="px-4 py-3">
-        <AccountBadge label={accountLabel} />
+        <AccountBadge label={share ? "Splitwise" : accountLabel} />
       </td>
       <td className="px-4 py-3 text-right whitespace-nowrap">
         {native == null ? (
@@ -117,6 +137,8 @@ export function TransactionCardView({
   onAnswerWorthIt,
   savingSplit,
   onSaveSplit,
+  onRename,
+  savingRename,
   highlighted,
 }: TransactionViewProps) {
   const native = nativeSignedAmount(tx);
@@ -124,6 +146,7 @@ export function TransactionCardView({
   const positive = (native ?? 0) >= 0;
   const eur = tx.signed_amount_eur;
   const showEur = currency !== "EUR" && eur != null;
+  const share = isSplitwiseShare(tx);
 
   return (
     <li
@@ -131,26 +154,34 @@ export function TransactionCardView({
       className={`px-4 py-3 ${selected ? "bg-primary/5" : ""} ${highlighted ? "ring-2 ring-inset ring-primary" : ""}`}
     >
       <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-3">
-        <label className="-m-3.5 -mt-3 inline-flex size-11 shrink-0 cursor-pointer items-center justify-center p-3.5">
-          <input
-            type="checkbox"
-            aria-label={`Select ${tx.creditor_name ?? "transaction"}`}
-            checked={selected}
-            onChange={onToggleSelect}
-            className="size-4 rounded border-border accent-primary"
-          />
-        </label>
+        {share ? (
+          <span className="size-4" />
+        ) : (
+          <label className="-m-3.5 -mt-3 inline-flex size-11 shrink-0 cursor-pointer items-center justify-center p-3.5">
+            <input
+              type="checkbox"
+              aria-label={`Select ${tx.creditor_name ?? "transaction"}`}
+              checked={selected}
+              onChange={onToggleSelect}
+              className="size-4 rounded border-border accent-primary"
+            />
+          </label>
+        )}
         <div className="min-w-0">
           <p className="truncate text-[0.9375rem] font-medium text-foreground">
-            {tx.creditor_name ?? "—"}
+            {share ? (
+              (tx.creditor_name ?? "—")
+            ) : (
+              <NameEditor name={tx.creditor_name} onSave={onRename} saving={savingRename} />
+            )}
           </p>
           <p className="mt-0.5 flex items-center gap-1.5 truncate text-xs text-muted-foreground">
             {formatBookingDate(tx.booking_date)}
-            <AccountBadge label={accountLabel} />
+            <AccountBadge label={share ? "Splitwise" : accountLabel} />
           </p>
           <div className="mt-0.5">
             <RefundedBadge flowType={tx.flow_type} />
-            <WorthItPrompt tx={tx} onAnswer={onAnswerWorthIt} />
+            {!share && <WorthItPrompt tx={tx} onAnswer={onAnswerWorthIt} />}
           </div>
         </div>
         <div className="shrink-0 text-right">
@@ -175,9 +206,15 @@ export function TransactionCardView({
         </div>
       </div>
       <div className="mt-2 flex flex-wrap items-center gap-2">
-        <CategoryPicker tx={tx} onSelect={onSelectCategory} saving={savingCategory} />
-        <TypePicker tx={tx} onSelect={onSelectType} saving={savingType} />
-        <SplitEditor tx={tx} onSave={onSaveSplit} saving={savingSplit} />
+        {share ? (
+          <span className="text-xs text-muted-foreground">{tx.category ?? "—"}</span>
+        ) : (
+          <>
+            <CategoryPicker tx={tx} onSelect={onSelectCategory} saving={savingCategory} />
+            <TypePicker tx={tx} onSelect={onSelectType} saving={savingType} />
+            <SplitEditor tx={tx} onSave={onSaveSplit} saving={savingSplit} />
+          </>
+        )}
         {currency !== "EUR" && <CurrencyBadge currency={currency} />}
       </div>
     </li>

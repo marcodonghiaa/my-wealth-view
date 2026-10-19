@@ -458,6 +458,117 @@ export type Database = {
         };
         Relationships: [];
       };
+      net_worth_reconstructed: {
+        Row: {
+          bonds_eur: number;
+          cash_eur: number;
+          created_at: string;
+          crypto_eur: number;
+          snapshot_date: string;
+          source: string;
+          stocks_eur: number;
+          user_id: string;
+        };
+        Insert: {
+          bonds_eur: number;
+          cash_eur: number;
+          created_at?: string;
+          crypto_eur?: number;
+          snapshot_date: string;
+          source?: string;
+          stocks_eur: number;
+          user_id: string;
+        };
+        Update: {
+          bonds_eur?: number;
+          cash_eur?: number;
+          created_at?: string;
+          crypto_eur?: number;
+          snapshot_date?: string;
+          source?: string;
+          stocks_eur?: number;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
+      splitwise_balances: {
+        Row: {
+          balance: number;
+          currency: string;
+          group_name: string;
+          is_me: boolean;
+          person: string;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          balance: number;
+          currency: string;
+          group_name: string;
+          is_me?: boolean;
+          person: string;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          balance?: number;
+          currency?: string;
+          group_name?: string;
+          is_me?: boolean;
+          person?: string;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
+      splitwise_expenses: {
+        Row: {
+          amount: number;
+          batch_id: string;
+          booking_date: string;
+          category: string | null;
+          created_at: string;
+          currency: string;
+          description: string;
+          fingerprint: string;
+          group_name: string;
+          id: string;
+          linked_account_uid: string | null;
+          linked_entry_reference: string | null;
+          user_id: string;
+        };
+        Insert: {
+          amount: number;
+          batch_id: string;
+          booking_date: string;
+          category?: string | null;
+          created_at?: string;
+          currency: string;
+          description: string;
+          fingerprint: string;
+          group_name: string;
+          id?: string;
+          linked_account_uid?: string | null;
+          linked_entry_reference?: string | null;
+          user_id: string;
+        };
+        Update: {
+          amount?: number;
+          batch_id?: string;
+          booking_date?: string;
+          category?: string | null;
+          created_at?: string;
+          currency?: string;
+          description?: string;
+          fingerprint?: string;
+          group_name?: string;
+          id?: string;
+          linked_account_uid?: string | null;
+          linked_entry_reference?: string | null;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
       subscription_billing_overrides: {
         Row: {
           billing_frequency: string | null;
@@ -498,9 +609,11 @@ export type Database = {
           created_at: string | null;
           credit_debit_indicator: string | null;
           creditor_name: string | null;
+          custom_name: string | null;
           currency: string;
           debtor_name: string | null;
           entry_reference: string;
+          import_batch_id: string | null;
           deleted_at: string | null;
           refund_of: string | null;
           flow_type: string | null;
@@ -525,9 +638,11 @@ export type Database = {
           created_at?: string | null;
           credit_debit_indicator?: string | null;
           creditor_name?: string | null;
+          custom_name?: string | null;
           currency: string;
           debtor_name?: string | null;
           entry_reference: string;
+          import_batch_id?: string | null;
           deleted_at?: string | null;
           refund_of?: string | null;
           flow_type?: string | null;
@@ -552,9 +667,11 @@ export type Database = {
           created_at?: string | null;
           credit_debit_indicator?: string | null;
           creditor_name?: string | null;
+          custom_name?: string | null;
           currency?: string;
           debtor_name?: string | null;
           entry_reference?: string;
+          import_batch_id?: string | null;
           deleted_at?: string | null;
           refund_of?: string | null;
           flow_type?: string | null;
@@ -706,6 +823,20 @@ export type Database = {
         };
         Relationships: [];
       };
+      v_splitwise_eur: {
+        Row: {
+          amount: number | null;
+          amount_eur: number | null;
+          booking_date: string | null;
+          category: string | null;
+          currency: string | null;
+          description: string | null;
+          group_name: string | null;
+          id: string | null;
+          user_id: string | null;
+        };
+        Relationships: [];
+      };
       v_subscriptions: {
         Row: {
           amount: number | null;
@@ -767,7 +898,25 @@ export type Database = {
       };
     };
     Functions: {
-      [_ in never]: never;
+      import_splitwise: {
+        Args: {
+          p_batch: string;
+          p_from: string;
+          p_group: string;
+          p_links: Json;
+          p_shares: Json;
+          p_to: string;
+        };
+        Returns: Json;
+      };
+      save_splitwise_balances: {
+        Args: { p_balances: Json; p_group: string };
+        Returns: Json;
+      };
+      undo_splitwise_import: {
+        Args: { p_batch: string };
+        Returns: Json;
+      };
     };
     Enums: {
       [_ in never]: never;

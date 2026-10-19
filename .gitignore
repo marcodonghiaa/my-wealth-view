@@ -39,3 +39,6 @@ graphify-out/
 *.njsproj
 *.sln
 *.sw?
+
+# Supabase CLI local state
+supabase/.temp/

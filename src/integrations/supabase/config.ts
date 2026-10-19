@@ -1,9 +1,6 @@
 export const REFERENCE_SUPABASE_URL = "https://diwezyrtlwdbrsgegkay.supabase.co";
 export const REFERENCE_SUPABASE_KEY = "sb_publishable_TUrIFr1vCjdFi7UF81VWhA_Qu8FiCe1";
 
-// Lovable's hosting builds without VITE_SUPABASE_*, so these hosts keep the reference project.
-const LOVABLE_ZONES = ["lovable.app", "lovableproject.com", "lovableproject-dev.com"];
-
 type Input = {
   url: string | undefined;
   key: string | undefined;
@@ -16,11 +13,7 @@ type Input = {
 export function resolveSupabaseConfig({ url, key, hostname, dev }: Input) {
   if (url && key) return { url, key, usingFallback: false };
 
-  const fallbackAllowed =
-    dev ||
-    hostname === undefined ||
-    LOVABLE_ZONES.some((zone) => hostname === zone || hostname.endsWith(`.${zone}`));
-  if (!fallbackAllowed) {
+  if (!dev && hostname !== undefined) {
     throw new Error(
       "VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY must be set at build time (see .env.example).",
     );

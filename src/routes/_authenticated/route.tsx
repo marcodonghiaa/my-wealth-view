@@ -12,6 +12,7 @@ import {
   MoreHorizontal,
   FileText,
   ArrowDownLeft,
+  Users,
   type LucideIcon,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -62,6 +63,7 @@ const NAV_GROUPS: Array<NavGroup> = [
       { label: "Income", icon: ArrowDownLeft, to: "/income" },
       { label: "Spending", icon: PieChart, to: "/spending" },
       { label: "Subscriptions", icon: Repeat, to: "/subscriptions" },
+      { label: "Splitwise", icon: Users, to: "/splitwise" },
     ],
   },
   {

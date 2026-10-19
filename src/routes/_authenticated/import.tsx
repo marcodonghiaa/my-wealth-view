@@ -11,7 +11,7 @@ function ImportPage() {
       <header className="mb-8">
         <h1 className="ios-large-title">Import data</h1>
         <p className="mt-0.5 text-sm text-muted-foreground">
-          Bring in past net worth or spending from a spreadsheet.
+          Bring in past net worth or spending from a spreadsheet. Splitwise has its own page.
         </p>
       </header>
       <ImportWizard />

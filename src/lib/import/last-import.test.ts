@@ -54,4 +54,27 @@ describe("refreshKeys", () => {
     expect(refreshKeys("spend")).not.toContainEqual(["net-worth-history"]);
     expect(refreshKeys("spend")).toContainEqual(["welcome-facts"]);
   });
+
+  it("lists the spending and income screens a Splitwise import changes", () => {
+    const keys = refreshKeys("splitwise");
+    for (const k of [
+      "spend-by-category",
+      "reports-spend",
+      "category-transactions",
+      "income-vs-expenses",
+      "reports-income-expenses",
+      "transactions",
+      "splitwise-balances",
+    ]) {
+      expect(keys).toContainEqual([k]);
+    }
+    expect(keys).not.toContainEqual(["net-worth-history"]);
+  });
+
+  it("keeps the Splitwise memory apart from the spreadsheet ones", () => {
+    const store = fakeStorage();
+    saveLastImport(store, "u1", "splitwise", last);
+    expect(loadLastImport(store, "u1", "splitwise")).toEqual(last);
+    expect(loadLastImport(store, "u1", "spend")).toBeNull();
+  });
 });

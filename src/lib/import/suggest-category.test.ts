@@ -19,8 +19,19 @@ describe("suggestCategory", () => {
     ["Netflix subscription", "Entertainment"],
     ["Farmacia", "Health"],
     ["Travel", "Experiences"],
+    ["Taxes", "Taxes"],
+    ["Tasse", "Taxes"],
+    ["F24 p.iva", "Taxes"],
+    ["Agenzia delle Entrate", "Taxes"],
+    ["Imposta sostitutiva", "Taxes"],
+    ["Income tax", "Taxes"],
   ])("maps %j to %s", (raw, expected) => {
     expect(suggestCategory(raw)).toBe(expected);
+  });
+
+  // protects=taxi rides stay transport; fails_when=the tax keyword matches inside "taxi"
+  it("does not read a taxi as a tax", () => {
+    expect(suggestCategory("Taxi to airport")).toBe("Transports");
   });
 
   it("falls back to Others for unknown or empty names", () => {

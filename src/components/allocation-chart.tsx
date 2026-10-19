@@ -7,7 +7,15 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { allocationSeries, type AllocationPoint, type HistoryRow } from "@/lib/net-worth";
+import {
+  allocationHistory,
+  allocationSeries,
+  breakAtGaps,
+  type AllocationPlotPoint,
+  type HistoryRow,
+  type NetWorthRow,
+  type ReconstructedRow,
+} from "@/lib/net-worth";
 import { axisDateFormatter, formatISODate } from "@/lib/date";
 
 const CLASSES = [
@@ -18,11 +26,21 @@ const CLASSES = [
   { key: "other", label: "Unallocated", color: "var(--color-muted-foreground)" },
 ] as const;
 
-export function AllocationChart({ history }: { history: Array<HistoryRow> }) {
-  const data = allocationSeries(history);
+export function AllocationChart({
+  history,
+  snapshots,
+  reconstructed = [],
+}: {
+  history: Array<HistoryRow>;
+  snapshots: Array<NetWorthRow>;
+  reconstructed?: Array<ReconstructedRow>;
+}) {
+  const data = breakAtGaps(
+    allocationSeries(allocationHistory(history, snapshots, undefined, reconstructed)),
+  );
   if (data.length < 2) return null;
   // The grey band only appears when some imported total has no split.
-  const classes = CLASSES.filter((c) => c.key !== "other" || data.some((d) => d.other > 0));
+  const classes = CLASSES.filter((c) => c.key !== "other" || data.some((d) => (d.other ?? 0) > 0));
   const fmtTick = axisDateFormatter(data[0]?.snapshot_date, data.at(-1)?.snapshot_date);
 
   return (
@@ -95,7 +113,10 @@ export function AllocationChart({ history }: { history: Array<HistoryRow> }) {
         </ResponsiveContainer>
       </div>
       <p className="mt-2 px-2 text-xs text-muted-foreground">
-        From your imported monthly history. Live snapshots don't split stocks from bonds.
+        Imported monthly history, then daily snapshots (portfolio shown as stocks).
+        {reconstructed.length > 0 &&
+          " Months rebuilt from statements cover stocks, bond funds, cash and crypto (at today's quantities): no CDs."}{" "}
+        Gaps are periods with no data.
       </p>
     </section>
   );
@@ -108,10 +129,10 @@ function AllocationTooltip({
 }: {
   classes: ReadonlyArray<(typeof CLASSES)[number]>;
   active?: boolean;
-  payload?: Array<{ payload?: AllocationPoint }>;
+  payload?: Array<{ payload?: AllocationPlotPoint }>;
 }) {
   const point = payload?.at(0)?.payload;
-  if (!active || !point) return null;
+  if (!active || !point || point.stocks === null) return null;
   return (
     <div className="rounded-lg border bg-popover px-3 py-2 shadow-lg">
       <p className="text-xs text-muted-foreground">
@@ -127,7 +148,7 @@ function AllocationTooltip({
               />
               {c.label}
             </span>
-            <span className="font-figure">{point[c.key].toFixed(1)}%</span>
+            <span className="font-figure">{(point[c.key] ?? 0).toFixed(1)}%</span>
           </p>
         ))}
       </div>

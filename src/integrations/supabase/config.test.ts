@@ -27,15 +27,10 @@ describe("resolveSupabaseConfig", () => {
     ).toThrow();
   });
 
-  it("falls back on Lovable-hosted domains, which build without these variables", () => {
-    const cfg = resolveSupabaseConfig({
-      url: "",
-      key: "",
-      hostname: "app.lovable.app",
-      dev: false,
-    });
-    expect(cfg.usingFallback).toBe(true);
-    expect(cfg.url).toBe(REFERENCE_SUPABASE_URL);
+  it("refuses to fall back on a former Lovable domain", () => {
+    expect(() =>
+      resolveSupabaseConfig({ url: "", key: "", hostname: "app.lovable.app", dev: false }),
+    ).toThrow(/VITE_SUPABASE_URL/);
   });
 
   it("falls back under the Vite dev server", () => {
@@ -46,16 +41,5 @@ describe("resolveSupabaseConfig", () => {
   it("falls back on the server, where no credentials are typed", () => {
     const cfg = resolveSupabaseConfig({ url: "", key: "", hostname: undefined, dev: false });
     expect(cfg.usingFallback).toBe(true);
-  });
-
-  it("does not treat a look-alike host as Lovable-hosted", () => {
-    expect(() =>
-      resolveSupabaseConfig({
-        url: "",
-        key: "",
-        hostname: "evil-lovable.app.example.com",
-        dev: false,
-      }),
-    ).toThrow();
   });
 });

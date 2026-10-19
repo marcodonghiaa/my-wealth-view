@@ -21,6 +21,7 @@ import { Route as AuthenticatedPortfolioRouteImport } from './routes/_authentica
 import { Route as AuthenticatedReportsRouteImport } from './routes/_authenticated/reports'
 import { Route as AuthenticatedRulesRouteImport } from './routes/_authenticated/rules'
 import { Route as AuthenticatedSpendingRouteImport } from './routes/_authenticated/spending'
+import { Route as AuthenticatedSplitwiseRouteImport } from './routes/_authenticated/splitwise'
 import { Route as AuthenticatedSubscriptionsRouteImport } from './routes/_authenticated/subscriptions'
 import { Route as AuthenticatedTransactionsRouteImport } from './routes/_authenticated/transactions'
 
@@ -84,6 +85,11 @@ const AuthenticatedSpendingRoute = AuthenticatedSpendingRouteImport.update({
   path: '/spending',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedSplitwiseRoute = AuthenticatedSplitwiseRouteImport.update({
+  id: '/splitwise',
+  path: '/splitwise',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedSubscriptionsRoute =
   AuthenticatedSubscriptionsRouteImport.update({
     id: '/subscriptions',
@@ -109,6 +115,7 @@ export interface FileRoutesByFullPath {
   '/reports': typeof AuthenticatedReportsRoute
   '/rules': typeof AuthenticatedRulesRoute
   '/spending': typeof AuthenticatedSpendingRoute
+  '/splitwise': typeof AuthenticatedSplitwiseRoute
   '/subscriptions': typeof AuthenticatedSubscriptionsRoute
   '/transactions': typeof AuthenticatedTransactionsRoute
 }
@@ -123,6 +130,7 @@ export interface FileRoutesByTo {
   '/reports': typeof AuthenticatedReportsRoute
   '/rules': typeof AuthenticatedRulesRoute
   '/spending': typeof AuthenticatedSpendingRoute
+  '/splitwise': typeof AuthenticatedSplitwiseRoute
   '/subscriptions': typeof AuthenticatedSubscriptionsRoute
   '/transactions': typeof AuthenticatedTransactionsRoute
   '/': typeof AuthenticatedIndexRoute
@@ -140,6 +148,7 @@ export interface FileRoutesById {
   '/_authenticated/reports': typeof AuthenticatedReportsRoute
   '/_authenticated/rules': typeof AuthenticatedRulesRoute
   '/_authenticated/spending': typeof AuthenticatedSpendingRoute
+  '/_authenticated/splitwise': typeof AuthenticatedSplitwiseRoute
   '/_authenticated/subscriptions': typeof AuthenticatedSubscriptionsRoute
   '/_authenticated/transactions': typeof AuthenticatedTransactionsRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
@@ -158,6 +167,7 @@ export interface FileRouteTypes {
     | '/reports'
     | '/rules'
     | '/spending'
+    | '/splitwise'
     | '/subscriptions'
     | '/transactions'
   fileRoutesByTo: FileRoutesByTo
@@ -172,6 +182,7 @@ export interface FileRouteTypes {
     | '/reports'
     | '/rules'
     | '/spending'
+    | '/splitwise'
     | '/subscriptions'
     | '/transactions'
     | '/'
@@ -188,6 +199,7 @@ export interface FileRouteTypes {
     | '/_authenticated/reports'
     | '/_authenticated/rules'
     | '/_authenticated/spending'
+    | '/_authenticated/splitwise'
     | '/_authenticated/subscriptions'
     | '/_authenticated/transactions'
     | '/_authenticated/'
@@ -284,6 +296,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSpendingRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/splitwise': {
+      id: '/_authenticated/splitwise'
+      path: '/splitwise'
+      fullPath: '/splitwise'
+      preLoaderRoute: typeof AuthenticatedSplitwiseRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/subscriptions': {
       id: '/_authenticated/subscriptions'
       path: '/subscriptions'
@@ -311,6 +330,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedReportsRoute: typeof AuthenticatedReportsRoute
   AuthenticatedRulesRoute: typeof AuthenticatedRulesRoute
   AuthenticatedSpendingRoute: typeof AuthenticatedSpendingRoute
+  AuthenticatedSplitwiseRoute: typeof AuthenticatedSplitwiseRoute
   AuthenticatedSubscriptionsRoute: typeof AuthenticatedSubscriptionsRoute
   AuthenticatedTransactionsRoute: typeof AuthenticatedTransactionsRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
@@ -326,6 +346,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedReportsRoute: AuthenticatedReportsRoute,
   AuthenticatedRulesRoute: AuthenticatedRulesRoute,
   AuthenticatedSpendingRoute: AuthenticatedSpendingRoute,
+  AuthenticatedSplitwiseRoute: AuthenticatedSplitwiseRoute,
   AuthenticatedSubscriptionsRoute: AuthenticatedSubscriptionsRoute,
   AuthenticatedTransactionsRoute: AuthenticatedTransactionsRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
