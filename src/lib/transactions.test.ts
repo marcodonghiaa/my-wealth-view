@@ -5,7 +5,11 @@ import {
   formatAmountPlain,
   formatBookingDate,
   formatMoney,
+  isSplitwiseShare,
   isWorthItEligible,
+  mergeShares,
+  shareToRow,
+  type SplitwiseShare,
   listCategories,
   nameRefunds,
   nativeSignedAmount,
@@ -188,5 +192,58 @@ describe("nameRefunds", () => {
       tx({ entry_reference: "r2", creditor_name: "Shop", flow_type: "refunded", refund_of: "x" }),
     ];
     expect(nameRefunds(rows)).toEqual(rows);
+  });
+});
+
+const share = (over: Partial<SplitwiseShare> = {}): SplitwiseShare => ({
+  id: "s1",
+  booking_date: "2026-10-04",
+  category: "Dine Out",
+  description: "Dinner",
+  group_name: "Trip",
+  currency: "EUR",
+  amount: 12.5,
+  amount_eur: 12.5,
+  ...over,
+});
+
+describe("Splitwise shares in the transaction list", () => {
+  // protects=a share reads like a spend row (negative euro amount, named after the expense);
+  // fails_when=the sign flips or the description is lost
+  it("turns a share into a spend row", () => {
+    expect(shareToRow(share())).toMatchObject({
+      entry_reference: "sw:s1",
+      account_uid: null,
+      creditor_name: "Dinner",
+      category: "Dine Out",
+      currency: "EUR",
+      amount: 12.5,
+      signed_amount_eur: -12.5,
+      credit_debit_indicator: "DBIT",
+      flow_type: "spend",
+      booking_date: "2026-10-04",
+    });
+  });
+
+  it("recognises shares and only shares", () => {
+    expect(isSplitwiseShare(shareToRow(share()))).toBe(true);
+    expect(isSplitwiseShare(tx())).toBe(false);
+  });
+
+  // protects=the month list stays newest first with shares in the right place; fails_when=shares are appended at the end
+  it("merges shares into bank rows, newest first", () => {
+    const rows = mergeShares(
+      [
+        tx({ entry_reference: "a", booking_date: "2026-10-05" }),
+        tx({ entry_reference: "b", booking_date: "2026-10-02" }),
+      ],
+      [share({ booking_date: "2026-10-04" })],
+    );
+    expect(rows.map((r) => r.entry_reference)).toEqual(["a", "sw:s1", "b"]);
+  });
+
+  it("leaves bank rows untouched when there are no shares", () => {
+    const bank = [tx()];
+    expect(mergeShares(bank, [])).toEqual(bank);
   });
 });

@@ -41,6 +41,55 @@ export function nameRefunds(rows: Array<TransactionRow>): Array<TransactionRow> 
   });
 }
 
+// My share of a Splitwise expense (view v_splitwise_eur), shown next to bank transactions.
+export interface SplitwiseShare {
+  id: string;
+  booking_date: string;
+  category: string | null;
+  description: string;
+  group_name: string;
+  currency: string;
+  amount: number;
+  amount_eur: number;
+}
+
+const SHARE_PREFIX = "sw:";
+
+export const isSplitwiseShare = (tx: Pick<TransactionRow, "entry_reference">): boolean =>
+  tx.entry_reference.startsWith(SHARE_PREFIX);
+
+export function shareToRow(s: SplitwiseShare): TransactionRow {
+  return {
+    entry_reference: `${SHARE_PREFIX}${s.id}`,
+    account_uid: null,
+    booking_date: s.booking_date,
+    category: s.category,
+    transaction_type: null,
+    creditor_name: s.description,
+    currency: s.currency,
+    amount: s.amount,
+    signed_amount_eur: -s.amount_eur,
+    credit_debit_indicator: "DBIT",
+    created_at: null,
+    worth_it: null,
+    personal_amount: null,
+    owed_by: null,
+    flow_type: "spend",
+    refund_of: null,
+  };
+}
+
+/** Bank rows plus shares, newest first (rows on the same day keep their order). */
+export function mergeShares(
+  rows: Array<TransactionRow>,
+  shares: Array<SplitwiseShare>,
+): Array<TransactionRow> {
+  if (shares.length === 0) return rows;
+  return [...rows, ...shares.map(shareToRow)].sort((a, b) =>
+    (b.booking_date ?? "").localeCompare(a.booking_date ?? ""),
+  );
+}
+
 export interface AccountRow {
   uid: string;
   label: string | null;

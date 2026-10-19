@@ -11,5 +11,7 @@ export default defineConfig({
     environment: "jsdom",
     setupFiles: ["./src/test/setup.ts"],
     globals: true,
+    // Tests must not depend on the developer's local .env.
+    env: { VITE_NET_WORTH_START: "" },
   },
 });
