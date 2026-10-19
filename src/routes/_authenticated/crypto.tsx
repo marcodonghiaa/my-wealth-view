@@ -81,15 +81,6 @@ function formatAmount(value: number): string {
   }).format(value);
 }
 
-function formatDate(iso: string | null): string {
-  if (!iso) return "—";
-  return new Date(`${iso}T00:00:00`).toLocaleDateString("en-GB", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
-}
-
 /** Merge per-source rows for the same asset into one line, keeping the
  * per-source split for display (e.g. BTC held in both Ledger and Coinbase). */
 function groupBySymbol(rows: Array<CryptoRow>): Array<AssetGroup> {
@@ -129,17 +120,6 @@ function CryptoPage() {
 
   const totalEur = useMemo(() => assets.reduce((sum, a) => sum + a.valueEur, 0), [assets]);
 
-  const asOf = useMemo(() => {
-    if (rows.length === 0) return null;
-    return (
-      rows
-        .map((h) => h.snapshot_date)
-        .filter(Boolean)
-        .sort()
-        .reverse()[0] ?? null
-    );
-  }, [rows]);
-
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-8 md:py-12">
       <header className="mb-8">
@@ -164,7 +144,6 @@ function CryptoPage() {
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
             <Bitcoin className="size-4 text-primary" />
             Total crypto value
-            {asOf && <span className="ml-1">· as of {formatDate(asOf)}</span>}
           </div>
 
           <div className="mt-3 min-h-16">
@@ -243,13 +222,18 @@ function CryptoPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y">
-                  {assets.map((asset) => {
+                  {assets.map((asset, i) => {
                     const percent = totalEur > 0 ? (asset.valueEur / totalEur) * 100 : 0;
                     return (
                       <tr key={asset.symbol}>
                         <td className="px-4 py-3 sm:px-5">
-                          <div className="font-medium text-foreground">{asset.name}</div>
-                          <div className="mt-0.5 text-xs text-muted-foreground">{asset.symbol}</div>
+                          <div className="flex items-center gap-2 font-medium text-foreground">
+                            <ColorDot color={assetColors[i]} />
+                            {asset.name}
+                          </div>
+                          <div className="mt-0.5 pl-[1.125rem] text-xs text-muted-foreground">
+                            {asset.symbol}
+                          </div>
                         </td>
                         <td className="px-4 py-3 sm:px-5">
                           <div className="font-figure text-foreground">
@@ -287,14 +271,19 @@ function CryptoPage() {
 
           {/* Mobile cards */}
           <section className="space-y-3 md:hidden">
-            {assets.map((asset) => {
+            {assets.map((asset, i) => {
               const percent = totalEur > 0 ? (asset.valueEur / totalEur) * 100 : 0;
               return (
                 <div key={asset.symbol} className="rounded-2xl border bg-card p-4 card-ring">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
-                      <div className="font-medium text-foreground">{asset.name}</div>
-                      <div className="mt-0.5 text-xs text-muted-foreground">{asset.symbol}</div>
+                      <div className="flex items-center gap-2 font-medium text-foreground">
+                        <ColorDot color={assetColors[i]} />
+                        {asset.name}
+                      </div>
+                      <div className="mt-0.5 pl-[1.125rem] text-xs text-muted-foreground">
+                        {asset.symbol}
+                      </div>
                     </div>
                   </div>
 
@@ -342,6 +331,16 @@ function CryptoPage() {
         </>
       )}
     </div>
+  );
+}
+
+function ColorDot({ color }: { color: string | undefined }) {
+  return (
+    <span
+      aria-hidden
+      className="inline-block size-2.5 shrink-0 rounded-full"
+      style={{ backgroundColor: color }}
+    />
   );
 }
 

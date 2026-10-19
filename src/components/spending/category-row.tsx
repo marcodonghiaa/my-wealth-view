@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { categoryColor } from "@/lib/categories";
 import { formatISODate } from "@/lib/date";
 
 interface BankRow {
@@ -103,6 +104,11 @@ export function CategoryRow({
         <span className="flex items-center gap-2 font-medium text-foreground">
           <ChevronDown
             className={`size-4 text-muted-foreground transition-transform ${open ? "" : "-rotate-90"}`}
+          />
+          <span
+            aria-hidden
+            className="inline-block size-2.5 shrink-0 rounded-full"
+            style={{ backgroundColor: categoryColor(category) }}
           />
           {category}
         </span>

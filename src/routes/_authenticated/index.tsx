@@ -22,6 +22,7 @@ import { changeOver, chartPoints, monthAgo, withHistory, yearStart } from "@/lib
 import { fetchHistory, fetchNetWorth, fetchReconstructed } from "@/lib/net-worth-queries";
 import { FriendsCreditLine } from "@/components/splitwise/balances-view";
 import { friendsCreditEur as friendsCreditEurOf } from "@/lib/import/splitwise-balances";
+import { useIsMobile } from "@/lib/use-is-mobile";
 import { useSplitwiseBalances } from "@/lib/use-splitwise-balances";
 import { TONE_PILL, toneOf } from "@/lib/tone";
 
@@ -89,6 +90,14 @@ async function fetchLatestFxRates(): Promise<Record<string, FxRate>> {
   return latest;
 }
 
+function formatFxDate(iso: string | undefined): string {
+  if (!iso) return "latest";
+  return new Date(`${iso}T00:00:00`).toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+  });
+}
+
 function formatMoney(value: number, currency: Currency): string {
   return new Intl.NumberFormat("en-IE", {
     style: "currency",
@@ -98,6 +107,7 @@ function formatMoney(value: number, currency: Currency): string {
 }
 
 function NetWorthPage() {
+  const isMobile = useIsMobile();
   const [currency, setCurrency] = useState<Currency>("EUR");
 
   const netWorthQuery = useQuery({
@@ -195,21 +205,7 @@ function NetWorthPage() {
 
       {/* Headline card */}
       <section className="mb-6 rounded-2xl bg-card p-5 card-ring sm:p-7">
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[0.8125rem] text-muted-foreground">
-          Total net worth
-          {latest && (
-            <span className="ml-1">
-              · as of{" "}
-              {new Date(`${latest.snapshot_date}T00:00:00`).toLocaleDateString("en-GB", {
-                day: "numeric",
-                month: "long",
-                year: "numeric",
-              })}
-            </span>
-          )}
-        </div>
-
-        <div className="mt-3 min-h-16">
+        <div className="min-h-16">
           {netWorthQuery.isPending ? (
             <div className="h-14 w-64 animate-pulse rounded-lg bg-muted" />
           ) : latest == null ? (
@@ -225,7 +221,8 @@ function NetWorthPage() {
           )}
           {currency !== "EUR" && headline != null && rateToEur != null && (
             <p className="mt-2 text-xs text-muted-foreground">
-              Converted at 1 {currency} = {rateToEur} EUR ({fxQuery.data?.[currency]?.date})
+              Rate: 1 {currency} = {rateToEur.toFixed(4)} EUR · ECB,{" "}
+              {formatFxDate(fxQuery.data?.[currency]?.date)}
             </p>
           )}
         </div>
@@ -238,15 +235,15 @@ function NetWorthPage() {
           />
         )}
 
-        <div className="mt-5 flex flex-wrap gap-3">
-          <ChangePill label="daily" value={dayChange} />
-          <ChangePill label="monthly" value={monthChange} />
-          <ChangePill label="YTD" value={ytdChange} />
+        <div className="mt-5 grid max-w-md grid-cols-3 gap-2 sm:gap-3">
+          <ChangeTile label="Day" value={dayChange} />
+          <ChangeTile label="Month" value={monthChange} />
+          <ChangeTile label="YTD" value={ytdChange} />
         </div>
       </section>
 
       {/* Chart card */}
-      <section className="rounded-2xl bg-card p-4 card-ring sm:p-6">
+      <section className="rounded-2xl bg-card px-1 py-4 card-ring sm:p-6">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2 px-2">
           <h2 className="text-[0.9375rem] font-semibold text-foreground">Net worth over time</h2>
           <div className="flex items-center gap-3 text-xs text-muted-foreground">
@@ -282,7 +279,7 @@ function NetWorthPage() {
             </div>
           ) : (
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData} margin={{ top: 8, right: 8, bottom: 0, left: 8 }}>
+              <AreaChart data={chartData} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
                 <CartesianGrid
                   strokeDasharray="3 6"
                   stroke="var(--color-border)"
@@ -309,7 +306,7 @@ function NetWorthPage() {
                   interval="preserveStartEnd"
                 />
                 <YAxis
-                  width={70}
+                  width={isMobile ? 48 : 70}
                   tickFormatter={(v: number) => (v >= 1000 ? `€${Math.round(v / 1000)}k` : `€${v}`)}
                   tick={{
                     fill: "var(--color-muted-foreground)",
@@ -418,22 +415,23 @@ function LegendDot({ color, label, dashed }: { color: string; label: string; das
 // Moves under half a percent are noise: show them without alarm colour.
 const NOISE_BAND = 0.005;
 
-function ChangePill({ label, value }: { label: string; value: number | null }) {
-  if (value == null) return null;
+// Three equal tiles (label over value) so they never wrap into 2 + 1 on a phone.
+function ChangeTile({ label, value }: { label: string; value: number | null }) {
+  if (value == null) return <div />;
   const Icon = value >= 0 ? ArrowUpRight : ArrowDownRight;
   return (
-    <span
-      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium ${
+    <div
+      className={`flex flex-col items-center gap-0.5 rounded-xl border px-2 py-2 text-center ${
         TONE_PILL[toneOf(value, NOISE_BAND)]
       }`}
     >
-      <Icon className="size-3.5" />
-      <span className="font-figure">
+      <span className="text-[0.6875rem] text-muted-foreground">{label}</span>
+      <span className="font-figure inline-flex items-center gap-1 text-sm font-semibold whitespace-nowrap">
+        <Icon className="size-3.5" />
         {value >= 0 ? "+" : ""}
         {(value * 100).toFixed(2)}%
       </span>
-      <span className="text-muted-foreground">{label}</span>
-    </span>
+    </div>
   );
 }
 

@@ -17,6 +17,7 @@ import {
   type ReconstructedRow,
 } from "@/lib/net-worth";
 import { axisDateFormatter, formatISODate } from "@/lib/date";
+import { useIsMobile } from "@/lib/use-is-mobile";
 
 const CLASSES = [
   { key: "stocks", label: "Stocks", color: "var(--color-chart-2)" },
@@ -35,6 +36,7 @@ export function AllocationChart({
   snapshots: Array<NetWorthRow>;
   reconstructed?: Array<ReconstructedRow>;
 }) {
+  const isMobile = useIsMobile();
   const data = breakAtGaps(
     allocationSeries(allocationHistory(history, snapshots, undefined, reconstructed)),
   );
@@ -44,7 +46,7 @@ export function AllocationChart({
   const fmtTick = axisDateFormatter(data[0]?.snapshot_date, data.at(-1)?.snapshot_date);
 
   return (
-    <section className="mt-6 rounded-2xl bg-card p-4 card-ring sm:p-6">
+    <section className="mt-6 rounded-2xl bg-card px-1 py-4 card-ring sm:p-6">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2 px-2">
         <h2 className="text-[0.9375rem] font-semibold text-foreground">
           Asset allocation over time
@@ -70,7 +72,7 @@ export function AllocationChart({
           <AreaChart
             data={data}
             stackOffset="expand"
-            margin={{ top: 8, right: 8, bottom: 0, left: 8 }}
+            margin={{ top: 8, right: 8, bottom: 0, left: 0 }}
           >
             <CartesianGrid strokeDasharray="3 6" stroke="var(--color-border)" vertical={false} />
             <XAxis
@@ -85,7 +87,7 @@ export function AllocationChart({
               minTickGap={40}
             />
             <YAxis
-              width={44}
+              width={isMobile ? 36 : 44}
               tickFormatter={(v: number) => `${Math.round(v * 100)}%`}
               tick={{ fill: "var(--color-muted-foreground)", fontSize: 11 }}
               tickLine={false}
@@ -112,12 +114,11 @@ export function AllocationChart({
           </AreaChart>
         </ResponsiveContainer>
       </div>
-      <p className="mt-2 px-2 text-xs text-muted-foreground">
-        Imported monthly history, then daily snapshots (portfolio shown as stocks).
-        {reconstructed.length > 0 &&
-          " Months rebuilt from statements cover stocks, bond funds, cash and crypto (at today's quantities): no CDs."}{" "}
-        Gaps are periods with no data.
-      </p>
+      {reconstructed.length > 0 && (
+        <p className="mt-2 px-2 text-xs text-muted-foreground">
+          Rebuilt months use today's quantities and exclude CDs.
+        </p>
+      )}
     </section>
   );
 }

@@ -169,3 +169,27 @@ export function useDeleteMutation(queryClient: QueryClient, onDone: () => void) 
   });
   return mutation;
 }
+
+// Renaming one transaction renames every one from the same bank merchant, past and future
+// (see the rename_merchant function), so every cached month is refetched, not just this one.
+export function useRenameMerchantMutation(queryClient: QueryClient) {
+  return useMutation<number, Error, { tx: TxKey; name: string | null }>({
+    mutationFn: async ({ tx, name }) => {
+      const { data, error } = await (
+        supabase.rpc as unknown as (
+          fn: string,
+          args: Record<string, unknown>,
+        ) => PromiseLike<{ data: number | null; error: Error | null }>
+      )("rename_merchant", {
+        p_entry_reference: tx.entry_reference,
+        p_account_uid: tx.account_uid,
+        p_name: name,
+      });
+      if (error) throw error;
+      return data ?? 0;
+    },
+    onError: (error) => toast.error("Couldn't rename", { description: error.message }),
+    onSuccess: (count) => toast.success(count > 1 ? `Renamed on ${count} transactions` : "Renamed"),
+    onSettled: () => void queryClient.invalidateQueries({ queryKey: ["transactions"] }),
+  });
+}

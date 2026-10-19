@@ -11,9 +11,11 @@ type Call = {
   in: Record<string, unknown[]>;
 };
 const calls: Call[] = [];
+const rpc = vi.fn();
 
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
+    rpc: (...args: unknown[]) => rpc(...args),
     from: () => {
       const call: Call = { update: null, eq: {}, is: {}, in: {} };
       const q = {
@@ -46,6 +48,7 @@ vi.mock("@/integrations/supabase/client", () => ({
 import {
   useBulkCategoryMutation,
   useDeleteMutation,
+  useRenameMerchantMutation,
   useSplitMutation,
   useTransactionFieldMutation,
 } from "./mutations";
@@ -190,5 +193,35 @@ describe("transaction mutations are scoped to one account", () => {
     );
     await waitFor(() => expect(calls).toHaveLength(1));
     expect(calls[0]!.update).toEqual({ deleted_at: null });
+  });
+
+  it("rename calls rename_merchant and refetches every month", async () => {
+    rpc.mockResolvedValue({ data: 3, error: null });
+    const { queryClient, wrapper } = setup();
+    const invalidate = vi.spyOn(queryClient, "invalidateQueries");
+    const { result } = renderHook(() => useRenameMerchantMutation(queryClient), { wrapper });
+    act(() =>
+      result.current.mutate({
+        tx: { account_uid: "a1", entry_reference: "r1" },
+        name: "Wash machine",
+      }),
+    );
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(rpc).toHaveBeenCalledWith("rename_merchant", {
+      p_entry_reference: "r1",
+      p_account_uid: "a1",
+      p_name: "Wash machine",
+    });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ["transactions"] });
+  });
+
+  it("rename surfaces an rpc error", async () => {
+    rpc.mockResolvedValue({ data: null, error: new Error("nope") });
+    const { queryClient, wrapper } = setup();
+    const { result } = renderHook(() => useRenameMerchantMutation(queryClient), { wrapper });
+    act(() =>
+      result.current.mutate({ tx: { account_uid: null, entry_reference: "r1" }, name: null }),
+    );
+    await waitFor(() => expect(result.current.isError).toBe(true));
   });
 });

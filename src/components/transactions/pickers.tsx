@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CATEGORIES, TRANSACTION_TYPES } from "@/lib/categories";
+import { CATEGORIES, TRANSACTION_TYPES, categoryColor } from "@/lib/categories";
 import type { TransactionRow } from "@/lib/transactions";
 
 export function CategoryPicker({
@@ -24,7 +24,18 @@ export function CategoryPicker({
           className="-m-2 inline-flex min-h-11 cursor-pointer items-center p-2 disabled:opacity-60"
         >
           {tx.category ? (
-            <span className="inline-flex min-w-24 justify-center rounded-full border border-primary/25 bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary transition-colors hover:bg-primary/20">
+            <span
+              className="inline-flex min-w-24 items-center justify-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium text-foreground transition-colors"
+              style={{
+                backgroundColor: `color-mix(in srgb, ${categoryColor(tx.category)} 16%, transparent)`,
+                borderColor: `color-mix(in srgb, ${categoryColor(tx.category)} 45%, transparent)`,
+              }}
+            >
+              <span
+                aria-hidden
+                className="inline-block size-1.5 rounded-full"
+                style={{ backgroundColor: categoryColor(tx.category) }}
+              />
               {tx.category}
             </span>
           ) : (

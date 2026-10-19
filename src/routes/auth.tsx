@@ -167,7 +167,7 @@ function AuthPage() {
               <button
                 type="submit"
                 disabled={pending}
-                className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-all hover:brightness-110 disabled:opacity-50"
+                className="flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground transition-colors hover:brightness-110 disabled:opacity-50"
               >
                 {pending ? (
                   <Loader2 className="size-4 animate-spin" />

@@ -1,4 +1,4 @@
-import { Banknote } from "lucide-react";
+import { Users } from "lucide-react";
 
 // Logos for the banks we know, served from /public/banks (keyed by lowercase bank name, the part
 // of an account label before the currency, e.g. "Revolut EUR" -> "revolut"). Revolut and Wise
@@ -21,6 +21,16 @@ export function bankNameFromLabel(label: string): string {
 
 export function AccountBadge({ label }: { label: string }) {
   const bankName = bankNameFromLabel(label);
+  if (bankName.toLowerCase() === "splitwise") {
+    return (
+      <span
+        title={label}
+        className="inline-flex size-7 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary"
+      >
+        <Users className="size-4" aria-label="Splitwise" />
+      </span>
+    );
+  }
   const logo = BANK_LOGO[bankName.toLowerCase()];
   if (logo) {
     return (
@@ -42,15 +52,6 @@ export function AccountBadge({ label }: { label: string }) {
       className="inline-flex size-7 shrink-0 items-center justify-center rounded-lg bg-muted text-xs font-bold text-muted-foreground"
     >
       {bankName.slice(0, 1).toUpperCase()}
-    </span>
-  );
-}
-
-export function CurrencyBadge({ currency }: { currency: string }) {
-  return (
-    <span className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium text-muted-foreground">
-      <Banknote className="size-3" />
-      {currency}
     </span>
   );
 }

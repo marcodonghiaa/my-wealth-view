@@ -410,6 +410,7 @@ export function SplitwiseReview({
             type="button"
             className={BUTTON}
             disabled={
+              !userId ||
               plan.problems.length > 0 ||
               (plan.shares.length === 0 && plan.links.length === 0) ||
               importShares.isPending ||
