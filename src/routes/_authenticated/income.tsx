@@ -72,7 +72,7 @@ async function fetchIncomeForMonth(month: Date): Promise<Array<IncomeRow>> {
   return (data ?? []) as Array<IncomeRow>;
 }
 
-export function IncomePage() {
+function IncomePage() {
   const [month, setMonth] = useState<Date>(() => startOfMonth(new Date()));
 
   const incomeQuery = useQuery({

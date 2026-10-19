@@ -79,7 +79,7 @@ function signedNativeAmount(sub: SubscriptionRow): number | null {
   return sign * Math.abs(sub.amount);
 }
 
-export function SubscriptionsPage() {
+function SubscriptionsPage() {
   const queryClient = useQueryClient();
   const query = useQuery({
     queryKey: ["subscriptions"],

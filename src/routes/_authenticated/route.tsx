@@ -23,11 +23,13 @@ export const Route = createFileRoute("/_authenticated")({
   ssr: false,
   beforeLoad: async () => {
     try {
-      const { data, error } = await supabase.auth.getUser();
-      if (error || !data.user) {
+      // getSession reads the stored login with no network call; getUser asked Supabase's server
+      // on every page change. The database still enforces access, so this only picks the screen.
+      const { data, error } = await supabase.auth.getSession();
+      if (error || !data.session) {
         throw redirect({ to: "/auth" });
       }
-      return { user: data.user };
+      return { user: data.session.user };
     } catch (err) {
       if (err instanceof Response) throw err;
       throw redirect({ to: "/auth" });

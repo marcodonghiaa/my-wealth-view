@@ -138,7 +138,7 @@ async function fetchWorthItForMonth(
   };
 }
 
-export function ReportsPage() {
+function ReportsPage() {
   const [month, setMonth] = useState<Date>(() => startOfMonth(new Date()));
 
   const monthISO = formatISODate(startOfMonth(month));
