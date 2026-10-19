@@ -75,17 +75,20 @@ export function FriendsCreditLine({
   if (creditEur === null) return null;
   const owed = creditEur >= 0;
   return (
-    <p className="mt-3 text-xs text-muted-foreground">
-      {owed ? "Friends owe you" : "You owe your groups"}{" "}
-      <span className="font-figure text-foreground">{format(Math.abs(creditEur))}</span> on
-      Splitwise (not in the total above)
-      {netWorthEur !== null && (
-        <>
-          {" · "}
-          with it:{" "}
-          <span className="font-figure text-foreground">{format(netWorthEur + creditEur)}</span>
-        </>
-      )}
-    </p>
+    <div className="mt-3 space-y-0.5 text-xs text-muted-foreground">
+      <p>
+        {owed ? "Friends owe you" : "You owe your groups"}{" "}
+        <span className="font-figure text-foreground">{format(Math.abs(creditEur))}</span>
+      </p>
+      <p>
+        On Splitwise, not counted above
+        {netWorthEur !== null && (
+          <>
+            {" · "}with it{" "}
+            <span className="font-figure text-foreground">{format(netWorthEur + creditEur)}</span>
+          </>
+        )}
+      </p>
+    </div>
   );
 }

@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import { Briefcase, ChevronDown } from "lucide-react";
+import { shortHoldingName } from "@/lib/holding-name";
 import { shareSummary } from "@/lib/chart-summary";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -101,15 +102,6 @@ function formatShares(value: number): string {
   }).format(value);
 }
 
-function formatDate(iso: string | null): string {
-  if (!iso) return "—";
-  return new Date(`${iso}T00:00:00`).toLocaleDateString("en-GB", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
-}
-
 interface TypeGroup {
   type: string;
   totalEur: number;
@@ -155,8 +147,6 @@ function PortfolioPage() {
       .sort((a, b) => b.totalEur - a.totalEur);
   }, [holdings]);
 
-  const asOf = holdings[0]?.snapshot_date ?? null;
-
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-8 md:py-12">
       <header className="mb-8">
@@ -181,7 +171,6 @@ function PortfolioPage() {
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
             <Briefcase className="size-4 text-primary" />
             Total portfolio value
-            {asOf && <span className="ml-1">· as of {formatDate(asOf)}</span>}
           </div>
 
           <div className="mt-3 min-h-16">
@@ -308,8 +297,11 @@ function PortfolioPage() {
                               return (
                                 <tr key={row.isin ?? `${row.name ?? "row"}-${i}`}>
                                   <td className="px-4 py-3 sm:px-5">
-                                    <div className="font-medium text-foreground">
-                                      {row.name ?? "—"}
+                                    <div
+                                      className="font-medium text-foreground"
+                                      title={row.name ?? undefined}
+                                    >
+                                      {row.name ? shortHoldingName(row.name) : "—"}
                                     </div>
                                     <div className="mt-0.5 text-xs text-muted-foreground">
                                       {row.broker_label ?? "—"}
@@ -344,8 +336,11 @@ function PortfolioPage() {
                           return (
                             <div key={row.isin ?? `${row.name ?? "row"}-${i}`} className="p-4">
                               <div className="min-w-0">
-                                <div className="truncate font-medium text-foreground">
-                                  {row.name ?? "—"}
+                                <div
+                                  className="line-clamp-2 font-medium text-foreground"
+                                  title={row.name ?? undefined}
+                                >
+                                  {row.name ? shortHoldingName(row.name) : "—"}
                                 </div>
                                 <div className="mt-0.5 text-xs text-muted-foreground">
                                   {row.broker_label ?? "—"}

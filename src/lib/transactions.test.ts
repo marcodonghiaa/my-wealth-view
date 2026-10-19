@@ -4,6 +4,7 @@ import {
   filterTransactions,
   formatAmountPlain,
   formatBookingDate,
+  formatBookingDateShort,
   formatMoney,
   isSplitwiseShare,
   isWorthItEligible,
@@ -245,5 +246,21 @@ describe("Splitwise shares in the transaction list", () => {
   it("leaves bank rows untouched when there are no shares", () => {
     const bank = [tx()];
     expect(mergeShares(bank, [])).toEqual(bank);
+  });
+});
+
+describe("formatBookingDateShort", () => {
+  const now = new Date("2026-10-19T12:00:00");
+
+  it("omits the year for the current year", () => {
+    expect(formatBookingDateShort("2026-10-18", now)).toBe("18 Oct");
+  });
+
+  it("keeps the year for other years", () => {
+    expect(formatBookingDateShort("2025-12-31", now)).toBe("31 Dec 2025");
+  });
+
+  it("shows a dash without a date", () => {
+    expect(formatBookingDateShort(null, now)).toBe("—");
   });
 });

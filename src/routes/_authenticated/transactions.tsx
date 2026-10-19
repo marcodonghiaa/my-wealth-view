@@ -22,6 +22,7 @@ import { BulkCategoryPicker } from "@/components/transactions/pickers";
 import {
   useBulkCategoryMutation,
   useDeleteMutation,
+  useRenameMerchantMutation,
   useSplitMutation,
   useTransactionFieldMutation,
 } from "@/components/transactions/mutations";
@@ -113,11 +114,7 @@ function TransactionsPage() {
     errorMessage: "Couldn't save answer",
   });
 
-  const renameTx = useTransactionFieldMutation(queryClient, monthKey, "creditor_name", {
-    errorMessage: "Couldn't rename",
-    successMessage: () => "Renamed",
-    writeColumn: "custom_name",
-  });
+  const renameTx = useRenameMerchantMutation(queryClient);
 
   const updateSplit = useSplitMutation(queryClient, monthKey);
 
@@ -228,7 +225,7 @@ function TransactionsPage() {
     savingSplit: updateSplit.isPending && isSameTx(updateSplit.variables?.tx, tx),
     onSaveSplit: (personalAmount, owedBy) => updateSplit.mutate({ tx, personalAmount, owedBy }),
     savingRename: renameTx.isPending && isSameTx(renameTx.variables?.tx, tx),
-    onRename: (name) => renameTx.mutate({ tx, value: name }),
+    onRename: (name) => renameTx.mutate({ tx, name }),
     highlighted: tx.entry_reference === highlightRef,
   });
 
@@ -401,24 +398,25 @@ function TransactionsPage() {
                 <th className="px-4 py-3 font-medium">Date</th>
                 <th className="px-4 py-3 font-medium">Merchant</th>
                 <th className="px-4 py-3 font-medium">Category</th>
-                <th className="px-4 py-3 font-medium">Type</th>
-                <th className="px-4 py-3 font-medium">Split</th>
                 <th className="px-4 py-3 font-medium">Account</th>
                 <th className="px-4 py-3 text-right font-medium">Amount</th>
+                <th className="w-12 px-2 py-3">
+                  <span className="sr-only">Edit</span>
+                </th>
               </tr>
             </thead>
             <tbody>
               {txQuery.isPending ? (
                 Array.from({ length: 8 }).map((_, i) => (
                   <tr key={i} className="border-b last:border-0">
-                    <td colSpan={8} className="px-4 py-3">
+                    <td colSpan={7} className="px-4 py-3">
                       <div className="h-5 animate-pulse rounded bg-muted" />
                     </td>
                   </tr>
                 ))
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-12 text-center text-sm text-muted-foreground">
+                  <td colSpan={7} className="px-4 py-12 text-center text-sm text-muted-foreground">
                     {transactions.length === 0
                       ? `No transactions for ${monthLabel}.`
                       : "No transactions match your filters."}

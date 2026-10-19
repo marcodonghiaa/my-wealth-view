@@ -143,6 +143,17 @@ export function nativeSignedAmount(tx: TransactionRow): number | null {
   return sign * Math.abs(tx.amount);
 }
 
+/** "18 Oct", with the year only when it is not the current one. */
+export function formatBookingDateShort(bookingDate: string | null, now: Date = new Date()): string {
+  if (!bookingDate) return "—";
+  const date = new Date(`${bookingDate}T00:00:00`);
+  return date.toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    ...(date.getFullYear() === now.getFullYear() ? {} : { year: "numeric" }),
+  });
+}
+
 export function formatBookingDate(bookingDate: string | null): string {
   return bookingDate
     ? new Date(`${bookingDate}T00:00:00`).toLocaleDateString("en-GB", {

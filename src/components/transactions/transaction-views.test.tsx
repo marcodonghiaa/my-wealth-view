@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { shareToRow } from "@/lib/transactions";
 import {
   TransactionCardView,
@@ -60,5 +61,50 @@ describe("Splitwise share rows are read only", () => {
     expect(screen.getByTitle("Splitwise")).toBeInTheDocument();
     expect(screen.queryByRole("checkbox")).toBeNull();
     expect(screen.queryByRole("button")).toBeNull();
+  });
+});
+
+// protects=a bank row stays a single clean line on a phone and every editor sits behind a tap;
+// fails_when=the editors render inline in the row again, or the tap no longer opens them
+describe("Bank card rows", () => {
+  const bankProps = (): TransactionViewProps => {
+    const base = props();
+    return {
+      ...base,
+      tx: {
+        ...base.tx,
+        entry_reference: "bank-1",
+        creditor_name: "Uber",
+        category: "Transports",
+        currency: "USD",
+        amount: 15,
+        signed_amount_eur: -13.2,
+      },
+      accountLabel: "Revolut USD",
+    };
+  };
+
+  it("shows the foreign amount with its symbol and the euro value, with no editors inline", () => {
+    render(
+      <ul>
+        <TransactionCardView {...bankProps()} />
+      </ul>,
+    );
+    expect(screen.getByText("Uber")).toBeInTheDocument();
+    expect(screen.getByText(/−US\$15\.00/)).toBeInTheDocument();
+    expect(screen.getByText(/≈ €13\.20/)).toBeInTheDocument();
+    expect(screen.queryByRole("checkbox")).toBeNull();
+    expect(screen.queryByLabelText(/Change category/)).toBeNull();
+  });
+
+  it("opens the editors in a sheet when tapped", async () => {
+    render(
+      <ul>
+        <TransactionCardView {...bankProps()} />
+      </ul>,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /Uber/ }));
+    expect(await screen.findByLabelText(/Change category for Uber/)).toBeInTheDocument();
+    expect(screen.getByRole("checkbox")).toBeInTheDocument();
   });
 });

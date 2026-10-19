@@ -239,9 +239,7 @@ function SubscriptionsPage() {
 
       {/* Estimated monthly cost */}
       <section className="mb-6 rounded-2xl bg-card p-5 card-ring sm:p-7">
-        <div className="text-[0.8125rem] text-muted-foreground">
-          Estimated monthly recurring cost
-        </div>
+        <div className="text-[0.8125rem] text-muted-foreground">Monthly subscriptions</div>
 
         <div className="mt-3 min-h-16">
           {query.isPending ? (
@@ -255,8 +253,7 @@ function SubscriptionsPage() {
         </div>
 
         <p className="mt-3 text-xs text-muted-foreground">
-          Based on each subscription's monthly equivalent — yearly charges count as 1/12, quarterly
-          as 1/3. Single charges are listed separately and not counted. Actual billing may differ.
+          Yearly and quarterly charges count pro rata. One-off charges are not included.
         </p>
       </section>
 
@@ -328,7 +325,6 @@ function SubscriptionCard({
     : null;
   const details = [
     sub.category,
-    `billed ${sub.charge_count ?? 0}x`,
     native != null && currency !== "EUR" ? formatMoney(Math.abs(native), currency) : null,
   ].filter(Boolean);
 
@@ -357,7 +353,7 @@ function SubscriptionCard({
           )}
         </div>
       </div>
-      <div className="mt-1 flex items-center gap-3 pl-[3.25rem]">
+      <div className="mt-1 grid grid-cols-[7rem_minmax(0,1fr)_auto] items-center gap-3 pl-[3.25rem]">
         <FrequencyPicker
           frequency={sub.billing_frequency}
           isManual={sub.billing_frequency_is_manual === true}
@@ -366,14 +362,14 @@ function SubscriptionCard({
           onSelect={onSelectFrequency}
           onSelectCustom={onSelectCustom}
         />
-        {lastCharged && (
-          <span className="text-[0.8125rem] text-muted-foreground">Last {lastCharged}</span>
-        )}
+        <span className="truncate text-[0.8125rem] text-muted-foreground">
+          {lastCharged ? `Last ${lastCharged}` : ""}
+        </span>
         <button
           type="button"
           onClick={onDismiss}
           aria-label={`Remove ${name}`}
-          className="-my-2 -mr-3 ml-auto inline-flex size-11 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-negative focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+          className="-my-2 -mr-3 inline-flex size-11 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-negative focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
         >
           <Trash2 className="size-4" />
         </button>
@@ -440,17 +436,17 @@ function FrequencyPicker({
                 : `${label} — auto-detected`
               : "Not enough history to detect — set the billing frequency"
           }
-          className={`inline-flex min-h-11 items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+          className={`inline-flex min-h-11 w-full items-center justify-between gap-1 rounded-full px-3 py-0.5 text-xs font-medium whitespace-nowrap transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
             frequency
               ? "border border-border text-foreground/80 hover:border-primary/50 hover:text-foreground"
               : "border border-warning/60 bg-warning/10 text-warning hover:bg-warning/20"
           }`}
         >
-          {label}
+          <span className="truncate">{label}</span>
           {isManual && frequency ? (
-            <Pencil className="size-3 text-primary" aria-label="manually set" />
+            <Pencil className="size-3 shrink-0 text-primary" aria-label="manually set" />
           ) : (
-            <ChevronDown className="size-3 opacity-60" />
+            <ChevronDown className="size-3 shrink-0 opacity-60" />
           )}
         </button>
       </PopoverTrigger>

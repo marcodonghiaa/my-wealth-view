@@ -16,6 +16,7 @@ import { shareSummary } from "@/lib/chart-summary";
 import { CategoryRow } from "@/components/spending/category-row";
 import { supabase } from "@/integrations/supabase/client";
 import { formatISODate } from "@/lib/date";
+import { categoryColor } from "@/lib/categories";
 import { useIsMobile } from "@/lib/use-is-mobile";
 
 export const Route = createFileRoute("/_authenticated/spending")({
@@ -244,7 +245,7 @@ function SpendingPage() {
                   />
                   <Bar dataKey="spend_eur" radius={[0, 6, 6, 0]} maxBarSize={26}>
                     {rows.map((row) => (
-                      <Cell key={row.category} fill="var(--color-primary)" />
+                      <Cell key={row.category} fill={categoryColor(row.category)} />
                     ))}
                   </Bar>
                 </BarChart>

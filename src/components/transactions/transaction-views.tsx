@@ -1,10 +1,16 @@
-import { AccountBadge, CurrencyBadge } from "@/components/bank-badge";
+import { useState, type ReactNode } from "react";
+import { ChevronRight, Users } from "lucide-react";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { categoryColor } from "@/lib/categories";
+import { useIsMobile } from "@/lib/use-is-mobile";
+import { AccountBadge } from "@/components/bank-badge";
 import { RefundedBadge } from "@/components/refunded-badge";
 import {
-  formatAmountPlain,
   formatBookingDate,
+  formatBookingDateShort,
   formatMoney,
   isSplitwiseShare,
+  isWorthItEligible,
   nativeSignedAmount,
   type TransactionRow,
 } from "@/lib/transactions";
@@ -30,29 +36,134 @@ export interface TransactionViewProps {
   highlighted?: boolean;
 }
 
-export function TransactionRowView({
-  tx,
-  accountLabel,
-  onSelectCategory,
-  savingCategory,
-  onSelectType,
-  savingType,
-  selected,
-  onToggleSelect,
-  onAnswerWorthIt,
-  savingSplit,
-  onSaveSplit,
-  onRename,
-  savingRename,
-  highlighted,
-}: TransactionViewProps) {
+const isSplit = (tx: TransactionRow): boolean =>
+  tx.personal_amount != null && tx.personal_amount < Math.abs(tx.amount ?? 0);
+
+/** Signed amount in the transaction's own currency, with the euro value under it if foreign. */
+function AmountText({ tx }: { tx: TransactionRow }) {
   const native = nativeSignedAmount(tx);
+  if (native == null) return <span className="text-sm text-muted-foreground">—</span>;
   const currency = tx.currency ?? "EUR";
-  const positive = (native ?? 0) >= 0;
+  const positive = native >= 0;
   const eur = tx.signed_amount_eur;
-  const showEur = currency !== "EUR" && eur != null;
+  return (
+    <div className="shrink-0 text-right">
+      <div
+        className={`font-figure text-[0.9375rem] font-semibold whitespace-nowrap ${
+          positive ? "text-positive" : "text-foreground"
+        }`}
+      >
+        {positive ? "+" : "−"}
+        {formatMoney(Math.abs(native), currency)}
+      </div>
+      {currency !== "EUR" && eur != null && (
+        <div className="font-figure text-xs whitespace-nowrap text-muted-foreground">
+          ≈ {formatMoney(Math.abs(eur), "EUR")}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CategoryDot({ category }: { category: string | null }) {
+  return (
+    <span
+      aria-hidden
+      className="inline-block size-2.5 shrink-0 rounded-full"
+      style={{ backgroundColor: categoryColor(category) }}
+    />
+  );
+}
+
+function Field({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="flex min-h-12 items-center justify-between gap-4 px-4 py-1">
+      <span className="shrink-0 text-sm text-muted-foreground">{label}</span>
+      <div className="flex min-w-0 justify-end text-sm">{children}</div>
+    </div>
+  );
+}
+
+/** Every editor for one bank transaction: a bottom sheet on a phone, a side panel on desktop. */
+function TransactionEditSheet({
+  open,
+  onOpenChange,
+  ...p
+}: TransactionViewProps & { open: boolean; onOpenChange: (open: boolean) => void }) {
+  const isMobile = useIsMobile();
+  const { tx } = p;
+  const name = tx.creditor_name ?? "—";
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent
+        side={isMobile ? "bottom" : "right"}
+        aria-describedby={undefined}
+        onOpenAutoFocus={(e) => e.preventDefault()}
+        className="max-h-[88dvh] gap-0 overflow-y-auto rounded-t-3xl border-0 bg-background p-0 pb-[env(safe-area-inset-bottom)] md:max-h-none md:rounded-none md:border-l [&>button]:size-11"
+      >
+        <div
+          aria-hidden
+          className="mx-auto mt-2 h-1 w-9 rounded-full bg-muted-foreground/40 md:hidden"
+        />
+        <SheetHeader className="px-5 pt-3 pb-3 text-left md:pt-6">
+          <SheetTitle className="truncate pr-10 text-xl">{name}</SheetTitle>
+          <p className="text-sm text-muted-foreground">
+            {formatBookingDate(tx.booking_date)} · {p.accountLabel}
+          </p>
+          <div className="pt-1 text-left">
+            <AmountText tx={tx} />
+          </div>
+        </SheetHeader>
+        <div className="space-y-4 px-4 pb-4">
+          <div className="divide-y overflow-hidden rounded-xl bg-card">
+            <Field label="Name">
+              <NameEditor name={tx.creditor_name} onSave={p.onRename} saving={p.savingRename} />
+            </Field>
+            <Field label="Category">
+              <CategoryPicker tx={tx} onSelect={p.onSelectCategory} saving={p.savingCategory} />
+            </Field>
+            <Field label="Type">
+              <TypePicker tx={tx} onSelect={p.onSelectType} saving={p.savingType} />
+            </Field>
+            <Field label="Split">
+              <SplitEditor tx={tx} onSave={p.onSaveSplit} saving={p.savingSplit} />
+            </Field>
+          </div>
+          <div className="divide-y overflow-hidden rounded-xl bg-card">
+            {(tx.worth_it != null || isWorthItEligible(tx)) && (
+              <Field label="Worth it">
+                <WorthItPrompt tx={tx} onAnswer={p.onAnswerWorthIt} />
+              </Field>
+            )}
+            <label className="flex min-h-12 cursor-pointer items-center justify-between gap-4 px-4 text-sm">
+              <span className="text-muted-foreground">Select (edit several at once)</span>
+              <input
+                type="checkbox"
+                checked={p.selected}
+                onChange={p.onToggleSelect}
+                className="size-5 rounded border-border accent-primary"
+              />
+            </label>
+          </div>
+          <RefundedBadge flowType={tx.flow_type} />
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+/** Desktop row: date, merchant, category, account, amount. Type, split and the rest sit behind ›. */
+export function TransactionRowView(props: TransactionViewProps) {
+  const { tx, accountLabel, selected, onToggleSelect, highlighted } = props;
+  const [open, setOpen] = useState(false);
   // A Splitwise share lives in its own table: nothing here can edit, select or delete it.
   const share = isSplitwiseShare(tx);
+  const notes = [
+    tx.transaction_type,
+    isSplit(tx)
+      ? `split, owed ${formatMoney(Math.abs(tx.amount ?? 0) - (tx.personal_amount ?? 0), tx.currency ?? "EUR")}`
+      : null,
+  ].filter(Boolean);
 
   return (
     <tr
@@ -73,150 +184,114 @@ export function TransactionRowView({
         )}
       </td>
       <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">
-        {formatBookingDate(tx.booking_date)}
+        {formatBookingDateShort(tx.booking_date)}
       </td>
-      <td className="max-w-48 px-4 py-3">
+      <td className="max-w-64 px-4 py-3">
         <div className="truncate font-medium text-foreground">
           {share ? (
             (tx.creditor_name ?? "—")
           ) : (
-            <NameEditor name={tx.creditor_name} onSave={onRename} saving={savingRename} />
+            <NameEditor
+              name={tx.creditor_name}
+              onSave={props.onRename}
+              saving={props.savingRename}
+            />
           )}
         </div>
+        {!share && notes.length > 0 && (
+          <div className="truncate text-xs text-muted-foreground">{notes.join(" · ")}</div>
+        )}
         <RefundedBadge flowType={tx.flow_type} />
-        {!share && <WorthItPrompt tx={tx} onAnswer={onAnswerWorthIt} />}
+        {!share && <WorthItPrompt tx={tx} onAnswer={props.onAnswerWorthIt} />}
       </td>
       <td className="px-4 py-3">
         {share ? (
-          <span className="text-muted-foreground">{tx.category ?? "—"}</span>
+          <span className="inline-flex items-center gap-2 text-muted-foreground">
+            <CategoryDot category={tx.category} />
+            {tx.category ?? "—"}
+          </span>
         ) : (
-          <CategoryPicker tx={tx} onSelect={onSelectCategory} saving={savingCategory} />
+          <CategoryPicker tx={tx} onSelect={props.onSelectCategory} saving={props.savingCategory} />
         )}
-      </td>
-      <td className="px-4 py-3">
-        {!share && <TypePicker tx={tx} onSelect={onSelectType} saving={savingType} />}
-      </td>
-      <td className="px-4 py-3">
-        {!share && <SplitEditor tx={tx} onSave={onSaveSplit} saving={savingSplit} />}
       </td>
       <td className="px-4 py-3">
         <AccountBadge label={share ? "Splitwise" : accountLabel} />
       </td>
-      <td className="px-4 py-3 text-right whitespace-nowrap">
-        {native == null ? (
-          <span className="text-muted-foreground">—</span>
-        ) : (
-          <span
-            className={`inline-flex items-center justify-end gap-1 font-figure font-medium ${
-              positive ? "text-positive" : "text-foreground"
-            }`}
-          >
-            {formatAmountPlain(native)}
-            <span className="text-xs font-normal text-muted-foreground">{currency}</span>
-            {showEur && (
-              <span className="ml-0.5 text-sm opacity-80">
-                ({formatMoney(eur as number, "EUR")})
-              </span>
-            )}
-          </span>
+      <td className="px-4 py-3 text-right">
+        <AmountText tx={tx} />
+      </td>
+      <td className="w-12 px-2 py-3 text-right">
+        {!share && (
+          <>
+            <button
+              type="button"
+              onClick={() => setOpen(true)}
+              aria-label={`Edit ${tx.creditor_name ?? "transaction"}`}
+              className="inline-flex size-11 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+            >
+              <ChevronRight className="size-4" />
+            </button>
+            <TransactionEditSheet {...props} open={open} onOpenChange={setOpen} />
+          </>
         )}
       </td>
     </tr>
   );
 }
 
-export function TransactionCardView({
-  tx,
-  accountLabel,
-  onSelectCategory,
-  savingCategory,
-  onSelectType,
-  savingType,
-  selected,
-  onToggleSelect,
-  onAnswerWorthIt,
-  savingSplit,
-  onSaveSplit,
-  onRename,
-  savingRename,
-  highlighted,
-}: TransactionViewProps) {
-  const native = nativeSignedAmount(tx);
-  const currency = tx.currency ?? "EUR";
-  const positive = (native ?? 0) >= 0;
-  const eur = tx.signed_amount_eur;
-  const showEur = currency !== "EUR" && eur != null;
+/** Phone row: a clean read-only line; every editor lives in the sheet that a tap opens. */
+export function TransactionCardView(props: TransactionViewProps) {
+  const { tx, selected, highlighted } = props;
+  const [open, setOpen] = useState(false);
   const share = isSplitwiseShare(tx);
 
-  return (
-    <li
-      data-entry-ref={tx.entry_reference}
-      className={`px-4 py-3 ${selected ? "bg-primary/5" : ""} ${highlighted ? "ring-2 ring-inset ring-primary" : ""}`}
-    >
-      <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-3">
-        {share ? (
-          <span className="size-4" />
-        ) : (
-          <label className="-m-3.5 -mt-3 inline-flex size-11 shrink-0 cursor-pointer items-center justify-center p-3.5">
-            <input
-              type="checkbox"
-              aria-label={`Select ${tx.creditor_name ?? "transaction"}`}
-              checked={selected}
-              onChange={onToggleSelect}
-              className="size-4 rounded border-border accent-primary"
-            />
-          </label>
-        )}
-        <div className="min-w-0">
-          <p className="truncate text-[0.9375rem] font-medium text-foreground">
-            {share ? (
-              (tx.creditor_name ?? "—")
-            ) : (
-              <NameEditor name={tx.creditor_name} onSave={onRename} saving={savingRename} />
-            )}
-          </p>
-          <p className="mt-0.5 flex items-center gap-1.5 truncate text-xs text-muted-foreground">
-            {formatBookingDate(tx.booking_date)}
-            <AccountBadge label={share ? "Splitwise" : accountLabel} />
-          </p>
-          <div className="mt-0.5">
-            <RefundedBadge flowType={tx.flow_type} />
-            {!share && <WorthItPrompt tx={tx} onAnswer={onAnswerWorthIt} />}
-          </div>
-        </div>
-        <div className="shrink-0 text-right">
-          {native == null ? (
-            <span className="text-sm text-muted-foreground">—</span>
-          ) : (
-            <>
-              <div
-                className={`inline-flex items-center justify-end gap-1 font-figure text-[0.9375rem] font-semibold ${
-                  positive ? "text-positive" : "text-foreground"
-                }`}
-              >
-                {formatAmountPlain(native)}
-              </div>
-              {showEur && (
-                <div className="font-figure text-xs text-muted-foreground">
-                  {formatMoney(eur as number, "EUR")}
-                </div>
-              )}
-            </>
+  const summary = (
+    <>
+      <CategoryDot category={tx.category} />
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-[0.9375rem] font-medium text-foreground">
+          {tx.creditor_name ?? "—"}
+        </p>
+        <p className="mt-0.5 flex items-center gap-1.5 truncate text-xs text-muted-foreground">
+          {share && (
+            <span title="Splitwise" className="inline-flex shrink-0">
+              <Users className="size-3" aria-hidden />
+            </span>
           )}
-        </div>
+          <span className="truncate">
+            {tx.category ?? "Uncategorized"} · {formatBookingDateShort(tx.booking_date)}
+            {tx.flow_type === "refunded" ? " · Refunded" : ""}
+          </span>
+          {!share && isWorthItEligible(tx) && (
+            <span className="shrink-0 font-medium text-primary">Worth it?</span>
+          )}
+        </p>
       </div>
-      <div className="mt-2 flex flex-wrap items-center gap-2">
-        {share ? (
-          <span className="text-xs text-muted-foreground">{tx.category ?? "—"}</span>
-        ) : (
-          <>
-            <CategoryPicker tx={tx} onSelect={onSelectCategory} saving={savingCategory} />
-            <TypePicker tx={tx} onSelect={onSelectType} saving={savingType} />
-            <SplitEditor tx={tx} onSave={onSaveSplit} saving={savingSplit} />
-          </>
-        )}
-        {currency !== "EUR" && <CurrencyBadge currency={currency} />}
-      </div>
+      <AmountText tx={tx} />
+    </>
+  );
+
+  const rowClass = `${selected ? "bg-primary/5" : ""} ${highlighted ? "ring-2 ring-inset ring-primary" : ""}`;
+
+  // A Splitwise share has nothing to edit, so it is a plain line, not a button.
+  if (share) {
+    return (
+      <li data-entry-ref={tx.entry_reference} className={rowClass}>
+        <div className="flex min-h-14 items-center gap-3 px-4 py-2.5">{summary}</div>
+      </li>
+    );
+  }
+
+  return (
+    <li data-entry-ref={tx.entry_reference} className={rowClass}>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="flex min-h-14 w-full items-center gap-3 px-4 py-2.5 text-left active:bg-accent"
+      >
+        {summary}
+      </button>
+      <TransactionEditSheet {...props} open={open} onOpenChange={setOpen} />
     </li>
   );
 }
