@@ -115,7 +115,7 @@ export function AllocationChart({
       <p className="mt-2 px-2 text-xs text-muted-foreground">
         Imported monthly history, then daily snapshots (portfolio shown as stocks).
         {reconstructed.length > 0 &&
-          " Months rebuilt from statements cover stocks, bond funds and cash only: no crypto or CDs."}{" "}
+          " Months rebuilt from statements cover stocks, bond funds, cash and crypto (at today's quantities): no CDs."}{" "}
         Gaps are periods with no data.
       </p>
     </section>

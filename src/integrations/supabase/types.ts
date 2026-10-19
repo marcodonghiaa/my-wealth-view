@@ -463,6 +463,7 @@ export type Database = {
           bonds_eur: number;
           cash_eur: number;
           created_at: string;
+          crypto_eur: number;
           snapshot_date: string;
           source: string;
           stocks_eur: number;
@@ -472,6 +473,7 @@ export type Database = {
           bonds_eur: number;
           cash_eur: number;
           created_at?: string;
+          crypto_eur?: number;
           snapshot_date: string;
           source?: string;
           stocks_eur: number;
@@ -481,6 +483,7 @@ export type Database = {
           bonds_eur?: number;
           cash_eur?: number;
           created_at?: string;
+          crypto_eur?: number;
           snapshot_date?: string;
           source?: string;
           stocks_eur?: number;

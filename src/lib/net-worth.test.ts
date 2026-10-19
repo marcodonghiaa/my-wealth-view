@@ -6,6 +6,7 @@ import {
   changeOver,
   chartPoints,
   monthAgo,
+  onOrBefore,
   yearStart,
   periodBaseline,
   withHistory,
@@ -187,6 +188,69 @@ describe("changeOver / period targets", () => {
 
   it("yearStart is the last day of the previous year", () => {
     expect(yearStart("2026-10-18")).toBe("2025-12-31");
+  });
+});
+
+describe("withHistory with rebuilt months", () => {
+  const live = (d: string) => ({
+    snapshot_date: d,
+    total_eur: 1000,
+    bank_total_eur: 100,
+    portfolio_total_eur: 800,
+    crypto_total_eur: 100,
+  });
+  const hist = (d: string) => ({
+    snapshot_date: d,
+    stocks_eur: 100,
+    bonds_eur: 50,
+    crypto_eur: 30,
+    cash_eur: 20,
+    liabilities_eur: 10,
+    total_eur: 190,
+  });
+  const rec = (d: string) => ({ snapshot_date: d, stocks_eur: 70, bonds_eur: 10, cash_eur: 20 });
+
+  // protects=the main net worth chart has no hole between history and live data; fails_when=
+  // rebuilt months are not merged, overwrite an imported month, or reach into the live period
+  it("puts rebuilt months between the imported history and the live snapshots", () => {
+    const rows = withHistory([hist("2025-11-30")], [live("2026-09-04")], "2026-09-04", [
+      rec("2025-11-30"),
+      rec("2025-12-31"),
+      rec("2026-09-30"),
+    ]);
+    expect(rows.map((r) => r.snapshot_date)).toEqual(["2025-11-30", "2025-12-31", "2026-09-04"]);
+    expect(rows[0]?.total_eur).toBe(190);
+    expect(rows[1]).toMatchObject({
+      total_eur: 100,
+      bank_total_eur: 20,
+      portfolio_total_eur: 80,
+      crypto_total_eur: 0,
+    });
+  });
+
+  // protects=rebuilt months carry crypto into the total and the crypto line; fails_when=crypto_eur is ignored
+  it("counts a rebuilt month's crypto in its total", () => {
+    const [row] = withHistory([], [live("2026-09-04")], "2026-09-04", [
+      { ...rec("2026-08-31"), crypto_eur: 5 },
+    ]);
+    expect(row).toMatchObject({ total_eur: 105, crypto_total_eur: 5 });
+  });
+
+  it("uses rebuilt months even when nothing was imported", () => {
+    const rows = withHistory([], [live("2026-09-04")], "2026-09-04", [rec("2026-08-31")]);
+    expect(rows.map((r) => r.snapshot_date)).toEqual(["2026-08-31", "2026-09-04"]);
+  });
+});
+
+describe("onOrBefore", () => {
+  const r = (d: string, t: number) => ({ snapshot_date: d, total_eur: t });
+  it("returns the latest row on or before the date", () => {
+    const rows = [r("2026-01-31", 1), r("2026-02-28", 2), r("2026-03-31", 3)];
+    expect(onOrBefore(rows, "2026-02-28")?.total_eur).toBe(2);
+    expect(onOrBefore(rows, "2026-03-15")?.total_eur).toBe(2);
+  });
+  it("is undefined when nothing is that old", () => {
+    expect(onOrBefore([r("2026-01-31", 1)], "2026-01-30")).toBeUndefined();
   });
 });
 

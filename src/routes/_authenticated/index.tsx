@@ -18,15 +18,8 @@ import { WelcomeCard } from "@/components/import/welcome-card";
 import { AllocationChart } from "@/components/allocation-chart";
 import { SegmentedControl } from "@/components/segmented-control";
 import { axisDateFormatter, formatISODate } from "@/lib/date";
-import {
-  changeOver,
-  chartPoints,
-  monthAgo,
-  withHistory,
-  yearStart,
-  type HistoryRow,
-  type ReconstructedRow,
-} from "@/lib/net-worth";
+import { changeOver, chartPoints, monthAgo, withHistory, yearStart } from "@/lib/net-worth";
+import { fetchHistory, fetchNetWorth, fetchReconstructed } from "@/lib/net-worth-queries";
 import { FriendsCreditLine } from "@/components/splitwise/balances-view";
 import { friendsCreditEur as friendsCreditEurOf } from "@/lib/import/splitwise-balances";
 import { useSplitwiseBalances } from "@/lib/use-splitwise-balances";
@@ -81,35 +74,6 @@ export const Route = createFileRoute("/_authenticated/")({
 type Currency = "EUR" | "USD" | "GBP";
 const CURRENCIES: Array<Currency> = ["EUR", "USD", "GBP"];
 
-async function fetchNetWorth(): Promise<Array<NetWorthSnapshot>> {
-  const { data, error } = await supabase
-    .from("v_net_worth_daily")
-    .select("snapshot_date,total_eur,bank_total_eur,portfolio_total_eur,crypto_total_eur")
-    .order("snapshot_date", { ascending: true });
-  if (error) throw error;
-  return (data ?? []) as Array<NetWorthSnapshot>;
-}
-
-async function fetchHistory(): Promise<Array<HistoryRow>> {
-  const { data, error } = await supabase
-    .from("net_worth_history")
-    .select(
-      "snapshot_date,stocks_eur,bonds_eur,crypto_eur,cash_eur,other_eur,liabilities_eur,total_eur",
-    )
-    .order("snapshot_date", { ascending: true });
-  if (error) throw error;
-  return (data ?? []) as Array<HistoryRow>;
-}
-
-async function fetchReconstructed(): Promise<Array<ReconstructedRow>> {
-  const { data, error } = await supabase
-    .from("net_worth_reconstructed")
-    .select("snapshot_date,stocks_eur,bonds_eur,cash_eur")
-    .order("snapshot_date", { ascending: true });
-  if (error) throw error;
-  return data ?? [];
-}
-
 async function fetchLatestFxRates(): Promise<Record<string, FxRate>> {
   // Latest fx_rates row per non-EUR currency.
   const { data, error } = await supabase
@@ -154,8 +118,13 @@ export function NetWorthPage() {
 
   const snapshots = useMemo(() => netWorthQuery.data ?? [], [netWorthQuery.data]);
   const chartData = useMemo(
-    () => withTrend(chartPoints(withHistory(historyQuery.data ?? [], snapshots))),
-    [historyQuery.data, snapshots],
+    () =>
+      withTrend(
+        chartPoints(
+          withHistory(historyQuery.data ?? [], snapshots, undefined, reconstructedQuery.data ?? []),
+        ),
+      ),
+    [historyQuery.data, snapshots, reconstructedQuery.data],
   );
   const chartFirst = chartData.at(0);
   const latest = snapshots.at(-1);
@@ -183,8 +152,8 @@ export function NetWorthPage() {
 
   // Monthly and YTD read from the merged series so they reach back into imported history.
   const series = useMemo(
-    () => withHistory(historyQuery.data ?? [], snapshots),
-    [historyQuery.data, snapshots],
+    () => withHistory(historyQuery.data ?? [], snapshots, undefined, reconstructedQuery.data ?? []),
+    [historyQuery.data, snapshots, reconstructedQuery.data],
   );
   const latestIso = series.at(-1)?.snapshot_date;
   const monthChange = latestIso ? changeOver(series, monthAgo(latestIso)) : null;

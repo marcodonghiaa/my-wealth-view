@@ -33,28 +33,60 @@ export type HistoryRow = {
   total_eur: number;
 };
 
-// Chart rows = imported history, then live snapshots from the baseline on. Live snapshots before
-// the baseline are partial (accounts not linked yet) and would drag the line down, so they are
-// dropped, but only when there is history to show instead; history never overlaps live data.
+// A month rebuilt from bank and broker statements (stocks, bond-like funds and cash only).
+export type ReconstructedRow = {
+  snapshot_date: string;
+  stocks_eur: number;
+  bonds_eur: number;
+  cash_eur: number;
+  // Absent on rows from before the column existed.
+  crypto_eur?: number;
+};
+
+// Chart rows = imported history, rebuilt months for what falls between, then live snapshots from
+// the baseline on. Live snapshots before the baseline are partial (accounts not linked yet) and
+// would drag the line down, so they are dropped, but only when there is history to show instead.
+// Nothing overlaps live data, and a rebuilt month never replaces an imported one.
 export function withHistory(
   history: Array<HistoryRow>,
   snapshots: Array<NetWorthRow>,
   start: string | undefined = NET_WORTH_START,
+  reconstructed: Array<ReconstructedRow> = [],
 ): Array<NetWorthRow> {
-  if (history.length === 0) return snapshots;
+  if (history.length === 0 && reconstructed.length === 0) return snapshots;
   const base = periodBaseline(snapshots, start);
   const live = base ? snapshots.filter((s) => s.snapshot_date >= base.snapshot_date) : snapshots;
   const firstLive = live.at(0)?.snapshot_date;
-  const past = history
-    .filter((h) => !firstLive || h.snapshot_date < firstLive)
-    .map((h) => ({
+  const before = (d: string) => !firstLive || d < firstLive;
+  const imported = history.filter((h) => before(h.snapshot_date));
+  const importedDates = new Set(imported.map((h) => h.snapshot_date));
+  const past: Array<NetWorthRow> = [
+    ...imported.map((h) => ({
       snapshot_date: h.snapshot_date,
       total_eur: h.total_eur,
       bank_total_eur: h.cash_eur,
       portfolio_total_eur: h.stocks_eur + h.bonds_eur,
       crypto_total_eur: h.crypto_eur,
-    }));
+    })),
+    ...reconstructed
+      .filter((r) => before(r.snapshot_date) && !importedDates.has(r.snapshot_date))
+      .map((r) => ({
+        snapshot_date: r.snapshot_date,
+        total_eur: r.stocks_eur + r.bonds_eur + r.cash_eur + (r.crypto_eur ?? 0),
+        bank_total_eur: r.cash_eur,
+        portfolio_total_eur: r.stocks_eur + r.bonds_eur,
+        crypto_total_eur: r.crypto_eur ?? 0,
+      })),
+  ].sort((x, y) => x.snapshot_date.localeCompare(y.snapshot_date));
   return [...past, ...live];
+}
+
+// The latest row on or before a date (rows sorted by date), e.g. the value at a month's end.
+export function onOrBefore<T extends { snapshot_date: string }>(
+  rows: Array<T>,
+  date: string,
+): T | undefined {
+  return rows.filter((r) => r.snapshot_date <= date).at(-1);
 }
 
 const DAY_MS = 86_400_000;
@@ -82,14 +114,6 @@ export function chartPoints<T extends NetWorthRow>(rows: Array<T>): Array<ChartP
   return points;
 }
 
-// A month rebuilt from bank and broker statements (stocks, bond-like funds and cash only).
-export type ReconstructedRow = {
-  snapshot_date: string;
-  stocks_eur: number;
-  bonds_eur: number;
-  cash_eur: number;
-};
-
 // Rows for the allocation chart: imported months, rebuilt months for what falls between, then
 // live snapshots from the baseline on. Live snapshots only split portfolio, crypto and bank, so
 // the portfolio counts as stocks (the holdings here are stocks and ETFs) and bank balances as
@@ -111,10 +135,10 @@ export function allocationHistory(
       snapshot_date: r.snapshot_date,
       stocks_eur: r.stocks_eur,
       bonds_eur: r.bonds_eur,
-      crypto_eur: 0,
+      crypto_eur: r.crypto_eur ?? 0,
       cash_eur: r.cash_eur,
       liabilities_eur: 0,
-      total_eur: r.stocks_eur + r.bonds_eur + r.cash_eur,
+      total_eur: r.stocks_eur + r.bonds_eur + r.cash_eur + (r.crypto_eur ?? 0),
     }));
   return [
     ...[...past, ...rebuilt].sort((a, b) => a.snapshot_date.localeCompare(b.snapshot_date)),
