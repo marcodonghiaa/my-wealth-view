@@ -91,7 +91,7 @@ async function fetchAccounts(): Promise<Record<string, AccountRow>> {
   return map;
 }
 
-export function TransactionsPage() {
+function TransactionsPage() {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<string>("all");
   const [month, setMonth] = useState(() => startOfMonth(new Date()));

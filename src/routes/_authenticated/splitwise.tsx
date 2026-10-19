@@ -19,7 +19,7 @@ export const Route = createFileRoute("/_authenticated/splitwise")({
   component: SplitwisePage,
 });
 
-export function SplitwisePage() {
+function SplitwisePage() {
   const { balances, rows, rate } = useSplitwiseBalances();
   const groups = useMemo(() => summarizeBalances(rows, rate), [rows, rate]);
 

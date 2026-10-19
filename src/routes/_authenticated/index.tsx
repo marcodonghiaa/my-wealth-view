@@ -97,7 +97,7 @@ function formatMoney(value: number, currency: Currency): string {
   }).format(value);
 }
 
-export function NetWorthPage() {
+function NetWorthPage() {
   const [currency, setCurrency] = useState<Currency>("EUR");
 
   const netWorthQuery = useQuery({

@@ -67,7 +67,7 @@ function formatMonthLabel(iso: string): string {
   });
 }
 
-export function IncomeExpensesPage() {
+function IncomeExpensesPage() {
   const query = useQuery({
     queryKey: ["income-vs-expenses"],
     queryFn: fetchMonthly,

@@ -117,7 +117,7 @@ function groupBySymbol(rows: Array<CryptoRow>): Array<AssetGroup> {
   return Array.from(bySymbol.values()).sort((a, b) => b.valueEur - a.valueEur);
 }
 
-export function CryptoPage() {
+function CryptoPage() {
   const query = useQuery({
     queryKey: ["crypto-latest"],
     queryFn: fetchCrypto,

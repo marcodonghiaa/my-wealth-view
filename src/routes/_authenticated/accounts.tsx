@@ -106,7 +106,7 @@ function formatDate(iso: string | null): string {
   });
 }
 
-export function AccountsPage() {
+function AccountsPage() {
   const queryClient = useQueryClient();
   const bankQuery = useQuery({
     queryKey: ["bank-accounts-latest"],

@@ -56,7 +56,7 @@ function fieldLabel(value: string) {
   return MATCH_FIELDS.find((f) => f.value === value)?.label ?? value;
 }
 
-export function RulesPage() {
+function RulesPage() {
   const queryClient = useQueryClient();
   const [matchField, setMatchField] = useState("creditor_name");
   const [matchText, setMatchText] = useState("");
