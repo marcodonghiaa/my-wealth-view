@@ -1,5 +1,5 @@
 export const REFERENCE_SUPABASE_URL = "https://diwezyrtlwdbrsgegkay.supabase.co";
-export const REFERENCE_SUPABASE_KEY = "sb_publishable_TUrIFr1vCjdFi7UF81VWhA_Qu8FiCe1";
+const REFERENCE_SUPABASE_KEY = "sb_publishable_TUrIFr1vCjdFi7UF81VWhA_Qu8FiCe1";
 
 type Input = {
   url: string | undefined;
