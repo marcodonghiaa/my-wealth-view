@@ -13,6 +13,7 @@ import {
 } from "recharts";
 import { ArrowDownRight, ArrowUpRight, Scale } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useIsMobile } from "@/lib/use-is-mobile";
 
 export const Route = createFileRoute("/_authenticated/income-expenses")({
   head: () => ({
@@ -68,6 +69,7 @@ function formatMonthLabel(iso: string): string {
 }
 
 function IncomeExpensesPage() {
+  const isMobile = useIsMobile();
   const query = useQuery({
     queryKey: ["income-vs-expenses"],
     queryFn: fetchMonthly,
@@ -180,7 +182,7 @@ function IncomeExpensesPage() {
                   minTickGap={24}
                 />
                 <YAxis
-                  width={70}
+                  width={isMobile ? 48 : 70}
                   tickFormatter={(v: number) =>
                     Math.abs(v) >= 1000 ? `€${Math.round(v / 1000)}k` : `€${v}`
                   }

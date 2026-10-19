@@ -59,12 +59,13 @@ export function SplitEditor({
           </label>
           <input
             type="number"
+            inputMode="decimal"
             step="0.01"
             min="0"
             max={fullAmount}
             value={shareInput}
             onChange={(e) => setShareInput(e.target.value)}
-            className="h-10 w-full rounded-lg border bg-background px-3 text-sm text-foreground focus:ring-2 focus:ring-ring focus:outline-none"
+            className="h-11 w-full rounded-lg border bg-background px-3 text-base text-foreground focus:ring-2 focus:ring-ring focus:outline-none"
           />
         </div>
         <div>
@@ -76,7 +77,7 @@ export function SplitEditor({
             placeholder="e.g. Anna, Luca"
             value={owedByInput}
             onChange={(e) => setOwedByInput(e.target.value)}
-            className="h-10 w-full rounded-lg border bg-background px-3 text-sm text-foreground focus:ring-2 focus:ring-ring focus:outline-none"
+            className="h-11 w-full rounded-lg border bg-background px-3 text-base text-foreground focus:ring-2 focus:ring-ring focus:outline-none"
           />
         </div>
         <div className="flex gap-2 pt-1">
@@ -87,7 +88,7 @@ export function SplitEditor({
                 setOpen(false);
                 onSave(null, null);
               }}
-              className="min-h-9 flex-1 rounded-lg border px-3 text-sm text-muted-foreground transition-colors hover:bg-accent"
+              className="min-h-11 flex-1 rounded-lg border px-3 text-sm text-muted-foreground transition-colors hover:bg-accent"
             >
               Clear
             </button>
@@ -105,7 +106,7 @@ export function SplitEditor({
                 parsed === fullAmount ? null : owedByInput.trim() || null,
               );
             }}
-            className="min-h-9 flex-1 rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground transition-colors hover:opacity-90"
+            className="min-h-11 flex-1 rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground transition-colors hover:opacity-90"
           >
             Save
           </button>

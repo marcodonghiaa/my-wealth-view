@@ -16,6 +16,7 @@ import { shareSummary } from "@/lib/chart-summary";
 import { CategoryRow } from "@/components/spending/category-row";
 import { supabase } from "@/integrations/supabase/client";
 import { formatISODate } from "@/lib/date";
+import { useIsMobile } from "@/lib/use-is-mobile";
 
 export const Route = createFileRoute("/_authenticated/spending")({
   head: () => ({
@@ -102,6 +103,7 @@ function formatEur(value: number): string {
 }
 
 function SpendingPage() {
+  const isMobile = useIsMobile();
   const [month, setMonth] = useState<Date>(() => startOfMonth(new Date()));
 
   const spendQuery = useQuery({
@@ -228,7 +230,10 @@ function SpendingPage() {
                   <YAxis
                     type="category"
                     dataKey="category"
-                    width={110}
+                    width={isMobile ? 84 : 110}
+                    tickFormatter={(name: string) =>
+                      isMobile && name.length > 11 ? `${name.slice(0, 10)}…` : name
+                    }
                     tick={{ fill: "var(--color-foreground)", fontSize: 12 }}
                     tickLine={false}
                     axisLine={false}

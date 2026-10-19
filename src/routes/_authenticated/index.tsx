@@ -22,6 +22,7 @@ import { changeOver, chartPoints, monthAgo, withHistory, yearStart } from "@/lib
 import { fetchHistory, fetchNetWorth, fetchReconstructed } from "@/lib/net-worth-queries";
 import { FriendsCreditLine } from "@/components/splitwise/balances-view";
 import { friendsCreditEur as friendsCreditEurOf } from "@/lib/import/splitwise-balances";
+import { useIsMobile } from "@/lib/use-is-mobile";
 import { useSplitwiseBalances } from "@/lib/use-splitwise-balances";
 import { TONE_PILL, toneOf } from "@/lib/tone";
 
@@ -98,6 +99,7 @@ function formatMoney(value: number, currency: Currency): string {
 }
 
 function NetWorthPage() {
+  const isMobile = useIsMobile();
   const [currency, setCurrency] = useState<Currency>("EUR");
 
   const netWorthQuery = useQuery({
@@ -309,7 +311,7 @@ function NetWorthPage() {
                   interval="preserveStartEnd"
                 />
                 <YAxis
-                  width={70}
+                  width={isMobile ? 48 : 70}
                   tickFormatter={(v: number) => (v >= 1000 ? `€${Math.round(v / 1000)}k` : `€${v}`)}
                   tick={{
                     fill: "var(--color-muted-foreground)",

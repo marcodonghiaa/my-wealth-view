@@ -326,7 +326,7 @@ function TransactionsPage() {
 
       {/* Bulk action bar */}
       {selected.size > 0 && (
-        <div className="mb-4 flex flex-wrap items-center gap-3 rounded-xl border bg-card p-3 card-ring">
+        <div className="sticky top-[calc(2.75rem+env(safe-area-inset-top)+0.5rem)] z-20 mb-4 flex flex-wrap items-center gap-3 rounded-xl border bg-card p-3 shadow-md card-ring md:top-4">
           <span className="text-sm font-medium text-foreground">{selected.size} selected</span>
           <BulkCategoryPicker
             onSelect={(next) =>
@@ -354,7 +354,7 @@ function TransactionsPage() {
           <button
             type="button"
             onClick={() => setSelected(new Set())}
-            className="ml-auto text-sm text-muted-foreground transition-colors hover:text-foreground"
+            className="ml-auto min-h-11 px-3 text-sm text-muted-foreground transition-colors hover:text-foreground"
           >
             Clear
           </button>

@@ -49,14 +49,14 @@ export function NameEditor({
             maxLength={100}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && save()}
-            className="mt-1 w-full rounded-lg border bg-background px-2.5 py-1.5 text-sm text-foreground"
+            className="mt-1 h-11 w-full rounded-lg border bg-background px-3 text-base text-foreground focus:ring-2 focus:ring-ring focus:outline-none"
           />
         </label>
         <p className="text-xs text-muted-foreground">Leave empty to use the bank's name.</p>
         <button
           type="button"
           onClick={save}
-          className="inline-flex min-h-9 w-full cursor-pointer items-center justify-center rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground"
+          className="inline-flex min-h-11 w-full cursor-pointer items-center justify-center rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground"
         >
           Save
         </button>
