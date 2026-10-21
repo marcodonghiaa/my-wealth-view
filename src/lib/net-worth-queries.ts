@@ -6,7 +6,9 @@ import type { HistoryRow, NetWorthRow, ReconstructedRow } from "./net-worth";
 export async function fetchNetWorth(): Promise<Array<NetWorthRow>> {
   const { data, error } = await supabase
     .from("v_net_worth_daily")
-    .select("snapshot_date,total_eur,bank_total_eur,portfolio_total_eur,crypto_total_eur")
+    .select(
+      "snapshot_date,total_eur,bank_total_eur,portfolio_total_eur,crypto_total_eur,portfolio_bonds_eur",
+    )
     .order("snapshot_date", { ascending: true });
   if (error) throw error;
   return (data ?? []) as Array<NetWorthRow>;

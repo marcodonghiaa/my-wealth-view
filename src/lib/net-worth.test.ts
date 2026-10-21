@@ -5,6 +5,7 @@ import {
   breakAtGaps,
   changeOver,
   chartPoints,
+  inRange,
   monthAgo,
   monthNetWorth,
   onOrBefore,
@@ -187,6 +188,27 @@ describe("changeOver / period targets", () => {
     expect(monthAgo("2026-01-15")).toBe("2025-12-15");
   });
 
+  it("monthAgo goes back several months", () => {
+    expect(monthAgo("2026-10-18", 6)).toBe("2026-04-18");
+    expect(monthAgo("2026-08-31", 6)).toBe("2026-02-28");
+    expect(monthAgo("2026-10-18", 12)).toBe("2025-10-18");
+  });
+
+  it("inRange keeps points within the range before the last one", () => {
+    const pts = [
+      snap("2025-01-01", 1),
+      snap("2026-05-01", 2),
+      snap("2026-09-20", 3),
+      snap("2026-10-18", 4),
+    ];
+    expect(inRange(pts, "1M").map((p) => p.total_eur)).toEqual([3, 4]);
+    expect(inRange(pts, "3M").map((p) => p.total_eur)).toEqual([3, 4]);
+    expect(inRange(pts, "1Y").map((p) => p.total_eur)).toEqual([2, 3, 4]);
+    expect(inRange(pts, "6M").map((p) => p.total_eur)).toEqual([2, 3, 4]);
+    expect(inRange(pts, "All")).toBe(pts);
+    expect(inRange([], "1Y")).toEqual([]);
+  });
+
   it("yearStart is the last day of the previous year", () => {
     expect(yearStart("2026-10-18")).toBe("2025-12-31");
   });
@@ -283,6 +305,12 @@ describe("allocationHistory", () => {
       crypto_eur: 100,
       cash_eur: 100,
     });
+  });
+
+  // protects=bond funds count as bonds, matching the portfolio page; fails_when=live portfolio is all stocks
+  it("splits the bond holdings out of a live portfolio", () => {
+    const rows = allocationHistory([], [{ ...live("2026-09-04"), portfolio_bonds_eur: 300 }]);
+    expect(rows[0]).toMatchObject({ stocks_eur: 500, bonds_eur: 300 });
   });
 
   // protects=partial early snapshots do not distort the mix; fails_when=the start date is ignored

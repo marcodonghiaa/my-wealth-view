@@ -765,6 +765,7 @@ export type Database = {
         Row: {
           bank_total_eur: number | null;
           crypto_total_eur: number | null;
+          portfolio_bonds_eur: number | null;
           portfolio_total_eur: number | null;
           snapshot_date: string | null;
           total_eur: number | null;
