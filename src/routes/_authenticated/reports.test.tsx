@@ -9,13 +9,21 @@ const subscriptions = [
   { monthly_equivalent_eur: -1000, charge_count: 1, billing_frequency_is_manual: false },
 ];
 
+let failTable: string | null = null;
+
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
     from: (table: string) => {
       const q: Record<string, unknown> = {};
-      for (const m of ["select", "order", "eq", "gte", "lt", "lte", "is", "in"]) q[m] = () => q;
+      for (const m of ["select", "order", "eq", "gte", "lt", "lte", "is", "in", "not"])
+        q[m] = () => q;
+      q["maybeSingle"] = () => q;
       q["then"] = (resolve: (v: unknown) => void) =>
-        resolve({ data: table === "v_subscriptions" ? subscriptions : [], error: null });
+        resolve(
+          table === failTable
+            ? { data: null, error: { message: "boom" } }
+            : { data: table === "v_subscriptions" ? subscriptions : [], error: null },
+        );
       return q;
     },
   },
@@ -40,5 +48,35 @@ describe("Reports subscriptions total", () => {
     );
     const card = (await screen.findByText("Subscriptions")).closest("section") as HTMLElement;
     expect(await within(card).findByText("€19.00")).toBeTruthy();
+  });
+});
+
+describe("Reports when a figure fails to load", () => {
+  // protects=a failed query shows an error instead of a quiet zero;
+  // fails_when=the page ignores the error state of its queries
+  it("tells the user some figures could not load", async () => {
+    failTable = "v_subscriptions";
+    render(
+      <QueryClientProvider
+        client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+      >
+        <Page />
+      </QueryClientProvider>,
+    );
+    expect((await screen.findByRole("alert")).textContent).toContain("boom");
+    failTable = null;
+  });
+
+  it("shows no error when everything loads", async () => {
+    render(
+      <QueryClientProvider
+        client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+      >
+        <Page />
+      </QueryClientProvider>,
+    );
+    const card = (await screen.findByText("Subscriptions")).closest("section") as HTMLElement;
+    await within(card).findByText("€19.00");
+    expect(screen.queryByRole("alert")).toBeNull();
   });
 });
