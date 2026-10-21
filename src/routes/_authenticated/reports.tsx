@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatISODate } from "@/lib/date";
+import { estimatedMonthlyEur, splitSubscriptions } from "@/lib/subscriptions";
 import { personalAmountEur } from "@/lib/transactions";
 import { monthNetWorth, withHistory } from "@/lib/net-worth";
 import { fetchHistory, fetchNetWorth, fetchReconstructed } from "@/lib/net-worth-queries";
@@ -88,20 +89,21 @@ async function fetchSpendByCategory(monthISO: string): Promise<Array<SpendRow>> 
 
 interface SubscriptionTotalRow {
   monthly_equivalent_eur: number | null;
+  charge_count: number | null;
+  billing_frequency_is_manual: boolean | null;
 }
 
 // Current subscriptions, not historized -- v_subscriptions reflects today's
 // state regardless of which month is selected. Labeled "current" in the UI
 // rather than implied to be that month's actual figure.
 async function fetchSubscriptionsTotal(): Promise<number> {
-  const { data, error } = await supabase.from("v_subscriptions").select("monthly_equivalent_eur");
+  const { data, error } = await supabase
+    .from("v_subscriptions")
+    .select("monthly_equivalent_eur,charge_count,billing_frequency_is_manual");
   if (error) throw error;
-  // monthly_equivalent_eur is signed (debits negative), same convention as
-  // signed_amount_eur elsewhere -- but this is displayed as a cost total,
-  // so take the magnitude.
-  return ((data ?? []) as Array<SubscriptionTotalRow>).reduce(
-    (sum, r) => sum + Math.abs(r.monthly_equivalent_eur ?? 0),
-    0,
+  // Same recurring-only total as the Subscriptions page; one-off charges are not a monthly cost.
+  return estimatedMonthlyEur(
+    splitSubscriptions((data ?? []) as Array<SubscriptionTotalRow>).recurring,
   );
 }
 
