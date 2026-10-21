@@ -10,13 +10,13 @@ self.addEventListener("push", (event) => {
   );
 });
 
-// Only ever open a same-origin relative path -- a push payload is only as
+// Only ever open a same-origin address -- a push payload is only as
 // trustworthy as whatever server-side code builds it, and this service
 // worker has no way to verify that at delivery time.
 function safeNotificationUrl(rawUrl) {
   try {
     const resolved = new URL(rawUrl, self.location.origin);
-    return resolved.origin === self.location.origin ? resolved.pathname + resolved.search : "/";
+    return resolved.origin === self.location.origin ? resolved.href : "/";
   } catch {
     return "/";
   }
