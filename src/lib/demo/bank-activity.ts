@@ -277,7 +277,8 @@ export function buildSubscriptions(
         custom_interval_value: o?.custom_interval_value ?? null,
         interval_days: days,
         last_charged: latest.booking_date,
-        monthly_equivalent_eur: round2((latest.amount * 30) / days),
+        // A cost, so negative, like the real view (its signed amount divided by the frequency).
+        monthly_equivalent_eur: -round2((latest.amount * 30) / days),
         signed_amount_eur: -latest.amount,
         user_id: DEMO_USER_ID,
       },
@@ -285,8 +286,12 @@ export function buildSubscriptions(
   });
 }
 
+// Like the real views: my Splitwise shares count as spend, and imported history only fills the
+// months that have no live bank spend.
 export function buildMonthly(
   view: DemoDb["v_transactions_eur"],
+  shares: DemoDb["v_splitwise_eur"],
+  history: DemoDb["spend_history"],
 ): Pick<DemoDb, "v_spend_by_category_monthly" | "v_income_vs_expenses_monthly"> {
   const spendByKey = new Map<string, { month: string; category: string; spend: number }>();
   const byMonth = new Map<string, { income: number; expenses: number }>();
@@ -303,6 +308,26 @@ export function buildMonthly(
       spendByKey.set(key, row);
     }
     byMonth.set(month, cell);
+  }
+  const spendMonths = new Set(
+    view.filter((t) => t.flow_type === "spend").map((t) => monthStart(t.booking_date!)),
+  );
+  const addSpend = (month: string, category: string, amount: number) => {
+    const key = `${month}|${category}`;
+    const row = spendByKey.get(key) ?? { month, category, spend: 0 };
+    row.spend += amount;
+    spendByKey.set(key, row);
+  };
+  for (const s of shares) {
+    const month = monthStart(s.booking_date!);
+    const amount = s.amount_eur!;
+    const cell = byMonth.get(month) ?? { income: 0, expenses: 0 };
+    cell.expenses += amount;
+    byMonth.set(month, cell);
+    addSpend(month, s.category ?? "Uncategorized", amount);
+  }
+  for (const h of history) {
+    if (!spendMonths.has(h.month)) addSpend(h.month, h.category, h.spend_eur);
   }
   return {
     v_spend_by_category_monthly: [...spendByKey.values()].map((s) => ({

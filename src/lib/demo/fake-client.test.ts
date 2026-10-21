@@ -95,7 +95,25 @@ describe("fake client: writes live in memory only", () => {
       .eq("flow_type", "spend")
       .eq("category", "Groceries");
     const total = all!.reduce((s, t) => s + Math.abs(t.signed_amount_eur!), 0);
-    expect(groceries!.reduce((s, r) => s + r.spend_eur!, 0)).toBeCloseTo(total, 1);
+    // The monthly view also holds Splitwise shares and, for months with no spend, imported history.
+    const { data: shares } = await c
+      .from("v_splitwise_eur")
+      .select("*")
+      .eq("category", "Groceries");
+    const shareTotal = shares!.reduce((s, e) => s + e.amount_eur!, 0);
+    const { data: spendAll } = await c
+      .from("v_transactions_eur")
+      .select("*")
+      .eq("flow_type", "spend");
+    const spendMonths = new Set(spendAll!.map((t) => t.booking_date!.slice(0, 7)));
+    const { data: hist } = await c.from("spend_history").select("*").eq("category", "Groceries");
+    const histTotal = hist!
+      .filter((h) => !spendMonths.has(h.month.slice(0, 7)))
+      .reduce((s, h) => s + h.spend_eur, 0);
+    expect(groceries!.reduce((s, r) => s + r.spend_eur!, 0)).toBeCloseTo(
+      total + shareTotal + histTotal,
+      1,
+    );
   });
 
   it("inserts, deletes and upserts rows", async () => {
