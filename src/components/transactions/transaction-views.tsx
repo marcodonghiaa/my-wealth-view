@@ -93,6 +93,7 @@ function TransactionEditSheet({
   const isMobile = useIsMobile();
   const { tx } = p;
   const name = tx.creditor_name ?? "—";
+  const share = isSplitwiseShare(tx);
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
@@ -122,29 +123,35 @@ function TransactionEditSheet({
             <Field label="Category">
               <CategoryPicker tx={tx} onSelect={p.onSelectCategory} saving={p.savingCategory} />
             </Field>
-            <Field label="Type">
-              <TypePicker tx={tx} onSelect={p.onSelectType} saving={p.savingType} />
-            </Field>
-            <Field label="Split">
-              <SplitEditor tx={tx} onSave={p.onSaveSplit} saving={p.savingSplit} />
-            </Field>
-          </div>
-          <div className="divide-y overflow-hidden rounded-xl bg-card">
-            {(tx.worth_it != null || isWorthItEligible(tx)) && (
-              <Field label="Worth it">
-                <WorthItPrompt tx={tx} onAnswer={p.onAnswerWorthIt} />
-              </Field>
+            {!share && (
+              <>
+                <Field label="Type">
+                  <TypePicker tx={tx} onSelect={p.onSelectType} saving={p.savingType} />
+                </Field>
+                <Field label="Split">
+                  <SplitEditor tx={tx} onSave={p.onSaveSplit} saving={p.savingSplit} />
+                </Field>
+              </>
             )}
-            <label className="flex min-h-12 cursor-pointer items-center justify-between gap-4 px-4 text-sm">
-              <span className="text-muted-foreground">Select (edit several at once)</span>
-              <input
-                type="checkbox"
-                checked={p.selected}
-                onChange={p.onToggleSelect}
-                className="size-5 rounded border-border accent-primary"
-              />
-            </label>
           </div>
+          {!share && (
+            <div className="divide-y overflow-hidden rounded-xl bg-card">
+              {(tx.worth_it != null || isWorthItEligible(tx)) && (
+                <Field label="Worth it">
+                  <WorthItPrompt tx={tx} onAnswer={p.onAnswerWorthIt} />
+                </Field>
+              )}
+              <label className="flex min-h-12 cursor-pointer items-center justify-between gap-4 px-4 text-sm">
+                <span className="text-muted-foreground">Select (edit several at once)</span>
+                <input
+                  type="checkbox"
+                  checked={p.selected}
+                  onChange={p.onToggleSelect}
+                  className="size-5 rounded border-border accent-primary"
+                />
+              </label>
+            </div>
+          )}
           <RefundedBadge flowType={tx.flow_type} />
         </div>
       </SheetContent>
@@ -188,15 +195,7 @@ export function TransactionRowView(props: TransactionViewProps) {
       </td>
       <td className="max-w-64 px-4 py-3">
         <div className="truncate font-medium text-foreground">
-          {share ? (
-            (tx.creditor_name ?? "—")
-          ) : (
-            <NameEditor
-              name={tx.creditor_name}
-              onSave={props.onRename}
-              saving={props.savingRename}
-            />
-          )}
+          <NameEditor name={tx.creditor_name} onSave={props.onRename} saving={props.savingRename} />
         </div>
         {!share && notes.length > 0 && (
           <div className="truncate text-xs text-muted-foreground">{notes.join(" · ")}</div>
@@ -205,14 +204,7 @@ export function TransactionRowView(props: TransactionViewProps) {
         {!share && <WorthItPrompt tx={tx} onAnswer={props.onAnswerWorthIt} />}
       </td>
       <td className="px-4 py-3">
-        {share ? (
-          <span className="inline-flex items-center gap-2 text-muted-foreground">
-            <CategoryDot category={tx.category} />
-            {tx.category ?? "—"}
-          </span>
-        ) : (
-          <CategoryPicker tx={tx} onSelect={props.onSelectCategory} saving={props.savingCategory} />
-        )}
+        <CategoryPicker tx={tx} onSelect={props.onSelectCategory} saving={props.savingCategory} />
       </td>
       <td className="px-4 py-3">
         <AccountBadge label={share ? "Splitwise" : accountLabel} />
@@ -272,15 +264,6 @@ export function TransactionCardView(props: TransactionViewProps) {
   );
 
   const rowClass = `${selected ? "bg-primary/5" : ""} ${highlighted ? "ring-2 ring-inset ring-primary" : ""}`;
-
-  // A Splitwise share has nothing to edit, so it is a plain line, not a button.
-  if (share) {
-    return (
-      <li data-entry-ref={tx.entry_reference} className={rowClass}>
-        <div className="flex min-h-14 items-center gap-3 px-4 py-2.5">{summary}</div>
-      </li>
-    );
-  }
 
   return (
     <li data-entry-ref={tx.entry_reference} className={rowClass}>

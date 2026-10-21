@@ -64,6 +64,9 @@ const SHARE_PREFIX = "sw:";
 export const isSplitwiseShare = (tx: Pick<TransactionRow, "entry_reference">): boolean =>
   tx.entry_reference.startsWith(SHARE_PREFIX);
 
+export const shareId = (tx: Pick<TransactionRow, "entry_reference">): string =>
+  tx.entry_reference.slice(SHARE_PREFIX.length);
+
 export function shareToRow(s: SplitwiseShare): TransactionRow {
   return {
     entry_reference: `${SHARE_PREFIX}${s.id}`,
