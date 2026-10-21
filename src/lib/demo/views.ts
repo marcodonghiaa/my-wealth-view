@@ -30,7 +30,8 @@ export function deriveViews(db: DemoDb, todayNum: number): Derived {
     owed_by: t.owed_by,
     owed_settled: t.owed_settled,
     personal_amount: t.personal_amount,
-    personal_signed_amount_eur: t.personal_amount == null ? null : -t.personal_amount,
+    // Unsplit: the whole charge is mine.
+    personal_signed_amount_eur: t.personal_amount == null ? signedEur(t) : -t.personal_amount,
     refund_of: t.refund_of,
     settled_at: t.settled_at,
     signed_amount_eur: signedEur(t),
