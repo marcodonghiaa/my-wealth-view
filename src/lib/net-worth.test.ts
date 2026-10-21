@@ -6,6 +6,7 @@ import {
   changeOver,
   chartPoints,
   monthAgo,
+  monthNetWorth,
   onOrBefore,
   yearStart,
   periodBaseline,
@@ -355,5 +356,39 @@ describe("breakAtGaps", () => {
   it("leaves normal monthly steps alone", () => {
     const rows = [pt("2025-10-31"), pt("2025-11-30"), pt("2025-12-31")];
     expect(breakAtGaps(rows)).toEqual(rows);
+  });
+});
+
+describe("monthNetWorth", () => {
+  const row = (d: string, total: number) => ({
+    snapshot_date: d,
+    total_eur: total,
+    bank_total_eur: total / 2,
+    portfolio_total_eur: total / 2,
+    crypto_total_eur: 0,
+  });
+
+  it("measures from the day before the month to its end", () => {
+    const m = monthNetWorth(
+      [row("2026-02-28", 100), row("2026-03-31", 130)],
+      "2026-02-28",
+      "2026-03-31",
+    );
+    expect(m?.delta?.total).toBe(30);
+  });
+
+  it("has no change when nothing precedes the month", () => {
+    const m = monthNetWorth([row("2026-03-10", 130)], "2026-02-28", "2026-03-31");
+    expect(m?.end.total_eur).toBe(130);
+    expect(m?.delta).toBeNull();
+  });
+
+  it("is null for a month with no data in it, not a zero change from older data", () => {
+    const rows = [row("2026-01-15", 90), row("2026-02-10", 100)];
+    expect(monthNetWorth(rows, "2026-02-28", "2026-03-31")).toBeNull();
+  });
+
+  it("is null with no rows", () => {
+    expect(monthNetWorth([], "2026-02-28", "2026-03-31")).toBeNull();
   });
 });

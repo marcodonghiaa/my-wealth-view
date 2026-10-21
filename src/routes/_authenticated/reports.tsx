@@ -12,7 +12,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { formatISODate } from "@/lib/date";
 import { personalAmountEur } from "@/lib/transactions";
-import { onOrBefore, withHistory } from "@/lib/net-worth";
+import { monthNetWorth, withHistory } from "@/lib/net-worth";
 import { fetchHistory, fetchNetWorth, fetchReconstructed } from "@/lib/net-worth-queries";
 import { TONE_TEXT, toneOf, type Tone } from "@/lib/tone";
 
@@ -180,22 +180,10 @@ function ReportsPage() {
     queryFn: () => fetchWorthItForMonth(monthISO, nextMonthStartISO),
   });
 
-  const netWorthDelta = useMemo(() => {
-    const end = onOrBefore(netWorthRows, endOfMonthISO);
-    const start = onOrBefore(netWorthRows, dayBeforeMonthISO);
-    if (!end) return null;
-    if (!start) return { end, start: null, delta: null };
-    return {
-      end,
-      start,
-      delta: {
-        total: end.total_eur - start.total_eur,
-        bank: end.bank_total_eur - start.bank_total_eur,
-        portfolio: end.portfolio_total_eur - start.portfolio_total_eur,
-        crypto: end.crypto_total_eur - start.crypto_total_eur,
-      },
-    };
-  }, [netWorthRows, endOfMonthISO, dayBeforeMonthISO]);
+  const netWorthDelta = useMemo(
+    () => monthNetWorth(netWorthRows, dayBeforeMonthISO, endOfMonthISO),
+    [netWorthRows, endOfMonthISO, dayBeforeMonthISO],
+  );
 
   const topCategories = useMemo(
     () =>
