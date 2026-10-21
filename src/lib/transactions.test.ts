@@ -15,6 +15,7 @@ import {
   nameRefunds,
   nativeSignedAmount,
   personalAmountEur,
+  restoredFlow,
   startOfMonth,
   type TransactionRow,
 } from "./transactions";
@@ -283,5 +284,15 @@ describe("personalAmountEur", () => {
     expect(personalAmountEur({ personal_signed_amount_eur: null, signed_amount_eur: null })).toBe(
       0,
     );
+  });
+});
+
+describe("restoredFlow", () => {
+  // protects=a transfer moved back lands in spending or income by its direction;
+  // fails_when=a debit goes back as income or a credit as spend
+  it("sends a debit back to spend and anything else to income", () => {
+    expect(restoredFlow(tx({ credit_debit_indicator: "DBIT" }))).toBe("spend");
+    expect(restoredFlow(tx({ credit_debit_indicator: "CRDT" }))).toBe("income");
+    expect(restoredFlow(tx({ credit_debit_indicator: null }))).toBe("income");
   });
 });

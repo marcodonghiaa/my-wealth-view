@@ -48,6 +48,7 @@ vi.mock("@/integrations/supabase/client", () => ({
 import {
   useBulkCategoryMutation,
   useDeleteMutation,
+  useFlowMutation,
   useRenameMerchantMutation,
   useShareMutation,
   useSplitMutation,
@@ -251,5 +252,41 @@ describe("Splitwise share edits", () => {
     expect(calls[0]?.eq).toEqual({ id: "s2" });
     const cached = queryClient.getQueryData<SplitwiseShare[]>(["splitwise-shares", MONTH])!;
     expect(cached.map((r) => r.category)).toEqual(["Others", "Dine Out"]);
+  });
+});
+
+describe("Moving a transfer back to spend or income", () => {
+  const transfer = (account_uid: string, entry_reference: string, dir: string): TransactionRow => ({
+    ...row(account_uid, entry_reference),
+    flow_type: "transfer",
+    credit_debit_indicator: dir,
+  });
+
+  function setupTransfers() {
+    const queryClient = new QueryClient({ defaultOptions: { mutations: { retry: false } } });
+    queryClient.setQueryData(
+      ["transfers", MONTH],
+      [transfer("a1", "r1", "DBIT"), transfer("a2", "r2", "CRDT")],
+    );
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    );
+    const { result } = renderHook(() => useFlowMutation(queryClient, MONTH), { wrapper });
+    const cached = () => queryClient.getQueryData<TransactionRow[]>(["transfers", MONTH])!;
+    return { result, cached };
+  }
+
+  it("writes spend for a debit on that one account and drops it from the transfers list", async () => {
+    const { result, cached } = setupTransfers();
+    await act(() => result.current.mutateAsync({ tx: transfer("a1", "r1", "DBIT") }));
+    expect(calls[0]?.update).toEqual({ flow_type: "spend" });
+    expect(calls[0]?.eq).toEqual({ account_uid: "a1", entry_reference: "r1" });
+    expect(cached().map((r) => r.entry_reference)).toEqual(["r2"]);
+  });
+
+  it("writes income for a credit", async () => {
+    const { result } = setupTransfers();
+    await act(() => result.current.mutateAsync({ tx: transfer("a2", "r2", "CRDT") }));
+    expect(calls[0]?.update).toEqual({ flow_type: "income" });
   });
 });

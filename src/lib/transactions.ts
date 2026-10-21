@@ -152,6 +152,11 @@ export function nativeSignedAmount(tx: TransactionRow): number | null {
   return sign * Math.abs(tx.amount);
 }
 
+/** Where a transaction marked as a transfer goes back to: spending if money left, income otherwise. */
+export const restoredFlow = (
+  tx: Pick<TransactionRow, "credit_debit_indicator">,
+): "spend" | "income" => (tx.credit_debit_indicator === "DBIT" ? "spend" : "income");
+
 /** My share of a charge in euros, as a positive number: the split share if there is one. */
 export const personalAmountEur = (
   tx: Pick<EurRow, "personal_signed_amount_eur" | "signed_amount_eur">,
