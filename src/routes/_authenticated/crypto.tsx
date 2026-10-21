@@ -6,6 +6,7 @@ import { Bitcoin } from "lucide-react";
 import { shareSummary } from "@/lib/chart-summary";
 import { colorsForAssets } from "@/lib/crypto-colors";
 import { supabase } from "@/integrations/supabase/client";
+import { formatEur, formatUsd } from "@/lib/transactions";
 
 export const Route = createFileRoute("/_authenticated/crypto")({
   head: () => ({
@@ -54,24 +55,6 @@ async function fetchCrypto(): Promise<Array<CryptoRow>> {
     .order("value_eur", { ascending: false });
   if (error) throw error;
   return (data ?? []) as Array<CryptoRow>;
-}
-
-function formatEur(value: number): string {
-  return new Intl.NumberFormat("en-IE", {
-    style: "currency",
-    currency: "EUR",
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value);
-}
-
-function formatUsd(value: number): string {
-  return new Intl.NumberFormat("en-IE", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value);
 }
 
 function formatAmount(value: number): string {

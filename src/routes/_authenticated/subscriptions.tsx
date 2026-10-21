@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { estimatedMonthlyEur, splitSubscriptions } from "@/lib/subscriptions";
+import { formatMoney } from "@/lib/transactions";
 
 export const Route = createFileRoute("/_authenticated/subscriptions")({
   head: () => ({
@@ -62,15 +63,6 @@ async function fetchSubscriptions(): Promise<Array<SubscriptionRow>> {
 function customIntervalLabel(value: number, unit: IntervalUnit): string {
   const unitLabel = value === 1 ? unit.slice(0, -1) : unit;
   return `Every ${value} ${unitLabel}`;
-}
-
-function formatMoney(value: number, currency: string): string {
-  return new Intl.NumberFormat("en-IE", {
-    style: "currency",
-    currency,
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value);
 }
 
 function signedNativeAmount(sub: SubscriptionRow): number | null {

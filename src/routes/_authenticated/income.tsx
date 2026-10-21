@@ -4,7 +4,7 @@ import { useState } from "react";
 import { ChevronLeft, ChevronRight, ArrowDownLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatISODate } from "@/lib/date";
-import { incomeTitle } from "@/lib/transactions";
+import { formatEur, formatMoney, incomeTitle } from "@/lib/transactions";
 
 export const Route = createFileRoute("/_authenticated/income")({
   head: () => ({
@@ -38,24 +38,6 @@ interface IncomeRow {
 
 function startOfMonth(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth(), 1);
-}
-
-function formatEur(value: number): string {
-  return new Intl.NumberFormat("en-IE", {
-    style: "currency",
-    currency: "EUR",
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value);
-}
-
-function formatMoney(value: number, currency: string): string {
-  return new Intl.NumberFormat("en-IE", {
-    style: "currency",
-    currency,
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value);
 }
 
 async function fetchIncomeForMonth(month: Date): Promise<Array<IncomeRow>> {

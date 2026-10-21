@@ -18,6 +18,8 @@ import {
   restoredFlow,
   startOfMonth,
   type TransactionRow,
+  formatEur,
+  formatUsd,
 } from "./transactions";
 
 const tx = (over: Partial<TransactionRow> = {}): TransactionRow => ({
@@ -294,5 +296,13 @@ describe("restoredFlow", () => {
     expect(restoredFlow(tx({ credit_debit_indicator: "DBIT" }))).toBe("spend");
     expect(restoredFlow(tx({ credit_debit_indicator: "CRDT" }))).toBe("income");
     expect(restoredFlow(tx({ credit_debit_indicator: null }))).toBe("income");
+  });
+});
+
+describe("formatEur / formatUsd", () => {
+  it("always show two decimals with the currency symbol", () => {
+    expect(formatEur(1234.5)).toBe("€1,234.50");
+    expect(formatEur(0)).toBe("€0.00");
+    expect(formatUsd(10)).toBe("US$10.00");
   });
 });

@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { assertHttpsUrl } from "@/lib/consent-url";
 import { formatISODate } from "@/lib/date";
 import { AccountBadge, bankNameFromLabel } from "@/components/bank-badge";
+import { formatEur, formatMoney } from "@/lib/transactions";
 
 export const Route = createFileRoute("/_authenticated/accounts")({
   head: () => ({
@@ -78,24 +79,6 @@ async function fetchCds(): Promise<Array<CdRow>> {
     .order("maturity_date", { ascending: true });
   if (error) throw error;
   return (data ?? []) as Array<CdRow>;
-}
-
-function formatEur(value: number): string {
-  return new Intl.NumberFormat("en-IE", {
-    style: "currency",
-    currency: "EUR",
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value);
-}
-
-function formatMoney(value: number, currency: string): string {
-  return new Intl.NumberFormat("en-IE", {
-    style: "currency",
-    currency,
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value);
 }
 
 function formatDate(iso: string | null): string {

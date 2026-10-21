@@ -136,6 +136,10 @@ export function formatMoney(value: number, currency: string): string {
   }).format(value);
 }
 
+export const formatEur = (value: number): string => formatMoney(value, "EUR");
+
+export const formatUsd = (value: number): string => formatMoney(value, "USD");
+
 /** Amount without a currency symbol — the Currency column states it instead. */
 export function formatAmountPlain(value: number): string {
   return new Intl.NumberFormat("en-IE", {
