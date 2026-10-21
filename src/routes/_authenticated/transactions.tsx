@@ -177,6 +177,8 @@ function TransactionsPage() {
     staleTime: 60_000,
   });
 
+  const extraError = [sharesQuery, accountsQuery, transfersQuery].find((q) => q.isError)?.error;
+
   const transactions = useMemo(
     () => mergeShares(nameRefunds(txQuery.data ?? []), sharesQuery.data ?? []),
     [txQuery.data, sharesQuery.data],
@@ -315,6 +317,16 @@ function TransactionsPage() {
           className="mb-6 rounded-xl border border-negative/30 bg-negative/10 px-4 py-3 text-sm text-negative"
         >
           Couldn't load transactions: {txQuery.error.message}
+        </div>
+      )}
+
+      {extraError && (
+        <div
+          role="alert"
+          className="mb-6 rounded-xl border border-negative/30 bg-negative/10 px-4 py-3 text-sm text-negative"
+        >
+          Some data couldn't load (Splitwise shares, account names or transfers), so this list may
+          be incomplete: {extraError.message}
         </div>
       )}
 

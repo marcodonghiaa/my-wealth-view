@@ -164,6 +164,15 @@ function SpendingPage() {
         </div>
       )}
 
+      {regretQuery.isError && (
+        <div
+          role="alert"
+          className="mb-6 rounded-xl border border-negative/30 bg-negative/10 px-4 py-3 text-sm text-negative"
+        >
+          Couldn't load your "worth it?" answers: {regretQuery.error.message}
+        </div>
+      )}
+
       {/* Month selector */}
       <div className="mb-6 flex items-center justify-between rounded-xl border bg-card p-2 card-ring">
         <button

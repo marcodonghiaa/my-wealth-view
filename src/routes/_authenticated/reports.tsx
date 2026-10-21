@@ -182,6 +182,18 @@ function ReportsPage() {
     queryFn: () => fetchWorthItForMonth(monthISO, nextMonthStartISO),
   });
 
+  // A failed query leaves its figure at zero, which reads like real data; say so instead.
+  const loadError = [
+    liveQuery,
+    historyQuery,
+    rebuiltQuery,
+    incomeExpensesQuery,
+    spendQuery,
+    prevSpendQuery,
+    subscriptionsQuery,
+    worthItQuery,
+  ].find((q) => q.isError)?.error;
+
   const netWorthDelta = useMemo(
     () => monthNetWorth(netWorthRows, dayBeforeMonthISO, endOfMonthISO),
     [netWorthRows, endOfMonthISO, dayBeforeMonthISO],
@@ -231,6 +243,15 @@ function ReportsPage() {
           Net worth, income vs expenses, and spending — one month at a time.
         </p>
       </header>
+
+      {loadError && (
+        <div
+          role="alert"
+          className="mb-6 rounded-xl border border-negative/30 bg-negative/10 px-4 py-3 text-sm text-negative"
+        >
+          Some figures couldn't load, so the numbers below may be incomplete: {loadError.message}
+        </div>
+      )}
 
       <div className="mb-6 flex items-center justify-between rounded-xl border bg-card p-2 card-ring">
         <button

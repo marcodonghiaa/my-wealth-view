@@ -3,6 +3,7 @@ import { render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 const worthItBounds: Array<[string, string]> = [];
+let failTable: string | null = null;
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
     from: (table: string) => {
@@ -16,7 +17,11 @@ vi.mock("@/integrations/supabase/client", () => ({
         if (table === "v_transactions_eur") {
           worthItBounds.push([filters["gte"] ?? "", filters["lt"] ?? ""]);
         }
-        resolve({ data: [], error: null });
+        resolve(
+          table === failTable
+            ? { data: null, error: { message: "boom" } }
+            : { data: [], error: null },
+        );
       };
       return q;
     },
@@ -48,5 +53,22 @@ describe("Spending page 'not worth it' section", () => {
     );
     await screen.findByText(/No spending recorded/);
     expect(worthItBounds).toContainEqual(["2026-10-01", "2026-11-01"]);
+  });
+});
+
+describe("Spending page when the 'not worth it' answers fail to load", () => {
+  // protects=a failed check-in query is reported, not mistaken for "nothing regretted";
+  // fails_when=the page ignores the error state of that query
+  it("shows an error", async () => {
+    failTable = "v_transactions_eur";
+    render(
+      <QueryClientProvider
+        client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+      >
+        <Page />
+      </QueryClientProvider>,
+    );
+    expect((await screen.findByRole("alert")).textContent).toContain("boom");
+    failTable = null;
   });
 });

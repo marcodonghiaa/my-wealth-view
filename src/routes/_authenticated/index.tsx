@@ -161,6 +161,15 @@ function NetWorthPage() {
 
   const friends = useSplitwiseBalances();
 
+  // These feed the chart history, the Month/YTD tiles and other currencies; say so when one fails.
+  const extraError = [
+    historyQuery,
+    reconstructedQuery,
+    fxQuery,
+    friends.balances,
+    friends.rates,
+  ].find((q) => q.isError)?.error;
+
   const rateToEur = useMemo(() => {
     if (currency === "EUR") return 1;
     return fxQuery.data?.[currency]?.rate_to_eur ?? null;
@@ -219,6 +228,15 @@ function NetWorthPage() {
           className="mb-6 rounded-xl border border-negative/30 bg-negative/10 px-4 py-3 text-sm text-negative"
         >
           Couldn't load your net worth data: {netWorthQuery.error.message}
+        </div>
+      )}
+
+      {extraError && (
+        <div
+          role="alert"
+          className="mb-6 rounded-xl border border-negative/30 bg-negative/10 px-4 py-3 text-sm text-negative"
+        >
+          Some data couldn't load, so charts and totals may be incomplete: {extraError.message}
         </div>
       )}
 
