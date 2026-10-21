@@ -206,7 +206,7 @@ function NetWorthPage() {
       {/* Headline card */}
       <section className="mb-6 rounded-2xl bg-card p-5 card-ring sm:p-7">
         <div className="min-h-16">
-          {netWorthQuery.isPending ? (
+          {netWorthQuery.isPending || (currency !== "EUR" && fxQuery.isPending) ? (
             <div className="h-14 w-64 animate-pulse rounded-lg bg-muted" />
           ) : latest == null ? (
             <p className="text-sm text-muted-foreground">No snapshots available yet.</p>
