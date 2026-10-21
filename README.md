@@ -2,7 +2,13 @@
 
 A self-hosted net worth dashboard. Bank accounts, investments and crypto in one place, converted to a single currency.
 
-![Dashboard](public/og-image.png)
+**[Try the live demo →](https://myfinancess-view.vercel.app/demo)** No sign-up. The demo runs on generated fake data inside your browser and never touches a real account. The data follows today's date, so the latest transactions are always from today or yesterday.
+
+![Net worth dashboard](docs/screenshots/net-worth.png)
+
+| Transactions                                       | Spending                                               | Portfolio                                    | Phone                                        |
+| -------------------------------------------------- | ------------------------------------------------------ | -------------------------------------------- | -------------------------------------------- |
+| ![Transactions](docs/screenshots/transactions.png) | ![Spending by category](docs/screenshots/spending.png) | ![Portfolio](docs/screenshots/portfolio.png) | ![Phone layout](docs/screenshots/mobile.png) |
 
 - **Net Worth**: total over time (bank + portfolio + crypto), in EUR, USD or GBP
 - **Transactions**: full register with inline categories and a "worth it?" check
@@ -18,7 +24,7 @@ iOS-style design: system font, grouped lists, large titles, translucent bars, a 
 
 ## Stack
 
-TanStack Start (React), Tailwind, shadcn/ui, Supabase. The app only uses the publishable key, so every read and write goes through Row Level Security (`auth.uid() = user_id`). No service-role key is used anywhere.
+TanStack Start (React), TypeScript, Tailwind, shadcn/ui, Recharts, Supabase, Vitest, deployed on Vercel. The app only uses the publishable key, so every read and write goes through Row Level Security (`auth.uid() = user_id`). No service-role key is used anywhere.
 
 ## Run it
 
