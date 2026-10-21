@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { MaskedIban } from "@/components/masked-iban";
 import { supabase } from "@/integrations/supabase/client";
 import { assertHttpsUrl } from "@/lib/consent-url";
+import { formatISODate } from "@/lib/date";
 import { AccountBadge, bankNameFromLabel } from "@/components/bank-badge";
 
 export const Route = createFileRoute("/_authenticated/accounts")({
@@ -230,7 +231,7 @@ function AccountsPage() {
   const [currency, setCurrency] = useState("EUR");
   const [principal, setPrincipal] = useState("");
   const [annualRatePct, setAnnualRatePct] = useState("");
-  const [startDate, setStartDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [startDate, setStartDate] = useState(() => formatISODate(new Date()));
   const [maturityDate, setMaturityDate] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
   const [showCdForm, setShowCdForm] = useState(false);
