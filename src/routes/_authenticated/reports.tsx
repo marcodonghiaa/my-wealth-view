@@ -11,7 +11,8 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatISODate } from "@/lib/date";
-import { onOrBefore, withHistory } from "@/lib/net-worth";
+import { personalAmountEur } from "@/lib/transactions";
+import { monthNetWorth, withHistory } from "@/lib/net-worth";
 import { fetchHistory, fetchNetWorth, fetchReconstructed } from "@/lib/net-worth-queries";
 import { TONE_TEXT, toneOf, type Tone } from "@/lib/tone";
 
@@ -105,8 +106,8 @@ async function fetchSubscriptionsTotal(): Promise<number> {
 }
 
 interface WorthItTxRow {
-  amount: number;
-  personal_amount: number | null;
+  personal_signed_amount_eur: number | null;
+  signed_amount_eur: number | null;
   worth_it: "yes" | "no" | null;
 }
 
@@ -121,10 +122,9 @@ async function fetchWorthItForMonth(
   endExclusiveISO: string,
 ): Promise<WorthItSummary> {
   const { data, error } = await supabase
-    .from("transactions")
-    .select("amount,personal_amount,worth_it")
+    .from("v_transactions_eur")
+    .select("personal_signed_amount_eur,signed_amount_eur,worth_it")
     .not("worth_it", "is", null)
-    .is("deleted_at", null)
     .gte("booking_date", startISO)
     .lt("booking_date", endExclusiveISO);
   if (error) throw error;
@@ -134,7 +134,7 @@ async function fetchWorthItForMonth(
     no: rows.filter((r) => r.worth_it === "no").length,
     notWorthItTotal: rows
       .filter((r) => r.worth_it === "no")
-      .reduce((sum, r) => sum + Math.abs(r.personal_amount ?? r.amount), 0),
+      .reduce((sum, r) => sum + personalAmountEur(r), 0),
   };
 }
 
@@ -180,22 +180,10 @@ function ReportsPage() {
     queryFn: () => fetchWorthItForMonth(monthISO, nextMonthStartISO),
   });
 
-  const netWorthDelta = useMemo(() => {
-    const end = onOrBefore(netWorthRows, endOfMonthISO);
-    const start = onOrBefore(netWorthRows, dayBeforeMonthISO);
-    if (!end) return null;
-    if (!start) return { end, start: null, delta: null };
-    return {
-      end,
-      start,
-      delta: {
-        total: end.total_eur - start.total_eur,
-        bank: end.bank_total_eur - start.bank_total_eur,
-        portfolio: end.portfolio_total_eur - start.portfolio_total_eur,
-        crypto: end.crypto_total_eur - start.crypto_total_eur,
-      },
-    };
-  }, [netWorthRows, endOfMonthISO, dayBeforeMonthISO]);
+  const netWorthDelta = useMemo(
+    () => monthNetWorth(netWorthRows, dayBeforeMonthISO, endOfMonthISO),
+    [netWorthRows, endOfMonthISO, dayBeforeMonthISO],
+  );
 
   const topCategories = useMemo(
     () =>

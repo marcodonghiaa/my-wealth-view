@@ -8,6 +8,7 @@ import {
   UNCATEGORIZED,
   filterTransactions,
   isSplitwiseShare,
+  shareId,
   listCategories,
   mergeShares,
   nameRefunds,
@@ -23,6 +24,7 @@ import {
   useBulkCategoryMutation,
   useDeleteMutation,
   useRenameMerchantMutation,
+  useShareMutation,
   useSplitMutation,
   useTransactionFieldMutation,
 } from "@/components/transactions/mutations";
@@ -118,6 +120,8 @@ function TransactionsPage() {
 
   const updateSplit = useSplitMutation(queryClient, monthKey);
 
+  const updateShare = useShareMutation(queryClient, monthKey);
+
   const bulkUpdateCategory = useBulkCategoryMutation(queryClient, monthKey, () =>
     setSelected(new Set()),
   );
@@ -212,20 +216,33 @@ function TransactionsPage() {
     setMonth(next);
   }
 
+  const savingShare = (tx: TransactionRow) =>
+    updateShare.isPending && updateShare.variables?.id === shareId(tx);
+
   const viewProps = (tx: TransactionRow): TransactionViewProps => ({
     tx,
     selected: selected.has(txId(tx)),
     onToggleSelect: () => toggleOne(txId(tx)),
-    savingCategory: updateCategory.isPending && isSameTx(updateCategory.variables?.tx, tx),
-    onSelectCategory: (next) => updateCategory.mutate({ tx, value: next }),
+    savingCategory: isSplitwiseShare(tx)
+      ? savingShare(tx)
+      : updateCategory.isPending && isSameTx(updateCategory.variables?.tx, tx),
+    onSelectCategory: (next) =>
+      isSplitwiseShare(tx)
+        ? updateShare.mutate({ id: shareId(tx), patch: { category: next } })
+        : updateCategory.mutate({ tx, value: next }),
     savingType: updateType.isPending && isSameTx(updateType.variables?.tx, tx),
     onSelectType: (next) => updateType.mutate({ tx, value: next }),
     accountLabel: tx.account_uid ? (accounts[tx.account_uid]?.label ?? "Unknown account") : "—",
     onAnswerWorthIt: (worthIt) => answerWorthIt.mutate({ tx, value: worthIt }),
     savingSplit: updateSplit.isPending && isSameTx(updateSplit.variables?.tx, tx),
     onSaveSplit: (personalAmount, owedBy) => updateSplit.mutate({ tx, personalAmount, owedBy }),
-    savingRename: renameTx.isPending && isSameTx(renameTx.variables?.tx, tx),
-    onRename: (name) => renameTx.mutate({ tx, name }),
+    savingRename: isSplitwiseShare(tx)
+      ? savingShare(tx)
+      : renameTx.isPending && isSameTx(renameTx.variables?.tx, tx),
+    onRename: (name) =>
+      isSplitwiseShare(tx)
+        ? name && updateShare.mutate({ id: shareId(tx), patch: { description: name } })
+        : renameTx.mutate({ tx, name }),
     highlighted: tx.entry_reference === highlightRef,
   });
 

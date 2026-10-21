@@ -9,6 +9,7 @@ describe("AccountBadge", () => {
     ["Revolut EUR", "/banks/revolut.png"],
     ["Wise USD", "/banks/wise.png"],
     ["Fineco EUR", "/banks/fineco.jpg"],
+    ["Splitwise", "/banks/splitwise.png"],
   ])("shows the logo for %s from a local file", (label, src) => {
     render(<AccountBadge label={label} />);
     const img = screen.getByRole("img", { name: label.split(" ")[0] ?? "" });

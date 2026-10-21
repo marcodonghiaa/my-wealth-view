@@ -2,7 +2,7 @@ import { useMutation, type QueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import type { TablesUpdate } from "@/integrations/supabase/types";
-import { txId, type TransactionRow, type TxKey } from "@/lib/transactions";
+import { txId, type SplitwiseShare, type TransactionRow, type TxKey } from "@/lib/transactions";
 
 // account_uid is part of the primary key; filtering on the reference alone would also
 // touch the same reference in another account.
@@ -191,5 +191,37 @@ export function useRenameMerchantMutation(queryClient: QueryClient) {
     onError: (error) => toast.error("Couldn't rename", { description: error.message }),
     onSuccess: (count) => toast.success(count > 1 ? `Renamed on ${count} transactions` : "Renamed"),
     onSettled: () => void queryClient.invalidateQueries({ queryKey: ["transactions"] }),
+  });
+}
+
+// A Splitwise share lives in splitwise_expenses; only its name and category can be edited.
+// A new category moves spend between categories, so the totals built from it are refetched.
+export function useShareMutation(queryClient: QueryClient, monthKey: string) {
+  type Vars = { id: string; patch: { description?: string; category?: string } };
+  type Context = { previous: Array<SplitwiseShare> | undefined };
+  const key = ["splitwise-shares", monthKey];
+
+  return useMutation<void, Error, Vars, Context>({
+    mutationFn: async ({ id, patch }) => {
+      const { error } = await supabase.from("splitwise_expenses").update(patch).eq("id", id);
+      if (error) throw error;
+    },
+    onMutate: async ({ id, patch }) => {
+      await queryClient.cancelQueries({ queryKey: key });
+      const previous = queryClient.getQueryData<Array<SplitwiseShare>>(key);
+      queryClient.setQueryData<Array<SplitwiseShare>>(key, (old) =>
+        old?.map((share) => (share.id === id ? { ...share, ...patch } : share)),
+      );
+      return { previous };
+    },
+    onError: (error, _vars, context) => {
+      if (context?.previous) queryClient.setQueryData(key, context.previous);
+      toast.error("Couldn't save change", { description: error.message });
+    },
+    onSettled: () => {
+      for (const k of ["splitwise-shares", "spend-by-category", "category-transactions"]) {
+        void queryClient.invalidateQueries({ queryKey: [k] });
+      }
+    },
   });
 }

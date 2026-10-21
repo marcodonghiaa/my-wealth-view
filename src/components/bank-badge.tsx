@@ -1,13 +1,12 @@
-import { Users } from "lucide-react";
-
 // Logos for the banks we know, served from /public/banks (keyed by lowercase bank name, the part
 // of an account label before the currency, e.g. "Revolut EUR" -> "revolut"). Revolut and Wise
 // are dark on transparent, so every logo sits on a white tile to stay visible in dark mode;
-// Fineco's logo is a filled square and covers its tile.
+// Fineco's and Splitwise's logos are filled squares and cover their tile.
 const BANK_LOGO: Record<string, { src: string; fill?: boolean }> = {
   revolut: { src: "/banks/revolut.png" },
   wise: { src: "/banks/wise.png" },
   fineco: { src: "/banks/fineco.jpg", fill: true },
+  splitwise: { src: "/banks/splitwise.png", fill: true },
 };
 
 export function bankNameFromLabel(label: string): string {
@@ -21,16 +20,6 @@ export function bankNameFromLabel(label: string): string {
 
 export function AccountBadge({ label }: { label: string }) {
   const bankName = bankNameFromLabel(label);
-  if (bankName.toLowerCase() === "splitwise") {
-    return (
-      <span
-        title={label}
-        className="inline-flex size-7 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary"
-      >
-        <Users className="size-4" aria-label="Splitwise" />
-      </span>
-    );
-  }
   const logo = BANK_LOGO[bankName.toLowerCase()];
   if (logo) {
     return (

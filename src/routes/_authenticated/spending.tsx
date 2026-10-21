@@ -17,6 +17,7 @@ import { CategoryRow } from "@/components/spending/category-row";
 import { supabase } from "@/integrations/supabase/client";
 import { formatISODate } from "@/lib/date";
 import { categoryColor } from "@/lib/categories";
+import { personalAmountEur } from "@/lib/transactions";
 import { useIsMobile } from "@/lib/use-is-mobile";
 
 export const Route = createFileRoute("/_authenticated/spending")({
@@ -47,8 +48,8 @@ interface SpendRow {
 
 interface RegretRow {
   category: string | null;
-  amount: number | null;
-  personal_amount: number | null;
+  personal_signed_amount_eur: number | null;
+  signed_amount_eur: number | null;
 }
 
 interface RegretGroup {
@@ -70,19 +71,21 @@ async function fetchSpendForMonth(month: Date): Promise<Array<SpendRow>> {
   return (data ?? []) as Array<SpendRow>;
 }
 
-// All-time, not scoped to the selected month -- "not worth it" answers accumulate
-// slowly and the point is the overall pattern, not a per-month view of it.
-async function fetchRegretSpend(): Promise<Array<RegretGroup>> {
+// Scoped to the selected month, like the rest of the page.
+async function fetchRegretSpend(month: Date): Promise<Array<RegretGroup>> {
+  const start = formatISODate(startOfMonth(month));
+  const end = formatISODate(new Date(month.getFullYear(), month.getMonth() + 1, 1));
   const { data, error } = await supabase
-    .from("transactions")
-    .select("category,amount,personal_amount")
+    .from("v_transactions_eur")
+    .select("category,personal_signed_amount_eur,signed_amount_eur")
     .eq("worth_it", "no")
-    .is("deleted_at", null);
+    .gte("booking_date", start)
+    .lt("booking_date", end);
   if (error) throw error;
   const byCategory = new Map<string, RegretGroup>();
   for (const row of (data ?? []) as Array<RegretRow>) {
     const category = row.category ?? "Uncategorized";
-    const amount = row.personal_amount ?? row.amount ?? 0;
+    const amount = personalAmountEur(row);
     const existing = byCategory.get(category);
     if (existing) {
       existing.total += amount;
@@ -113,8 +116,8 @@ function SpendingPage() {
   });
 
   const regretQuery = useQuery({
-    queryKey: ["worth-it-regret"],
-    queryFn: fetchRegretSpend,
+    queryKey: ["worth-it-regret", formatISODate(month)],
+    queryFn: () => fetchRegretSpend(month),
   });
   const regretRows = regretQuery.data ?? [];
   const regretTotal = regretRows.reduce((sum, r) => sum + r.total, 0);
@@ -281,7 +284,7 @@ function SpendingPage() {
               {regretCount === 1 ? "" : "s"}
             </h2>
             <p className="mt-0.5 text-xs text-muted-foreground">
-              From your "worth it?" check-ins, all time.
+              From your "worth it?" check-ins this month.
             </p>
           </div>
           <ul className="divide-y">

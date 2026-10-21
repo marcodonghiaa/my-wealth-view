@@ -17,6 +17,12 @@ export interface TransactionRow {
   refund_of: string | null;
 }
 
+// The euro columns of v_transactions_eur; `amount` and `personal_amount` are in the card's own currency.
+export interface EurRow {
+  personal_signed_amount_eur: number | null;
+  signed_amount_eur: number | null;
+}
+
 // A transaction's identity is the pair: the same reference can occur in two accounts.
 export type TxKey = Pick<TransactionRow, "account_uid" | "entry_reference">;
 
@@ -57,6 +63,9 @@ const SHARE_PREFIX = "sw:";
 
 export const isSplitwiseShare = (tx: Pick<TransactionRow, "entry_reference">): boolean =>
   tx.entry_reference.startsWith(SHARE_PREFIX);
+
+export const shareId = (tx: Pick<TransactionRow, "entry_reference">): string =>
+  tx.entry_reference.slice(SHARE_PREFIX.length);
 
 export function shareToRow(s: SplitwiseShare): TransactionRow {
   return {
@@ -142,6 +151,11 @@ export function nativeSignedAmount(tx: TransactionRow): number | null {
   const sign = (tx.signed_amount_eur ?? tx.amount) < 0 ? -1 : 1;
   return sign * Math.abs(tx.amount);
 }
+
+/** My share of a charge in euros, as a positive number: the split share if there is one. */
+export const personalAmountEur = (
+  tx: Pick<EurRow, "personal_signed_amount_eur" | "signed_amount_eur">,
+): number => Math.abs(tx.personal_signed_amount_eur ?? tx.signed_amount_eur ?? 0);
 
 /** "18 Oct", with the year only when it is not the current one. */
 export function formatBookingDateShort(bookingDate: string | null, now: Date = new Date()): string {

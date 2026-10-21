@@ -2,7 +2,7 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import { renderHook, act, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import type { TransactionRow } from "@/lib/transactions";
+import type { SplitwiseShare, TransactionRow } from "@/lib/transactions";
 
 type Call = {
   update: unknown;
@@ -49,6 +49,7 @@ import {
   useBulkCategoryMutation,
   useDeleteMutation,
   useRenameMerchantMutation,
+  useShareMutation,
   useSplitMutation,
   useTransactionFieldMutation,
 } from "./mutations";
@@ -223,5 +224,32 @@ describe("transaction mutations are scoped to one account", () => {
       result.current.mutate({ tx: { account_uid: null, entry_reference: "r1" }, name: null }),
     );
     await waitFor(() => expect(result.current.isError).toBe(true));
+  });
+});
+
+describe("Splitwise share edits", () => {
+  const share = (id: string): SplitwiseShare => ({
+    id,
+    booking_date: "2026-10-02",
+    category: "Others",
+    description: "Dinner",
+    group_name: "Trip",
+    currency: "EUR",
+    amount: 10,
+    amount_eur: 10,
+  });
+
+  it("writes the one share by id and shows the change at once", async () => {
+    const queryClient = new QueryClient({ defaultOptions: { mutations: { retry: false } } });
+    queryClient.setQueryData(["splitwise-shares", MONTH], [share("s1"), share("s2")]);
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    );
+    const { result } = renderHook(() => useShareMutation(queryClient, MONTH), { wrapper });
+    await act(() => result.current.mutateAsync({ id: "s2", patch: { category: "Dine Out" } }));
+    expect(calls[0]?.update).toEqual({ category: "Dine Out" });
+    expect(calls[0]?.eq).toEqual({ id: "s2" });
+    const cached = queryClient.getQueryData<SplitwiseShare[]>(["splitwise-shares", MONTH])!;
+    expect(cached.map((r) => r.category)).toEqual(["Others", "Dine Out"]);
   });
 });

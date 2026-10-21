@@ -14,6 +14,7 @@ import {
   listCategories,
   nameRefunds,
   nativeSignedAmount,
+  personalAmountEur,
   startOfMonth,
   type TransactionRow,
 } from "./transactions";
@@ -262,5 +263,25 @@ describe("formatBookingDateShort", () => {
 
   it("shows a dash without a date", () => {
     expect(formatBookingDateShort(null, now)).toBe("—");
+  });
+});
+
+describe("personalAmountEur", () => {
+  it("uses the euro figures, not the native amount, for a foreign-currency charge", () => {
+    expect(personalAmountEur({ personal_signed_amount_eur: -9.2, signed_amount_eur: -18.4 })).toBe(
+      9.2,
+    );
+  });
+
+  it("falls back to the full euro amount when nothing was split", () => {
+    expect(personalAmountEur({ personal_signed_amount_eur: null, signed_amount_eur: -18.4 })).toBe(
+      18.4,
+    );
+  });
+
+  it("is zero when no euro figure exists", () => {
+    expect(personalAmountEur({ personal_signed_amount_eur: null, signed_amount_eur: null })).toBe(
+      0,
+    );
   });
 });

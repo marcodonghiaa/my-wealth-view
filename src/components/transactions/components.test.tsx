@@ -134,6 +134,15 @@ describe("SplitEditor", () => {
     expect(onSave).not.toHaveBeenCalled();
   });
 
+  it("ignores an empty share instead of saving it as zero", async () => {
+    const onSave = vi.fn();
+    render(<SplitEditor tx={tx()} onSave={onSave} saving={false} />);
+    await open();
+    await userEvent.clear(await screen.findByRole("spinbutton"));
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(onSave).not.toHaveBeenCalled();
+  });
+
   it("offers Clear only for an existing split and clears it", async () => {
     const onSave = vi.fn();
     render(

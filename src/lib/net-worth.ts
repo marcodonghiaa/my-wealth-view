@@ -92,6 +92,25 @@ export function onOrBefore<T extends { snapshot_date: string }>(
   return rows.filter((r) => r.snapshot_date <= date).at(-1);
 }
 
+// Net worth at a month's end and what it changed since the day before the month began. Null when
+// no row falls inside the month: older data would read as a flat month instead of a missing one.
+export function monthNetWorth(rows: Array<NetWorthRow>, dayBeforeIso: string, endIso: string) {
+  const end = onOrBefore(rows, endIso);
+  if (!end || end.snapshot_date <= dayBeforeIso) return null;
+  const start = onOrBefore(rows, dayBeforeIso);
+  if (!start) return { end, start: null, delta: null };
+  return {
+    end,
+    start,
+    delta: {
+      total: end.total_eur - start.total_eur,
+      bank: end.bank_total_eur - start.bank_total_eur,
+      portfolio: end.portfolio_total_eur - start.portfolio_total_eur,
+      crypto: end.crypto_total_eur - start.crypto_total_eur,
+    },
+  };
+}
+
 const DAY_MS = 86_400_000;
 // Months are 28-31 days apart; anything wider than this is missing data, not a normal step.
 const GAP_DAYS = 45;

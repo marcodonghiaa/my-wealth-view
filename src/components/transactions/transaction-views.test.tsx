@@ -33,34 +33,48 @@ const props = (): TransactionViewProps => ({
   savingRename: false,
 });
 
-// protects=a Splitwise share cannot be edited, selected or deleted like a bank row (those writes
-// target the transactions table and would fail); fails_when=a checkbox or an editor appears
-describe("Splitwise share rows are read only", () => {
-  it("table row shows name, category and a Splitwise label, with nothing to edit", () => {
+// protects=a Splitwise share offers only name and category: the other editors and the bulk
+// select/delete write to the transactions table, which a share is not part of;
+// fails_when=a checkbox, type or split editor appears, or name/category cannot be changed
+describe("Splitwise share rows allow only name and category edits", () => {
+  it("table row lets you rename and recategorise, with no checkbox", async () => {
+    const p = props();
     render(
       <table>
         <tbody>
-          <TransactionRowView {...props()} />
+          <TransactionRowView {...p} />
         </tbody>
       </table>,
     );
-    expect(screen.getByText("Dinner")).toBeInTheDocument();
-    expect(screen.getByText("Dine Out")).toBeInTheDocument();
     expect(screen.getByTitle("Splitwise")).toBeInTheDocument();
     expect(screen.queryByRole("checkbox")).toBeNull();
-    expect(screen.queryByRole("button")).toBeNull();
+    expect(screen.queryByRole("button", { name: /Edit/ })).toBeNull();
+
+    await userEvent.click(screen.getByRole("button", { name: "Rename Dinner" }));
+    const input = await screen.findByRole("textbox");
+    await userEvent.clear(input);
+    await userEvent.type(input, "Pizza");
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(p.onRename).toHaveBeenCalledWith("Pizza");
+
+    await userEvent.click(screen.getByRole("button", { name: /Change category for/ }));
+    await userEvent.click(await screen.findByRole("button", { name: "Groceries" }));
+    expect(p.onSelectCategory).toHaveBeenCalledWith("Groceries");
   });
 
-  it("card shows the same and nothing to edit", () => {
+  it("card opens a sheet with name and category only", async () => {
     render(
       <ul>
         <TransactionCardView {...props()} />
       </ul>,
     );
-    expect(screen.getByText("Dinner")).toBeInTheDocument();
     expect(screen.getByTitle("Splitwise")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: /Dinner/ }));
+    expect(await screen.findByRole("button", { name: "Rename Dinner" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Change category for/ })).toBeInTheDocument();
     expect(screen.queryByRole("checkbox")).toBeNull();
-    expect(screen.queryByRole("button")).toBeNull();
+    expect(screen.queryByText("Type")).toBeNull();
+    expect(screen.queryByText("Split")).toBeNull();
   });
 });
 
