@@ -12,7 +12,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { formatISODate } from "@/lib/date";
 import { estimatedMonthlyEur, splitSubscriptions } from "@/lib/subscriptions";
-import { personalAmountEur } from "@/lib/transactions";
+import { formatEur, personalAmountEur } from "@/lib/transactions";
 import { monthNetWorth, withHistory } from "@/lib/net-worth";
 import { fetchHistory, fetchNetWorth, fetchReconstructed } from "@/lib/net-worth-queries";
 import { TONE_TEXT, toneOf, type Tone } from "@/lib/tone";
@@ -43,15 +43,6 @@ function startOfMonth(date: Date): Date {
 
 function endOfMonth(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth() + 1, 0);
-}
-
-function formatEur(value: number): string {
-  return new Intl.NumberFormat("en-IE", {
-    style: "currency",
-    currency: "EUR",
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value);
 }
 
 function formatSigned(value: number): string {

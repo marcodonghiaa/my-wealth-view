@@ -6,6 +6,7 @@ import { Briefcase, ChevronDown } from "lucide-react";
 import { shortHoldingName } from "@/lib/holding-name";
 import { shareSummary } from "@/lib/chart-summary";
 import { supabase } from "@/integrations/supabase/client";
+import { formatEur } from "@/lib/transactions";
 
 export const Route = createFileRoute("/_authenticated/portfolio")({
   head: () => ({
@@ -66,15 +67,6 @@ async function fetchPortfolio(): Promise<Array<PortfolioRow>> {
     .order("value_eur", { ascending: false });
   if (error) throw error;
   return (data ?? []) as Array<PortfolioRow>;
-}
-
-function formatEur(value: number): string {
-  return new Intl.NumberFormat("en-IE", {
-    style: "currency",
-    currency: "EUR",
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value);
 }
 
 function formatMoney(value: number, currency: string): string {

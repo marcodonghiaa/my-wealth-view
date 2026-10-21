@@ -4,6 +4,7 @@ import { ChevronDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { categoryColor } from "@/lib/categories";
 import { formatISODate } from "@/lib/date";
+import { formatEur } from "@/lib/transactions";
 
 interface BankRow {
   entry_reference: string;
@@ -27,9 +28,6 @@ interface CategoryTx {
 }
 
 const UNCATEGORIZED = "Uncategorized";
-
-const formatEur = (value: number) =>
-  new Intl.NumberFormat("en-IE", { style: "currency", currency: "EUR" }).format(value);
 
 // Same rows the category total is built from, for one month: the personal share of real bank
 // spend, plus my Splitwise shares that are not already inside a bank transaction.

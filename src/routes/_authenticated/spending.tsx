@@ -17,7 +17,7 @@ import { CategoryRow } from "@/components/spending/category-row";
 import { supabase } from "@/integrations/supabase/client";
 import { formatISODate } from "@/lib/date";
 import { categoryColor } from "@/lib/categories";
-import { personalAmountEur } from "@/lib/transactions";
+import { formatEur, personalAmountEur } from "@/lib/transactions";
 import { useIsMobile } from "@/lib/use-is-mobile";
 
 export const Route = createFileRoute("/_authenticated/spending")({
@@ -95,15 +95,6 @@ async function fetchRegretSpend(month: Date): Promise<Array<RegretGroup>> {
     }
   }
   return Array.from(byCategory.values()).sort((a, b) => b.total - a.total);
-}
-
-function formatEur(value: number): string {
-  return new Intl.NumberFormat("en-IE", {
-    style: "currency",
-    currency: "EUR",
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value);
 }
 
 function SpendingPage() {
