@@ -40,11 +40,23 @@ export function deriveViews(db: DemoDb, todayNum: number): Derived {
     worth_it: t.worth_it,
   }));
 
+  const v_splitwise_eur: DemoDb["v_splitwise_eur"] = db.splitwise_expenses.map((e) => ({
+    amount: e.amount,
+    amount_eur: e.amount,
+    booking_date: e.booking_date,
+    category: e.category,
+    currency: e.currency,
+    description: e.description,
+    group_name: e.group_name,
+    id: e.id,
+    user_id: e.user_id,
+  }));
+
   const v_cd_holdings: DemoDb["v_cd_holdings"] = db.cd_holdings.map((c) => {
     const start = Date.parse(c.start_date) / DAY_MS;
     const end = Date.parse(c.maturity_date) / DAY_MS;
     const elapsed = Math.max(0, Math.min(todayNum, end) - start);
-    const value = round2(c.principal * (1 + (c.annual_rate * elapsed) / 365));
+    const value = round2(c.principal * (1 + c.annual_rate) ** (elapsed / 365.25));
     return {
       annual_rate: c.annual_rate,
       bank_label: c.bank_label,
@@ -64,20 +76,10 @@ export function deriveViews(db: DemoDb, todayNum: number): Derived {
 
   return {
     v_transactions_eur,
-    ...buildMonthly(v_transactions_eur),
+    ...buildMonthly(v_transactions_eur, v_splitwise_eur, db.spend_history),
     v_subscriptions: buildSubscriptions(live, db.subscription_billing_overrides),
     v_cd_holdings,
-    v_splitwise_eur: db.splitwise_expenses.map((e) => ({
-      amount: e.amount,
-      amount_eur: e.amount,
-      booking_date: e.booking_date,
-      category: e.category,
-      currency: e.currency,
-      description: e.description,
-      group_name: e.group_name,
-      id: e.id,
-      user_id: e.user_id,
-    })),
+    v_splitwise_eur,
   };
 }
 

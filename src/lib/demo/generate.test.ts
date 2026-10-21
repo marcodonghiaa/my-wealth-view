@@ -97,17 +97,28 @@ describe("generateDemoData: internal consistency", () => {
     }
   });
 
-  it("monthly category spend equals the sum of spend transactions", () => {
+  it("monthly category spend is spend transactions plus Splitwise shares, plus history for months with no spend", () => {
+    const inMonth = (date: string, row: { month: string | null }) =>
+      date.slice(0, 7) === row.month!.slice(0, 7);
     for (const row of db.v_spend_by_category_monthly) {
-      const sum = db.v_transactions_eur
-        .filter(
-          (t) =>
-            t.flow_type === "spend" &&
-            t.category === row.category &&
-            t.booking_date!.slice(0, 7) === row.month!.slice(0, 7),
-        )
+      const spend = db.v_transactions_eur.filter(
+        (t) => t.flow_type === "spend" && inMonth(t.booking_date!, row),
+      );
+      const bank = spend
+        .filter((t) => t.category === row.category)
         .reduce((s, t) => s + Math.abs(t.personal_amount ?? t.signed_amount_eur!), 0);
-      expect(row.spend_eur).toBeCloseTo(sum, 1);
+      const shares = db.v_splitwise_eur
+        .filter(
+          (e) => (e.category ?? "Uncategorized") === row.category && inMonth(e.booking_date!, row),
+        )
+        .reduce((s, e) => s + e.amount_eur!, 0);
+      const history =
+        spend.length === 0
+          ? db.spend_history
+              .filter((h) => h.category === row.category && inMonth(h.month, row))
+              .reduce((s, h) => s + h.spend_eur, 0)
+          : 0;
+      expect(row.spend_eur).toBeCloseTo(bank + shares + history, 1);
     }
   });
 
