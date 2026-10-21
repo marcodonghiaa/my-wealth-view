@@ -7,11 +7,16 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { useState } from "react";
+import { SegmentedControl } from "@/components/segmented-control";
 import {
+  ALLOCATION_RANGES,
   allocationHistory,
   allocationSeries,
   breakAtGaps,
+  inRange,
   type AllocationPlotPoint,
+  type ChartRange,
   type HistoryRow,
   type NetWorthRow,
   type ReconstructedRow,
@@ -37,10 +42,10 @@ export function AllocationChart({
   reconstructed?: Array<ReconstructedRow>;
 }) {
   const isMobile = useIsMobile();
-  const data = breakAtGaps(
-    allocationSeries(allocationHistory(history, snapshots, undefined, reconstructed)),
-  );
-  if (data.length < 2) return null;
+  const [range, setRange] = useState<ChartRange>("1Y");
+  const all = allocationSeries(allocationHistory(history, snapshots, undefined, reconstructed));
+  if (all.length < 2) return null;
+  const data = breakAtGaps(inRange(all, range));
   // The grey band only appears when some imported total has no split.
   const classes = CLASSES.filter((c) => c.key !== "other" || data.some((d) => (d.other ?? 0) > 0));
   const fmtTick = axisDateFormatter(data[0]?.snapshot_date, data.at(-1)?.snapshot_date);
@@ -51,7 +56,15 @@ export function AllocationChart({
         <h2 className="text-[0.9375rem] font-semibold text-foreground">
           Asset allocation over time
         </h2>
-        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+        <div className="w-full sm:w-auto">
+          <SegmentedControl
+            label="Allocation range"
+            options={ALLOCATION_RANGES.map((r) => ({ value: r, label: r }))}
+            value={range}
+            onChange={setRange}
+          />
+        </div>
+        <div className="flex w-full flex-wrap items-center gap-3 text-xs text-muted-foreground">
           {classes.map((c) => (
             <span key={c.key} className="inline-flex items-center gap-1.5">
               <span

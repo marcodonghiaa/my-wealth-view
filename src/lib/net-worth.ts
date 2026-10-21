@@ -21,6 +21,8 @@ export type NetWorthRow = {
   bank_total_eur: number;
   portfolio_total_eur: number;
   crypto_total_eur: number;
+  // The bond-type holdings inside portfolio_total_eur. Only live snapshots carry it.
+  portfolio_bonds_eur?: number;
 };
 
 // Month-end rows imported from before live snapshots existed (table net_worth_history).
@@ -137,8 +139,8 @@ export function chartPoints<T extends NetWorthRow>(rows: Array<T>): Array<ChartP
 }
 
 // Rows for the allocation chart: imported months, rebuilt months for what falls between, then
-// live snapshots from the baseline on. Live snapshots only split portfolio, crypto and bank, so
-// the portfolio counts as stocks (the holdings here are stocks and ETFs) and bank balances as
+// live snapshots from the baseline on. Live snapshots split the portfolio into its bond-type
+// holdings (bonds) and everything else (stocks and ETFs, as stocks), and bank balances count as
 // cash. A rebuilt month never replaces an imported or live one.
 export function allocationHistory(
   history: Array<HistoryRow>,
@@ -166,8 +168,8 @@ export function allocationHistory(
     ...[...past, ...rebuilt].sort((a, b) => a.snapshot_date.localeCompare(b.snapshot_date)),
     ...live.map((s) => ({
       snapshot_date: s.snapshot_date,
-      stocks_eur: s.portfolio_total_eur,
-      bonds_eur: 0,
+      stocks_eur: s.portfolio_total_eur - (s.portfolio_bonds_eur ?? 0),
+      bonds_eur: s.portfolio_bonds_eur ?? 0,
       crypto_eur: s.crypto_total_eur,
       cash_eur: s.bank_total_eur,
       liabilities_eur: 0,
@@ -187,8 +189,7 @@ export type AllocationPoint = {
 };
 
 // Percent of gross assets per class. Liabilities (tax reserve) are left out so the mix describes
-// what you hold, not what you owe. Only imported history has the stocks/bonds split; live
-// snapshots lump them together as "portfolio".
+// what you hold, not what you owe.
 export function allocationSeries(history: Array<HistoryRow>): Array<AllocationPoint> {
   return history.flatMap((h) => {
     const other = h.other_eur ?? 0;
@@ -258,13 +259,35 @@ export function changeOver(
 }
 
 // Same day one month earlier, clamped to that month's last day (31 Mar -> 28 Feb).
-export function monthAgo(iso: string): string {
+export function monthAgo(iso: string, months = 1): string {
   const [y = 0, m = 1, d = 1] = iso.split("-").map(Number);
-  const prevLast = new Date(Date.UTC(y, m - 1, 0));
+  const prevLast = new Date(Date.UTC(y, m - months, 0));
   const day = Math.min(d, prevLast.getUTCDate());
   return `${prevLast.getUTCFullYear()}-${String(prevLast.getUTCMonth() + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
 
 export function yearStart(iso: string): string {
   return `${Number(iso.slice(0, 4)) - 1}-12-31`;
+}
+
+export type ChartRange = "1M" | "3M" | "6M" | "1Y" | "All";
+export const CHART_RANGES: Array<ChartRange> = ["1M", "6M", "1Y", "All"];
+// Allocation shifts slowly, so its shortest useful window is a quarter.
+export const ALLOCATION_RANGES: Array<ChartRange> = ["3M", "6M", "1Y", "All"];
+const RANGE_MONTHS: Record<Exclude<ChartRange, "All">, number> = {
+  "1M": 1,
+  "3M": 3,
+  "6M": 6,
+  "1Y": 12,
+};
+
+/** Points from `range` before the last one; "All" keeps everything. */
+export function inRange<T extends { snapshot_date: string }>(
+  points: Array<T>,
+  range: ChartRange,
+): Array<T> {
+  const lastIso = points.at(-1)?.snapshot_date;
+  if (range === "All" || lastIso == null) return points;
+  const start = monthAgo(lastIso, RANGE_MONTHS[range]);
+  return points.filter((p) => p.snapshot_date >= start);
 }

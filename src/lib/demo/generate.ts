@@ -66,6 +66,7 @@ const HOLDINGS = [
     currency: "USD",
   },
 ] as const;
+const BOND_ISINS = new Set<string>(HOLDINGS.filter((h) => h.type === "Bond").map((h) => h.isin));
 
 const COINS = [
   { symbol: "BTC", id: "bitcoin", name: "Bitcoin", amount: 0.05, base: 62000 },
@@ -211,15 +212,16 @@ export function generateDemoData(now: Date = new Date()): DemoDb {
     const bank = sum(
       net_worth_snapshots.filter((s) => s.snapshot_date === d).map((s) => s.eur_equivalent!),
     );
-    const port = sum(
-      portfolio_snapshots.filter((s) => s.snapshot_date === d).map((s) => s.value_eur!),
-    );
+    const held = portfolio_snapshots.filter((s) => s.snapshot_date === d);
+    const port = sum(held.map((s) => s.value_eur!));
+    const bonds = sum(held.filter((s) => BOND_ISINS.has(s.isin)).map((s) => s.value_eur!));
     const crypto = sum(
       crypto_snapshots.filter((s) => s.snapshot_date === d).map((s) => s.value_eur!),
     );
     return {
       bank_total_eur: round2(bank),
       crypto_total_eur: round2(crypto),
+      portfolio_bonds_eur: round2(bonds),
       portfolio_total_eur: round2(port),
       snapshot_date: d,
       total_eur: round2(bank + port + crypto),

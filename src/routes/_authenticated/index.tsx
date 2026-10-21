@@ -18,7 +18,16 @@ import { WelcomeCard } from "@/components/import/welcome-card";
 import { AllocationChart } from "@/components/allocation-chart";
 import { SegmentedControl } from "@/components/segmented-control";
 import { axisDateFormatter, formatISODate } from "@/lib/date";
-import { changeOver, chartPoints, monthAgo, withHistory, yearStart } from "@/lib/net-worth";
+import {
+  CHART_RANGES,
+  changeOver,
+  chartPoints,
+  inRange,
+  monthAgo,
+  withHistory,
+  yearStart,
+  type ChartRange,
+} from "@/lib/net-worth";
 import { fetchHistory, fetchNetWorth, fetchReconstructed } from "@/lib/net-worth-queries";
 import { FriendsCreditLine } from "@/components/splitwise/balances-view";
 import { friendsCreditEur as friendsCreditEurOf } from "@/lib/import/splitwise-balances";
@@ -109,6 +118,7 @@ function formatMoney(value: number, currency: Currency): string {
 function NetWorthPage() {
   const isMobile = useIsMobile();
   const [currency, setCurrency] = useState<Currency>("EUR");
+  const [range, setRange] = useState<ChartRange>("1Y");
 
   const netWorthQuery = useQuery({
     queryKey: ["net-worth-daily"],
@@ -127,14 +137,23 @@ function NetWorthPage() {
   });
 
   const snapshots = useMemo(() => netWorthQuery.data ?? [], [netWorthQuery.data]);
+  // Trend runs over the whole series before the range cut, so it doesn't restart at the edge.
   const chartData = useMemo(
     () =>
-      withTrend(
-        chartPoints(
-          withHistory(historyQuery.data ?? [], snapshots, undefined, reconstructedQuery.data ?? []),
+      inRange(
+        withTrend(
+          chartPoints(
+            withHistory(
+              historyQuery.data ?? [],
+              snapshots,
+              undefined,
+              reconstructedQuery.data ?? [],
+            ),
+          ),
         ),
+        range,
       ),
-    [historyQuery.data, snapshots, reconstructedQuery.data],
+    [historyQuery.data, snapshots, reconstructedQuery.data, range],
   );
   const chartFirst = chartData.at(0);
   const latest = snapshots.at(-1);
@@ -246,7 +265,15 @@ function NetWorthPage() {
       <section className="rounded-2xl bg-card px-1 py-4 card-ring sm:p-6">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2 px-2">
           <h2 className="text-[0.9375rem] font-semibold text-foreground">Net worth over time</h2>
-          <div className="flex items-center gap-3 text-xs text-muted-foreground">
+          <div className="w-full sm:w-auto">
+            <SegmentedControl
+              label="Chart range"
+              options={CHART_RANGES.map((r) => ({ value: r, label: r }))}
+              value={range}
+              onChange={setRange}
+            />
+          </div>
+          <div className="flex w-full flex-wrap items-center gap-3 text-xs text-muted-foreground">
             <LegendDot color="var(--color-chart-1)" label="Bank" />
             <LegendDot color="var(--color-chart-2)" label="Portfolio" />
             <LegendDot color="var(--color-chart-3)" label="Crypto" />
