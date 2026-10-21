@@ -97,7 +97,13 @@ export function SplitEditor({
             type="button"
             onClick={() => {
               const parsed = Number(shareInput);
-              if (!Number.isFinite(parsed) || parsed < 0 || parsed > fullAmount) return;
+              if (
+                shareInput.trim() === "" ||
+                !Number.isFinite(parsed) ||
+                parsed < 0 ||
+                parsed > fullAmount
+              )
+                return;
               setOpen(false);
               // Full amount = same as unset, keeps the "NULL means whole
               // thing is mine" convention the schema/views rely on.
