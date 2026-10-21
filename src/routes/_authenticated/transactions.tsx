@@ -20,9 +20,11 @@ import {
   txId,
 } from "@/lib/transactions";
 import { BulkCategoryPicker } from "@/components/transactions/pickers";
+import { TransfersSection } from "@/components/transactions/transfers-section";
 import {
   useBulkCategoryMutation,
   useDeleteMutation,
+  useFlowMutation,
   useRenameMerchantMutation,
   useShareMutation,
   useSplitMutation,
@@ -66,6 +68,25 @@ async function fetchTransactionsForMonth(month: Date): Promise<Array<Transaction
     .gte("booking_date", start)
     .lt("booking_date", end)
     .in("flow_type", ["spend", "refunded"])
+    .neq("amount", 0)
+    .order("booking_date", { ascending: false })
+    .order("entry_reference", { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as Array<TransactionRow>;
+}
+
+// Transfers are left out of spending and income; they are listed on request so a wrong one can be moved back.
+async function fetchTransfersForMonth(month: Date): Promise<Array<TransactionRow>> {
+  const start = formatISODate(startOfMonth(month));
+  const end = formatISODate(new Date(month.getFullYear(), month.getMonth() + 1, 1));
+  const { data, error } = await supabase
+    .from("v_transactions_eur")
+    .select(
+      "entry_reference,account_uid,booking_date,category,transaction_type,creditor_name,currency,amount,signed_amount_eur,credit_debit_indicator,created_at,worth_it,personal_amount,owed_by,flow_type,refund_of",
+    )
+    .gte("booking_date", start)
+    .lt("booking_date", end)
+    .eq("flow_type", "transfer")
     .neq("amount", 0)
     .order("booking_date", { ascending: false })
     .order("entry_reference", { ascending: false });
@@ -122,6 +143,9 @@ function TransactionsPage() {
 
   const updateShare = useShareMutation(queryClient, monthKey);
 
+  const restoreTransfer = useFlowMutation(queryClient, monthKey);
+  const [showTransfers, setShowTransfers] = useState(false);
+
   const bulkUpdateCategory = useBulkCategoryMutation(queryClient, monthKey, () =>
     setSelected(new Set()),
   );
@@ -139,6 +163,13 @@ function TransactionsPage() {
     queryFn: () => fetchTransactionsForMonth(month),
     staleTime: 60_000,
   });
+
+  const transfersQuery = useQuery({
+    queryKey: ["transfers", monthKey],
+    queryFn: () => fetchTransfersForMonth(month),
+    staleTime: 60_000,
+  });
+  const transfers = transfersQuery.data ?? [];
 
   const sharesQuery = useQuery({
     queryKey: ["splitwise-shares", monthKey],
@@ -448,6 +479,24 @@ function TransactionsPage() {
           </table>
         </div>
       </section>
+
+      {transfers.length > 0 && (
+        <button
+          type="button"
+          onClick={() => setShowTransfers((v) => !v)}
+          className="mt-4 h-9 rounded-lg bg-muted px-3 text-xs font-medium text-foreground transition-colors hover:bg-accent"
+        >
+          {showTransfers ? "Hide" : "Show"} {transfers.length} transfer
+          {transfers.length === 1 ? "" : "s"}
+        </button>
+      )}
+      {showTransfers && transfers.length > 0 && (
+        <TransfersSection
+          rows={transfers}
+          savingId={restoreTransfer.isPending ? txId(restoreTransfer.variables.tx) : undefined}
+          onRestore={(tx) => restoreTransfer.mutate({ tx })}
+        />
+      )}
     </div>
   );
 }

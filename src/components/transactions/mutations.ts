@@ -2,7 +2,13 @@ import { useMutation, type QueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import type { TablesUpdate } from "@/integrations/supabase/types";
-import { txId, type SplitwiseShare, type TransactionRow, type TxKey } from "@/lib/transactions";
+import {
+  restoredFlow,
+  txId,
+  type SplitwiseShare,
+  type TransactionRow,
+  type TxKey,
+} from "@/lib/transactions";
 
 // account_uid is part of the primary key; filtering on the reference alone would also
 // touch the same reference in another account.
@@ -220,6 +226,44 @@ export function useShareMutation(queryClient: QueryClient, monthKey: string) {
     },
     onSettled: () => {
       for (const k of ["splitwise-shares", "spend-by-category", "category-transactions"]) {
+        void queryClient.invalidateQueries({ queryKey: [k] });
+      }
+    },
+  });
+}
+
+// Puts a transaction marked as a transfer back into spending or income. The row leaves the
+// transfers list at once; the month's totals are refetched.
+export function useFlowMutation(queryClient: QueryClient, monthKey: string) {
+  type Vars = { tx: TransactionRow };
+  type Context = { previous: Array<TransactionRow> | undefined };
+  const key = ["transfers", monthKey];
+
+  return useMutation<void, Error, Vars, Context>({
+    mutationFn: async ({ tx }) => {
+      const { error } = await forTx(
+        supabase.from("transactions").update({ flow_type: restoredFlow(tx) }),
+        tx,
+      );
+      if (error) throw error;
+    },
+    onMutate: async ({ tx }) => {
+      await queryClient.cancelQueries({ queryKey: key });
+      const previous = queryClient.getQueryData<Array<TransactionRow>>(key);
+      queryClient.setQueryData<Array<TransactionRow>>(key, (old) =>
+        old?.filter((row) => txId(row) !== txId(tx)),
+      );
+      return { previous };
+    },
+    onError: (error, _vars, context) => {
+      if (context?.previous) queryClient.setQueryData(key, context.previous);
+      toast.error("Couldn't move transaction", { description: error.message });
+    },
+    onSuccess: (_data, { tx }) => {
+      toast.success(`Counted as ${restoredFlow(tx)}`);
+    },
+    onSettled: () => {
+      for (const k of ["transactions", "transfers", "spend-by-category", "category-transactions"]) {
         void queryClient.invalidateQueries({ queryKey: [k] });
       }
     },
