@@ -18,6 +18,7 @@ import {
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { supabase } from "@/integrations/supabase/client";
 import { PushSubscribeButton } from "@/components/push-subscribe";
+import { MadeWith } from "@/components/made-with";
 import { DemoBadge } from "@/components/demo-badge";
 
 export const Route = createFileRoute("/_authenticated")({
@@ -163,6 +164,7 @@ function AuthenticatedLayout() {
             <LogOut className="size-4" />
             {signingOut ? "Signing out…" : "Sign out"}
           </button>
+          <MadeWith className="mt-2 px-3" />
         </div>
       </aside>
 
@@ -257,6 +259,7 @@ function AuthenticatedLayout() {
                   {signingOut ? "Signing out…" : "Sign out"}
                 </button>
               </div>
+              <MadeWith className="mt-3 min-h-11 px-4" />
             </div>
           </nav>
         </SheetContent>

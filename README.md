@@ -58,6 +58,10 @@ Import the repo in Vercel (framework: Other, defaults for build). Vercel sets `V
 
 `bun run dev` · `bun run build` · `bun run test` · `bun run lint` · `bun run format`
 
+## Support
+
+If MyFinances is useful to you, a ⭐ on [GitHub](https://github.com/marcodonghiaa/my-wealth-view) helps others find it. The app shows a small "Made with MyFinances" credit in its menu; set `VITE_HIDE_BRANDING=true` to hide it.
+
 ## License
 
 [MIT](LICENSE)
