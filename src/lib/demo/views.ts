@@ -9,7 +9,20 @@ type Derived = Pick<
   | "v_subscriptions"
   | "v_cd_holdings"
   | "v_splitwise_eur"
+  | "v_portfolio_latest"
+  | "v_crypto_latest"
 >;
+
+// Latest snapshot per holding, like the views' "distinct on ... order by snapshot_date desc".
+function latestSnapshot<T extends { snapshot_date: string }>(
+  rows: Array<T>,
+  matches: (row: T) => boolean,
+): T | undefined {
+  let best: T | undefined;
+  for (const row of rows)
+    if (matches(row) && (!best || row.snapshot_date > best.snapshot_date)) best = row;
+  return best;
+}
 
 // The database computes these views from the base tables. In the demo they are rebuilt from the
 // in-memory tables, so an edit made while exploring shows up everywhere it would for real.
@@ -74,7 +87,54 @@ export function deriveViews(db: DemoDb, todayNum: number): Derived {
     };
   });
 
+  const v_portfolio_latest: DemoDb["v_portfolio_latest"] = db.portfolio_holdings.flatMap((h) => {
+    const snap = latestSnapshot(
+      db.portfolio_snapshots,
+      (x) => x.isin === h.isin && x.user_id === h.user_id,
+    );
+    return snap
+      ? [
+          {
+            asset_type: h.asset_type,
+            broker_label: h.broker_label,
+            currency: snap.currency,
+            isin: h.isin,
+            name: h.name,
+            price: snap.price,
+            shares: h.shares,
+            snapshot_date: snap.snapshot_date,
+            user_id: h.user_id,
+            value_eur: snap.value_eur,
+            value_native: snap.value_native,
+          },
+        ]
+      : [];
+  });
+  const v_crypto_latest: DemoDb["v_crypto_latest"] = db.crypto_holdings.flatMap((h) => {
+    const snap = latestSnapshot(
+      db.crypto_snapshots,
+      (x) => x.asset_symbol === h.asset_symbol && x.source === h.source && x.user_id === h.user_id,
+    );
+    return snap
+      ? [
+          {
+            amount: h.amount,
+            asset_symbol: h.asset_symbol,
+            name: h.name,
+            price_usd: snap.price_usd,
+            snapshot_date: snap.snapshot_date,
+            source: h.source,
+            user_id: h.user_id,
+            value_eur: snap.value_eur,
+            value_usd: snap.value_usd,
+          },
+        ]
+      : [];
+  });
+
   return {
+    v_portfolio_latest,
+    v_crypto_latest,
     v_transactions_eur,
     ...buildMonthly(v_transactions_eur, v_splitwise_eur, db.spend_history),
     v_subscriptions: buildSubscriptions(live, db.subscription_billing_overrides),

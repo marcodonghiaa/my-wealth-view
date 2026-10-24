@@ -7,6 +7,9 @@ import { shortHoldingName } from "@/lib/holding-name";
 import { shareSummary } from "@/lib/chart-summary";
 import { supabase } from "@/integrations/supabase/client";
 import { formatEur } from "@/lib/transactions";
+import { currentValueEur } from "@/lib/holdings";
+import { AddHoldingPanel } from "@/components/holdings/add-holding-panel";
+import { EditHolding } from "@/components/holdings/edit-holding";
 
 export const Route = createFileRoute("/_authenticated/portfolio")({
   head: () => ({
@@ -106,7 +109,26 @@ function PortfolioPage() {
     queryFn: fetchPortfolio,
   });
 
-  const holdings = useMemo(() => query.data ?? [], [query.data]);
+  // Sold holdings (0 shares) drop out; values follow a quantity edited since the last price sync.
+  const holdings = useMemo(
+    () =>
+      (query.data ?? [])
+        .filter((row) => row.shares !== 0)
+        .map((row) =>
+          row.shares == null
+            ? row
+            : {
+                ...row,
+                value_eur: currentValueEur({
+                  quantity: row.shares,
+                  price: row.price,
+                  valueAtPrice: row.value_native,
+                  valueEur: row.value_eur,
+                }),
+              },
+        ),
+    [query.data],
+  );
 
   // Groups start collapsed: the header already carries the count, total and share.
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
@@ -211,6 +233,8 @@ function PortfolioPage() {
         )}
       </section>
 
+      {!query.isPending && <AddHoldingPanel kind="stock" defaultOpen={holdings.length === 0} />}
+
       {query.isPending ? (
         <>
           <div className="mb-6 h-80 animate-pulse rounded-2xl bg-muted/50" />
@@ -218,7 +242,7 @@ function PortfolioPage() {
         </>
       ) : holdings.length === 0 ? (
         <div className="flex h-48 items-center justify-center rounded-2xl border bg-card text-sm text-muted-foreground card-ring">
-          No holdings found yet.
+          No investments yet. Search for your first one above.
         </div>
       ) : (
         <>
@@ -280,6 +304,9 @@ function PortfolioPage() {
                               <th className="px-4 py-2.5 text-right font-medium sm:px-5">
                                 % of total
                               </th>
+                              <th className="w-14 px-2 py-2.5">
+                                <span className="sr-only">Edit</span>
+                              </th>
                             </tr>
                           </thead>
                           <tbody className="divide-y">
@@ -313,6 +340,15 @@ function PortfolioPage() {
                                   <td className="px-4 py-3 text-right font-figure text-foreground sm:px-5">
                                     {rowPercent.toFixed(1)}%
                                   </td>
+                                  <td className="px-2 py-1 text-right">
+                                    {row.isin && (
+                                      <EditHolding
+                                        target={{ kind: "stock", isin: row.isin }}
+                                        name={row.name ?? row.isin}
+                                        quantity={row.shares ?? 0}
+                                      />
+                                    )}
+                                  </td>
                                 </tr>
                               );
                             })}
@@ -327,16 +363,25 @@ function PortfolioPage() {
                           const rowPercent = totalEur > 0 ? (valueEur / totalEur) * 100 : 0;
                           return (
                             <div key={row.isin ?? `${row.name ?? "row"}-${i}`} className="p-4">
-                              <div className="min-w-0">
-                                <div
-                                  className="line-clamp-2 font-medium text-foreground"
-                                  title={row.name ?? undefined}
-                                >
-                                  {row.name ? shortHoldingName(row.name) : "—"}
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="min-w-0">
+                                  <div
+                                    className="line-clamp-2 font-medium text-foreground"
+                                    title={row.name ?? undefined}
+                                  >
+                                    {row.name ? shortHoldingName(row.name) : "—"}
+                                  </div>
+                                  <div className="mt-0.5 text-xs text-muted-foreground">
+                                    {row.broker_label ?? "—"}
+                                  </div>
                                 </div>
-                                <div className="mt-0.5 text-xs text-muted-foreground">
-                                  {row.broker_label ?? "—"}
-                                </div>
+                                {row.isin && (
+                                  <EditHolding
+                                    target={{ kind: "stock", isin: row.isin }}
+                                    name={row.name ?? row.isin}
+                                    quantity={row.shares ?? 0}
+                                  />
+                                )}
                               </div>
                               <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
                                 <div>
