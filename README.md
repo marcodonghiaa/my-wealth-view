@@ -26,15 +26,16 @@ iOS-style design: system font, grouped lists, large titles, translucent bars, a 
 
 TanStack Start (React), TypeScript, Tailwind, shadcn/ui, Recharts, Supabase, Vitest, deployed on Vercel. The app only uses the publishable key, so every read and write goes through Row Level Security (`auth.uid() = user_id`). No service-role key is used anywhere.
 
-## Run it
+## Self-host it
 
-Needs [Bun](https://bun.sh) and a Supabase project with the schema applied (the backend's `setup.sh` does this).
+Start from the backend: [myfinances → Getting started](https://github.com/marcodonghiaa/myfinances#-getting-started). Its `setup.sh` creates the Supabase project, writes this repo's `.env` too, and `docker compose` runs both apps. About 45 minutes the first time.
+
+## Develop
+
+Needs [Bun](https://bun.sh) and a `.env` (written by the backend's `setup.sh`, or `cp .env.example .env` and fill in your Supabase URL and publishable key).
 
 ```sh
-git clone https://github.com/marcodonghiaa/my-wealth-view.git
-cd my-wealth-view
 bun install
-cp .env.example .env   # your Supabase URL + publishable key
 bun run dev
 ```
 
@@ -48,8 +49,6 @@ Open **Import data** (a link on the Accounts page, also offered on a new empty d
 - Months can be `2024-03`, `03/2024`, `Mar 2024`, `marzo 2024` or an Excel date. Day-first dates (`03/04/2024` is 3 April) are assumed.
 - Importing again overwrites months that already exist. Undo removes the rows of that import but does not bring back values it replaced.
 - Examples: [`docs/examples/net-worth.csv`](docs/examples/net-worth.csv) and [`docs/examples/spending.csv`](docs/examples/spending.csv).
-
-Needs the backend migration `20261019000000_import_support.sql` (in the `myfinances` repo). Apply it before deploying this version, otherwise the net worth chart cannot load its history.
 
 ## Deploy on Vercel
 
