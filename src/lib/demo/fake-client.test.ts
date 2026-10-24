@@ -224,3 +224,65 @@ describe("fake client: auth, functions and rpc", () => {
     expect(error?.message).toMatch(/demo/i);
   });
 });
+
+describe("fake client: adding and editing holdings", () => {
+  it("searches, adds a holding with today's price, then edits and sells it", async () => {
+    const c = fresh();
+    const search = await c.functions.invoke<{ results: Array<{ id: string }> }>("add-holding", {
+      body: { action: "search", kind: "stock", query: "apple" },
+    });
+    expect(search.data!.results.map((r) => r.id)).toContain("AAPL");
+
+    const add = await c.functions.invoke("add-holding", {
+      body: {
+        action: "add",
+        kind: "stock",
+        id: "AAPL",
+        symbol: "AAPL",
+        name: "Apple Inc.",
+        quantity: 2,
+      },
+    });
+    expect(add.error).toBeNull();
+    const latest = async () =>
+      (await c.from("v_portfolio_latest").select("isin,shares,value_eur").eq("isin", "AAPL")).data!;
+    expect((await latest())[0]).toMatchObject({ isin: "AAPL", shares: 2 });
+    expect((await latest())[0]!.value_eur).toBeGreaterThan(0);
+
+    const again = await c.functions.invoke("add-holding", {
+      body: {
+        action: "add",
+        kind: "stock",
+        id: "AAPL",
+        symbol: "AAPL",
+        name: "Apple Inc.",
+        quantity: 1,
+      },
+    });
+    expect(again.error).not.toBeNull();
+
+    await c.from("portfolio_holdings").update({ shares: 0 }).eq("isin", "AAPL");
+    expect((await latest())[0]!.shares).toBe(0);
+  });
+
+  it("adds a coin to the crypto view", async () => {
+    const c = fresh();
+    await c.functions.invoke("add-holding", {
+      body: {
+        action: "add",
+        kind: "crypto",
+        id: "solana",
+        symbol: "SOL",
+        name: "Solana",
+        quantity: 3,
+      },
+    });
+    const { data } = await c
+      .from("v_crypto_latest")
+      .select("asset_symbol,source,amount")
+      .eq("asset_symbol", "SOL");
+    expect(data!.filter((r) => r.source === "Manual")).toMatchObject([
+      { asset_symbol: "SOL", source: "Manual", amount: 3 },
+    ]);
+  });
+});

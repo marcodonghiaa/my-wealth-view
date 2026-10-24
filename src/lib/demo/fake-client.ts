@@ -22,7 +22,89 @@ const FEEDS_VIEWS = new Set([
   "subscription_billing_overrides",
   "cd_holdings",
   "splitwise_expenses",
+  "portfolio_holdings",
+  "portfolio_snapshots",
+  "crypto_holdings",
+  "crypto_snapshots",
 ]);
+
+// What add-holding finds in the demo: a few well-known names, priced at fixed demo prices.
+interface DemoSecurity {
+  id: string;
+  symbol: string;
+  name: string;
+  detail: string;
+  price: number;
+  currency: string;
+  type: string;
+}
+const DEMO_SECURITIES: Record<"stock" | "crypto", Array<DemoSecurity>> = {
+  stock: [
+    {
+      id: "VWCE.DE",
+      symbol: "VWCE.DE",
+      name: "Vanguard FTSE All-World UCITS ETF",
+      detail: "ETF · XETRA",
+      price: 128,
+      currency: "EUR",
+      type: "ETF",
+    },
+    {
+      id: "IWDA.AS",
+      symbol: "IWDA.AS",
+      name: "iShares Core MSCI World UCITS ETF",
+      detail: "ETF · Amsterdam",
+      price: 97,
+      currency: "EUR",
+      type: "ETF",
+    },
+    {
+      id: "AAPL",
+      symbol: "AAPL",
+      name: "Apple Inc.",
+      detail: "Stock · NASDAQ",
+      price: 190,
+      currency: "USD",
+      type: "Stock",
+    },
+  ],
+  crypto: [
+    {
+      id: "bitcoin",
+      symbol: "BTC",
+      name: "Bitcoin",
+      detail: "Rank #1",
+      price: 65000,
+      currency: "USD",
+      type: "Crypto",
+    },
+    {
+      id: "ethereum",
+      symbol: "ETH",
+      name: "Ethereum",
+      detail: "Rank #2",
+      price: 3200,
+      currency: "USD",
+      type: "Crypto",
+    },
+    {
+      id: "solana",
+      symbol: "SOL",
+      name: "Solana",
+      detail: "Rank #5",
+      price: 150,
+      currency: "USD",
+      type: "Crypto",
+    },
+  ],
+};
+const DEMO_USD_TO_EUR = 0.92;
+
+// Same answer shape as a non-2xx from the real function: the panel reads error.context.
+const functionError = (status: number, message: string) => ({
+  data: null,
+  error: { message, context: new Response(JSON.stringify({ error: message }), { status }) },
+});
 
 const compare = (a: unknown, b: unknown) => {
   const [x, y] = [a, b] as Array<number | string>;
@@ -252,6 +334,90 @@ class Query implements PromiseLike<Result> {
   }
 }
 
+function demoAddHolding(store: Store, now: Date, body: Record<string, unknown>) {
+  const kind = body["kind"] === "crypto" ? "crypto" : "stock";
+  const list = DEMO_SECURITIES[kind];
+  if (body["action"] === "search") {
+    const q = String(body["query"] ?? "").toLowerCase();
+    const hits = list.filter((s) => `${s.name} ${s.symbol}`.toLowerCase().includes(q));
+    return {
+      data: {
+        results: (hits.length > 0 ? hits : list).map(({ id, symbol, name, detail }) => ({
+          id,
+          symbol,
+          name,
+          detail,
+        })),
+      },
+      error: null,
+    };
+  }
+  const sec = list.find((s) => s.id === body["id"]);
+  const quantity = Number(body["quantity"]);
+  if (!sec || !(quantity > 0)) return functionError(400, "Invalid request");
+  const today = now.toISOString().slice(0, 10);
+  const user_id = DEMO_USER_ID;
+  const db = store.db;
+  if (kind === "stock") {
+    const isin = (body["isin"] as string | undefined) ?? sec.id;
+    if (db["portfolio_holdings"]!.some((h) => h["isin"] === isin)) {
+      return functionError(409, "Already in your holdings: change its quantity instead");
+    }
+    const native = sec.price * quantity;
+    db["portfolio_holdings"]!.push({
+      asset_type: sec.type,
+      broker_label: (body["broker"] as string | undefined) || "Other",
+      created_at: now.toISOString(),
+      isin,
+      name: sec.name,
+      shares: quantity,
+      user_id,
+      yahoo_symbol: sec.id,
+    });
+    db["portfolio_snapshots"]!.push({
+      created_at: now.toISOString(),
+      currency: sec.currency,
+      isin,
+      price: sec.price,
+      snapshot_date: today,
+      user_id,
+      value_eur: sec.currency === "USD" ? native * DEMO_USD_TO_EUR : native,
+      value_native: native,
+    });
+  } else {
+    if (
+      db["crypto_holdings"]!.some(
+        (h) => h["asset_symbol"] === sec.symbol && h["source"] === "Manual",
+      )
+    ) {
+      return functionError(409, "Already in your holdings: change its quantity instead");
+    }
+    const usd = sec.price * quantity;
+    db["crypto_holdings"]!.push({
+      amount: quantity,
+      asset_symbol: sec.symbol,
+      coingecko_id: sec.id,
+      created_at: now.toISOString(),
+      name: sec.name,
+      source: "Manual",
+      user_id,
+    });
+    db["crypto_snapshots"]!.push({
+      amount: quantity,
+      asset_symbol: sec.symbol,
+      created_at: now.toISOString(),
+      price_usd: sec.price,
+      snapshot_date: today,
+      source: "Manual",
+      user_id,
+      value_eur: usd * DEMO_USD_TO_EUR,
+      value_usd: usd,
+    });
+  }
+  store.refresh();
+  return { data: { added: true, priced: true }, error: null };
+}
+
 export function createFakeClient(now: Date = new Date()): SupabaseClient<Database> {
   const store = new Store(now);
   const user = {
@@ -286,18 +452,20 @@ export function createFakeClient(now: Date = new Date()): SupabaseClient<Databas
           }
         : { data: null, error: DISABLED },
     functions: {
-      invoke: async (name: string) =>
-        name === "list-banks"
-          ? {
-              data: {
-                banks: [
-                  { name: "Demo Bank", logo: null },
-                  { name: "Sample Bank", logo: null },
-                ],
-              },
-              error: null,
-            }
-          : { data: null, error: DISABLED },
+      invoke: async (name: string, opts?: { body?: Record<string, unknown> }) =>
+        name === "add-holding"
+          ? demoAddHolding(store, now, opts?.body ?? {})
+          : name === "list-banks"
+            ? {
+                data: {
+                  banks: [
+                    { name: "Demo Bank", logo: null },
+                    { name: "Sample Bank", logo: null },
+                  ],
+                },
+                error: null,
+              }
+            : { data: null, error: DISABLED },
     },
     auth: {
       getSession: async () => ({ data: { session }, error: null }),

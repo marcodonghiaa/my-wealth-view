@@ -6,6 +6,9 @@ import { Bitcoin } from "lucide-react";
 import { shareSummary } from "@/lib/chart-summary";
 import { colorsForAssets } from "@/lib/crypto-colors";
 import { supabase } from "@/integrations/supabase/client";
+import { currentValueEur, isEditableCryptoSource } from "@/lib/holdings";
+import { AddHoldingPanel } from "@/components/holdings/add-holding-panel";
+import { EditHolding } from "@/components/holdings/edit-holding";
 import { formatEur, formatUsd } from "@/lib/transactions";
 
 export const Route = createFileRoute("/_authenticated/crypto")({
@@ -97,7 +100,26 @@ function CryptoPage() {
     queryFn: fetchCrypto,
   });
 
-  const rows = useMemo(() => query.data ?? [], [query.data]);
+  // Sold coins (amount 0) drop out; values follow an amount edited since the last price sync.
+  const rows = useMemo(
+    () =>
+      (query.data ?? [])
+        .filter((row) => row.amount !== 0)
+        .map((row) =>
+          row.amount == null
+            ? row
+            : {
+                ...row,
+                value_eur: currentValueEur({
+                  quantity: row.amount,
+                  price: row.price_usd,
+                  valueAtPrice: row.value_usd,
+                  valueEur: row.value_eur,
+                }),
+              },
+        ),
+    [query.data],
+  );
   const assets = useMemo(() => groupBySymbol(rows), [rows]);
   const assetColors = useMemo(() => colorsForAssets(assets.map((a) => a.symbol)), [assets]);
 
@@ -140,8 +162,8 @@ function CryptoPage() {
           </div>
 
           <p className="mt-3 text-xs text-muted-foreground">
-            Ledger holdings are entered manually; Coinbase syncs automatically. The same asset held
-            in multiple places is combined into one line below.
+            Coins you add here are priced every day; Coinbase syncs automatically. The same asset
+            held in multiple places is combined into one line below.
           </p>
         </div>
         {!query.isPending && assets.length > 0 && (
@@ -180,6 +202,8 @@ function CryptoPage() {
         )}
       </section>
 
+      {!query.isPending && <AddHoldingPanel kind="crypto" defaultOpen={assets.length === 0} />}
+
       {query.isPending ? (
         <>
           <div className="mb-6 h-80 animate-pulse rounded-2xl bg-muted/50" />
@@ -187,7 +211,7 @@ function CryptoPage() {
         </>
       ) : assets.length === 0 ? (
         <div className="flex h-48 items-center justify-center rounded-2xl border bg-card text-sm text-muted-foreground card-ring">
-          No crypto holdings found yet.
+          No coins yet. Search for your first one above.
         </div>
       ) : (
         <>
@@ -202,6 +226,9 @@ function CryptoPage() {
                     <th className="px-4 py-3 font-medium sm:px-5">Price</th>
                     <th className="px-4 py-3 text-right font-medium sm:px-5">Value</th>
                     <th className="px-4 py-3 text-right font-medium sm:px-5">% of total</th>
+                    <th className="w-14 px-2 py-3">
+                      <span className="sr-only">Edit</span>
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
@@ -244,6 +271,9 @@ function CryptoPage() {
                         <td className="px-4 py-3 text-right font-figure text-foreground sm:px-5">
                           {percent.toFixed(1)}%
                         </td>
+                        <td className="px-2 py-1 text-right">
+                          <AssetEdits asset={asset} />
+                        </td>
                       </tr>
                     );
                   })}
@@ -268,6 +298,7 @@ function CryptoPage() {
                         {asset.symbol}
                       </div>
                     </div>
+                    <AssetEdits asset={asset} />
                   </div>
 
                   {asset.bySource.length > 1 && (
@@ -314,6 +345,23 @@ function CryptoPage() {
         </>
       )}
     </div>
+  );
+}
+
+// One edit control per source you entered yourself; Coinbase amounts come from the sync.
+function AssetEdits({ asset }: { asset: AssetGroup }) {
+  const editable = asset.bySource.filter((s) => isEditableCryptoSource(s.source));
+  return (
+    <>
+      {editable.map((s) => (
+        <EditHolding
+          key={s.source}
+          target={{ kind: "crypto", symbol: asset.symbol, source: s.source }}
+          name={asset.bySource.length > 1 ? `${asset.name} (${s.source})` : asset.name}
+          quantity={s.amount}
+        />
+      ))}
+    </>
   );
 }
 
