@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { MaskedIban } from "@/components/masked-iban";
 import { supabase } from "@/integrations/supabase/client";
 import { assertHttpsUrl } from "@/lib/consent-url";
+import { consentAlerts, type ConsentAlert } from "@/lib/consent-expiry";
 import { formatISODate } from "@/lib/date";
 import { AccountBadge, bankNameFromLabel } from "@/components/bank-badge";
 import { formatEur, formatMoney } from "@/lib/transactions";
@@ -38,6 +39,7 @@ interface BankAccountRow {
   snapshot_date: string | null;
   amount: number | null;
   amount_eur: number | null;
+  consent_valid_until: string | null;
 }
 
 interface BankGroup {
@@ -64,7 +66,7 @@ interface CdRow {
 async function fetchBankAccounts(): Promise<Array<BankAccountRow>> {
   const { data, error } = await supabase
     .from("v_bank_accounts_latest")
-    .select("uid,label,iban,currency,snapshot_date,amount,amount_eur")
+    .select("uid,label,iban,currency,snapshot_date,amount,amount_eur,consent_valid_until")
     .order("amount_eur", { ascending: false });
   if (error) throw error;
   return (data ?? []) as Array<BankAccountRow>;
@@ -88,6 +90,12 @@ function formatDate(iso: string | null): string {
     month: "short",
     year: "numeric",
   });
+}
+
+function consentMessage({ bank, daysLeft }: ConsentAlert): string {
+  if (daysLeft < 0) return `Bank access to ${bank} has expired, so it no longer syncs.`;
+  if (daysLeft === 0) return `Bank access to ${bank} ends today.`;
+  return `Bank access to ${bank} ends in ${daysLeft} day${daysLeft === 1 ? "" : "s"}.`;
 }
 
 function AccountsPage() {
@@ -114,6 +122,7 @@ function AccountsPage() {
   }, []);
 
   const bankAccounts = useMemo(() => bankQuery.data ?? [], [bankQuery.data]);
+  const expiring = useMemo(() => consentAlerts(bankAccounts, new Date()), [bankAccounts]);
   const cds = useMemo(() => cdQuery.data ?? [], [cdQuery.data]);
 
   const totalBankEur = useMemo(
@@ -338,6 +347,24 @@ function AccountsPage() {
             Couldn't load bank accounts: {bankQuery.error.message}
           </div>
         )}
+
+        {/* Renewing is linking the bank again, so the button opens Connect a bank below. */}
+        {expiring.map((alert) => (
+          <div
+            key={alert.bank}
+            role="status"
+            className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-warning/60 bg-warning/10 px-4 py-3 text-sm text-foreground"
+          >
+            <span>{consentMessage(alert)}</span>
+            <button
+              type="button"
+              onClick={() => setShowConnectForm(true)}
+              className="min-h-11 rounded-lg px-3 font-medium text-primary hover:bg-primary/10"
+            >
+              Renew access
+            </button>
+          </div>
+        ))}
 
         {/* Connect a bank — collapsed by default, same pattern as Add CD below. */}
         <form onSubmit={handleConnectBank} className="mb-4 rounded-2xl border bg-card card-ring">
