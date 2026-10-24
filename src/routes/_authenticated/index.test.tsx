@@ -4,6 +4,18 @@ import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 let failTable: string | null = null;
+// Someone who imported a spreadsheet but has no bank yet: history rows, no live snapshots.
+let historyOnly = false;
+const HISTORY = {
+  snapshot_date: "2025-01-31",
+  stocks_eur: 1000,
+  bonds_eur: 0,
+  crypto_eur: 0,
+  cash_eur: 500,
+  other_eur: 0,
+  liabilities_eur: 0,
+  total_eur: 1500,
+};
 const SNAPSHOT = {
   snapshot_date: "2026-10-19",
   total_eur: 1000,
@@ -20,6 +32,8 @@ vi.mock("@/integrations/supabase/client", () => ({
         // The exchange rates never arrive: the page must say it is waiting, not that there are none.
         if (table === "fx_rates") return;
         if (table === failTable) return resolve({ data: null, error: { message: "boom" } });
+        if (historyOnly)
+          return resolve({ data: table === "net_worth_history" ? [HISTORY] : [], error: null });
         resolve({ data: table === "v_net_worth_daily" ? [SNAPSHOT] : [], error: null });
       };
       return q;
@@ -77,5 +91,24 @@ describe("Net worth page when an extra source fails to load", () => {
     await screen.findByRole("radio", { name: "USD" });
     await new Promise((r) => setTimeout(r, 50));
     expect(screen.queryByRole("alert")).toBeNull();
+  });
+});
+
+describe("Net worth page with only imported history", () => {
+  // protects=a new user who imported a CSV sees their history charted; fails_when=the empty
+  // chart message keys on live snapshots instead of on what the chart would draw
+  it("charts the history instead of saying there is no data", async () => {
+    historyOnly = true;
+    render(
+      <QueryClientProvider
+        client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+      >
+        <Page />
+      </QueryClientProvider>,
+    );
+    await screen.findByRole("radio", { name: "USD" });
+    await new Promise((r) => setTimeout(r, 50));
+    expect(screen.queryByText("No data to chart yet.")).toBeNull();
+    historyOnly = false;
   });
 });

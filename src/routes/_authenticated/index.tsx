@@ -219,7 +219,7 @@ function NetWorthPage() {
       </header>
 
       {netWorthQuery.isSuccess && historyQuery.isSuccess && (
-        <WelcomeCard snapshots={snapshots.length} history={historyQuery.data.length} />
+        <WelcomeCard history={historyQuery.data.length} />
       )}
 
       {netWorthQuery.isError && (
@@ -246,7 +246,9 @@ function NetWorthPage() {
           {netWorthQuery.isPending || (currency !== "EUR" && fxQuery.isPending) ? (
             <div className="h-14 w-64 animate-pulse rounded-lg bg-muted" />
           ) : latest == null ? (
-            <p className="text-sm text-muted-foreground">No snapshots available yet.</p>
+            <p className="text-sm text-muted-foreground">
+              No balances yet: connect a bank or add an investment.
+            </p>
           ) : headline != null ? (
             <p className="font-figure text-5xl font-bold tracking-tight text-foreground sm:text-6xl">
               {formatMoney(headline, currency)}
@@ -318,7 +320,7 @@ function NetWorthPage() {
         >
           {netWorthQuery.isPending ? (
             <div className="h-full w-full animate-pulse rounded-xl bg-muted/50" />
-          ) : snapshots.length === 0 ? (
+          ) : chartData.length === 0 ? (
             <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
               No data to chart yet.
             </div>
