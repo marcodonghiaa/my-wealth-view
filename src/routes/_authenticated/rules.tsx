@@ -153,7 +153,7 @@ function RulesPage() {
 
       {/* Add rule form — collapsed by default so it doesn't push the
           existing rules list below the fold on a phone. */}
-      <form onSubmit={handleSubmit} className="card-ring mb-8 rounded-2xl bg-card">
+      <form onSubmit={handleSubmit} className="mb-8 rounded-2xl bg-card">
         <button
           type="button"
           onClick={() => setShowForm((v) => !v)}
@@ -317,7 +317,7 @@ function RulesPage() {
               <button
                 type="submit"
                 disabled={addRule.isPending}
-                className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+                className="inline-flex min-h-11 items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
               >
                 {addRule.isPending ? (
                   <Loader2 className="size-4 animate-spin" />
@@ -333,7 +333,7 @@ function RulesPage() {
       </form>
 
       {/* Rules list */}
-      <div className="card-ring overflow-hidden rounded-2xl bg-card">
+      <div className="overflow-hidden rounded-2xl bg-card">
         <div className="border-b px-5 py-3">
           <h2 className="text-sm font-medium">
             Existing rules <span className="text-muted-foreground">({rules.length})</span>
@@ -380,7 +380,7 @@ function RulesPage() {
                     onClick={() => deleteRule.mutate(rule.id)}
                     disabled={deleteRule.isPending}
                     aria-label={`Delete rule for ${rule.match_text}`}
-                    className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
+                    className="rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
                   >
                     <Trash2 className="size-4" />
                   </button>

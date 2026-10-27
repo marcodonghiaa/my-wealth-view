@@ -1,10 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { ChevronLeft, ChevronRight, ArrowDownLeft } from "lucide-react";
+import { ArrowDownLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatISODate } from "@/lib/date";
 import { formatEur, formatMoney, incomeTitle } from "@/lib/transactions";
+import { MonthSwitcher } from "@/components/month-switcher";
+import { HeadlineFigure } from "@/components/headline-figure";
 
 export const Route = createFileRoute("/_authenticated/income")({
   head: () => ({
@@ -81,43 +83,28 @@ function IncomePage() {
       {incomeQuery.isError && (
         <div
           role="alert"
-          className="mb-6 rounded-xl border border-negative/30 bg-negative/10 px-4 py-3 text-sm text-negative"
+          className="mb-6 rounded-2xl bg-negative/10 px-4 py-3 text-sm text-negative"
         >
           Couldn't load income: {incomeQuery.error.message}
         </div>
       )}
 
-      <div className="mb-6 flex items-center justify-between rounded-xl border bg-card p-2 card-ring">
-        <button
-          type="button"
-          onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))}
-          aria-label="Previous month"
-          className="flex size-11 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-        >
-          <ChevronLeft className="size-5" />
-        </button>
-        <span className="text-sm font-medium text-foreground">{monthLabel}</span>
-        <button
-          type="button"
-          onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))}
-          disabled={!canGoNext}
-          aria-label="Next month"
-          className="flex size-11 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-40"
-        >
-          <ChevronRight className="size-5" />
-        </button>
-      </div>
+      <MonthSwitcher
+        className="mb-6"
+        label={monthLabel}
+        onPrev={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))}
+        onNext={() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))}
+        canGoNext={canGoNext}
+      />
 
-      <section className="mb-6 rounded-2xl border bg-card p-6 card-ring sm:p-8">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          Total income · {monthLabel}
+      <section aria-label="Total income" className="mb-8">
+        <p className="text-[0.9375rem] font-medium text-muted-foreground">Total income</p>
+        <div className="mt-1">
+          <HeadlineFigure value={total} currency="EUR" />
         </div>
-        <p className="font-figure mt-2 text-4xl font-bold tracking-tight text-positive sm:text-5xl">
-          {formatEur(total)}
-        </p>
       </section>
 
-      <section className="overflow-hidden rounded-2xl border bg-card card-ring">
+      <section className="overflow-hidden rounded-2xl bg-card">
         {incomeQuery.isPending ? (
           <div className="space-y-3 p-4">
             {Array.from({ length: 4 }).map((_, i) => (

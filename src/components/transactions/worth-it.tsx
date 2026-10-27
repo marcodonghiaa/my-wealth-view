@@ -19,9 +19,9 @@ export function WorthItPrompt({
     return (
       <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
         {tx.worth_it === "yes" ? (
-          <ThumbsUp className="size-3 text-positive" />
+          <ThumbsUp className="size-3" />
         ) : (
-          <ThumbsDown className="size-3 text-negative" />
+          <ThumbsDown className="size-3" />
         )}
         {tx.worth_it === "yes" ? "Worth it" : "Not worth it"}
       </span>
@@ -83,7 +83,7 @@ export function WorthItSpotlight({
                 onAnswer(tx, "no");
                 onClose();
               }}
-              className="min-h-11 flex-1 rounded-lg border border-negative/30 bg-negative/10 text-sm font-semibold text-negative transition-colors hover:bg-negative/20"
+              className="min-h-11 flex-1 rounded-full bg-negative/10 text-sm font-semibold text-negative transition-colors hover:bg-negative/20"
             >
               No
             </button>
@@ -93,7 +93,7 @@ export function WorthItSpotlight({
                 onAnswer(tx, "yes");
                 onClose();
               }}
-              className="min-h-11 flex-1 rounded-lg border border-positive/30 bg-positive/10 text-sm font-semibold text-positive transition-colors hover:bg-positive/20"
+              className="min-h-11 flex-1 rounded-full border border-positive/30 bg-positive/10 text-sm font-semibold text-positive transition-colors hover:bg-positive/20"
             >
               Yes
             </button>

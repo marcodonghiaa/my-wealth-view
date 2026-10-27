@@ -83,7 +83,7 @@ export function BulkCategoryPicker({
         <button
           type="button"
           disabled={disabled}
-          className="inline-flex h-9 items-center rounded-lg border bg-background px-3 text-sm font-medium text-foreground transition-colors hover:bg-accent disabled:opacity-60"
+          className="inline-flex h-9 items-center rounded-full border bg-background px-3 text-sm font-medium text-foreground transition-colors hover:bg-accent disabled:opacity-60"
         >
           {disabled ? "Saving…" : "Set category…"}
         </button>

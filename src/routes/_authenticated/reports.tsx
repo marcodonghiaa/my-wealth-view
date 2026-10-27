@@ -1,14 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState, type ReactNode } from "react";
-import {
-  ChevronLeft,
-  ChevronRight,
-  TrendingUp,
-  TrendingDown,
-  ArrowLeftRight,
-  ThumbsDown,
-} from "lucide-react";
+import { TrendingUp, TrendingDown, ArrowLeftRight, ThumbsDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatISODate } from "@/lib/date";
 import { estimatedMonthlyEur, splitSubscriptions } from "@/lib/subscriptions";
@@ -16,6 +9,7 @@ import { formatEur, personalAmountEur } from "@/lib/transactions";
 import { monthNetWorth, withHistory } from "@/lib/net-worth";
 import { fetchHistory, fetchNetWorth, fetchReconstructed } from "@/lib/net-worth-queries";
 import { TONE_TEXT, toneOf, type Tone } from "@/lib/tone";
+import { MonthSwitcher } from "@/components/month-switcher";
 
 export const Route = createFileRoute("/_authenticated/reports")({
   head: () => ({
@@ -46,7 +40,7 @@ function endOfMonth(date: Date): Date {
 }
 
 function formatSigned(value: number): string {
-  return `${value >= 0 ? "+" : ""}${formatEur(value)}`;
+  return `${value >= 0 ? "+" : "−"}${formatEur(Math.abs(value))}`;
 }
 
 interface IncomeExpenseRow {
@@ -238,34 +232,21 @@ function ReportsPage() {
       {loadError && (
         <div
           role="alert"
-          className="mb-6 rounded-xl border border-negative/30 bg-negative/10 px-4 py-3 text-sm text-negative"
+          className="mb-6 rounded-2xl bg-negative/10 px-4 py-3 text-sm text-negative"
         >
           Some figures couldn't load, so the numbers below may be incomplete: {loadError.message}
         </div>
       )}
 
-      <div className="mb-6 flex items-center justify-between rounded-xl border bg-card p-2 card-ring">
-        <button
-          type="button"
-          onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))}
-          aria-label="Previous month"
-          className="flex size-11 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-        >
-          <ChevronLeft className="size-5" />
-        </button>
-        <span className="text-sm font-medium text-foreground">{monthLabel}</span>
-        <button
-          type="button"
-          onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))}
-          disabled={!canGoNext}
-          aria-label="Next month"
-          className="flex size-11 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-40"
-        >
-          <ChevronRight className="size-5" />
-        </button>
-      </div>
+      <MonthSwitcher
+        className="mb-6"
+        label={monthLabel}
+        onPrev={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))}
+        onNext={() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))}
+        canGoNext={canGoNext}
+      />
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <ul className="divide-y overflow-hidden rounded-2xl bg-card">
         <HeadlineCard
           icon={
             netWorthDelta?.delta && netWorthDelta.delta.total < 0 ? (
@@ -304,12 +285,12 @@ function ReportsPage() {
           }
           pending={worthItQuery.isPending}
           value={formatEur(worthItQuery.data?.notWorthItTotal ?? 0)}
-          tone={worthItQuery.data?.notWorthItTotal ? "negative" : "neutral"}
+          tone="neutral"
         />
-      </div>
+      </ul>
 
       {netWorthDelta?.delta && (
-        <section className="mt-6 overflow-hidden rounded-2xl border bg-card card-ring">
+        <section className="mt-6 overflow-hidden rounded-2xl bg-card">
           <div className="border-b px-4 py-3 sm:px-5">
             <h2 className="text-sm font-semibold text-foreground">Net worth by source</h2>
           </div>
@@ -336,7 +317,7 @@ function ReportsPage() {
         </section>
       )}
 
-      <section className="mt-6 overflow-hidden rounded-2xl border bg-card card-ring">
+      <section className="mt-6 overflow-hidden rounded-2xl bg-card">
         <div className="border-b px-4 py-3 sm:px-5">
           <h2 className="text-sm font-semibold text-foreground">Top spending categories</h2>
           {biggestMover && (
@@ -364,7 +345,7 @@ function ReportsPage() {
         )}
       </section>
 
-      <section className="mt-6 overflow-hidden rounded-2xl border bg-card card-ring">
+      <section className="mt-6 overflow-hidden rounded-2xl bg-card">
         <div className="flex items-center justify-between px-4 py-3 sm:px-5">
           <div>
             <h2 className="text-sm font-semibold text-foreground">Subscriptions</h2>
@@ -397,25 +378,28 @@ function HeadlineCard({
   tone: Tone;
 }) {
   return (
-    <section className="rounded-2xl border bg-card p-5 card-ring">
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+    <li className="flex min-h-16 items-center gap-3 px-4 py-3 sm:px-5">
+      <span
+        aria-hidden
+        className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted text-foreground"
+      >
         {icon}
-        {label}
-        {sublabel && <span className="ml-1 text-xs">· {sublabel}</span>}
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="text-[0.9375rem] font-medium text-foreground">{label}</p>
+        {sublabel && <p className="text-xs text-muted-foreground">{sublabel}</p>}
       </div>
-      <div className="mt-2 min-h-9">
-        {pending ? (
-          <div className="h-8 w-28 animate-pulse rounded-lg bg-muted" />
-        ) : (
-          <p
-            className={`font-figure text-2xl font-bold tracking-tight sm:text-3xl ${
-              TONE_TEXT[tone]
-            }`}
-          >
-            {value}
-          </p>
-        )}
-      </div>
-    </section>
+      {pending ? (
+        <div className="h-6 w-24 animate-pulse rounded-full bg-muted" />
+      ) : (
+        <p
+          className={`font-figure text-lg font-semibold tracking-[-0.02em] ${
+            tone === "neutral" ? "text-foreground" : TONE_TEXT[tone]
+          }`}
+        >
+          {value}
+        </p>
+      )}
+    </li>
   );
 }

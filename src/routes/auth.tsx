@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import { Github, Loader2, LockKeyhole } from "lucide-react";
 import { BrandMark } from "@/components/brand-mark";
+import { TrustNote } from "@/components/trust-note";
 import { supabase } from "@/integrations/supabase/client";
 import { exitDemoMode } from "@/lib/demo/mode";
 
@@ -116,7 +117,7 @@ function AuthPage() {
           <p className="mt-1 text-sm text-muted-foreground">Sign in to view your finances</p>
         </div>
 
-        <div className="rounded-2xl border bg-card p-6 card-ring">
+        <div className="rounded-2xl bg-card p-6">
           {checkingSession ? (
             <div className="flex items-center justify-center py-8 text-muted-foreground">
               <Loader2 className="size-5 animate-spin" />
@@ -124,10 +125,7 @@ function AuthPage() {
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-1.5">
-                <label
-                  htmlFor="email"
-                  className="text-xs font-medium tracking-wide text-muted-foreground uppercase"
-                >
+                <label htmlFor="email" className="text-xs font-medium text-muted-foreground">
                   Email
                 </label>
                 <input
@@ -145,10 +143,7 @@ function AuthPage() {
                 />
               </div>
               <div className="space-y-1.5">
-                <label
-                  htmlFor="password"
-                  className="text-xs font-medium tracking-wide text-muted-foreground uppercase"
-                >
+                <label htmlFor="password" className="text-xs font-medium text-muted-foreground">
                   Password
                 </label>
                 <input
@@ -172,7 +167,7 @@ function AuthPage() {
               <button
                 type="submit"
                 disabled={pending}
-                className="flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground transition-colors hover:brightness-110 disabled:opacity-50"
+                className="flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-primary px-4 text-sm font-semibold text-primary-foreground transition-colors hover:brightness-110 disabled:opacity-50"
               >
                 {pending ? (
                   <Loader2 className="size-4 animate-spin" />
@@ -187,7 +182,7 @@ function AuthPage() {
           <div className="mt-5 space-y-3 border-t pt-4 text-center">
             <Link
               to="/demo"
-              className="flex w-full items-center justify-center rounded-lg border border-input px-4 py-2.5 text-sm font-semibold text-foreground transition-colors hover:bg-accent"
+              className="flex w-full items-center justify-center rounded-full border border-input px-4 py-2.5 text-sm font-semibold text-foreground transition-colors hover:bg-accent"
             >
               Try the demo
             </Link>
@@ -202,6 +197,7 @@ function AuthPage() {
             </a>
           </div>
         </div>
+        <TrustNote className="mx-auto mt-6 max-w-xs" />
       </div>
     </div>
   );

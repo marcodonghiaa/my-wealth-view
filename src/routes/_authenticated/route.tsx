@@ -20,6 +20,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { PushSubscribeButton } from "@/components/push-subscribe";
 import { MadeWith } from "@/components/made-with";
 import { BrandMark } from "@/components/brand-mark";
+import { TrustNote } from "@/components/trust-note";
 import { DemoBadge } from "@/components/demo-badge";
 
 export const Route = createFileRoute("/_authenticated")({
@@ -116,33 +117,33 @@ function AuthenticatedLayout() {
   return (
     <div className="flex min-h-dvh bg-background">
       {/* Sidebar */}
-      <aside className="glass fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r md:flex">
-        <div className="flex h-14 items-center gap-2.5 px-5">
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r bg-sidebar md:flex">
+        <div className="flex h-16 items-center gap-2.5 px-5">
           <BrandMark className="size-8" />
-          <span className="text-sm font-semibold tracking-tight text-sidebar-foreground">
+          <span className="text-[0.9375rem] font-semibold tracking-tight text-sidebar-foreground">
             MyFinances
           </span>
         </div>
 
-        <nav className="flex-1 space-y-4 px-3 py-4">
+        <nav className="flex-1 space-y-5 overflow-y-auto px-3 py-3">
           {NAV_GROUPS.map((group) => (
             <div key={group.label}>
-              <div className="px-3 pb-1.5 text-xs font-medium tracking-wide text-muted-foreground uppercase">
+              <div className="px-3 pb-1.5 text-xs font-medium text-muted-foreground">
                 {group.label}
               </div>
-              <div className="space-y-1">
+              <div className="space-y-0.5">
                 {group.items.map((item) => (
                   <Link
                     key={item.label}
                     to={item.to}
                     activeOptions={{ exact: true }}
-                    className="flex items-center gap-3 rounded-lg px-3 py-2 text-[0.9375rem] text-foreground/80 transition-colors hover:bg-accent hover:text-foreground"
+                    className="flex items-center gap-3 rounded-full px-3 py-2 text-[0.9375rem] text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-foreground"
                     activeProps={{
                       className:
-                        "flex items-center gap-3 rounded-lg px-3 py-2 text-[0.9375rem] font-medium bg-sidebar-accent text-sidebar-primary",
+                        "flex items-center gap-3 rounded-full px-3 py-2 text-[0.9375rem] font-medium bg-sidebar-accent text-foreground",
                     }}
                   >
-                    <item.icon className="size-4" />
+                    <item.icon className="size-[1.125rem]" />
                     {item.label}
                   </Link>
                 ))}
@@ -158,7 +159,7 @@ function AuthenticatedLayout() {
             type="button"
             onClick={handleSignOut}
             disabled={signingOut}
-            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground disabled:opacity-50"
+            className="flex w-full items-center gap-3 rounded-full px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground disabled:opacity-50"
           >
             <LogOut className="size-4" />
             {signingOut ? "Signing out…" : "Sign out"}
@@ -220,7 +221,7 @@ function AuthenticatedLayout() {
             {NAV_GROUPS.map((group) => (
               <div key={group.label}>
                 <div className="ios-section-title">{group.label}</div>
-                <div className="divide-y overflow-hidden rounded-xl bg-card">
+                <div className="divide-y overflow-hidden rounded-2xl bg-card">
                   {group.items.map((item) => (
                     <Link
                       key={item.label}
@@ -243,7 +244,7 @@ function AuthenticatedLayout() {
 
             <div>
               <div className="ios-section-title">Account</div>
-              <div className="divide-y overflow-hidden rounded-xl bg-card">
+              <div className="divide-y overflow-hidden rounded-2xl bg-card">
                 <div className="truncate px-4 py-3 text-sm text-muted-foreground">{user.email}</div>
                 <div className="px-1 py-1">
                   <PushSubscribeButton />
@@ -258,7 +259,7 @@ function AuthenticatedLayout() {
                   {signingOut ? "Signing out…" : "Sign out"}
                 </button>
               </div>
-              <MadeWith className="mt-3 min-h-11 px-4" />
+              <MadeWith className="min-h-11 px-4" />
             </div>
           </nav>
         </SheetContent>
@@ -269,6 +270,9 @@ function AuthenticatedLayout() {
       {/* Main content */}
       <main className="min-w-0 flex-1 pt-[calc(2.75rem+env(safe-area-inset-top))] pb-[calc(3.25rem+env(safe-area-inset-bottom))] md:pt-0 md:pb-0 md:pl-64">
         <Outlet />
+        <footer className="mx-auto max-w-5xl px-4 pb-8 sm:px-8 md:pb-12">
+          <TrustNote className="border-t pt-4" />
+        </footer>
       </main>
     </div>
   );

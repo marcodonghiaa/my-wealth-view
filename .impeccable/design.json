@@ -1,0 +1,650 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-27T07:26:17+00:00",
+  "title": "Design System: MyFinances",
+  "extensions": {
+    "colorMeta": {
+      "forest": {
+        "role": "primary",
+        "displayName": "Forest",
+        "canonical": "oklch(0.33 0.05 167)",
+        "tonalRamp": [
+          "oklch(0.15 0.05 167)",
+          "oklch(0.26 0.05 167)",
+          "oklch(0.37 0.05 167)",
+          "oklch(0.48 0.05 167)",
+          "oklch(0.60 0.05 167)",
+          "oklch(0.72 0.05 167)",
+          "oklch(0.84 0.05 167)",
+          "oklch(0.95 0.05 167)"
+        ],
+        "hexApprox": "#173F34"
+      },
+      "mint": {
+        "role": "primary",
+        "displayName": "Mint",
+        "canonical": "oklch(0.925 0.03 155)",
+        "tonalRamp": [
+          "oklch(0.15 0.03 155)",
+          "oklch(0.26 0.03 155)",
+          "oklch(0.37 0.03 155)",
+          "oklch(0.48 0.03 155)",
+          "oklch(0.60 0.03 155)",
+          "oklch(0.72 0.03 155)",
+          "oklch(0.84 0.03 155)",
+          "oklch(0.95 0.03 155)"
+        ],
+        "hexApprox": "#D8ECDD"
+      },
+      "ground": {
+        "role": "neutral",
+        "displayName": "Ground",
+        "canonical": "oklch(0.977 0.003 165)",
+        "tonalRamp": [
+          "oklch(0.15 0.003 165)",
+          "oklch(0.26 0.003 165)",
+          "oklch(0.37 0.003 165)",
+          "oklch(0.48 0.003 165)",
+          "oklch(0.60 0.003 165)",
+          "oklch(0.72 0.003 165)",
+          "oklch(0.84 0.003 165)",
+          "oklch(0.95 0.003 165)"
+        ]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Surface",
+        "canonical": "oklch(1 0 0)",
+        "tonalRamp": [
+          "oklch(0.15 0 0)",
+          "oklch(0.26 0 0)",
+          "oklch(0.37 0 0)",
+          "oklch(0.48 0 0)",
+          "oklch(0.60 0 0)",
+          "oklch(0.72 0 0)",
+          "oklch(0.84 0 0)",
+          "oklch(0.95 0 0)"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "oklch(0.19 0.012 165)",
+        "tonalRamp": [
+          "oklch(0.15 0.012 165)",
+          "oklch(0.26 0.012 165)",
+          "oklch(0.37 0.012 165)",
+          "oklch(0.48 0.012 165)",
+          "oklch(0.60 0.012 165)",
+          "oklch(0.72 0.012 165)",
+          "oklch(0.84 0.012 165)",
+          "oklch(0.95 0.012 165)"
+        ]
+      },
+      "ink-muted": {
+        "role": "neutral",
+        "displayName": "Ink Muted",
+        "canonical": "oklch(0.47 0.012 165)",
+        "tonalRamp": [
+          "oklch(0.15 0.012 165)",
+          "oklch(0.26 0.012 165)",
+          "oklch(0.37 0.012 165)",
+          "oklch(0.48 0.012 165)",
+          "oklch(0.60 0.012 165)",
+          "oklch(0.72 0.012 165)",
+          "oklch(0.84 0.012 165)",
+          "oklch(0.95 0.012 165)"
+        ]
+      },
+      "fill": {
+        "role": "neutral",
+        "displayName": "Fill",
+        "canonical": "oklch(0.945 0.005 165)",
+        "tonalRamp": [
+          "oklch(0.15 0.005 165)",
+          "oklch(0.26 0.005 165)",
+          "oklch(0.37 0.005 165)",
+          "oklch(0.48 0.005 165)",
+          "oklch(0.60 0.005 165)",
+          "oklch(0.72 0.005 165)",
+          "oklch(0.84 0.005 165)",
+          "oklch(0.95 0.005 165)"
+        ]
+      },
+      "fill-hover": {
+        "role": "neutral",
+        "displayName": "Fill Hover",
+        "canonical": "oklch(0.955 0.006 165)",
+        "tonalRamp": [
+          "oklch(0.15 0.006 165)",
+          "oklch(0.26 0.006 165)",
+          "oklch(0.37 0.006 165)",
+          "oklch(0.48 0.006 165)",
+          "oklch(0.60 0.006 165)",
+          "oklch(0.72 0.006 165)",
+          "oklch(0.84 0.006 165)",
+          "oklch(0.95 0.006 165)"
+        ]
+      },
+      "hairline": {
+        "role": "neutral",
+        "displayName": "Hairline",
+        "canonical": "oklch(0.19 0.012 165 / 10%)",
+        "tonalRamp": [
+          "oklch(0.15 0.012 165)",
+          "oklch(0.26 0.012 165)",
+          "oklch(0.37 0.012 165)",
+          "oklch(0.48 0.012 165)",
+          "oklch(0.60 0.012 165)",
+          "oklch(0.72 0.012 165)",
+          "oklch(0.84 0.012 165)",
+          "oklch(0.95 0.012 165)"
+        ]
+      },
+      "field-stroke": {
+        "role": "neutral",
+        "displayName": "Field Stroke",
+        "canonical": "oklch(0.19 0.012 165 / 16%)",
+        "tonalRamp": [
+          "oklch(0.15 0.012 165)",
+          "oklch(0.26 0.012 165)",
+          "oklch(0.37 0.012 165)",
+          "oklch(0.48 0.012 165)",
+          "oklch(0.60 0.012 165)",
+          "oklch(0.72 0.012 165)",
+          "oklch(0.84 0.012 165)",
+          "oklch(0.95 0.012 165)"
+        ]
+      },
+      "gain": {
+        "role": "status",
+        "displayName": "Gain",
+        "canonical": "oklch(0.5 0.13 155)",
+        "tonalRamp": [
+          "oklch(0.15 0.13 155)",
+          "oklch(0.26 0.13 155)",
+          "oklch(0.37 0.13 155)",
+          "oklch(0.48 0.13 155)",
+          "oklch(0.60 0.13 155)",
+          "oklch(0.72 0.13 155)",
+          "oklch(0.84 0.13 155)",
+          "oklch(0.95 0.13 155)"
+        ]
+      },
+      "loss": {
+        "role": "status",
+        "displayName": "Loss",
+        "canonical": "oklch(0.53 0.2 27)",
+        "tonalRamp": [
+          "oklch(0.15 0.2 27)",
+          "oklch(0.26 0.2 27)",
+          "oklch(0.37 0.2 27)",
+          "oklch(0.48 0.2 27)",
+          "oklch(0.60 0.2 27)",
+          "oklch(0.72 0.2 27)",
+          "oklch(0.84 0.2 27)",
+          "oklch(0.95 0.2 27)"
+        ]
+      },
+      "warning": {
+        "role": "status",
+        "displayName": "Warning",
+        "canonical": "oklch(0.55 0.13 65)",
+        "tonalRamp": [
+          "oklch(0.15 0.13 65)",
+          "oklch(0.26 0.13 65)",
+          "oklch(0.37 0.13 65)",
+          "oklch(0.48 0.13 65)",
+          "oklch(0.60 0.13 65)",
+          "oklch(0.72 0.13 65)",
+          "oklch(0.84 0.13 65)",
+          "oklch(0.95 0.13 65)"
+        ]
+      },
+      "series-teal": {
+        "role": "categorical",
+        "displayName": "Series Teal",
+        "canonical": "oklch(0.55 0.07 200)",
+        "tonalRamp": [
+          "oklch(0.15 0.07 200)",
+          "oklch(0.26 0.07 200)",
+          "oklch(0.37 0.07 200)",
+          "oklch(0.48 0.07 200)",
+          "oklch(0.60 0.07 200)",
+          "oklch(0.72 0.07 200)",
+          "oklch(0.84 0.07 200)",
+          "oklch(0.95 0.07 200)"
+        ]
+      },
+      "series-blue": {
+        "role": "categorical",
+        "displayName": "Series Blue",
+        "canonical": "oklch(0.55 0.15 250)",
+        "tonalRamp": [
+          "oklch(0.15 0.15 250)",
+          "oklch(0.26 0.15 250)",
+          "oklch(0.37 0.15 250)",
+          "oklch(0.48 0.15 250)",
+          "oklch(0.60 0.15 250)",
+          "oklch(0.72 0.15 250)",
+          "oklch(0.84 0.15 250)",
+          "oklch(0.95 0.15 250)"
+        ]
+      },
+      "series-amber": {
+        "role": "categorical",
+        "displayName": "Series Amber",
+        "canonical": "oklch(0.74 0.14 75)",
+        "tonalRamp": [
+          "oklch(0.15 0.14 75)",
+          "oklch(0.26 0.14 75)",
+          "oklch(0.37 0.14 75)",
+          "oklch(0.48 0.14 75)",
+          "oklch(0.60 0.14 75)",
+          "oklch(0.72 0.14 75)",
+          "oklch(0.84 0.14 75)",
+          "oklch(0.95 0.14 75)"
+        ]
+      },
+      "series-violet": {
+        "role": "categorical",
+        "displayName": "Series Violet",
+        "canonical": "oklch(0.55 0.17 310)",
+        "tonalRamp": [
+          "oklch(0.15 0.17 310)",
+          "oklch(0.26 0.17 310)",
+          "oklch(0.37 0.17 310)",
+          "oklch(0.48 0.17 310)",
+          "oklch(0.60 0.17 310)",
+          "oklch(0.72 0.17 310)",
+          "oklch(0.84 0.17 310)",
+          "oklch(0.95 0.17 310)"
+        ]
+      },
+      "series-clay": {
+        "role": "categorical",
+        "displayName": "Series Clay",
+        "canonical": "oklch(0.62 0.07 60)",
+        "tonalRamp": [
+          "oklch(0.15 0.07 60)",
+          "oklch(0.26 0.07 60)",
+          "oklch(0.37 0.07 60)",
+          "oklch(0.48 0.07 60)",
+          "oklch(0.60 0.07 60)",
+          "oklch(0.72 0.07 60)",
+          "oklch(0.84 0.07 60)",
+          "oklch(0.95 0.07 60)"
+        ]
+      },
+      "dark-ground": {
+        "role": "neutral",
+        "displayName": "Dark Ground",
+        "canonical": "oklch(0.155 0.006 170)",
+        "tonalRamp": [
+          "oklch(0.15 0.006 170)",
+          "oklch(0.26 0.006 170)",
+          "oklch(0.37 0.006 170)",
+          "oklch(0.48 0.006 170)",
+          "oklch(0.60 0.006 170)",
+          "oklch(0.72 0.006 170)",
+          "oklch(0.84 0.006 170)",
+          "oklch(0.95 0.006 170)"
+        ]
+      },
+      "dark-surface": {
+        "role": "neutral",
+        "displayName": "Dark Surface",
+        "canonical": "oklch(0.2 0.007 170)",
+        "tonalRamp": [
+          "oklch(0.15 0.007 170)",
+          "oklch(0.26 0.007 170)",
+          "oklch(0.37 0.007 170)",
+          "oklch(0.48 0.007 170)",
+          "oklch(0.60 0.007 170)",
+          "oklch(0.72 0.007 170)",
+          "oklch(0.84 0.007 170)",
+          "oklch(0.95 0.007 170)"
+        ]
+      },
+      "dark-sheet": {
+        "role": "neutral",
+        "displayName": "Dark Sheet",
+        "canonical": "oklch(0.235 0.008 170)",
+        "tonalRamp": [
+          "oklch(0.15 0.008 170)",
+          "oklch(0.26 0.008 170)",
+          "oklch(0.37 0.008 170)",
+          "oklch(0.48 0.008 170)",
+          "oklch(0.60 0.008 170)",
+          "oklch(0.72 0.008 170)",
+          "oklch(0.84 0.008 170)",
+          "oklch(0.95 0.008 170)"
+        ]
+      },
+      "dark-ink": {
+        "role": "neutral",
+        "displayName": "Dark Ink",
+        "canonical": "oklch(0.965 0.004 165)",
+        "tonalRamp": [
+          "oklch(0.15 0.004 165)",
+          "oklch(0.26 0.004 165)",
+          "oklch(0.37 0.004 165)",
+          "oklch(0.48 0.004 165)",
+          "oklch(0.60 0.004 165)",
+          "oklch(0.72 0.004 165)",
+          "oklch(0.84 0.004 165)",
+          "oklch(0.95 0.004 165)"
+        ]
+      },
+      "dark-ink-muted": {
+        "role": "neutral",
+        "displayName": "Dark Ink Muted",
+        "canonical": "oklch(0.72 0.01 165)",
+        "tonalRamp": [
+          "oklch(0.15 0.01 165)",
+          "oklch(0.26 0.01 165)",
+          "oklch(0.37 0.01 165)",
+          "oklch(0.48 0.01 165)",
+          "oklch(0.60 0.01 165)",
+          "oklch(0.72 0.01 165)",
+          "oklch(0.84 0.01 165)",
+          "oklch(0.95 0.01 165)"
+        ]
+      },
+      "dark-fill": {
+        "role": "neutral",
+        "displayName": "Dark Fill",
+        "canonical": "oklch(0.245 0.008 170)",
+        "tonalRamp": [
+          "oklch(0.15 0.008 170)",
+          "oklch(0.26 0.008 170)",
+          "oklch(0.37 0.008 170)",
+          "oklch(0.48 0.008 170)",
+          "oklch(0.60 0.008 170)",
+          "oklch(0.72 0.008 170)",
+          "oklch(0.84 0.008 170)",
+          "oklch(0.95 0.008 170)"
+        ]
+      },
+      "dark-forest-ink": {
+        "role": "primary",
+        "displayName": "Forest Ink (on mint, dark)",
+        "canonical": "oklch(0.3 0.05 167)",
+        "tonalRamp": [
+          "oklch(0.15 0.05 167)",
+          "oklch(0.26 0.05 167)",
+          "oklch(0.37 0.05 167)",
+          "oklch(0.48 0.05 167)",
+          "oklch(0.60 0.05 167)",
+          "oklch(0.72 0.05 167)",
+          "oklch(0.84 0.05 167)",
+          "oklch(0.95 0.05 167)"
+        ]
+      },
+      "dark-gain": {
+        "role": "status",
+        "displayName": "Dark Gain",
+        "canonical": "oklch(0.8 0.15 155)",
+        "tonalRamp": [
+          "oklch(0.15 0.15 155)",
+          "oklch(0.26 0.15 155)",
+          "oklch(0.37 0.15 155)",
+          "oklch(0.48 0.15 155)",
+          "oklch(0.60 0.15 155)",
+          "oklch(0.72 0.15 155)",
+          "oklch(0.84 0.15 155)",
+          "oklch(0.95 0.15 155)"
+        ]
+      },
+      "dark-loss": {
+        "role": "status",
+        "displayName": "Dark Loss",
+        "canonical": "oklch(0.72 0.18 25)",
+        "tonalRamp": [
+          "oklch(0.15 0.18 25)",
+          "oklch(0.26 0.18 25)",
+          "oklch(0.37 0.18 25)",
+          "oklch(0.48 0.18 25)",
+          "oklch(0.60 0.18 25)",
+          "oklch(0.72 0.18 25)",
+          "oklch(0.84 0.18 25)",
+          "oklch(0.95 0.18 25)"
+        ]
+      },
+      "dark-warning": {
+        "role": "status",
+        "displayName": "Dark Warning",
+        "canonical": "oklch(0.82 0.14 75)",
+        "tonalRamp": [
+          "oklch(0.15 0.14 75)",
+          "oklch(0.26 0.14 75)",
+          "oklch(0.37 0.14 75)",
+          "oklch(0.48 0.14 75)",
+          "oklch(0.60 0.14 75)",
+          "oklch(0.72 0.14 75)",
+          "oklch(0.84 0.14 75)",
+          "oklch(0.95 0.14 75)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Headline Figure",
+        "purpose": "The one agreed total on a screen; cents at 0.5em, muted."
+      },
+      "headline": {
+        "displayName": "Large Title",
+        "purpose": "List screens without one agreed total."
+      },
+      "title": {
+        "displayName": "Month",
+        "purpose": "Month switcher heading."
+      },
+      "section": {
+        "displayName": "Section",
+        "purpose": "Headings above grouped lists."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Row names, nav, change lines."
+      },
+      "figure": {
+        "displayName": "Row Figure",
+        "purpose": "Right-aligned amounts in rows."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Grouped-list section titles, segment labels."
+      },
+      "caption": {
+        "displayName": "Caption",
+        "purpose": "Trust note, FX line, sidebar group names."
+      },
+      "tab": {
+        "displayName": "Tab",
+        "purpose": "Mobile tab bar labels."
+      }
+    },
+    "shadows": [
+      {
+        "name": "floating-toolbar",
+        "value": "0 8px 24px -12px oklch(0 0 0 / 0.25)",
+        "purpose": "Sticky bulk-selection bar on Transactions only."
+      }
+    ],
+    "materials": [
+      {
+        "name": "glass",
+        "value": "background: color-mix(in oklab, var(--color-sidebar) 72%, transparent); backdrop-filter: blur(24px) saturate(180%)",
+        "purpose": "Mobile top bar and tab bar; solid under prefers-reduced-transparency."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-thumb",
+        "value": "cubic-bezier(0.32, 0.72, 0, 1)",
+        "purpose": "Segmented-control thumb slide, 300ms; none under reduced motion."
+      },
+      {
+        "name": "chart-entry",
+        "value": "none",
+        "purpose": "Chart draw-in animation is off."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "sm",
+        "value": "640px"
+      },
+      {
+        "name": "md",
+        "value": "768px"
+      }
+    ],
+    "focus": {
+      "value": "outline: 2px solid var(--color-ring); outline-offset: 2px",
+      "purpose": "One focus style for every custom control."
+    },
+    "outOfScope": [
+      "Import",
+      "Onboarding",
+      "Setup and config"
+    ]
+  },
+  "components": [
+    {
+      "name": "Segmented Control",
+      "kind": "chip",
+      "refersTo": "segmented-control",
+      "description": "Same-surface choice (currency, range): pill track, one tinted thumb.",
+      "html": "<div class=\"ds-seg\" role=\"radiogroup\" aria-label=\"Range\"><button class=\"ds-seg-opt\" role=\"radio\" aria-checked=\"false\">1M</button><button class=\"ds-seg-opt\" role=\"radio\" aria-checked=\"false\">6M</button><button class=\"ds-seg-opt ds-seg-on\" role=\"radio\" aria-checked=\"true\">1Y</button><button class=\"ds-seg-opt\" role=\"radio\" aria-checked=\"false\">All</button></div>",
+      "css": ".ds-seg{display:inline-grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:0;padding:4px;border-radius:9999px;background:var(--color-muted);font-family:var(--font-sans)}.ds-seg-opt{min-height:36px;padding:0 16px;border:0;border-radius:9999px;background:transparent;color:var(--color-muted-foreground);font-size:.8125rem;font-weight:500;cursor:pointer;transition:color .15s,background .3s cubic-bezier(.32,.72,0,1)}.ds-seg-opt:hover{color:var(--color-foreground)}.ds-seg-on,.ds-seg-on:hover{background:var(--color-primary);color:var(--color-primary-foreground)}.ds-seg-opt:focus-visible{outline:2px solid var(--color-ring);outline-offset:2px}"
+    },
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The one filled action on a screen.",
+      "html": "<button class=\"ds-btn-primary\">Connect bank</button>",
+      "css": ".ds-btn-primary{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:8px 16px;border:0;border-radius:9999px;background:var(--color-primary);color:var(--color-primary-foreground);font:500 .875rem var(--font-sans);cursor:pointer;transition:background .15s}.ds-btn-primary:hover{background:color-mix(in oklab,var(--color-primary) 90%,transparent)}.ds-btn-primary:focus-visible{outline:2px solid var(--color-ring);outline-offset:2px}.ds-btn-primary:disabled{opacity:.5}"
+    },
+    {
+      "name": "Quiet Button",
+      "kind": "button",
+      "refersTo": "button-quiet",
+      "description": "Secondary action on the ground, e.g. Load more.",
+      "html": "<button class=\"ds-btn-quiet\">Load more</button>",
+      "css": ".ds-btn-quiet{height:36px;padding:0 16px;border:0;border-radius:9999px;background:var(--color-card);color:var(--color-foreground);font:500 .75rem var(--font-sans);cursor:pointer;transition:background .15s}.ds-btn-quiet:hover{background:var(--color-accent)}.ds-btn-quiet:focus-visible{outline:2px solid var(--color-ring);outline-offset:2px}"
+    },
+    {
+      "name": "Search Field",
+      "kind": "input",
+      "refersTo": "search-field",
+      "description": "Pill search on the ground with an inset magnifier.",
+      "html": "<label class=\"ds-search\"><svg viewBox=\"0 0 24 24\" width=\"16\" height=\"16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"><circle cx=\"11\" cy=\"11\" r=\"8\"/><path d=\"m21 21-4.3-4.3\"/></svg><input placeholder=\"Search transactions\"></label>",
+      "css": ".ds-search{position:relative;display:block;max-width:360px;color:var(--color-muted-foreground)}.ds-search svg{position:absolute;left:16px;top:50%;transform:translateY(-50%)}.ds-search input{width:100%;height:44px;padding:0 16px 0 40px;border:0;border-radius:9999px;background:var(--color-card);color:var(--color-foreground);font:400 1rem var(--font-sans)}.ds-search input::placeholder{color:var(--color-muted-foreground)}.ds-search input:focus{outline:none;box-shadow:0 0 0 2px var(--color-ring)}"
+    },
+    {
+      "name": "Headline Figure",
+      "kind": "custom",
+      "refersTo": "display",
+      "description": "A screen's one agreed total: whole units large, cents half-size and muted, then the change line.",
+      "html": "<div class=\"ds-hero\"><div class=\"ds-hero-name\">Net worth</div><p class=\"ds-fig\">€38,545<span>.04</span></p><p class=\"ds-chg\"><b>+€7,604 (+24.58%)</b> Past year</p></div>",
+      "css": ".ds-hero{font-family:var(--font-sans);font-variant-numeric:tabular-nums lining-nums}.ds-hero-name{font-size:.9375rem;font-weight:500;color:var(--color-muted-foreground);margin-bottom:12px}.ds-fig{margin:0;font-weight:600;font-size:clamp(2.75rem,1.6rem + 3.2vw,4rem);line-height:1;letter-spacing:-.035em;color:var(--color-foreground)}.ds-fig span{font-size:.5em;font-weight:500;letter-spacing:-.02em;color:var(--color-muted-foreground)}.ds-chg{margin:12px 0 0;font-size:.9375rem;color:var(--color-muted-foreground)}.ds-chg b{font-weight:500;color:var(--color-positive)}"
+    },
+    {
+      "name": "Grouped List",
+      "kind": "card",
+      "refersTo": "grouped-list",
+      "description": "White list on the pale ground, hairline rows, avatar left, figure right.",
+      "html": "<ul class=\"ds-list\"><li><span class=\"ds-av\" style=\"--cat:#14b8a6\">R</span><span class=\"ds-row-t\"><b>Rent</b><small>Housing · 1 Oct</small></span><span class=\"ds-amt\">€799.44</span></li><li><span class=\"ds-av\" style=\"--cat:#f97316\">P</span><span class=\"ds-row-t\"><b>Pizzeria</b><small>Dine Out · 3 Oct</small></span><span class=\"ds-amt\">€23.90</span></li></ul>",
+      "css": ".ds-list{list-style:none;margin:0;padding:0;max-width:560px;border-radius:22px;overflow:hidden;background:var(--color-card);font-family:var(--font-sans)}.ds-list li{display:flex;align-items:center;gap:12px;padding:12px 16px;transition:background .15s}.ds-list li+li{border-top:1px solid var(--color-border)}.ds-list li:hover{background:var(--color-accent)}.ds-av{flex:none;display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:9999px;background:color-mix(in oklab,var(--cat) 22%,var(--color-card));color:var(--color-foreground);font-size:.9375rem;font-weight:600}.ds-row-t{flex:1;min-width:0;display:flex;flex-direction:column}.ds-row-t b{font-size:.9375rem;font-weight:500;color:var(--color-foreground)}.ds-row-t small{font-size:.8125rem;color:var(--color-muted-foreground)}.ds-amt{font-variant-numeric:tabular-nums lining-nums;letter-spacing:-.02em;font-size:.9375rem;font-weight:600;color:var(--color-foreground)}"
+    },
+    {
+      "name": "Month Switcher",
+      "kind": "nav",
+      "refersTo": "month-step",
+      "description": "Month as a heading with round step buttons.",
+      "html": "<div class=\"ds-month\"><span>October 2026</span><button aria-label=\"Previous month\"><svg viewBox=\"0 0 24 24\" width=\"20\" height=\"20\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"><path d=\"m15 18-6-6 6-6\"/></svg></button><button aria-label=\"Next month\" disabled><svg viewBox=\"0 0 24 24\" width=\"20\" height=\"20\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"><path d=\"m9 18 6-6-6-6\"/></svg></button></div>",
+      "css": ".ds-month{display:flex;align-items:center;gap:4px;max-width:560px;font-family:var(--font-sans)}.ds-month span{margin-right:auto;font-size:1.25rem;font-weight:600;letter-spacing:-.02em;color:var(--color-foreground)}.ds-month button{display:flex;align-items:center;justify-content:center;width:44px;height:44px;border:0;border-radius:9999px;background:var(--color-card);color:var(--color-foreground);cursor:pointer;transition:background .15s}.ds-month button:hover{background:var(--color-accent)}.ds-month button:focus-visible{outline:2px solid var(--color-ring);outline-offset:2px}.ds-month button:disabled{opacity:.4;cursor:default}"
+    },
+    {
+      "name": "Share Bar",
+      "kind": "custom",
+      "refersTo": "share-bar",
+      "description": "How a total splits: one rounded bar plus a legend of labels and percents.",
+      "html": "<div class=\"ds-share\"><div class=\"ds-share-bar\" role=\"img\" aria-label=\"Housing 43%, Dine Out 12%, Groceries 9%\"><i style=\"width:60%;background:#14b8a6\"></i><i style=\"width:22%;background:#f97316\"></i><i style=\"width:18%;background:#6366f1\"></i></div><ul><li><i style=\"background:#14b8a6\"></i>Housing <span>43.2%</span></li><li><i style=\"background:#f97316\"></i>Dine Out <span>12.1%</span></li><li><i style=\"background:#6366f1\"></i>Groceries <span>9.2%</span></li></ul></div>",
+      "css": ".ds-share{max-width:560px;font-family:var(--font-sans)}.ds-share-bar{display:flex;gap:2px;height:10px;border-radius:9999px;overflow:hidden}.ds-share-bar i{display:block;height:100%}.ds-share ul{list-style:none;margin:12px 0 0;padding:0;display:flex;flex-wrap:wrap;gap:6px 20px;font-size:.875rem;color:var(--color-foreground)}.ds-share li{display:flex;align-items:center;gap:6px}.ds-share li i{width:8px;height:8px;border-radius:9999px}.ds-share li span{font-variant-numeric:tabular-nums;color:var(--color-muted-foreground)}"
+    },
+    {
+      "name": "Sidebar Nav",
+      "kind": "nav",
+      "refersTo": "nav-item-active",
+      "description": "Desktop sidebar items: rounded pills, active on a soft fill.",
+      "html": "<nav class=\"ds-nav\"><div class=\"ds-nav-g\">Overview</div><a class=\"ds-nav-i ds-nav-on\" href=\"#\">Net Worth</a><a class=\"ds-nav-i\" href=\"#\">Reports</a></nav>",
+      "css": ".ds-nav{width:232px;padding:12px;background:var(--color-sidebar);font-family:var(--font-sans)}.ds-nav-g{padding:0 12px 6px;font-size:.75rem;font-weight:500;color:var(--color-muted-foreground)}.ds-nav-i{display:flex;align-items:center;gap:12px;padding:8px 12px;border-radius:9999px;font-size:.9375rem;color:var(--color-muted-foreground);text-decoration:none;transition:background .15s,color .15s}.ds-nav-i:hover{background:var(--color-sidebar-accent);color:var(--color-foreground)}.ds-nav-on{background:var(--color-sidebar-accent);color:var(--color-foreground);font-weight:500}.ds-nav-i:focus-visible{outline:2px solid var(--color-ring);outline-offset:2px}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Number Is the Interface",
+    "overview": "MyFinances reads like a well-made bank app: one exact figure at the top of the screen, quiet rows beneath, and nothing else competing. The world is played straight in the Revolut / Trade Republic register the user pinned: a pale green-grey ground, white grouped lists floating on it with no outlines, Geist with tabular figures everywhere, and a single forest tint for controls. Colour carries meaning (gain, loss, warning) or identity (a category, a coin), never decoration.\n\nDensity is calm rather than sparse. Rows are generous (40px avatar, 64px breakdown rows, 44px minimum tap targets), sections breathe at 32px, and the page column caps at 64rem so the figure and its chart stay in one glance on a 1440 screen. The interface is read-only in tone: no trading cues, no hype, no tinted stat tiles in boxed cards.\n\nThe tinted ground with white grouped lists was approved by the user after seeing it. Import, onboarding and setup surfaces are out of scope for this system and keep their older styling; do not treat them as reference.",
+    "keyCharacteristics": [
+      "One headline figure per screen that has one agreed total, cents set half-size and muted.",
+      "Pale ground, white grouped lists, hairline dividers, no borders or drop shadows on containers.",
+      "Forest is the only control tint in light mode; mint takes that role in dark mode.",
+      "Green and red mean gain and loss, and nothing else.",
+      "Fully rounded pills for every control; 22px corners for grouped lists.",
+      "Light and dark follow the system setting; both are first-class."
+    ],
+    "rules": [
+      {
+        "name": "The One Tint Rule",
+        "body": "Forest is the only colour a control may wear (mint on dark). No second accent, no blue links, no coloured secondary buttons.",
+        "section": "colors"
+      },
+      {
+        "name": "The Meaning-Only Rule",
+        "body": "Green and red appear only for a gain, a loss, or a destructive action. A positive number that is not a change stays in ink.",
+        "section": "colors"
+      },
+      {
+        "name": "The Identity, Not Mood Rule",
+        "body": "Categorical tints are allowed for identity (a category avatar wash at 22%, a chip, a chart series, a share-bar segment) but never use the gain-green or loss-red hues, so a category never reads as a price move.",
+        "section": "colors"
+      },
+      {
+        "name": "The Tabular Rule",
+        "body": "Every number is set in tabular lining figures. Never let a column of amounts shift as values change or a chart is scrubbed.",
+        "section": "typography"
+      },
+      {
+        "name": "The Quiet Page Name Rule",
+        "body": "On screens that open on a figure, the page name is the h1 set small (15px, 500, muted) so the figure is the loudest thing. Labels stay sentence case; no uppercase tracked labels above headings.",
+        "section": "typography"
+      },
+      {
+        "name": "The No-Outline Rule",
+        "body": "Containers have no border and no drop shadow. A grouped list is a white fill on the ground; rows inside it are split by hairlines.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "**Do** open every screen with one agreed total on the Headline Figure, and list screens on the large title or the month switcher.",
+      "**Do** keep Forest (mint on dark) as the only control tint.",
+      "**Do** set every amount in tabular lining figures, right-aligned in rows.",
+      "**Do** separate rows with hairlines inside white grouped lists on the pale ground.",
+      "**Do** use fully rounded pills for controls and 22px corners for containers.",
+      "**Do** give every chart a text summary and keep 44px tap targets.",
+      "**Do** honour reduced motion and reduced transparency."
+    ],
+    "donts": [
+      "**Don't** put borders or drop shadows on cards or lists; the floating selection bar is the only shadow.",
+      "**Don't** use green or red for anything but gains, losses and destructive actions.",
+      "**Don't** give a category or coin a colour in the gain-green or loss-red hue range.",
+      "**Don't** build dashboards of tinted stat tiles in boxed cards.",
+      "**Don't** add buy/sell cues, tickers or anything that reads as advice.",
+      "**Don't** turn chart draw-in animation back on.",
+      "**Don't** restyle import, onboarding or setup from this system without a decision to bring them in scope."
+    ]
+  }
+}

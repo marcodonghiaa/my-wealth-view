@@ -1,10 +1,10 @@
 import { useState, type ReactNode } from "react";
 import { ChevronRight, Users } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { categoryColor } from "@/lib/categories";
 import { useIsMobile } from "@/lib/use-is-mobile";
 import { AccountBadge } from "@/components/bank-badge";
 import { RefundedBadge } from "@/components/refunded-badge";
+import { MerchantAvatar } from "@/components/merchant-avatar";
 import {
   formatBookingDate,
   formatBookingDateShort,
@@ -65,16 +65,6 @@ function AmountText({ tx }: { tx: TransactionRow }) {
   );
 }
 
-function CategoryDot({ category }: { category: string | null }) {
-  return (
-    <span
-      aria-hidden
-      className="inline-block size-2.5 shrink-0 rounded-full"
-      style={{ backgroundColor: categoryColor(category) }}
-    />
-  );
-}
-
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="flex min-h-12 items-center justify-between gap-4 px-4 py-1">
@@ -116,7 +106,7 @@ function TransactionEditSheet({
           </div>
         </SheetHeader>
         <div className="space-y-4 px-4 pb-4">
-          <div className="divide-y overflow-hidden rounded-xl bg-card">
+          <div className="divide-y overflow-hidden rounded-2xl bg-card">
             <Field label="Name">
               <NameEditor name={tx.creditor_name} onSave={p.onRename} saving={p.savingRename} />
             </Field>
@@ -135,7 +125,7 @@ function TransactionEditSheet({
             )}
           </div>
           {!share && (
-            <div className="divide-y overflow-hidden rounded-xl bg-card">
+            <div className="divide-y overflow-hidden rounded-2xl bg-card">
               {(tx.worth_it != null || isWorthItEligible(tx)) && (
                 <Field label="Worth it">
                   <WorthItPrompt tx={tx} onAnswer={p.onAnswerWorthIt} />
@@ -175,7 +165,7 @@ export function TransactionRowView(props: TransactionViewProps) {
   return (
     <tr
       data-entry-ref={tx.entry_reference}
-      className={`border-b transition-colors last:border-0 hover:bg-accent/40 ${selected ? "bg-primary/5" : ""} ${highlighted ? "ring-2 ring-inset ring-primary" : ""}`}
+      className={`border-b transition-colors last:border-0 hover:bg-accent ${selected ? "bg-primary/10" : ""} ${highlighted ? "ring-2 ring-inset ring-primary" : ""}`}
     >
       <td className="px-4 py-3">
         {!share && (
@@ -193,15 +183,24 @@ export function TransactionRowView(props: TransactionViewProps) {
       <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">
         {formatBookingDateShort(tx.booking_date)}
       </td>
-      <td className="max-w-64 px-4 py-3">
-        <div className="truncate font-medium text-foreground">
-          <NameEditor name={tx.creditor_name} onSave={props.onRename} saving={props.savingRename} />
+      <td className="max-w-72 px-4 py-3">
+        <div className="flex items-center gap-3">
+          <MerchantAvatar name={tx.creditor_name} category={tx.category} />
+          <div className="min-w-0">
+            <div className="truncate font-medium text-foreground">
+              <NameEditor
+                name={tx.creditor_name}
+                onSave={props.onRename}
+                saving={props.savingRename}
+              />
+            </div>
+            {!share && notes.length > 0 && (
+              <div className="truncate text-xs text-muted-foreground">{notes.join(" · ")}</div>
+            )}
+            <RefundedBadge flowType={tx.flow_type} />
+            {!share && <WorthItPrompt tx={tx} onAnswer={props.onAnswerWorthIt} />}
+          </div>
         </div>
-        {!share && notes.length > 0 && (
-          <div className="truncate text-xs text-muted-foreground">{notes.join(" · ")}</div>
-        )}
-        <RefundedBadge flowType={tx.flow_type} />
-        {!share && <WorthItPrompt tx={tx} onAnswer={props.onAnswerWorthIt} />}
       </td>
       <td className="px-4 py-3">
         <CategoryPicker tx={tx} onSelect={props.onSelectCategory} saving={props.savingCategory} />
@@ -219,7 +218,7 @@ export function TransactionRowView(props: TransactionViewProps) {
               type="button"
               onClick={() => setOpen(true)}
               aria-label={`Edit ${tx.creditor_name ?? "transaction"}`}
-              className="inline-flex size-11 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+              className="inline-flex size-11 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
             >
               <ChevronRight className="size-4" />
             </button>
@@ -239,7 +238,7 @@ export function TransactionCardView(props: TransactionViewProps) {
 
   const summary = (
     <>
-      <CategoryDot category={tx.category} />
+      <MerchantAvatar name={tx.creditor_name} category={tx.category} />
       <div className="min-w-0 flex-1">
         <p className="truncate text-[0.9375rem] font-medium text-foreground">
           {tx.creditor_name ?? "—"}
@@ -263,14 +262,14 @@ export function TransactionCardView(props: TransactionViewProps) {
     </>
   );
 
-  const rowClass = `${selected ? "bg-primary/5" : ""} ${highlighted ? "ring-2 ring-inset ring-primary" : ""}`;
+  const rowClass = `${selected ? "bg-primary/10" : ""} ${highlighted ? "ring-2 ring-inset ring-primary" : ""}`;
 
   return (
     <li data-entry-ref={tx.entry_reference} className={rowClass}>
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="flex min-h-14 w-full items-center gap-3 px-4 py-2.5 text-left active:bg-accent"
+        className="flex min-h-16 w-full items-center gap-3 px-4 py-3 text-left active:bg-accent"
       >
         {summary}
       </button>

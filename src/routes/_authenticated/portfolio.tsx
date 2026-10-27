@@ -1,15 +1,26 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
-import { Briefcase, ChevronDown } from "lucide-react";
+import {
+  Building2,
+  ChevronDown,
+  ChartPie,
+  Layers,
+  ScrollText,
+  Shapes,
+  type LucideIcon,
+} from "lucide-react";
 import { shortHoldingName } from "@/lib/holding-name";
-import { shareSummary } from "@/lib/chart-summary";
 import { supabase } from "@/integrations/supabase/client";
 import { formatEur } from "@/lib/transactions";
 import { currentValueEur } from "@/lib/holdings";
 import { AddHoldingPanel } from "@/components/holdings/add-holding-panel";
 import { EditHolding } from "@/components/holdings/edit-holding";
+import { HeadlineFigure } from "@/components/headline-figure";
+import { ShareBar } from "@/components/share-bar";
+import { RangeChangeLine, ValueHistoryChart } from "@/components/value-history";
+import { useValueHistory } from "@/lib/use-value-history";
+import { formatDay } from "@/lib/date";
 
 export const Route = createFileRoute("/_authenticated/portfolio")({
   head: () => ({
@@ -60,6 +71,13 @@ function colorForType(type: string): string {
   // UNCLASSIFIED is always a key in TYPE_COLORS -- defined right above.
   return TYPE_COLORS[type] ?? TYPE_COLORS[UNCLASSIFIED]!;
 }
+
+const TYPE_ICONS: Record<string, LucideIcon> = {
+  Stock: Building2,
+  ETF: Layers,
+  Fund: ChartPie,
+  Bond: ScrollText,
+};
 
 async function fetchPortfolio(): Promise<Array<PortfolioRow>> {
   const { data, error } = await supabase
@@ -161,79 +179,63 @@ function PortfolioPage() {
       .sort((a, b) => b.totalEur - a.totalEur);
   }, [holdings]);
 
+  // Scrubbing shows that day's value; otherwise today's, from the holdings below.
+  const history = useValueHistory("portfolio_total_eur", totalEur);
+  const { scrubbed } = history;
+
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-8 md:py-12">
-      <header className="mb-8">
-        <h1 className="ios-large-title">Portfolio</h1>
-        <p className="mt-0.5 text-sm text-muted-foreground">
-          Your investment holdings and allocation.
-        </p>
+      <header className="mb-3 text-[0.9375rem] font-medium text-muted-foreground">
+        <h1 className="inline">Portfolio</h1>
+        {scrubbed && <span> · {formatDay(scrubbed.snapshot_date)}</span>}
       </header>
 
       {query.isError && (
         <div
           role="alert"
-          className="mb-6 rounded-xl border border-negative/30 bg-negative/10 px-4 py-3 text-sm text-negative"
+          className="mb-6 rounded-2xl bg-negative/10 px-4 py-3 text-sm text-negative"
         >
           Couldn't load portfolio data: {query.error.message}
         </div>
       )}
 
-      {/* Headline + allocation side by side */}
-      <section className="mb-6 grid items-center gap-6 rounded-2xl border bg-card p-6 card-ring sm:p-8 md:grid-cols-2">
-        <div>
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
-            <Briefcase className="size-4 text-primary" />
-            Total portfolio value
-          </div>
-
-          <div className="mt-3 min-h-16">
-            {query.isPending ? (
-              <div className="h-14 w-64 animate-pulse rounded-lg bg-muted" />
-            ) : (
-              <p className="font-figure text-4xl font-bold tracking-tight text-foreground sm:text-6xl">
-                {formatEur(totalEur)}
-              </p>
-            )}
-          </div>
+      {history.error && (
+        <div
+          role="alert"
+          className="mb-6 rounded-2xl bg-negative/10 px-4 py-3 text-sm text-negative"
+        >
+          Couldn't load your portfolio history: {history.error.message}
         </div>
-        {!query.isPending && holdings.length > 0 && (
-          <div
-            className="h-56 w-full md:h-64"
-            role="img"
-            aria-label={shareSummary(
-              "Allocation by type",
-              groups.map((g) => ({ label: g.type, value: g.totalEur })),
-            )}
-          >
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={groups}
-                  dataKey="totalEur"
-                  nameKey="type"
-                  innerRadius="55%"
-                  outerRadius="80%"
-                  paddingAngle={2}
-                  cornerRadius={6}
-                >
-                  {groups.map((g) => (
-                    <Cell
-                      key={g.type}
-                      fill={colorForType(g.type)}
-                      stroke="var(--color-card)"
-                      strokeWidth={2}
-                    />
-                  ))}
-                </Pie>
-                <Tooltip content={<TypeTooltip totalEur={totalEur} />} />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-        )}
+      )}
+
+      {/* Headline: total value and its change over the chart range */}
+      <section aria-label="Total portfolio value" className="mb-6">
+        <div className="min-h-16" aria-live="polite">
+          {query.isPending ? (
+            <div className="h-16 w-72 animate-pulse rounded-2xl bg-muted" />
+          ) : (
+            <HeadlineFigure value={history.shownEur} currency="EUR" />
+          )}
+        </div>
+        {!query.isPending && <RangeChangeLine history={history} />}
       </section>
 
-      {!query.isPending && <AddHoldingPanel kind="stock" defaultOpen={holdings.length === 0} />}
+      {/* Chart: portfolio value over time; scrub it to read any day */}
+      <ValueHistoryChart history={history} title="Portfolio value over time" />
+
+      {/* How it splits by type */}
+      {!query.isPending && holdings.length > 0 && totalEur > 0 && (
+        <div className="mb-6">
+          <ShareBar
+            title="Allocation by type"
+            shares={groups.map((g) => ({
+              label: g.type,
+              value: g.totalEur,
+              color: colorForType(g.type),
+            }))}
+          />
+        </div>
+      )}
 
       {query.isPending ? (
         <>
@@ -241,53 +243,52 @@ function PortfolioPage() {
           <div className="h-64 animate-pulse rounded-2xl bg-muted/50" />
         </>
       ) : holdings.length === 0 ? (
-        <div className="flex h-48 items-center justify-center rounded-2xl border bg-card text-sm text-muted-foreground card-ring">
-          No investments yet. Search for your first one above.
+        <div className="flex h-48 items-center justify-center rounded-2xl bg-card text-sm text-muted-foreground">
+          No investments yet. Search for your first one below.
         </div>
       ) : (
         <>
           {/* Holdings grouped by type */}
-          <div className="space-y-4">
+          <div className="divide-y overflow-hidden rounded-2xl bg-card">
             {groups.map((group) => {
               const percent = totalEur > 0 ? (group.totalEur / totalEur) * 100 : 0;
               const color = colorForType(group.type);
+              const TypeIcon = TYPE_ICONS[group.type] ?? Shapes;
               const isOpen = expanded.has(group.type);
               return (
-                <section
-                  key={group.type}
-                  className="overflow-hidden rounded-2xl border bg-card card-ring"
-                >
+                <section key={group.type}>
                   <button
                     type="button"
                     onClick={() => toggleGroup(group.type)}
                     aria-expanded={isOpen}
-                    className={`flex min-h-11 w-full items-center justify-between gap-3 px-4 py-3 text-left sm:px-5 ${isOpen ? "border-b" : ""}`}
-                    style={{
-                      // 8%, not 12% -- the muted-foreground text in this header
-                      // (holding count, %) dropped to ~4.1:1 contrast at 12%.
-                      backgroundColor: `color-mix(in srgb, ${color} 8%, transparent)`,
-                    }}
+                    className={`flex min-h-16 w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-accent sm:px-5 ${isOpen ? "border-b" : ""}`}
                   >
-                    <div className="flex items-center gap-2">
-                      <ChevronDown
-                        className={`size-4 text-muted-foreground transition-transform ${isOpen ? "" : "-rotate-90"}`}
-                      />
-                      <span
-                        className="inline-block size-2.5 rounded-full"
-                        style={{ backgroundColor: color }}
-                      />
-                      <span className="text-sm font-semibold text-foreground">{group.type}</span>
-                      <span className="text-xs text-muted-foreground">
-                        · {group.holdings.length} holding
-                        {group.holdings.length === 1 ? "" : "s"}
+                    <span
+                      aria-hidden
+                      className="flex size-10 shrink-0 items-center justify-center rounded-full"
+                      style={{
+                        color,
+                        backgroundColor: `color-mix(in oklab, ${color} 16%, var(--color-card))`,
+                      }}
+                    >
+                      <TypeIcon className="size-[1.125rem]" strokeWidth={2} />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-[0.9375rem] font-medium text-foreground">
+                        {group.type}
                       </span>
-                    </div>
-                    <div className="text-right">
-                      <div className="font-figure text-sm font-semibold text-foreground">
-                        {formatEur(group.totalEur)}
-                      </div>
-                      <div className="text-xs text-muted-foreground">{percent.toFixed(1)}%</div>
-                    </div>
+                      <span className="block text-xs text-muted-foreground">
+                        {group.holdings.length} holding
+                        {group.holdings.length === 1 ? "" : "s"} · {percent.toFixed(1)}%
+                      </span>
+                    </span>
+                    <span className="font-figure text-[0.9375rem] font-semibold text-foreground">
+                      {formatEur(group.totalEur)}
+                    </span>
+                    <ChevronDown
+                      aria-hidden
+                      className={`size-4 shrink-0 text-muted-foreground transition-transform ${isOpen ? "rotate-180" : ""}`}
+                    />
                   </button>
 
                   {isOpen && (
@@ -295,7 +296,7 @@ function PortfolioPage() {
                       {/* Desktop table */}
                       <div className="hidden overflow-x-auto md:block">
                         <table className="w-full text-sm">
-                          <thead className="bg-muted/50 text-left text-xs font-medium text-muted-foreground">
+                          <thead className="border-y text-left text-xs font-medium text-muted-foreground">
                             <tr>
                               <th className="px-4 py-2.5 font-medium sm:px-5">Holding</th>
                               <th className="px-4 py-2.5 font-medium sm:px-5">Shares</th>
@@ -423,34 +424,12 @@ function PortfolioPage() {
           </div>
         </>
       )}
-    </div>
-  );
-}
 
-interface TooltipPayloadItem {
-  payload?: TypeGroup;
-}
-
-function TypeTooltip({
-  active,
-  payload,
-  totalEur,
-}: {
-  active?: boolean;
-  payload?: Array<TooltipPayloadItem>;
-  totalEur: number;
-}) {
-  if (!active || !payload || payload.length === 0) return null;
-  const group = payload[0]?.payload;
-  if (!group) return null;
-  const percent = totalEur > 0 ? ((group.totalEur / totalEur) * 100).toFixed(1) : "0.0";
-  return (
-    <div className="rounded-lg border bg-popover px-3 py-2 shadow-lg">
-      <p className="text-xs text-muted-foreground">{group.type}</p>
-      <p className="font-figure mt-0.5 text-sm font-semibold text-foreground">
-        {formatEur(group.totalEur)}
-      </p>
-      <p className="text-xs text-muted-foreground">{percent}% of portfolio</p>
+      {!query.isPending && (
+        <div className="mt-6">
+          <AddHoldingPanel kind="stock" defaultOpen={holdings.length === 0} />
+        </div>
+      )}
     </div>
   );
 }

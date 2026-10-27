@@ -77,7 +77,7 @@ export function EditHolding({
     >
       <PopoverTrigger
         aria-label={`Edit ${name}`}
-        className="inline-flex size-11 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground"
+        className="inline-flex size-11 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
       >
         <Pencil className="size-4" />
       </PopoverTrigger>
@@ -92,7 +92,7 @@ export function EditHolding({
               inputMode="decimal"
               value={value}
               onChange={(e) => setValue(e.target.value)}
-              className="min-w-0 flex-1 rounded-lg border bg-background px-3 py-2 text-base focus:ring-2 focus:ring-ring focus:outline-none"
+              className="min-w-0 flex-1 rounded-full border bg-background px-3 py-2 text-base focus:ring-2 focus:ring-ring focus:outline-none"
             />
             <button
               type="submit"

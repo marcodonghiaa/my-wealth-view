@@ -35,7 +35,7 @@ function SplitwisePage() {
       {balances.isError && (
         <div
           role="alert"
-          className="mb-6 rounded-xl border border-negative/30 bg-negative/10 px-4 py-3 text-sm text-negative"
+          className="mb-6 rounded-2xl bg-negative/10 px-4 py-3 text-sm text-negative"
         >
           Couldn't load Splitwise balances: {balances.error.message}
         </div>

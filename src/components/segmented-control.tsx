@@ -12,7 +12,7 @@ interface SegmentedControlProps<T extends string> {
   onChange: (value: T) => void;
 }
 
-// Same-surface choice (iOS segmented control): one thumb slides under the selected segment.
+// Same-surface choice as a row of pills: one filled thumb slides under the selected option.
 export function SegmentedControl<T extends string>({
   label,
   options,
@@ -37,14 +37,14 @@ export function SegmentedControl<T extends string>({
       role="radiogroup"
       aria-label={label}
       onKeyDown={onKeyDown}
-      className="relative grid rounded-[0.6rem] bg-muted p-0.5"
+      className="relative grid rounded-full bg-muted p-1"
       style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}
     >
       <div
         aria-hidden
-        className="absolute inset-y-0.5 left-0.5 rounded-lg bg-popover shadow-sm transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] motion-reduce:transition-none"
+        className="absolute inset-y-1 left-1 rounded-full bg-primary transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] motion-reduce:transition-none"
         style={{
-          width: `calc((100% - 0.25rem) / ${options.length})`,
+          width: `calc((100% - 0.5rem) / ${options.length})`,
           transform: `translateX(${index * 100}%)`,
         }}
       />
@@ -58,8 +58,8 @@ export function SegmentedControl<T extends string>({
             aria-checked={selected}
             tabIndex={selected ? 0 : -1}
             onClick={() => onChange(option.value)}
-            className={`relative z-10 min-h-10 rounded-lg px-4 text-[0.8125rem] transition-colors ${
-              selected ? "font-semibold text-foreground" : "font-medium text-muted-foreground"
+            className={`relative z-10 min-h-9 rounded-full px-4 text-[0.8125rem] font-medium transition-colors ${
+              selected ? "text-primary-foreground" : "text-muted-foreground hover:text-foreground"
             }`}
           >
             {option.label}

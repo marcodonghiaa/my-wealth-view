@@ -274,6 +274,13 @@ export type ChartRange = "1M" | "3M" | "6M" | "1Y" | "All";
 export const CHART_RANGES: Array<ChartRange> = ["1M", "6M", "1Y", "All"];
 // Allocation shifts slowly, so its shortest useful window is a quarter.
 export const ALLOCATION_RANGES: Array<ChartRange> = ["3M", "6M", "1Y", "All"];
+export const RANGE_LABEL: Record<ChartRange, string> = {
+  "1M": "Past month",
+  "3M": "Past 3 months",
+  "6M": "Past 6 months",
+  "1Y": "Past year",
+  All: "All time",
+};
 const RANGE_MONTHS: Record<Exclude<ChartRange, "All">, number> = {
   "1M": 1,
   "3M": 3,

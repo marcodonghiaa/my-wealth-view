@@ -1,24 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Cell,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
-import { ChevronLeft, ChevronRight } from "lucide-react";
-import { shareSummary } from "@/lib/chart-summary";
 import { CategoryRow } from "@/components/spending/category-row";
 import { supabase } from "@/integrations/supabase/client";
 import { formatISODate } from "@/lib/date";
 import { categoryColor } from "@/lib/categories";
 import { formatEur, personalAmountEur } from "@/lib/transactions";
-import { useIsMobile } from "@/lib/use-is-mobile";
+import { MonthSwitcher } from "@/components/month-switcher";
+import { HeadlineFigure } from "@/components/headline-figure";
+import { ShareBar } from "@/components/share-bar";
 
 export const Route = createFileRoute("/_authenticated/spending")({
   head: () => ({
@@ -98,7 +88,6 @@ async function fetchRegretSpend(month: Date): Promise<Array<RegretGroup>> {
 }
 
 function SpendingPage() {
-  const isMobile = useIsMobile();
   const [month, setMonth] = useState<Date>(() => startOfMonth(new Date()));
 
   const spendQuery = useQuery({
@@ -139,17 +128,13 @@ function SpendingPage() {
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-8 md:py-12">
-      <header className="mb-8">
-        <h1 className="ios-large-title">Spend by Category</h1>
-        <p className="mt-0.5 text-sm text-muted-foreground">
-          Where your money went, broken down per category.
-        </p>
-      </header>
+      {/* One header: the month and its arrows; the figure below is the page's answer */}
+      <h1 className="sr-only">Spending by category</h1>
 
       {spendQuery.isError && (
         <div
           role="alert"
-          className="mb-6 rounded-xl border border-negative/30 bg-negative/10 px-4 py-3 text-sm text-negative"
+          className="mb-6 rounded-2xl bg-negative/10 px-4 py-3 text-sm text-negative"
         >
           Couldn't load spending data: {spendQuery.error.message}
         </div>
@@ -158,106 +143,48 @@ function SpendingPage() {
       {regretQuery.isError && (
         <div
           role="alert"
-          className="mb-6 rounded-xl border border-negative/30 bg-negative/10 px-4 py-3 text-sm text-negative"
+          className="mb-6 rounded-2xl bg-negative/10 px-4 py-3 text-sm text-negative"
         >
           Couldn't load your "worth it?" answers: {regretQuery.error.message}
         </div>
       )}
 
-      {/* Month selector */}
-      <div className="mb-6 flex items-center justify-between rounded-xl border bg-card p-2 card-ring">
-        <button
-          type="button"
-          onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))}
-          aria-label="Previous month"
-          className="flex size-11 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-        >
-          <ChevronLeft className="size-5" />
-        </button>
-        <span className="text-sm font-medium text-foreground">{monthLabel}</span>
-        <button
-          type="button"
-          onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))}
-          disabled={!canGoNext}
-          aria-label="Next month"
-          className="flex size-11 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-40"
-        >
-          <ChevronRight className="size-5" />
-        </button>
-      </div>
+      <MonthSwitcher
+        className="mb-6"
+        label={monthLabel}
+        onPrev={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))}
+        onNext={() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))}
+        canGoNext={canGoNext}
+      />
 
       {spendQuery.isPending ? (
         <div className="h-80 animate-pulse rounded-2xl bg-muted/50" />
       ) : rows.length === 0 ? (
-        <div className="flex h-48 items-center justify-center rounded-2xl border bg-card text-sm text-muted-foreground card-ring">
+        <div className="flex h-48 items-center justify-center rounded-2xl bg-card text-sm text-muted-foreground">
           No spending recorded for {monthLabel}.
         </div>
       ) : (
         <>
-          {/* Chart card */}
-          <section className="mb-6 rounded-2xl border bg-card p-4 card-ring sm:p-6">
-            <div className="mb-4 flex items-center justify-between px-2">
-              <h2 className="text-sm font-semibold text-foreground">
-                {monthLabel} — total {formatEur(total)}
-              </h2>
-              <span className="text-xs text-muted-foreground">EUR</span>
+          {/* Headline: the month's spend, then how it splits by category */}
+          <section aria-label={`Spent in ${monthLabel}`} className="mb-8">
+            <p className="text-[0.9375rem] font-medium text-muted-foreground">Spent</p>
+            <div className="mt-1">
+              <HeadlineFigure value={total} currency="EUR" />
             </div>
-            <div
-              className="w-full"
-              style={{ height: Math.max(220, rows.length * 44) }}
-              role="img"
-              aria-label={shareSummary(
-                "Spend by category",
-                rows.map((r) => ({ label: r.category, value: r.spend_eur })),
-              )}
-            >
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={rows}
-                  layout="vertical"
-                  margin={{ top: 4, right: 16, bottom: 4, left: 8 }}
-                >
-                  <CartesianGrid
-                    strokeDasharray="3 6"
-                    stroke="var(--color-border)"
-                    horizontal={false}
-                  />
-                  <XAxis
-                    type="number"
-                    tickFormatter={(v: number) =>
-                      v >= 1000 ? `€${Math.round(v / 1000)}k` : `€${v}`
-                    }
-                    tick={{ fill: "var(--color-muted-foreground)", fontSize: 11 }}
-                    tickLine={false}
-                    axisLine={false}
-                  />
-                  <YAxis
-                    type="category"
-                    dataKey="category"
-                    width={isMobile ? 84 : 110}
-                    tickFormatter={(name: string) =>
-                      isMobile && name.length > 11 ? `${name.slice(0, 10)}…` : name
-                    }
-                    tick={{ fill: "var(--color-foreground)", fontSize: 12 }}
-                    tickLine={false}
-                    axisLine={false}
-                  />
-                  <Tooltip
-                    content={<SpendTooltip />}
-                    cursor={{ fill: "var(--color-muted)", fillOpacity: 0.3 }}
-                  />
-                  <Bar dataKey="spend_eur" radius={[0, 6, 6, 0]} maxBarSize={26}>
-                    {rows.map((row) => (
-                      <Cell key={row.category} fill={categoryColor(row.category)} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
+            <div className="mt-5">
+              <ShareBar
+                title="Spend by category"
+                shares={rows.map((r) => ({
+                  label: r.category,
+                  value: r.spend_eur,
+                  color: categoryColor(r.category),
+                }))}
+              />
             </div>
           </section>
 
           {/* Breakdown list */}
-          <section className="overflow-hidden rounded-2xl border bg-card card-ring">
+          <section className="overflow-hidden rounded-2xl bg-card">
             <ul className="divide-y">
               {rows.map((row) => (
                 <CategoryRow
@@ -277,7 +204,7 @@ function SpendingPage() {
       )}
 
       {regretCount > 0 && (
-        <section className="mt-6 overflow-hidden rounded-2xl border bg-card card-ring">
+        <section className="mt-6 overflow-hidden rounded-2xl bg-card">
           <div className="border-b px-4 py-3 sm:px-5">
             <h2 className="text-sm font-semibold text-foreground">
               Not worth it — {formatEur(regretTotal)} across {regretCount} purchase
@@ -297,30 +224,12 @@ function SpendingPage() {
                   {row.category}{" "}
                   <span className="text-xs text-muted-foreground">({row.count})</span>
                 </span>
-                <span className="font-figure text-negative">{formatEur(row.total)}</span>
+                <span className="font-figure text-foreground">{formatEur(row.total)}</span>
               </li>
             ))}
           </ul>
         </section>
       )}
-    </div>
-  );
-}
-
-interface TooltipEntry {
-  payload?: { category: string; spend_eur: number };
-}
-
-function SpendTooltip({ active, payload }: { active?: boolean; payload?: Array<TooltipEntry> }) {
-  if (!active || !payload?.length) return null;
-  const point = payload.at(0)?.payload;
-  if (!point) return null;
-  return (
-    <div className="rounded-lg border bg-popover px-3 py-2 shadow-lg">
-      <p className="text-xs text-muted-foreground">{point.category}</p>
-      <p className="font-figure mt-0.5 text-sm font-semibold text-foreground">
-        {formatEur(point.spend_eur)}
-      </p>
     </div>
   );
 }

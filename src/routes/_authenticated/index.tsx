@@ -1,25 +1,18 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import {
-  Area,
-  AreaChart,
-  CartesianGrid,
-  Line,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
-import { ArrowDownRight, ArrowUpRight } from "lucide-react";
+import { Bitcoin, Briefcase, Landmark } from "lucide-react";
 import { trendSummary } from "@/lib/chart-summary";
 import { supabase } from "@/integrations/supabase/client";
 import { WelcomeCard } from "@/components/import/welcome-card";
 import { AllocationChart } from "@/components/allocation-chart";
+import { HeadlineFigure } from "@/components/headline-figure";
+import { formatDay } from "@/lib/date";
+import { ValueChart } from "@/components/value-chart";
 import { SegmentedControl } from "@/components/segmented-control";
-import { axisDateFormatter, formatISODate } from "@/lib/date";
 import {
   CHART_RANGES,
+  RANGE_LABEL,
   changeOver,
   chartPoints,
   inRange,
@@ -31,9 +24,8 @@ import {
 import { fetchHistory, fetchNetWorth, fetchReconstructed } from "@/lib/net-worth-queries";
 import { FriendsCreditLine } from "@/components/splitwise/balances-view";
 import { friendsCreditEur as friendsCreditEurOf } from "@/lib/import/splitwise-balances";
-import { useIsMobile } from "@/lib/use-is-mobile";
 import { useSplitwiseBalances } from "@/lib/use-splitwise-balances";
-import { TONE_PILL, toneOf } from "@/lib/tone";
+import { TONE_TEXT, toneOf } from "@/lib/tone";
 
 export type NetWorthSnapshot = {
   snapshot_date: string;
@@ -43,23 +35,6 @@ export type NetWorthSnapshot = {
   crypto_total_eur: number;
 };
 export type FxRate = { date: string; currency: string; rate_to_eur: number };
-
-// Trailing simple moving average, capped at 365 days but shrinking to a
-// fraction of however much history actually exists so the trend line is
-// still visible while the dataset is young (rather than a strict 12-month
-// window that would stay empty for the first year of usage).
-const TREND_WINDOW_DAYS = 365;
-
-function withTrend<T extends NetWorthSnapshot>(
-  snapshots: Array<T>,
-): Array<T & { trend_eur: number | null }> {
-  const window = Math.min(TREND_WINDOW_DAYS, Math.max(1, Math.floor(snapshots.length / 3)));
-  return snapshots.map((row, i) => {
-    const slice = snapshots.slice(Math.max(0, i + 1 - window), i + 1);
-    const avg = slice.reduce((sum, r) => sum + r.total_eur, 0) / slice.length;
-    return { ...row, trend_eur: avg };
-  });
-}
 
 export const Route = createFileRoute("/_authenticated/")({
   head: () => ({
@@ -116,7 +91,6 @@ function formatMoney(value: number, currency: Currency): string {
 }
 
 function NetWorthPage() {
-  const isMobile = useIsMobile();
   const [currency, setCurrency] = useState<Currency>("EUR");
   const [range, setRange] = useState<ChartRange>("1Y");
 
@@ -137,19 +111,11 @@ function NetWorthPage() {
   });
 
   const snapshots = useMemo(() => netWorthQuery.data ?? [], [netWorthQuery.data]);
-  // Trend runs over the whole series before the range cut, so it doesn't restart at the edge.
   const chartData = useMemo(
     () =>
       inRange(
-        withTrend(
-          chartPoints(
-            withHistory(
-              historyQuery.data ?? [],
-              snapshots,
-              undefined,
-              reconstructedQuery.data ?? [],
-            ),
-          ),
+        chartPoints(
+          withHistory(historyQuery.data ?? [], snapshots, undefined, reconstructedQuery.data ?? []),
         ),
         range,
       ),
@@ -197,18 +163,27 @@ function NetWorthPage() {
   const monthChange = latestIso ? changeOver(series, monthAgo(latestIso)) : null;
   const ytdChange = latestIso ? changeOver(series, yearStart(latestIso)) : null;
 
+  // Scrubbing the chart rewrites the headline to that day; leaving it shows today again.
+  const [scrubIndex, setScrubIndex] = useState<number | null>(null);
+  const scrubbed = scrubIndex != null ? chartData.at(scrubIndex) : undefined;
+
+  const shownEur = scrubbed?.total_eur ?? latest?.total_eur ?? null;
+  const shownValue = shownEur != null && rateToEur != null ? shownEur / rateToEur : null;
+  const rangeDeltaEur = chartFirst && shownEur != null ? shownEur - chartFirst.total_eur : null;
+  const rangeChange =
+    rangeDeltaEur != null && chartFirst && chartFirst.total_eur !== 0
+      ? rangeDeltaEur / Math.abs(chartFirst.total_eur)
+      : null;
+  const breakdown = scrubbed ?? latest;
+
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-8 md:py-12">
-      {/* Header */}
-      <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="ios-large-title">Net Worth</h1>
-          <p className="mt-0.5 text-sm text-muted-foreground">
-            Daily snapshot of everything you own, minus what you owe.
-          </p>
+      <header className="mb-3 flex items-center justify-between gap-4">
+        <div className="text-[0.9375rem] font-medium text-muted-foreground">
+          <h1 className="inline">Net worth</h1>
+          {scrubbed && <span> · {formatDay(scrubbed.snapshot_date)}</span>}
         </div>
-
-        <div className="w-full sm:w-auto">
+        <div className="shrink-0">
           <SegmentedControl
             label="Display currency"
             options={CURRENCIES.map((c) => ({ value: c, label: c }))}
@@ -225,7 +200,7 @@ function NetWorthPage() {
       {netWorthQuery.isError && (
         <div
           role="alert"
-          className="mb-6 rounded-xl border border-negative/30 bg-negative/10 px-4 py-3 text-sm text-negative"
+          className="mb-6 rounded-2xl bg-negative/10 px-4 py-3 text-sm text-negative"
         >
           Couldn't load your net worth data: {netWorthQuery.error.message}
         </div>
@@ -234,81 +209,76 @@ function NetWorthPage() {
       {extraError && (
         <div
           role="alert"
-          className="mb-6 rounded-xl border border-negative/30 bg-negative/10 px-4 py-3 text-sm text-negative"
+          className="mb-6 rounded-2xl bg-negative/10 px-4 py-3 text-sm text-negative"
         >
           Some data couldn't load, so charts and totals may be incomplete: {extraError.message}
         </div>
       )}
 
-      {/* Headline card */}
-      <section className="mb-6 rounded-2xl bg-card p-5 card-ring sm:p-7">
-        <div className="min-h-16">
+      {/* Headline: the number is the screen */}
+      <section aria-label="Net worth today" className="mb-6">
+        <div className="min-h-16" aria-live="polite">
           {netWorthQuery.isPending || (currency !== "EUR" && fxQuery.isPending) ? (
-            <div className="h-14 w-64 animate-pulse rounded-lg bg-muted" />
+            <div className="h-16 w-72 animate-pulse rounded-2xl bg-muted" />
           ) : latest == null ? (
             <p className="text-sm text-muted-foreground">
               No balances yet: connect a bank or add an investment.
             </p>
-          ) : headline != null ? (
-            <p className="font-figure text-5xl font-bold tracking-tight text-foreground sm:text-6xl">
-              {formatMoney(headline, currency)}
-            </p>
+          ) : headline != null && shownValue != null ? (
+            <HeadlineFigure value={shownValue} currency={currency} />
           ) : (
             <p className="text-sm text-muted-foreground">
               No {currency} exchange rate available yet.
             </p>
           )}
+        </div>
+
+        {rangeDeltaEur != null && rangeChange != null && rateToEur != null && (
+          <p className="mt-3 flex flex-wrap items-baseline gap-x-2 text-[0.9375rem]">
+            <span
+              className={`font-figure font-medium ${TONE_TEXT[toneOf(rangeChange, NOISE_BAND)]}`}
+            >
+              {rangeDeltaEur >= 0 ? "+" : "−"}
+              {formatMoney(Math.abs(rangeDeltaEur) / rateToEur, currency)} (
+              {formatPercent(rangeChange)})
+            </span>
+            <span className="text-muted-foreground">
+              {scrubbed && chartFirst
+                ? `${formatDay(chartFirst.snapshot_date)} – ${formatDay(scrubbed.snapshot_date)}`
+                : RANGE_LABEL[range]}
+            </span>
+          </p>
+        )}
+
+        {/* Today's context only: hidden (space kept) while the headline shows a past day */}
+        <div className={scrubbed ? "invisible" : undefined}>
+          <dl className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-sm">
+            <InlineChange label="Today" value={dayChange} />
+            <InlineChange label="Month" value={monthChange} />
+            <InlineChange label="YTD" value={ytdChange} />
+          </dl>
+
           {currency !== "EUR" && headline != null && rateToEur != null && (
             <p className="mt-2 text-xs text-muted-foreground">
               Rate: 1 {currency} = {rateToEur.toFixed(4)} EUR · ECB,{" "}
               {formatFxDate(fxQuery.data?.[currency]?.date)}
             </p>
           )}
-        </div>
 
-        {rateToEur != null && (
-          <FriendsCreditLine
-            creditEur={friendsCreditEur}
-            netWorthEur={latest?.total_eur ?? null}
-            format={(eur) => formatMoney(eur / rateToEur, currency)}
-          />
-        )}
-
-        <div className="mt-5 grid max-w-md grid-cols-3 gap-2 sm:gap-3">
-          <ChangeTile label="Day" value={dayChange} />
-          <ChangeTile label="Month" value={monthChange} />
-          <ChangeTile label="YTD" value={ytdChange} />
+          {rateToEur != null && (
+            <FriendsCreditLine
+              creditEur={friendsCreditEur}
+              netWorthEur={latest?.total_eur ?? null}
+              format={(eur) => formatMoney(eur / rateToEur, currency)}
+            />
+          )}
         </div>
       </section>
 
-      {/* Chart card */}
-      <section className="rounded-2xl bg-card px-1 py-4 card-ring sm:p-6">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-2 px-2">
-          <h2 className="text-[0.9375rem] font-semibold text-foreground">Net worth over time</h2>
-          <div className="w-full sm:w-auto">
-            <SegmentedControl
-              label="Chart range"
-              options={CHART_RANGES.map((r) => ({ value: r, label: r }))}
-              value={range}
-              onChange={setRange}
-            />
-          </div>
-          <div className="flex w-full flex-wrap items-center gap-3 text-xs text-muted-foreground">
-            <LegendDot color="var(--color-chart-1)" label="Bank" />
-            <LegendDot color="var(--color-chart-2)" label="Portfolio" />
-            <LegendDot color="var(--color-chart-3)" label="Crypto" />
-            <LegendDot color="var(--color-foreground)" label="Trend" dashed />
-            {chartData.some((p) => p.estimated_eur != null) && (
-              <LegendDot
-                color="var(--color-muted-foreground)"
-                label="No data (straight line)"
-                dashed
-              />
-            )}
-          </div>
-        </div>
+      {/* Chart: one line, no grid; scrub it to read any day */}
+      <section aria-label="Net worth over time" className="mb-8">
         <div
-          className="h-80 w-full"
+          className="-mx-1 h-72 sm:h-80"
           role="img"
           aria-label={
             chartFirst && latest
@@ -319,117 +289,74 @@ function NetWorthPage() {
           }
         >
           {netWorthQuery.isPending ? (
-            <div className="h-full w-full animate-pulse rounded-xl bg-muted/50" />
+            <div className="h-full w-full animate-pulse rounded-2xl bg-muted/60" />
           ) : chartData.length === 0 ? (
             <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
               No data to chart yet.
             </div>
           ) : (
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
-                <CartesianGrid
-                  strokeDasharray="3 6"
-                  stroke="var(--color-border)"
-                  vertical={false}
-                />
-                <XAxis
-                  dataKey="ts"
-                  type="number"
-                  scale="time"
-                  domain={["dataMin", "dataMax"]}
-                  tickFormatter={(ts: number) =>
-                    axisDateFormatter(
-                      chartFirst?.snapshot_date,
-                      latest?.snapshot_date,
-                    )(formatISODate(new Date(ts)))
-                  }
-                  tick={{
-                    fill: "var(--color-muted-foreground)",
-                    fontSize: 11,
-                  }}
-                  tickLine={false}
-                  axisLine={false}
-                  minTickGap={40}
-                  interval="preserveStartEnd"
-                />
-                <YAxis
-                  width={isMobile ? 48 : 70}
-                  tickFormatter={(v: number) => (v >= 1000 ? `€${Math.round(v / 1000)}k` : `€${v}`)}
-                  tick={{
-                    fill: "var(--color-muted-foreground)",
-                    fontSize: 11,
-                  }}
-                  tickLine={false}
-                  axisLine={false}
-                  domain={["auto", "auto"]}
-                />
-                <Tooltip
-                  content={<NetWorthTooltip />}
-                  cursor={{
-                    stroke: "var(--color-primary)",
-                    strokeOpacity: 0.3,
-                  }}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="bank_total_eur"
-                  name="Bank"
-                  stackId="networth"
-                  stroke="var(--color-chart-1)"
-                  strokeWidth={1.5}
-                  fill="var(--color-chart-1)"
-                  fillOpacity={0.55}
-                  dot={false}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="portfolio_total_eur"
-                  name="Portfolio"
-                  stackId="networth"
-                  stroke="var(--color-chart-2)"
-                  strokeWidth={1.5}
-                  fill="var(--color-chart-2)"
-                  fillOpacity={0.55}
-                  dot={false}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="crypto_total_eur"
-                  name="Crypto"
-                  stackId="networth"
-                  stroke="var(--color-chart-3)"
-                  strokeWidth={1.5}
-                  fill="var(--color-chart-3)"
-                  fillOpacity={0.55}
-                  dot={false}
-                />
-                <Line
-                  type="linear"
-                  dataKey="estimated_eur"
-                  name="Estimate"
-                  stroke="var(--color-muted-foreground)"
-                  strokeWidth={1.5}
-                  strokeDasharray="2 4"
-                  dot={false}
-                  activeDot={false}
-                  connectNulls
-                />
-                <Line
-                  type="monotone"
-                  dataKey="trend_eur"
-                  name="Trend"
-                  stroke="var(--color-foreground)"
-                  strokeWidth={1.5}
-                  strokeDasharray="4 4"
-                  dot={false}
-                  activeDot={false}
-                  connectNulls
-                />
-              </AreaChart>
-            </ResponsiveContainer>
+            <ValueChart
+              data={chartData}
+              dataKey="total_eur"
+              name="Net worth"
+              estimateKey="estimated_eur"
+              onScrub={setScrubIndex}
+            />
           )}
         </div>
+
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+          <SegmentedControl
+            label="Chart range"
+            options={CHART_RANGES.map((r) => ({ value: r, label: r }))}
+            value={range}
+            onChange={setRange}
+          />
+          <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
+            {chartData.some((p) => p.estimated_eur != null) && (
+              <LegendDot
+                color="var(--color-muted-foreground)"
+                label="No data (straight line)"
+                dashed
+              />
+            )}
+          </div>
+        </div>
       </section>
+
+      {/* What it is made of, on the scrubbed day when scrubbing */}
+      {breakdown != null && rateToEur != null && (
+        <section aria-labelledby="breakdown-title" className="mb-8">
+          <h2 id="breakdown-title" className="mb-2 px-1 text-lg font-semibold text-foreground">
+            Breakdown
+          </h2>
+          <ul className="divide-y overflow-hidden rounded-2xl bg-card">
+            {BREAKDOWN.map(({ key, label, icon: Icon }) => {
+              const valueEur = breakdown[key];
+              const share = breakdown.total_eur !== 0 ? valueEur / breakdown.total_eur : 0;
+              return (
+                <li key={key} className="flex min-h-16 items-center gap-3 px-4 py-3">
+                  <span
+                    aria-hidden
+                    className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted text-foreground"
+                  >
+                    <Icon className="size-[1.125rem]" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[0.9375rem] font-medium text-foreground">{label}</p>
+                    <p className="font-figure text-xs text-muted-foreground">
+                      {formatPercent(share, false)} of total
+                    </p>
+                  </div>
+                  <p className="font-figure text-[0.9375rem] font-semibold text-foreground">
+                    {formatMoney(valueEur / rateToEur, currency)}
+                  </p>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
 
       <AllocationChart
         history={historyQuery.data ?? []}
@@ -438,6 +365,17 @@ function NetWorthPage() {
       />
     </div>
   );
+}
+
+const BREAKDOWN = [
+  { key: "bank_total_eur", label: "Bank", icon: Landmark },
+  { key: "portfolio_total_eur", label: "Portfolio", icon: Briefcase },
+  { key: "crypto_total_eur", label: "Crypto", icon: Bitcoin },
+] as const;
+
+function formatPercent(value: number, signed = true): string {
+  const sign = signed ? (value > 0 ? "+" : value < 0 ? "−" : "") : "";
+  return `${sign}${Math.abs(value * 100).toFixed(2)}%`;
 }
 
 function LegendDot({ color, label, dashed }: { color: string; label: string; dashed?: boolean }) {
@@ -462,78 +400,14 @@ function LegendDot({ color, label, dashed }: { color: string; label: string; das
 // Moves under half a percent are noise: show them without alarm colour.
 const NOISE_BAND = 0.005;
 
-// Three equal tiles (label over value) so they never wrap into 2 + 1 on a phone.
-function ChangeTile({ label, value }: { label: string; value: number | null }) {
-  if (value == null) return <div />;
-  const Icon = value >= 0 ? ArrowUpRight : ArrowDownRight;
+function InlineChange({ label, value }: { label: string; value: number | null }) {
+  if (value == null) return null;
   return (
-    <div
-      className={`flex flex-col items-center gap-0.5 rounded-xl border px-2 py-2 text-center ${
-        TONE_PILL[toneOf(value, NOISE_BAND)]
-      }`}
-    >
-      <span className="text-[0.6875rem] text-muted-foreground">{label}</span>
-      <span className="font-figure inline-flex items-center gap-1 text-sm font-semibold whitespace-nowrap">
-        <Icon className="size-3.5" />
-        {value >= 0 ? "+" : ""}
-        {(value * 100).toFixed(2)}%
-      </span>
-    </div>
-  );
-}
-
-interface TooltipEntry {
-  payload?: NetWorthSnapshot & { trend_eur: number | null };
-}
-
-function NetWorthTooltip({
-  active,
-  payload,
-  label,
-}: {
-  active?: boolean;
-  payload?: Array<TooltipEntry>;
-  label?: number;
-}) {
-  if (!active || !payload?.length || label == null) return null;
-  const point = payload.at(0)?.payload;
-  if (!point) return null;
-  return (
-    <div className="rounded-lg border bg-popover px-3 py-2 shadow-lg">
-      <p className="text-xs text-muted-foreground">
-        {new Date(label).toLocaleDateString("en-GB", {
-          day: "numeric",
-          month: "short",
-          year: "numeric",
-        })}
-      </p>
-      <p className="font-figure mt-0.5 text-sm font-semibold text-foreground">
-        {formatMoney(point.total_eur, "EUR")}
-      </p>
-      <div className="mt-2 space-y-0.5 text-xs">
-        <TooltipRow color="var(--color-chart-1)" label="Bank" value={point.bank_total_eur} />
-        <TooltipRow
-          color="var(--color-chart-2)"
-          label="Portfolio"
-          value={point.portfolio_total_eur}
-        />
-        <TooltipRow color="var(--color-chart-3)" label="Crypto" value={point.crypto_total_eur} />
-        {point.trend_eur != null && (
-          <TooltipRow color="var(--color-foreground)" label="Trend" value={point.trend_eur} />
-        )}
-      </div>
-    </div>
-  );
-}
-
-function TooltipRow({ color, label, value }: { color: string; label: string; value: number }) {
-  return (
-    <div className="flex items-center justify-between gap-4">
-      <span className="flex items-center gap-1.5 text-muted-foreground">
-        <span className="inline-block size-1.5 rounded-full" style={{ backgroundColor: color }} />
-        {label}
-      </span>
-      <span className="font-figure text-foreground">{formatMoney(value, "EUR")}</span>
+    <div className="flex items-baseline gap-1.5">
+      <dt className="text-muted-foreground">{label}</dt>
+      <dd className={`font-figure font-medium ${TONE_TEXT[toneOf(value, NOISE_BAND)]}`}>
+        {formatPercent(value)}
+      </dd>
     </div>
   );
 }
