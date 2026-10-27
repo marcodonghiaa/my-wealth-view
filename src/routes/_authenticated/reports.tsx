@@ -40,7 +40,7 @@ function endOfMonth(date: Date): Date {
 }
 
 function formatSigned(value: number): string {
-  return `${value >= 0 ? "+" : ""}${formatEur(value)}`;
+  return `${value >= 0 ? "+" : "−"}${formatEur(Math.abs(value))}`;
 }
 
 interface IncomeExpenseRow {
