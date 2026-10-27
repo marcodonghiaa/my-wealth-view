@@ -112,6 +112,7 @@ export function AllocationChart({
             />
             {classes.map((c) => (
               <Area
+                isAnimationActive={false}
                 key={c.key}
                 type="monotone"
                 dataKey={c.key}
