@@ -1,37 +1,24 @@
+import { Cell, Pie, PieChart, ResponsiveContainer } from "recharts";
+import { shareSummary } from "@/lib/chart-summary";
+import { formatDay } from "@/lib/date";
 import {
-  Area,
-  AreaChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
-import { useState } from "react";
-import { SegmentedControl } from "@/components/segmented-control";
-import {
-  ALLOCATION_RANGES,
   allocationHistory,
-  allocationSeries,
-  breakAtGaps,
-  inRange,
-  type AllocationPlotPoint,
-  type ChartRange,
   type HistoryRow,
   type NetWorthRow,
   type ReconstructedRow,
 } from "@/lib/net-worth";
-import { axisDateFormatter, formatISODate } from "@/lib/date";
-import { useIsMobile } from "@/lib/use-is-mobile";
+import { formatEur } from "@/lib/transactions";
 
 const CLASSES = [
-  { key: "stocks", label: "Stocks", color: "var(--color-chart-2)" },
-  { key: "bonds", label: "Bonds", color: "var(--color-chart-4)" },
-  { key: "crypto", label: "Crypto", color: "var(--color-chart-3)" },
-  { key: "cash", label: "Cash", color: "var(--color-chart-1)" },
-  { key: "other", label: "Unallocated", color: "var(--color-muted-foreground)" },
+  { key: "stocks_eur", label: "Stocks", color: "var(--color-chart-2)" },
+  { key: "bonds_eur", label: "Bonds", color: "var(--color-chart-4)" },
+  { key: "crypto_eur", label: "Crypto", color: "var(--color-chart-3)" },
+  { key: "cash_eur", label: "Cash", color: "var(--color-chart-1)" },
+  { key: "other_eur", label: "Unallocated", color: "var(--color-muted-foreground)" },
 ] as const;
 
+// Today's mix of gross assets as a donut, with the exact euros and shares beside it.
+// Liabilities (tax reserve) are left out so the mix describes what you hold, not what you owe.
 export function AllocationChart({
   history,
   snapshots,
@@ -41,132 +28,71 @@ export function AllocationChart({
   snapshots: Array<NetWorthRow>;
   reconstructed?: Array<ReconstructedRow>;
 }) {
-  const isMobile = useIsMobile();
-  const [range, setRange] = useState<ChartRange>("1Y");
-  const all = allocationSeries(allocationHistory(history, snapshots, undefined, reconstructed));
-  if (all.length < 2) return null;
-  const data = breakAtGaps(inRange(all, range));
-  // The grey band only appears when some imported total has no split.
-  const classes = CLASSES.filter((c) => c.key !== "other" || data.some((d) => (d.other ?? 0) > 0));
-  const fmtTick = axisDateFormatter(data[0]?.snapshot_date, data.at(-1)?.snapshot_date);
-
-  return (
-    <section className="mt-6 rounded-2xl bg-card px-1 py-4 sm:p-6">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-2 px-2">
-        <h2 className="text-[0.9375rem] font-semibold text-foreground">
-          Asset allocation over time
-        </h2>
-        <div className="w-full sm:w-auto">
-          <SegmentedControl
-            label="Allocation range"
-            options={ALLOCATION_RANGES.map((r) => ({ value: r, label: r }))}
-            value={range}
-            onChange={setRange}
-          />
-        </div>
-        <div className="flex w-full flex-wrap items-center gap-3 text-xs text-muted-foreground">
-          {classes.map((c) => (
-            <span key={c.key} className="inline-flex items-center gap-1.5">
-              <span
-                className="inline-block size-2 rounded-full"
-                style={{ backgroundColor: c.color }}
-              />
-              {c.label}
-            </span>
-          ))}
-        </div>
-      </div>
-      <div
-        className="h-64 w-full"
-        role="img"
-        aria-label="Asset allocation over time, share of stocks, bonds, crypto, cash and unallocated"
-      >
-        <ResponsiveContainer width="100%" height="100%">
-          <AreaChart
-            data={data}
-            stackOffset="expand"
-            margin={{ top: 8, right: 8, bottom: 0, left: 0 }}
-          >
-            <CartesianGrid strokeDasharray="3 6" stroke="var(--color-border)" vertical={false} />
-            <XAxis
-              dataKey="ts"
-              type="number"
-              scale="time"
-              domain={["dataMin", "dataMax"]}
-              tickFormatter={(ts: number) => fmtTick(formatISODate(new Date(ts)))}
-              tick={{ fill: "var(--color-muted-foreground)", fontSize: 11 }}
-              tickLine={false}
-              axisLine={false}
-              minTickGap={40}
-            />
-            <YAxis
-              width={isMobile ? 36 : 44}
-              tickFormatter={(v: number) => `${Math.round(v * 100)}%`}
-              tick={{ fill: "var(--color-muted-foreground)", fontSize: 11 }}
-              tickLine={false}
-              axisLine={false}
-            />
-            <Tooltip
-              content={<AllocationTooltip classes={classes} />}
-              cursor={{ stroke: "var(--color-primary)", strokeOpacity: 0.3 }}
-            />
-            {classes.map((c) => (
-              <Area
-                isAnimationActive={false}
-                key={c.key}
-                type="monotone"
-                dataKey={c.key}
-                name={c.label}
-                stackId="mix"
-                stroke={c.color}
-                strokeWidth={1.5}
-                fill={c.color}
-                fillOpacity={0.55}
-                dot={false}
-              />
-            ))}
-          </AreaChart>
-        </ResponsiveContainer>
-      </div>
-      {reconstructed.length > 0 && (
-        <p className="mt-2 px-2 text-xs text-muted-foreground">
-          Rebuilt months use today's quantities and exclude CDs.
-        </p>
-      )}
-    </section>
+  const latest = allocationHistory(history, snapshots, undefined, reconstructed).at(-1);
+  if (!latest) return null;
+  const slices = CLASSES.map((c) => ({ ...c, value: latest[c.key] ?? 0 })).filter(
+    (s) => s.value > 0,
   );
-}
+  const gross = slices.reduce((sum, s) => sum + s.value, 0);
+  if (gross <= 0) return null;
 
-function AllocationTooltip({
-  active,
-  payload,
-  classes,
-}: {
-  classes: ReadonlyArray<(typeof CLASSES)[number]>;
-  active?: boolean;
-  payload?: Array<{ payload?: AllocationPlotPoint }>;
-}) {
-  const point = payload?.at(0)?.payload;
-  if (!active || !point || point.stocks === null) return null;
   return (
-    <div className="rounded-lg border bg-popover px-3 py-2 shadow-lg">
-      <p className="text-xs text-muted-foreground">
-        {new Date(point.ts).toLocaleDateString("en-GB", { month: "short", year: "numeric" })}
-      </p>
-      <div className="mt-1 space-y-0.5 text-xs">
-        {classes.map((c) => (
-          <p key={c.key} className="flex items-center justify-between gap-4">
-            <span className="inline-flex items-center gap-1.5">
+    <section aria-labelledby="allocation-title" className="mt-6 rounded-2xl bg-card p-5 sm:p-6">
+      <h2 id="allocation-title" className="text-lg font-semibold text-foreground">
+        Asset allocation
+      </h2>
+      <p className="text-xs text-muted-foreground">As of {formatDay(latest.snapshot_date)}</p>
+
+      <div className="mt-4 flex flex-col items-center gap-6 sm:flex-row sm:gap-10">
+        <div
+          className="size-48 shrink-0"
+          role="img"
+          aria-label={shareSummary(
+            "Asset allocation",
+            slices.map((s) => ({ label: s.label, value: s.value })),
+          )}
+        >
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={slices}
+                dataKey="value"
+                nameKey="label"
+                innerRadius="62%"
+                outerRadius="100%"
+                startAngle={90}
+                endAngle={-270}
+                stroke="var(--color-card)"
+                strokeWidth={2}
+                isAnimationActive={false}
+              >
+                {slices.map((s) => (
+                  <Cell key={s.key} fill={s.color} />
+                ))}
+              </Pie>
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+
+        <ul className="w-full flex-1 divide-y">
+          {slices.map((s) => (
+            <li key={s.key} className="flex items-center gap-3 py-2.5 text-[0.9375rem]">
               <span
-                className="inline-block size-2 rounded-full"
-                style={{ backgroundColor: c.color }}
+                aria-hidden
+                className="inline-block size-2.5 shrink-0 rounded-full"
+                style={{ backgroundColor: s.color }}
               />
-              {c.label}
-            </span>
-            <span className="font-figure">{(point[c.key] ?? 0).toFixed(1)}%</span>
-          </p>
-        ))}
+              <span className="flex-1 text-foreground">{s.label}</span>
+              <span className="font-figure text-muted-foreground">
+                {((s.value / gross) * 100).toFixed(1)}%
+              </span>
+              <span className="w-28 text-right font-figure font-medium text-foreground">
+                {formatEur(s.value)}
+              </span>
+            </li>
+          ))}
+        </ul>
       </div>
-    </div>
+    </section>
   );
 }
