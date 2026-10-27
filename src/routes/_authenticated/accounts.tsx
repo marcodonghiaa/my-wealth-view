@@ -1,11 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { ChevronDown, Link2, Loader2, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { MaskedIban } from "@/components/masked-iban";
 import { supabase } from "@/integrations/supabase/client";
 import { assertHttpsUrl } from "@/lib/consent-url";
+import { COUNTRIES, linkedMessage, renewTarget } from "@/lib/bank-link";
 import { functionErrorMessage } from "@/lib/function-error";
 import { consentAlerts, type ConsentAlert } from "@/lib/consent-expiry";
 import { formatISODate } from "@/lib/date";
@@ -45,6 +47,7 @@ interface BankAccountRow {
   // Absent on a database without the bank columns yet, null until the bank is renewed.
   bank_name?: string | null;
   bank_logo?: string | null;
+  bank_country?: string | null;
 }
 
 interface BankGroup {
@@ -115,10 +118,10 @@ function AccountsPage() {
   // Landed here from the bank-consent-callback redirect after connecting a bank.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const linked = params.get("bank_linked");
+    const linked = linkedMessage(params);
     const error = params.get("bank_link_error");
     if (linked) {
-      toast.success(`${linked} account${linked === "1" ? "" : "s"} connected`);
+      toast.success(linked);
       void queryClient.invalidateQueries({ queryKey: ["bank-accounts-latest"] });
     } else if (error) {
       toast.error("Couldn't connect bank", { description: error });
@@ -176,6 +179,7 @@ function AccountsPage() {
   const [bankName, setBankName] = useState("");
   const [bankCountry, setBankCountry] = useState("IT");
   const [connectError, setConnectError] = useState<string | null>(null);
+  const connectStepsRef = useRef<HTMLOListElement>(null);
 
   // Only fetched once the form is actually open, and cached per country so
   // switching back to a country already loaded doesn't re-hit the function.
@@ -370,7 +374,19 @@ function AccountsPage() {
             <span>{consentMessage(alert)}</span>
             <button
               type="button"
-              onClick={() => setShowConnectForm(true)}
+              onClick={() => {
+                // Prefill without the country select's handler, which would clear the bank.
+                const t = renewTarget(alert.bank, bankAccounts);
+                if (t) {
+                  setBankCountry(t.country);
+                  setBankName(t.bankName);
+                } else {
+                  setBankName(""); // never keep another bank from an earlier Renew
+                }
+                flushSync(() => setShowConnectForm(true));
+                connectStepsRef.current?.scrollIntoView({ block: "center" });
+                connectStepsRef.current?.focus({ preventScroll: true });
+              }}
               className="min-h-11 rounded-full px-3 font-medium text-primary hover:bg-primary/10"
             >
               Renew access
@@ -396,6 +412,28 @@ function AccountsPage() {
           </button>
           {showConnectForm && (
             <div className="px-5 pb-5">
+              <ol
+                ref={connectStepsRef}
+                tabIndex={-1}
+                className="mb-4 list-decimal space-y-2 pl-5 text-sm text-foreground focus:outline-none"
+              >
+                <li>
+                  <a
+                    href="https://enablebanking.com/cp/applications"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="font-medium text-primary hover:underline"
+                  >
+                    Approve in Enable Banking <span aria-hidden="true">↗</span>
+                    <span className="sr-only">(opens in new tab)</span>
+                  </a>
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    Once per bank: in your app, use Link accounts and pick this bank. Already done?
+                    Skip.
+                  </p>
+                </li>
+                <li>Pick the bank below, then Approve here and sign in with your bank.</li>
+              </ol>
               <div className="grid gap-3 sm:grid-cols-[auto_1fr]">
                 <div>
                   <label className="mb-1 block text-xs text-muted-foreground">Country</label>
@@ -407,16 +445,11 @@ function AccountsPage() {
                     }}
                     className="w-full rounded-lg border bg-background px-3 py-2 text-base focus:ring-2 focus:ring-ring focus:outline-none sm:w-28"
                   >
-                    <option value="IT">Italy</option>
-                    <option value="DE">Germany</option>
-                    <option value="FR">France</option>
-                    <option value="ES">Spain</option>
-                    <option value="GB">UK</option>
-                    <option value="NL">Netherlands</option>
-                    <option value="BE">Belgium</option>
-                    <option value="AT">Austria</option>
-                    <option value="PT">Portugal</option>
-                    <option value="IE">Ireland</option>
+                    {COUNTRIES.map((c) => (
+                      <option key={c.code} value={c.code}>
+                        {c.name}
+                      </option>
+                    ))}
                   </select>
                 </div>
                 <div>
@@ -446,7 +479,7 @@ function AccountsPage() {
               <div className="mt-4 flex items-center gap-3">
                 <button
                   type="submit"
-                  disabled={connectBank.isPending || !bankName}
+                  disabled={connectBank.isPending || !banks.some((b) => b.name === bankName)}
                   className="inline-flex min-h-11 items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
                 >
                   {connectBank.isPending ? (
@@ -454,7 +487,7 @@ function AccountsPage() {
                   ) : (
                     <Link2 className="size-4" />
                   )}
-                  {connectBank.isPending ? "Connecting…" : "Connect"}
+                  {connectBank.isPending ? "Connecting…" : "Approve here"}
                 </button>
                 {connectError && <p className="text-sm text-negative">{connectError}</p>}
               </div>
