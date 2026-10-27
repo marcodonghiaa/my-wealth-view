@@ -27,8 +27,18 @@ self.addEventListener("notificationclick", (event) => {
   const url = safeNotificationUrl(event.notification.data?.url || "/");
   event.waitUntil(
     self.clients.matchAll({ type: "window" }).then((clients) => {
-      for (const client of clients) {
-        if (client.url.includes(url) && "focus" in client) return client.focus();
+      const already = clients.find((c) => c.url === url);
+      if (already) return already.focus();
+      // The app is open on another page (common for an installed iOS app):
+      // send that window to the tapped page instead of just showing it.
+      const client = clients[0];
+      if (client) {
+        // Inside .then so a missing navigate() also lands in the openWindow fallback;
+        // a focus() failure after navigating must not open a second window.
+        return Promise.resolve()
+          .then(() => client.navigate(url))
+          .then((c) => (c ?? client).focus().catch(() => {}))
+          .catch(() => self.clients.openWindow(url));
       }
       if (self.clients.openWindow) return self.clients.openWindow(url);
     }),
