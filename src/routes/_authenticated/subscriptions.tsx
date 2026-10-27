@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { estimatedMonthlyEur, splitSubscriptions } from "@/lib/subscriptions";
 import { formatMoney } from "@/lib/transactions";
+import { MerchantAvatar } from "@/components/merchant-avatar";
 
 export const Route = createFileRoute("/_authenticated/subscriptions")({
   head: () => ({
@@ -213,38 +214,35 @@ function SubscriptionsPage() {
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-8 md:py-12">
-      <header className="mb-8">
-        <h1 className="ios-large-title">Subscriptions</h1>
-        <p className="mt-0.5 text-sm text-muted-foreground">
-          Recurring charges grouped by merchant.
-        </p>
+      <header className="mb-3">
+        <h1 className="text-[0.9375rem] font-medium text-muted-foreground">Subscriptions</h1>
       </header>
 
       {query.isError && (
         <div
           role="alert"
-          className="mb-6 rounded-xl border border-negative/30 bg-negative/10 px-4 py-3 text-sm text-negative"
+          className="mb-6 rounded-2xl bg-negative/10 px-4 py-3 text-sm text-negative"
         >
           Couldn't load subscriptions: {query.error.message}
         </div>
       )}
 
       {/* Estimated monthly cost */}
-      <section className="mb-6 rounded-2xl bg-card p-5 card-ring sm:p-7">
-        <div className="text-[0.8125rem] text-muted-foreground">Monthly subscriptions</div>
-
-        <div className="mt-3 min-h-16">
+      <section aria-label="Estimated monthly cost" className="mb-8">
+        <div className="min-h-16">
           {query.isPending ? (
-            <div className="h-14 w-64 animate-pulse rounded-lg bg-muted" />
+            <div className="h-16 w-72 animate-pulse rounded-2xl bg-muted" />
           ) : (
-            <p className="font-figure text-5xl font-bold tracking-tight text-foreground sm:text-6xl">
+            <p className="figure-display">
               ~{formatMoney(monthlyTotal, "EUR")}
-              <span className="text-xl font-medium text-muted-foreground"> /month</span>
+              <span className="text-[0.4em] font-medium tracking-normal text-muted-foreground">
+                {" "}
+                /month
+              </span>
             </p>
           )}
         </div>
-
-        <p className="mt-3 text-xs text-muted-foreground">
+        <p className="mt-3 text-sm text-muted-foreground">
           Yearly and quarterly charges count pro rata. One-off charges are not included.
         </p>
       </section>
@@ -254,7 +252,7 @@ function SubscriptionsPage() {
         <ul className="divide-y overflow-hidden rounded-2xl bg-card">
           {Array.from({ length: 5 }).map((_, i) => (
             <li key={i} className="flex items-center gap-3 px-4 py-3">
-              <div className="size-10 animate-pulse rounded-[0.6rem] bg-muted" />
+              <div className="size-10 animate-pulse rounded-full bg-muted" />
               <div className="flex-1 space-y-2">
                 <div className="h-4 w-1/2 animate-pulse rounded bg-muted" />
                 <div className="h-3 w-3/4 animate-pulse rounded bg-muted" />
@@ -323,12 +321,7 @@ function SubscriptionCard({
   return (
     <li className="px-4 py-3">
       <div className="flex items-center gap-3">
-        <span
-          aria-hidden
-          className="flex size-10 shrink-0 items-center justify-center rounded-[0.6rem] bg-primary/15 text-[0.9375rem] font-semibold text-primary"
-        >
-          {name.slice(0, 1).toUpperCase()}
-        </span>
+        <MerchantAvatar name={name} category={sub.category} />
         <div className="min-w-0 flex-1">
           <h2 className="truncate text-[0.9375rem] font-medium text-foreground">{name}</h2>
           <p className="truncate text-[0.8125rem] text-muted-foreground">{details.join(" · ")}</p>
@@ -361,7 +354,7 @@ function SubscriptionCard({
           type="button"
           onClick={onDismiss}
           aria-label={`Remove ${name}`}
-          className="-my-2 -mr-3 inline-flex size-11 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-negative focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+          className="-my-2 -mr-3 inline-flex size-11 items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-negative focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
         >
           <Trash2 className="size-4" />
         </button>

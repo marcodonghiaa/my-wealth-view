@@ -1,3 +1,4 @@
+@import "@fontsource-variable/geist";
 @import "tailwindcss" source(none);
 @source "../src";
 @import "tw-animate-css";
@@ -6,10 +7,10 @@
 
 /*
  * MyFinances design system.
- * iOS-style: system font, black base with grouped fills, a blue tint for
- * interactive elements, green/red reserved for gains and losses, hairline
- * separators, large titles and translucent bars. Tokens are semantic roles
- * (label, grouped fill, separator, tint); components never hard-code colors.
+ * Number-first: Geist with tabular figures, a pale ground with white grouped
+ * lists, brand forest as the one control tint (mint on dark), green/red only
+ * for gains and losses, hairline rows and fully rounded pills. Tokens are
+ * semantic roles; components never hard-code colors.
  */
 
 @theme inline {
@@ -56,96 +57,102 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
-  --font-sans: -apple-system, BlinkMacSystemFont, system-ui, "Segoe UI", Roboto, sans-serif;
+  --font-sans:
+    "Geist Variable", -apple-system, BlinkMacSystemFont, system-ui, "Segoe UI", Roboto, sans-serif;
+  --color-mint: var(--mint);
   --font-mono: ui-monospace, "SF Mono", Menlo, monospace;
 }
 
 :root {
   color-scheme: light;
-  --radius: 0.75rem;
-  /* Surfaces: grouped base, white cards, white elevated */
-  --background: oklch(0.965 0.004 286);
-  --foreground: oklch(0 0 0);
+  --radius: 0.875rem;
+  /* Surfaces: pale ground, white grouped lists, white elevated */
+  --background: oklch(0.977 0.003 165);
+  --foreground: oklch(0.19 0.012 165);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0 0 0);
+  --card-foreground: oklch(0.19 0.012 165);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0 0 0);
-  /* Tint */
-  --primary: oklch(0.6 0.2 255);
+  --popover-foreground: oklch(0.19 0.012 165);
+  /* Accent: brand forest #173F34, the only tint for controls */
+  --primary: oklch(0.33 0.05 167);
   --primary-foreground: oklch(1 0 0);
-  --secondary: oklch(0.94 0.004 286);
-  --secondary-foreground: oklch(0 0 0);
-  --muted: oklch(0.94 0.004 286);
-  --muted-foreground: oklch(0.5 0.01 286);
-  --accent: oklch(0.92 0.005 286);
-  --accent-foreground: oklch(0 0 0);
-  /* Status (darker than the dark-mode hues so text keeps 4.5:1 on white) */
-  --destructive: oklch(0.55 0.22 27);
+  --secondary: oklch(0.945 0.005 165);
+  --secondary-foreground: oklch(0.19 0.012 165);
+  --muted: oklch(0.945 0.005 165);
+  --muted-foreground: oklch(0.47 0.012 165);
+  --accent: oklch(0.955 0.006 165);
+  --accent-foreground: oklch(0.19 0.012 165);
+  /* Brand mint #D8ECDD: selection and soft highlights */
+  --mint: oklch(0.925 0.03 155);
+  /* Status: meaning only (gains, losses, warnings), each 4.5:1 on white. Categorical palettes
+     (chart-*, category colours) stay off these two hues so a category never reads as a gain or loss. */
+  --destructive: oklch(0.53 0.2 27);
   --destructive-foreground: oklch(1 0 0);
-  --positive: oklch(0.52 0.15 150);
-  --negative: oklch(0.55 0.22 27);
-  --warning: oklch(0.55 0.15 60);
+  --positive: oklch(0.5 0.13 155);
+  --negative: oklch(0.53 0.2 27);
+  --warning: oklch(0.55 0.13 65);
   /* Separators and fields */
-  --border: oklch(0.3 0.01 286 / 18%);
-  --input: oklch(0.3 0.01 286 / 22%);
-  --ring: oklch(0.6 0.2 255 / 55%);
-  --chart-1: oklch(0.65 0.19 150);
-  --chart-2: oklch(0.6 0.2 255);
-  --chart-3: oklch(0.75 0.16 70);
-  --chart-4: oklch(0.58 0.2 315);
-  --chart-5: oklch(0.6 0.22 27);
-  --sidebar: oklch(0.975 0.003 286);
-  --sidebar-foreground: oklch(0 0 0);
-  --sidebar-primary: oklch(0.6 0.2 255);
+  --border: oklch(0.19 0.012 165 / 10%);
+  --input: oklch(0.19 0.012 165 / 16%);
+  --ring: oklch(0.33 0.05 167 / 50%);
+  --chart-1: oklch(0.55 0.07 200);
+  --chart-2: oklch(0.55 0.15 250);
+  --chart-3: oklch(0.74 0.14 75);
+  --chart-4: oklch(0.55 0.17 310);
+  --chart-5: oklch(0.62 0.07 60);
+  --sidebar: oklch(0.977 0.003 165);
+  --sidebar-foreground: oklch(0.19 0.012 165);
+  --sidebar-primary: oklch(0.33 0.05 167);
   --sidebar-primary-foreground: oklch(1 0 0);
-  --sidebar-accent: oklch(0.6 0.2 255 / 12%);
-  --sidebar-accent-foreground: oklch(0 0 0);
-  --sidebar-border: oklch(0.3 0.01 286 / 18%);
-  --sidebar-ring: oklch(0.6 0.2 255 / 55%);
+  --sidebar-accent: oklch(0.19 0.012 165 / 6%);
+  --sidebar-accent-foreground: oklch(0.19 0.012 165);
+  --sidebar-border: oklch(0.19 0.012 165 / 10%);
+  --sidebar-ring: oklch(0.33 0.05 167 / 50%);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
     color-scheme: dark;
-    /* Surfaces: base, grouped (cards), elevated (popovers, sheets) */
-    --background: oklch(0 0 0);
-    --foreground: oklch(1 0 0);
-    --card: oklch(0.218 0.003 286);
-    --card-foreground: oklch(1 0 0);
-    --popover: oklch(0.27 0.004 286);
-    --popover-foreground: oklch(1 0 0);
-    /* Tint */
-    --primary: oklch(0.66 0.19 253);
-    --primary-foreground: oklch(1 0 0);
-    --secondary: oklch(0.27 0.004 286);
-    --secondary-foreground: oklch(1 0 0);
-    --muted: oklch(0.27 0.004 286);
-    --muted-foreground: oklch(0.68 0.008 286);
-    --accent: oklch(0.3 0.005 286);
-    --accent-foreground: oklch(1 0 0);
+    /* Surfaces: forest-black ground, raised grouped lists, elevated sheets */
+    --background: oklch(0.155 0.006 170);
+    --foreground: oklch(0.965 0.004 165);
+    --card: oklch(0.2 0.007 170);
+    --card-foreground: oklch(0.965 0.004 165);
+    --popover: oklch(0.235 0.008 170);
+    --popover-foreground: oklch(0.965 0.004 165);
+    /* Accent: mint on dark, with forest text on it */
+    --primary: oklch(0.925 0.03 155);
+    --primary-foreground: oklch(0.3 0.05 167);
+    --secondary: oklch(0.245 0.008 170);
+    --secondary-foreground: oklch(0.965 0.004 165);
+    --muted: oklch(0.245 0.008 170);
+    --muted-foreground: oklch(0.72 0.01 165);
+    --accent: oklch(0.26 0.009 170);
+    --accent-foreground: oklch(0.965 0.004 165);
+    --mint: oklch(0.925 0.03 155);
     /* Status */
-    --destructive: oklch(0.66 0.22 27);
-    --destructive-foreground: oklch(1 0 0);
-    --positive: oklch(0.78 0.2 150);
-    --negative: oklch(0.66 0.22 27);
-    --warning: oklch(0.8 0.17 70);
+    --destructive: oklch(0.7 0.18 25);
+    --destructive-foreground: oklch(0.155 0.006 170);
+    --positive: oklch(0.8 0.15 155);
+    --negative: oklch(0.72 0.18 25);
+    --warning: oklch(0.82 0.14 75);
     /* Separators and fields */
-    --border: oklch(0.45 0.006 286 / 45%);
+    --border: oklch(1 0 0 / 10%);
     --input: oklch(1 0 0 / 16%);
-    --ring: oklch(0.66 0.19 253 / 70%);
-    --chart-1: oklch(0.78 0.2 150);
-    --chart-2: oklch(0.66 0.19 253);
-    --chart-3: oklch(0.8 0.17 70);
-    --chart-4: oklch(0.68 0.2 315);
-    --chart-5: oklch(0.66 0.22 27);
-    --sidebar: oklch(0.17 0.003 286);
-    --sidebar-foreground: oklch(1 0 0);
-    --sidebar-primary: oklch(0.66 0.19 253);
-    --sidebar-primary-foreground: oklch(1 0 0);
-    --sidebar-accent: oklch(0.66 0.19 253 / 16%);
-    --sidebar-accent-foreground: oklch(1 0 0);
-    --sidebar-border: oklch(0.45 0.006 286 / 45%);
-    --sidebar-ring: oklch(0.66 0.19 253 / 70%);
+    --ring: oklch(0.925 0.03 155 / 60%);
+    --chart-1: oklch(0.75 0.07 200);
+    --chart-2: oklch(0.7 0.14 250);
+    --chart-3: oklch(0.82 0.14 75);
+    --chart-4: oklch(0.7 0.16 310);
+    --chart-5: oklch(0.76 0.07 60);
+    --sidebar: oklch(0.155 0.006 170);
+    --sidebar-foreground: oklch(0.965 0.004 165);
+    --sidebar-primary: oklch(0.925 0.03 155);
+    --sidebar-primary-foreground: oklch(0.3 0.05 167);
+    --sidebar-accent: oklch(1 0 0 / 7%);
+    --sidebar-accent-foreground: oklch(0.965 0.004 165);
+    --sidebar-border: oklch(1 0 0 / 10%);
+    --sidebar-ring: oklch(0.925 0.03 155 / 60%);
   }
 }
 
@@ -159,6 +166,9 @@
     color: var(--color-foreground);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
+    font-variant-numeric: tabular-nums;
+    caret-color: var(--color-primary);
+    scrollbar-color: var(--color-input) transparent;
     /* iOS rubber-band scroll otherwise visually detaches the fixed mobile
        top bar from the page content underneath it. */
     overscroll-behavior-y: none;
@@ -171,8 +181,8 @@
   }
 
   ::selection {
-    background-color: var(--color-primary);
-    color: var(--color-primary-foreground);
+    background-color: var(--color-mint);
+    color: oklch(0.3 0.05 167);
   }
 }
 
@@ -182,6 +192,17 @@
   letter-spacing: -0.02em;
 }
 
+/* The headline figure on a screen: one exact number, cents set smaller by the component. */
+@utility figure-display {
+  font-family: var(--font-sans);
+  font-variant-numeric: tabular-nums lining-nums;
+  font-weight: 600;
+  font-size: clamp(2.75rem, 1.6rem + 3.2vw, 4rem);
+  line-height: 1;
+  letter-spacing: -0.035em;
+  color: var(--color-foreground);
+}
+
 /* Cards are flat grouped fills, no outline or drop shadow. */
 @utility card-ring {
   border-color: transparent !important;
@@ -189,10 +210,10 @@
 }
 
 @utility ios-large-title {
-  font-size: 2.125rem;
+  font-size: 2rem;
   line-height: 1.15;
-  font-weight: 700;
-  letter-spacing: -0.022em;
+  font-weight: 600;
+  letter-spacing: -0.03em;
   color: var(--color-foreground);
 }
 
@@ -201,8 +222,7 @@
   padding-bottom: 0.375rem;
   font-size: 0.8125rem;
   line-height: 1.25;
-  letter-spacing: -0.005em;
-  text-transform: uppercase;
+  font-weight: 500;
   color: var(--color-muted-foreground);
 }
 

@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
-import { ChevronDown, Landmark, Link2, Loader2, Lock, Plus, Trash2 } from "lucide-react";
+import { ChevronDown, Link2, Loader2, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { MaskedIban } from "@/components/masked-iban";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,6 +10,7 @@ import { consentAlerts, type ConsentAlert } from "@/lib/consent-expiry";
 import { formatISODate } from "@/lib/date";
 import { AccountBadge, bankNameFromLabel } from "@/components/bank-badge";
 import { formatEur, formatMoney } from "@/lib/transactions";
+import { HeadlineFigure } from "@/components/headline-figure";
 
 export const Route = createFileRoute("/_authenticated/accounts")({
   head: () => ({
@@ -315,9 +316,16 @@ function AccountsPage() {
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-8 md:py-12">
-      <header className="mb-8">
-        <h1 className="ios-large-title">Accounts</h1>
-        <p className="mt-0.5 text-sm text-muted-foreground">
+      <header className="mb-10">
+        <h1 className="text-[0.9375rem] font-medium text-muted-foreground">Accounts</h1>
+        <div className="mt-1 min-h-16">
+          {bankQuery.isPending || cdQuery.isPending ? (
+            <div className="h-16 w-72 animate-pulse rounded-2xl bg-muted" />
+          ) : (
+            <HeadlineFigure value={totalBankEur + totalCdEur} currency="EUR" />
+          )}
+        </div>
+        <p className="mt-3 text-sm text-muted-foreground">
           Your bank accounts and fixed-term deposits.{" "}
           <Link to="/import" className="text-primary underline-offset-2 hover:underline">
             Import data
@@ -328,10 +336,7 @@ function AccountsPage() {
       {/* Bank accounts */}
       <section className="mb-10">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground">
-            <Landmark className="size-4 text-primary" />
-            Bank accounts
-          </h2>
+          <h2 className="text-lg font-semibold text-foreground">Bank accounts</h2>
           {!bankQuery.isPending && (
             <span className="font-figure text-sm font-medium text-foreground">
               {formatEur(totalBankEur)}
@@ -342,7 +347,7 @@ function AccountsPage() {
         {bankQuery.isError && (
           <div
             role="alert"
-            className="mb-4 rounded-xl border border-negative/30 bg-negative/10 px-4 py-3 text-sm text-negative"
+            className="mb-4 rounded-2xl bg-negative/10 px-4 py-3 text-sm text-negative"
           >
             Couldn't load bank accounts: {bankQuery.error.message}
           </div>
@@ -359,7 +364,7 @@ function AccountsPage() {
             <button
               type="button"
               onClick={() => setShowConnectForm(true)}
-              className="min-h-11 rounded-lg px-3 font-medium text-primary hover:bg-primary/10"
+              className="min-h-11 rounded-full px-3 font-medium text-primary hover:bg-primary/10"
             >
               Renew access
             </button>
@@ -367,7 +372,7 @@ function AccountsPage() {
         ))}
 
         {/* Connect a bank — collapsed by default, same pattern as Add CD below. */}
-        <form onSubmit={handleConnectBank} className="mb-4 rounded-2xl border bg-card card-ring">
+        <form onSubmit={handleConnectBank} className="mb-4 rounded-2xl bg-card">
           <button
             type="button"
             onClick={() => setShowConnectForm((v) => !v)}
@@ -435,7 +440,7 @@ function AccountsPage() {
                 <button
                   type="submit"
                   disabled={connectBank.isPending || !bankName}
-                  className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+                  className="inline-flex min-h-11 items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
                 >
                   {connectBank.isPending ? (
                     <Loader2 className="size-4 animate-spin" />
@@ -454,7 +459,7 @@ function AccountsPage() {
           )}
         </form>
 
-        <div className="overflow-hidden rounded-2xl border bg-card card-ring">
+        <div className="overflow-hidden rounded-2xl bg-card">
           {bankQuery.isPending ? (
             <div className="space-y-3 p-4">
               {Array.from({ length: 4 }).map((_, i) => (
@@ -528,10 +533,7 @@ function AccountsPage() {
       {/* Certificates of deposit */}
       <section>
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground">
-            <Lock className="size-4 text-primary" />
-            Certificates of deposit
-          </h2>
+          <h2 className="text-lg font-semibold text-foreground">Certificates of deposit</h2>
           {!cdQuery.isPending && cds.length > 0 && (
             <span className="font-figure text-sm font-medium text-foreground">
               {formatEur(totalCdEur)}
@@ -541,7 +543,7 @@ function AccountsPage() {
 
         {/* Add CD form — collapsed by default so it doesn't push the actual
             CD list below the fold on a phone. */}
-        <form onSubmit={handleAddCd} className="mb-4 rounded-2xl border bg-card card-ring">
+        <form onSubmit={handleAddCd} className="mb-4 rounded-2xl bg-card">
           <button
             type="button"
             onClick={() => setShowCdForm((v) => !v)}
@@ -638,7 +640,7 @@ function AccountsPage() {
                 <button
                   type="submit"
                   disabled={addCd.isPending}
-                  className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+                  className="inline-flex min-h-11 items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
                 >
                   {addCd.isPending ? (
                     <Loader2 className="size-4 animate-spin" />
@@ -656,7 +658,7 @@ function AccountsPage() {
         {cdQuery.isError && (
           <div
             role="alert"
-            className="mb-4 rounded-xl border border-negative/30 bg-negative/10 px-4 py-3 text-sm text-negative"
+            className="mb-4 rounded-2xl bg-negative/10 px-4 py-3 text-sm text-negative"
           >
             Couldn't load CDs: {cdQuery.error.message}
           </div>
@@ -681,7 +683,7 @@ function AccountsPage() {
                 ),
               );
               return (
-                <div key={cd.id} className="rounded-2xl border bg-card p-5 card-ring">
+                <div key={cd.id} className="rounded-2xl bg-card p-5">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <h3 className="truncate font-medium text-foreground">{cd.label}</h3>
@@ -695,7 +697,7 @@ function AccountsPage() {
                       onClick={() => deleteCd.mutate(cd.id)}
                       disabled={deleteCd.isPending}
                       aria-label={`Remove ${cd.label}`}
-                      className="shrink-0 rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-negative/10 hover:text-negative disabled:opacity-50"
+                      className="shrink-0 rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-negative/10 hover:text-negative disabled:opacity-50"
                     >
                       <Trash2 className="size-4" />
                     </button>
@@ -712,7 +714,7 @@ function AccountsPage() {
 
                   <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-muted">
                     <div
-                      className={`h-full rounded-full ${cd.is_matured ? "bg-positive" : "bg-primary"}`}
+                      className="h-full rounded-full bg-primary"
                       style={{ width: `${progressPct}%` }}
                     />
                   </div>

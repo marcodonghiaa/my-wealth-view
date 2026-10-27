@@ -1,14 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
-import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
-import { Bitcoin } from "lucide-react";
-import { shareSummary } from "@/lib/chart-summary";
 import { colorsForAssets } from "@/lib/crypto-colors";
 import { supabase } from "@/integrations/supabase/client";
 import { currentValueEur, isEditableCryptoSource } from "@/lib/holdings";
 import { AddHoldingPanel } from "@/components/holdings/add-holding-panel";
 import { EditHolding } from "@/components/holdings/edit-holding";
+import { HeadlineFigure } from "@/components/headline-figure";
+import { ShareBar } from "@/components/share-bar";
 import { formatEur, formatUsd } from "@/lib/transactions";
 
 export const Route = createFileRoute("/_authenticated/crypto")({
@@ -127,82 +126,45 @@ function CryptoPage() {
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-8 md:py-12">
-      <header className="mb-8">
-        <h1 className="ios-large-title">Crypto</h1>
-        <p className="mt-0.5 text-sm text-muted-foreground">
-          Your cryptocurrency holdings and allocation.
-        </p>
+      <header className="mb-3">
+        <h1 className="text-[0.9375rem] font-medium text-muted-foreground">Crypto</h1>
       </header>
 
       {query.isError && (
         <div
           role="alert"
-          className="mb-6 rounded-xl border border-negative/30 bg-negative/10 px-4 py-3 text-sm text-negative"
+          className="mb-6 rounded-2xl bg-negative/10 px-4 py-3 text-sm text-negative"
         >
           Couldn't load crypto data: {query.error.message}
         </div>
       )}
 
-      {/* Headline + allocation side by side */}
-      <section className="mb-6 grid items-center gap-6 rounded-2xl border bg-card p-6 card-ring sm:p-8 md:grid-cols-2">
-        <div>
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
-            <Bitcoin className="size-4 text-primary" />
-            Total crypto value
-          </div>
-
-          <div className="mt-3 min-h-16">
-            {query.isPending ? (
-              <div className="h-14 w-64 animate-pulse rounded-lg bg-muted" />
-            ) : (
-              <p className="font-figure text-4xl font-bold tracking-tight text-foreground sm:text-6xl">
-                {formatEur(totalEur)}
-              </p>
-            )}
-          </div>
-
-          <p className="mt-3 text-xs text-muted-foreground">
-            Coins you add here are priced every day; Coinbase syncs automatically. The same asset
-            held in multiple places is combined into one line below.
-          </p>
+      {/* Headline: total value, then how it splits by coin */}
+      <section aria-label="Total crypto value" className="mb-8">
+        <div className="min-h-16">
+          {query.isPending ? (
+            <div className="h-16 w-72 animate-pulse rounded-2xl bg-muted" />
+          ) : (
+            <HeadlineFigure value={totalEur} currency="EUR" />
+          )}
         </div>
         {!query.isPending && assets.length > 0 && (
-          <div
-            className="h-56 w-full md:h-64"
-            role="img"
-            aria-label={shareSummary(
-              "Allocation by holding",
-              assets.map((a) => ({ label: a.symbol, value: a.valueEur })),
-            )}
-          >
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={assets}
-                  dataKey="valueEur"
-                  nameKey="symbol"
-                  innerRadius="55%"
-                  outerRadius="80%"
-                  paddingAngle={2}
-                  cornerRadius={6}
-                >
-                  {assets.map((asset, i) => (
-                    <Cell
-                      key={i}
-                      fill={assetColors[i]}
-                      stroke="var(--color-card)"
-                      strokeWidth={2}
-                    />
-                  ))}
-                </Pie>
-                <Tooltip content={<CryptoTooltip totalEur={totalEur} />} />
-              </PieChart>
-            </ResponsiveContainer>
+          <div className="mt-5">
+            <ShareBar
+              title="Allocation by holding"
+              shares={assets.map((a, i) => ({
+                label: a.symbol,
+                value: a.valueEur,
+                color: assetColors[i] ?? "var(--color-muted-foreground)",
+              }))}
+            />
           </div>
         )}
+        <p className="mt-4 max-w-2xl text-sm text-muted-foreground">
+          Coins you add here are priced every day; Coinbase syncs automatically. The same asset held
+          in multiple places is combined into one line below.
+        </p>
       </section>
-
-      {!query.isPending && <AddHoldingPanel kind="crypto" defaultOpen={assets.length === 0} />}
 
       {query.isPending ? (
         <>
@@ -210,16 +172,16 @@ function CryptoPage() {
           <div className="h-64 animate-pulse rounded-2xl bg-muted/50" />
         </>
       ) : assets.length === 0 ? (
-        <div className="flex h-48 items-center justify-center rounded-2xl border bg-card text-sm text-muted-foreground card-ring">
-          No coins yet. Search for your first one above.
+        <div className="flex h-48 items-center justify-center rounded-2xl bg-card text-sm text-muted-foreground">
+          No coins yet. Search for your first one below.
         </div>
       ) : (
         <>
           {/* Desktop table */}
-          <section className="hidden overflow-hidden rounded-2xl border bg-card card-ring md:block">
+          <section className="hidden overflow-hidden rounded-2xl bg-card md:block">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead className="bg-muted/50 text-left text-xs font-medium text-muted-foreground">
+                <thead className="border-b text-left text-xs font-medium text-muted-foreground">
                   <tr>
                     <th className="px-4 py-3 font-medium sm:px-5">Holding</th>
                     <th className="px-4 py-3 font-medium sm:px-5">Amount</th>
@@ -283,11 +245,11 @@ function CryptoPage() {
           </section>
 
           {/* Mobile cards */}
-          <section className="space-y-3 md:hidden">
+          <section className="divide-y overflow-hidden rounded-2xl bg-card md:hidden">
             {assets.map((asset, i) => {
               const percent = totalEur > 0 ? (asset.valueEur / totalEur) * 100 : 0;
               return (
-                <div key={asset.symbol} className="rounded-2xl border bg-card p-4 card-ring">
+                <div key={asset.symbol} className="p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 font-medium text-foreground">
@@ -344,6 +306,12 @@ function CryptoPage() {
           </section>
         </>
       )}
+
+      {!query.isPending && (
+        <div className="mt-6">
+          <AddHoldingPanel kind="crypto" defaultOpen={assets.length === 0} />
+        </div>
+      )}
     </div>
   );
 }
@@ -372,33 +340,5 @@ function ColorDot({ color }: { color: string | undefined }) {
       className="inline-block size-2.5 shrink-0 rounded-full"
       style={{ backgroundColor: color }}
     />
-  );
-}
-
-interface TooltipPayloadItem {
-  payload?: AssetGroup;
-}
-
-function CryptoTooltip({
-  active,
-  payload,
-  totalEur,
-}: {
-  active?: boolean;
-  payload?: Array<TooltipPayloadItem>;
-  totalEur: number;
-}) {
-  if (!active || !payload || payload.length === 0) return null;
-  const asset = payload[0]?.payload;
-  if (!asset) return null;
-  const percent = totalEur > 0 ? ((asset.valueEur / totalEur) * 100).toFixed(1) : "0.0";
-  return (
-    <div className="rounded-lg border bg-popover px-3 py-2 shadow-lg">
-      <p className="max-w-xs truncate text-xs text-muted-foreground">{asset.name}</p>
-      <p className="font-figure mt-0.5 text-sm font-semibold text-foreground">
-        {formatEur(asset.valueEur)}
-      </p>
-      <p className="text-xs text-muted-foreground">{percent}% of crypto</p>
-    </div>
   );
 }

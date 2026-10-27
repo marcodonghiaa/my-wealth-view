@@ -51,7 +51,7 @@ export function AllocationChart({
   const fmtTick = axisDateFormatter(data[0]?.snapshot_date, data.at(-1)?.snapshot_date);
 
   return (
-    <section className="mt-6 rounded-2xl bg-card px-1 py-4 card-ring sm:p-6">
+    <section className="mt-6 rounded-2xl bg-card px-1 py-4 sm:p-6">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2 px-2">
         <h2 className="text-[0.9375rem] font-semibold text-foreground">
           Asset allocation over time

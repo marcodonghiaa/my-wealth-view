@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, Search, Trash2 } from "lucide-react";
+import { Search, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatISODate } from "@/lib/date";
 import {
@@ -36,6 +36,7 @@ import {
   type TransactionViewProps,
 } from "@/components/transactions/transaction-views";
 import { WorthItSpotlight } from "@/components/transactions/worth-it";
+import { MonthSwitcher } from "@/components/month-switcher";
 
 export const Route = createFileRoute("/_authenticated/transactions")({
   head: () => ({
@@ -314,7 +315,7 @@ function TransactionsPage() {
       {txQuery.isError && (
         <div
           role="alert"
-          className="mb-6 rounded-xl border border-negative/30 bg-negative/10 px-4 py-3 text-sm text-negative"
+          className="mb-6 rounded-2xl bg-negative/10 px-4 py-3 text-sm text-negative"
         >
           Couldn't load transactions: {txQuery.error.message}
         </div>
@@ -323,53 +324,39 @@ function TransactionsPage() {
       {extraError && (
         <div
           role="alert"
-          className="mb-6 rounded-xl border border-negative/30 bg-negative/10 px-4 py-3 text-sm text-negative"
+          className="mb-6 rounded-2xl bg-negative/10 px-4 py-3 text-sm text-negative"
         >
           Some data couldn't load (Splitwise shares, account names or transfers), so this list may
           be incomplete: {extraError.message}
         </div>
       )}
 
-      {/* Month selector */}
-      <div className="mb-4 flex items-center justify-between rounded-xl border bg-card p-2 card-ring">
-        <button
-          type="button"
-          onClick={goToPrevMonth}
-          aria-label="Previous month"
-          className="flex size-11 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-        >
-          <ChevronLeft className="size-5" />
-        </button>
-        <span className="text-sm font-medium text-foreground">{monthLabel}</span>
-        <button
-          type="button"
-          onClick={goToNextMonth}
-          disabled={!canGoNext}
-          aria-label="Next month"
-          className="flex size-11 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-40"
-        >
-          <ChevronRight className="size-5" />
-        </button>
-      </div>
+      <MonthSwitcher
+        className="mb-4"
+        label={monthLabel}
+        onPrev={goToPrevMonth}
+        onNext={goToNextMonth}
+        canGoNext={canGoNext}
+      />
 
       {/* Filters */}
       <div className="mb-4 flex flex-col gap-3 sm:flex-row">
         <div className="relative flex-1">
-          <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Search className="pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 text-muted-foreground" />
           <input
             type="search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search"
             aria-label="Search by merchant"
-            className="h-11 w-full rounded-xl bg-muted pr-3 pl-9 text-base text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-ring focus:outline-none"
+            className="h-11 w-full rounded-full bg-card pr-4 pl-10 text-base text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-ring focus:outline-none"
           />
         </div>
         <select
           value={category}
           onChange={(e) => setCategory(e.target.value)}
           aria-label="Filter by category"
-          className="h-11 rounded-xl bg-muted px-3 text-base text-foreground focus:ring-2 focus:ring-ring focus:outline-none"
+          className="h-11 rounded-full bg-card px-4 text-base text-foreground focus:ring-2 focus:ring-ring focus:outline-none"
         >
           <option value="all">All categories</option>
           {categories.hasUncategorized && <option value={UNCATEGORIZED}>Uncategorized</option>}
@@ -383,7 +370,7 @@ function TransactionsPage() {
 
       {/* Bulk action bar */}
       {selected.size > 0 && (
-        <div className="sticky top-[calc(2.75rem+env(safe-area-inset-top)+0.5rem)] z-20 mb-4 flex flex-wrap items-center gap-3 rounded-xl border bg-card p-3 shadow-md card-ring md:top-4">
+        <div className="sticky top-[calc(2.75rem+env(safe-area-inset-top)+0.5rem)] z-20 mb-4 flex flex-wrap items-center gap-3 rounded-2xl bg-card p-3 shadow-[0_8px_24px_-12px_oklch(0_0_0/0.25)] md:top-4">
           <span className="text-sm font-medium text-foreground">{selected.size} selected</span>
           <BulkCategoryPicker
             onSelect={(next) =>
@@ -403,7 +390,7 @@ function TransactionsPage() {
               })
             }
             disabled={deleteTxs.isPending}
-            className="inline-flex min-h-11 items-center gap-1.5 rounded-lg px-3 text-sm font-medium text-negative transition-colors hover:bg-negative/10 disabled:opacity-50"
+            className="inline-flex min-h-11 items-center gap-1.5 rounded-full px-3 text-sm font-medium text-negative transition-colors hover:bg-negative/10 disabled:opacity-50"
           >
             <Trash2 className="size-4" />
             Delete
@@ -419,11 +406,11 @@ function TransactionsPage() {
       )}
 
       {/* Register — cards on mobile, table from md up */}
-      <section className="overflow-hidden rounded-2xl border bg-card card-ring">
+      <section className="overflow-hidden rounded-2xl bg-card">
         {txQuery.isPending ? (
           <div className="space-y-3 p-4 md:hidden">
             {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="h-16 animate-pulse rounded-xl bg-muted" />
+              <div key={i} className="h-14 animate-pulse rounded-2xl bg-muted" />
             ))}
           </div>
         ) : filtered.length === 0 ? (
@@ -443,7 +430,7 @@ function TransactionsPage() {
         <div className="hidden overflow-x-auto md:block">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b text-left text-xs tracking-wide text-muted-foreground uppercase">
+              <tr className="border-b text-left text-xs text-muted-foreground">
                 <th className="w-10 px-4 py-3">
                   <label className="-m-3.5 inline-flex size-11 cursor-pointer items-center justify-center p-3.5">
                     <input
@@ -496,7 +483,7 @@ function TransactionsPage() {
         <button
           type="button"
           onClick={() => setShowTransfers((v) => !v)}
-          className="mt-4 h-9 rounded-lg bg-muted px-3 text-xs font-medium text-foreground transition-colors hover:bg-accent"
+          className="mt-4 h-9 rounded-full bg-card px-4 text-xs font-medium text-foreground transition-colors hover:bg-accent"
         >
           {showTransfers ? "Hide" : "Show"} {transfers.length} transfer
           {transfers.length === 1 ? "" : "s"}

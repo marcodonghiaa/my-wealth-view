@@ -1,14 +1,15 @@
 const BRAND_COLORS: Record<string, string> = { BTC: "#f7931a", ETH: "#8b5cf6" };
 
-// None of these is close to Bitcoin's orange or Ethereum's purple.
+// None of these is close to Bitcoin's orange or Ethereum's purple, nor to the gain green or
+// loss red, so a coin's colour never reads as a price move.
 const OTHER_COLORS = [
-  "#22c55e",
+  "#0ea5e9",
   "#3b82f6",
   "#14b8a6",
   "#ec4899",
-  "#ef4444",
+  "#d946ef",
   "#06b6d4",
-  "#84cc16",
+  "#eab308",
   "#64748b",
 ];
 

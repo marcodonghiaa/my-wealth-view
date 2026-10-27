@@ -19,7 +19,7 @@ export function TransfersSection({
   onRestore: (tx: TransactionRow) => void;
 }) {
   return (
-    <section className="mt-6 overflow-hidden rounded-2xl border bg-card card-ring">
+    <section className="mt-6 overflow-hidden rounded-2xl bg-card">
       <div className="px-4 py-3 sm:px-5">
         <h2 className="text-sm font-semibold text-foreground">Transfers</h2>
         <p className="mt-0.5 text-xs text-muted-foreground">
@@ -46,7 +46,7 @@ export function TransfersSection({
                 type="button"
                 disabled={savingId === txId(tx)}
                 onClick={() => onRestore(tx)}
-                className="h-9 shrink-0 rounded-lg bg-muted px-3 text-xs font-medium text-foreground transition-colors hover:bg-accent disabled:opacity-50"
+                className="h-9 shrink-0 rounded-full bg-muted px-3 text-xs font-medium text-foreground transition-colors hover:bg-accent disabled:opacity-50"
               >
                 Count as {restoredFlow(tx)}
               </button>

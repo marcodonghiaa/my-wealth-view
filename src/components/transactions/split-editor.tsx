@@ -88,7 +88,7 @@ export function SplitEditor({
                 setOpen(false);
                 onSave(null, null);
               }}
-              className="min-h-11 flex-1 rounded-lg border px-3 text-sm text-muted-foreground transition-colors hover:bg-accent"
+              className="min-h-11 flex-1 rounded-full border px-3 text-sm text-muted-foreground transition-colors hover:bg-accent"
             >
               Clear
             </button>
@@ -112,7 +112,7 @@ export function SplitEditor({
                 parsed === fullAmount ? null : owedByInput.trim() || null,
               );
             }}
-            className="min-h-11 flex-1 rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground transition-colors hover:opacity-90"
+            className="min-h-11 flex-1 rounded-full bg-primary px-3 text-sm font-medium text-primary-foreground transition-colors hover:opacity-90"
           >
             Save
           </button>

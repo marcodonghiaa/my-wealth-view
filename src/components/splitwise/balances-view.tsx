@@ -9,7 +9,7 @@ const day = (iso: string) =>
 export function BalancesView({ groups }: { groups: Array<GroupSummary> }) {
   if (groups.length === 0) {
     return (
-      <div className="flex h-32 items-center justify-center rounded-2xl border bg-card px-4 text-center text-sm text-muted-foreground card-ring">
+      <div className="flex h-32 items-center justify-center rounded-2xl bg-card px-4 text-center text-sm text-muted-foreground">
         Import a Splitwise file below to see who owes what.
       </div>
     );
@@ -17,7 +17,7 @@ export function BalancesView({ groups }: { groups: Array<GroupSummary> }) {
   return (
     <div className="space-y-6">
       {groups.map((g) => (
-        <section key={g.group} className="overflow-hidden rounded-2xl border bg-card card-ring">
+        <section key={g.group} className="overflow-hidden rounded-2xl bg-card">
           <div className="border-b px-4 py-4 sm:px-5">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
               <h2 className="text-sm font-semibold text-foreground">{g.group}</h2>
