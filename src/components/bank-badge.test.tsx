@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { AccountBadge } from "./bank-badge";
+import { AccountBadge, bankOf } from "./bank-badge";
 
 describe("AccountBadge", () => {
   // protects=a known bank shows its own logo from our own files; fails_when=the logo is missing
@@ -26,5 +26,48 @@ describe("AccountBadge", () => {
     const { container } = render(<AccountBadge label="Acme Bank" />);
     expect(container.querySelector("img")).toBeNull();
     expect(screen.getByText("A")).toBeInTheDocument();
+  });
+
+  it("names a bank given by name, keeping the holder label as the tooltip", () => {
+    render(<AccountBadge label="Marco D'Onghia" bank="Revolut" />);
+    expect(screen.getByRole("img", { name: "Revolut" }).getAttribute("src")).toBe(
+      "/banks/revolut.png",
+    );
+    expect(screen.getByTitle("Marco D'Onghia")).toBeInTheDocument();
+  });
+
+  // protects=a bank we have no local file for shows the logo Enable Banking gave us
+  it("shows the remote logo for a bank not known locally", () => {
+    render(
+      <AccountBadge label="Marco D'Onghia" bank="Intesa" logo="https://cdn.example/intesa.png" />,
+    );
+    expect(screen.getByRole("img", { name: "Intesa" }).getAttribute("src")).toBe(
+      "https://cdn.example/intesa.png",
+    );
+  });
+
+  it("prefers the local logo over the remote one for a known bank", () => {
+    render(<AccountBadge label="x" bank="Fineco" logo="https://cdn.example/fineco.png" />);
+    expect(screen.getByRole("img").getAttribute("src")).toBe("/banks/fineco.jpg");
+  });
+
+  it("ignores a logo that is not an https URL", () => {
+    const { container } = render(
+      <AccountBadge label="x" bank="Intesa" logo="javascript:alert(1)" />,
+    );
+    expect(container.querySelector("img")).toBeNull();
+    expect(screen.getByText("I")).toBeInTheDocument();
+  });
+});
+
+describe("bankOf", () => {
+  it("prefers the stored bank name over the holder label", () => {
+    expect(bankOf({ bank_name: "Revolut", label: "Marco D'Onghia" })).toBe("Revolut");
+  });
+
+  it("falls back to the label when the bank name is missing (rows from before the column)", () => {
+    expect(bankOf({ bank_name: null, label: "Revolut EUR" })).toBe("Revolut");
+    expect(bankOf({ label: "Fineco" })).toBe("Fineco");
+    expect(bankOf({ label: null })).toBe("Bank account");
   });
 });

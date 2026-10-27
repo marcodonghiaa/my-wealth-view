@@ -37,4 +37,15 @@ describe("consentAlerts", () => {
       { bank: "Revolut", daysLeft: 7 },
     ]);
   });
+
+  it("groups accounts of one bank under its stored name, whatever their holder labels", () => {
+    const alerts = consentAlerts(
+      [
+        { ...acc("Marco D'Onghia", "2026-10-30T00:00:00Z"), bank_name: "Revolut" },
+        { ...acc("D'ONGHIA MARCO", "2026-10-24T00:00:00Z"), bank_name: "Revolut" },
+      ],
+      TODAY,
+    );
+    expect(alerts).toEqual([{ bank: "Revolut", daysLeft: 1 }]);
+  });
 });

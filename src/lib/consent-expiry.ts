@@ -1,4 +1,4 @@
-import { bankNameFromLabel } from "@/components/bank-badge";
+import { bankOf } from "@/components/bank-badge";
 import { formatISODate } from "@/lib/date";
 
 // Bank access (PSD2 consent) lasts 180 days. After that the bank stops syncing without any
@@ -8,6 +8,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 
 export interface ConsentAccount {
   label: string | null;
+  bank_name?: string | null;
   consent_valid_until: string | null;
 }
 
@@ -26,7 +27,7 @@ export function consentAlerts(accounts: Array<ConsentAccount>, today: Date): Arr
       (Date.parse(a.consent_valid_until.slice(0, 10)) - todayUtc) / DAY_MS,
     );
     if (daysLeft > WARN_DAYS) continue;
-    const bank = bankNameFromLabel(a.label ?? "Bank");
+    const bank = bankOf(a);
     soonest.set(bank, Math.min(daysLeft, soonest.get(bank) ?? Infinity));
   }
   return [...soonest]

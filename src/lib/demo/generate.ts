@@ -135,6 +135,10 @@ export function generateDemoData(now: Date = new Date()): DemoDb {
     { uid: SAVINGS, label: "Demo Bank Savings", iban: "IT00DEMO0000000000000002", currency: "EUR" },
   ].map((a) => ({
     ...a,
+    // No bank fields: the two demo accounts keep grouping by label, as before bank_name existed.
+    bank_country: null,
+    bank_logo: null,
+    bank_name: null,
     consent_valid_until: `${iso(todayNum + 80)}T00:00:00Z`,
     created_at: stamp(iso(days[0]!)),
     identification_hash: null,
@@ -144,6 +148,9 @@ export function generateDemoData(now: Date = new Date()): DemoDb {
   const v_bank_accounts_latest: DemoDb["v_bank_accounts_latest"] = accounts.map((a) => ({
     amount: balances.find((b) => b.uid === a.uid && b.n === todayNum)!.amount,
     amount_eur: balances.find((b) => b.uid === a.uid && b.n === todayNum)!.amount,
+    bank_country: a.bank_country,
+    bank_logo: a.bank_logo,
+    bank_name: a.bank_name,
     consent_valid_until: a.consent_valid_until,
     currency: "EUR",
     iban: a.iban,
