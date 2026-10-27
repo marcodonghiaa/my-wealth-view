@@ -18,14 +18,9 @@ import { AddHoldingPanel } from "@/components/holdings/add-holding-panel";
 import { EditHolding } from "@/components/holdings/edit-holding";
 import { HeadlineFigure } from "@/components/headline-figure";
 import { ShareBar } from "@/components/share-bar";
-import { trendSummary } from "@/lib/chart-summary";
-import { SegmentedControl } from "@/components/segmented-control";
-import { ValueChart } from "@/components/value-chart";
+import { RangeChangeLine, ValueHistoryChart } from "@/components/value-history";
+import { useValueHistory } from "@/lib/use-value-history";
 import { formatDay } from "@/lib/date";
-import { CHART_RANGES, RANGE_LABEL, chartPoints, inRange, withHistory } from "@/lib/net-worth";
-import type { ChartRange } from "@/lib/net-worth";
-import { fetchHistory, fetchNetWorth, fetchReconstructed } from "@/lib/net-worth-queries";
-import { TONE_TEXT, toneOf } from "@/lib/tone";
 
 export const Route = createFileRoute("/_authenticated/portfolio")({
   head: () => ({
@@ -83,9 +78,6 @@ const TYPE_ICONS: Record<string, LucideIcon> = {
   Fund: ChartPie,
   Bond: ScrollText,
 };
-
-// Moves under half a percent are noise: show them without alarm colour.
-const NOISE_BAND = 0.005;
 
 async function fetchPortfolio(): Promise<Array<PortfolioRow>> {
   const { data, error } = await supabase
@@ -156,33 +148,6 @@ function PortfolioPage() {
     [query.data],
   );
 
-  // Value over time comes from the same merged history as net worth (shared query cache).
-  const [range, setRange] = useState<ChartRange>("1Y");
-  const netWorthQuery = useQuery({ queryKey: ["net-worth-daily"], queryFn: fetchNetWorth });
-  const historyQuery = useQuery({ queryKey: ["net-worth-history"], queryFn: fetchHistory });
-  const reconstructedQuery = useQuery({
-    queryKey: ["net-worth-reconstructed"],
-    queryFn: fetchReconstructed,
-  });
-  const chartData = useMemo(
-    () =>
-      inRange(
-        chartPoints(
-          withHistory(
-            historyQuery.data ?? [],
-            netWorthQuery.data ?? [],
-            undefined,
-            reconstructedQuery.data ?? [],
-          ),
-        ),
-        range,
-      ),
-    [historyQuery.data, netWorthQuery.data, reconstructedQuery.data, range],
-  );
-  const chartFirst = chartData.at(0);
-  const [scrubIndex, setScrubIndex] = useState<number | null>(null);
-  const scrubbed = scrubIndex != null ? chartData.at(scrubIndex) : undefined;
-
   // Groups start collapsed: the header already carries the count, total and share.
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const toggleGroup = (type: string) =>
@@ -215,15 +180,8 @@ function PortfolioPage() {
   }, [holdings]);
 
   // Scrubbing shows that day's value; otherwise today's, from the holdings below.
-  const shownEur = scrubbed?.portfolio_total_eur ?? totalEur;
-  const rangeDelta = chartFirst ? shownEur - chartFirst.portfolio_total_eur : null;
-  const rangeChange =
-    rangeDelta != null && chartFirst && chartFirst.portfolio_total_eur !== 0
-      ? rangeDelta / Math.abs(chartFirst.portfolio_total_eur)
-      : null;
-  const chartError = [netWorthQuery, historyQuery, reconstructedQuery].find(
-    (q) => q.isError,
-  )?.error;
+  const history = useValueHistory("portfolio_total_eur", totalEur);
+  const { scrubbed } = history;
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-8 md:py-12">
@@ -241,12 +199,12 @@ function PortfolioPage() {
         </div>
       )}
 
-      {chartError && (
+      {history.error && (
         <div
           role="alert"
           className="mb-6 rounded-2xl bg-negative/10 px-4 py-3 text-sm text-negative"
         >
-          Couldn't load your portfolio history: {chartError.message}
+          Couldn't load your portfolio history: {history.error.message}
         </div>
       )}
 
@@ -256,57 +214,14 @@ function PortfolioPage() {
           {query.isPending ? (
             <div className="h-16 w-72 animate-pulse rounded-2xl bg-muted" />
           ) : (
-            <HeadlineFigure value={shownEur} currency="EUR" />
+            <HeadlineFigure value={history.shownEur} currency="EUR" />
           )}
         </div>
-        {!query.isPending && rangeDelta != null && rangeChange != null && (
-          <p className="mt-3 flex flex-wrap items-baseline gap-x-2 text-[0.9375rem]">
-            <span
-              className={`font-figure font-medium ${TONE_TEXT[toneOf(rangeChange, NOISE_BAND)]}`}
-            >
-              {rangeDelta >= 0 ? "+" : "−"}
-              {formatEur(Math.abs(rangeDelta))} ({rangeChange >= 0 ? "+" : "−"}
-              {Math.abs(rangeChange * 100).toFixed(2)}%)
-            </span>
-            <span className="text-muted-foreground">
-              {scrubbed && chartFirst
-                ? `${formatDay(chartFirst.snapshot_date)} – ${formatDay(scrubbed.snapshot_date)}`
-                : RANGE_LABEL[range]}
-            </span>
-          </p>
-        )}
+        {!query.isPending && <RangeChangeLine history={history} />}
       </section>
 
       {/* Chart: portfolio value over time; scrub it to read any day */}
-      {chartData.length > 1 && (
-        <section aria-label="Portfolio value over time" className="mb-8">
-          <div
-            className="-mx-1 h-64 sm:h-72"
-            role="img"
-            aria-label={trendSummary(
-              "Portfolio value over time",
-              chartData[0]!.portfolio_total_eur,
-              chartData.at(-1)!.portfolio_total_eur,
-              formatEur,
-            )}
-          >
-            <ValueChart
-              data={chartData}
-              dataKey="portfolio_total_eur"
-              name="Portfolio"
-              onScrub={setScrubIndex}
-            />
-          </div>
-          <div className="mt-4 flex">
-            <SegmentedControl
-              label="Chart range"
-              options={CHART_RANGES.map((r) => ({ value: r, label: r }))}
-              value={range}
-              onChange={setRange}
-            />
-          </div>
-        </section>
-      )}
+      <ValueHistoryChart history={history} title="Portfolio value over time" />
 
       {/* How it splits by type */}
       {!query.isPending && holdings.length > 0 && totalEur > 0 && (

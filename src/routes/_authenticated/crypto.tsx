@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
+import { Bitcoin, Coins } from "lucide-react";
 import { colorsForAssets } from "@/lib/crypto-colors";
 import { supabase } from "@/integrations/supabase/client";
 import { currentValueEur, isEditableCryptoSource } from "@/lib/holdings";
@@ -8,6 +9,9 @@ import { AddHoldingPanel } from "@/components/holdings/add-holding-panel";
 import { EditHolding } from "@/components/holdings/edit-holding";
 import { HeadlineFigure } from "@/components/headline-figure";
 import { ShareBar } from "@/components/share-bar";
+import { RangeChangeLine, ValueHistoryChart } from "@/components/value-history";
+import { useValueHistory } from "@/lib/use-value-history";
+import { formatDay } from "@/lib/date";
 import { formatEur, formatUsd } from "@/lib/transactions";
 
 export const Route = createFileRoute("/_authenticated/crypto")({
@@ -124,10 +128,15 @@ function CryptoPage() {
 
   const totalEur = useMemo(() => assets.reduce((sum, a) => sum + a.valueEur, 0), [assets]);
 
+  // Scrubbing shows that day's value; otherwise today's, from the coins below.
+  const history = useValueHistory("crypto_total_eur", totalEur);
+  const { scrubbed } = history;
+
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-8 md:py-12">
-      <header className="mb-3">
-        <h1 className="text-[0.9375rem] font-medium text-muted-foreground">Crypto</h1>
+      <header className="mb-3 text-[0.9375rem] font-medium text-muted-foreground">
+        <h1 className="inline">Crypto</h1>
+        {scrubbed && <span> · {formatDay(scrubbed.snapshot_date)}</span>}
       </header>
 
       {query.isError && (
@@ -139,17 +148,34 @@ function CryptoPage() {
         </div>
       )}
 
-      {/* Headline: total value, then how it splits by coin */}
-      <section aria-label="Total crypto value" className="mb-8">
-        <div className="min-h-16">
+      {history.error && (
+        <div
+          role="alert"
+          className="mb-6 rounded-2xl bg-negative/10 px-4 py-3 text-sm text-negative"
+        >
+          Couldn't load your crypto history: {history.error.message}
+        </div>
+      )}
+
+      {/* Headline: total value and its change over the chart range */}
+      <section aria-label="Total crypto value" className="mb-6">
+        <div className="min-h-16" aria-live="polite">
           {query.isPending ? (
             <div className="h-16 w-72 animate-pulse rounded-2xl bg-muted" />
           ) : (
-            <HeadlineFigure value={totalEur} currency="EUR" />
+            <HeadlineFigure value={history.shownEur} currency="EUR" />
           )}
         </div>
+        {!query.isPending && <RangeChangeLine history={history} />}
+      </section>
+
+      {/* Chart: crypto value over time; scrub it to read any day */}
+      <ValueHistoryChart history={history} title="Crypto value over time" />
+
+      {/* How it splits by coin */}
+      <section aria-label="Allocation by holding" className="mb-6">
         {!query.isPending && assets.length > 0 && (
-          <div className="mt-5">
+          <div>
             <ShareBar
               title="Allocation by holding"
               shares={assets.map((a, i) => ({
@@ -199,12 +225,14 @@ function CryptoPage() {
                     return (
                       <tr key={asset.symbol}>
                         <td className="px-4 py-3 sm:px-5">
-                          <div className="flex items-center gap-2 font-medium text-foreground">
-                            <ColorDot color={assetColors[i]} />
-                            {asset.name}
-                          </div>
-                          <div className="mt-0.5 pl-[1.125rem] text-xs text-muted-foreground">
-                            {asset.symbol}
+                          <div className="flex items-center gap-3">
+                            <CoinAvatar symbol={asset.symbol} color={assetColors[i]} />
+                            <div className="min-w-0">
+                              <div className="font-medium text-foreground">{asset.name}</div>
+                              <div className="mt-0.5 text-xs text-muted-foreground">
+                                {asset.symbol}
+                              </div>
+                            </div>
                           </div>
                         </td>
                         <td className="px-4 py-3 sm:px-5">
@@ -251,13 +279,11 @@ function CryptoPage() {
               return (
                 <div key={asset.symbol} className="p-4">
                   <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2 font-medium text-foreground">
-                        <ColorDot color={assetColors[i]} />
-                        {asset.name}
-                      </div>
-                      <div className="mt-0.5 pl-[1.125rem] text-xs text-muted-foreground">
-                        {asset.symbol}
+                    <div className="flex min-w-0 flex-1 items-center gap-3">
+                      <CoinAvatar symbol={asset.symbol} color={assetColors[i]} />
+                      <div className="min-w-0">
+                        <div className="font-medium text-foreground">{asset.name}</div>
+                        <div className="mt-0.5 text-xs text-muted-foreground">{asset.symbol}</div>
                       </div>
                     </div>
                     <AssetEdits asset={asset} />
@@ -333,12 +359,20 @@ function AssetEdits({ asset }: { asset: AssetGroup }) {
   );
 }
 
-function ColorDot({ color }: { color: string | undefined }) {
+// Round coin icon tinted in the coin's allocation colour; no third-party logos, so holdings stay private.
+function CoinAvatar({ symbol, color }: { symbol: string; color: string | undefined }) {
+  const Icon = symbol === "BTC" ? Bitcoin : Coins;
+  const tint = color ?? "var(--color-muted-foreground)";
   return (
     <span
       aria-hidden
-      className="inline-block size-2.5 shrink-0 rounded-full"
-      style={{ backgroundColor: color }}
-    />
+      className="flex size-10 shrink-0 items-center justify-center rounded-full"
+      style={{
+        color: tint,
+        backgroundColor: `color-mix(in oklab, ${tint} 16%, var(--color-card))`,
+      }}
+    >
+      <Icon className="size-[1.125rem]" strokeWidth={2} />
+    </span>
   );
 }
