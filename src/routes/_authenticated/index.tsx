@@ -86,7 +86,7 @@ function formatMoney(value: number, currency: Currency): string {
 
 function NetWorthPage() {
   const [currency, setCurrency] = useState<Currency>("EUR");
-  const [range, setRange] = useState<ChartRange>("1Y");
+  const [range, setRange] = useState<ChartRange>("YTD");
 
   const netWorthQuery = useQuery({
     queryKey: ["net-worth-daily"],
@@ -117,6 +117,11 @@ function NetWorthPage() {
   );
   const chartFirst = chartData.at(0);
   const latest = snapshots.at(-1);
+  const previous = snapshots.at(-2);
+  const dayChange =
+    latest != null && previous != null && previous.total_eur !== 0
+      ? (latest.total_eur - previous.total_eur) / previous.total_eur
+      : null;
 
   // These feed the chart history and other currencies; say so when one fails.
   const extraError = [historyQuery, reconstructedQuery, fxQuery].find((q) => q.isError)?.error;
@@ -216,8 +221,18 @@ function NetWorthPage() {
           </p>
         )}
 
-        {/* Exchange rate for today's figure: hidden (space kept) while scrubbing a past day */}
+        {/* Today's context: hidden (space kept) while scrubbing a past day */}
         <div className={scrubbed ? "invisible" : undefined}>
+          {dayChange != null && (
+            <p className="mt-2 flex items-baseline gap-1.5 text-sm">
+              <span className="text-muted-foreground">Today</span>
+              <span
+                className={`font-figure font-medium ${TONE_TEXT[toneOf(dayChange, NOISE_BAND)]}`}
+              >
+                {formatPercent(dayChange)}
+              </span>
+            </p>
+          )}
           {currency !== "EUR" && headline != null && rateToEur != null && (
             <p className="mt-2 text-xs text-muted-foreground">
               Rate: 1 {currency} = {rateToEur.toFixed(4)} EUR · ECB,{" "}

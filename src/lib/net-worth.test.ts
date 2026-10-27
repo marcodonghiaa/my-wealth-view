@@ -182,11 +182,12 @@ describe("period targets", () => {
     ];
     expect(inRange(pts, "1M").map((p) => p.total_eur)).toEqual([3, 4]);
     expect(inRange(pts, "3M").map((p) => p.total_eur)).toEqual([3, 4]);
-    expect(inRange(pts, "1Y").map((p) => p.total_eur)).toEqual([2, 3, 4]);
-    expect(inRange(pts, "1D").map((p) => p.total_eur)).toEqual([3, 4]);
-    expect(inRange(pts.slice(0, 1), "1D").map((p) => p.total_eur)).toEqual([1]);
-    expect(inRange(pts, "MAX")).toBe(pts);
-    expect(inRange([], "1Y")).toEqual([]);
+    expect(inRange(pts, "YTD").map((p) => p.total_eur)).toEqual([2, 3, 4]);
+    expect(inRange(pts, "2Y").map((p) => p.total_eur)).toEqual([1, 2, 3, 4]);
+    expect(inRange([snap("2023-01-01", 0), ...pts], "2Y").map((p) => p.total_eur)).toEqual([
+      1, 2, 3, 4,
+    ]);
+    expect(inRange([], "2Y")).toEqual([]);
   });
 });
 

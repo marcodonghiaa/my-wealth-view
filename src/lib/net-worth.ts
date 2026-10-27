@@ -250,32 +250,30 @@ export function monthAgo(iso: string, months = 1): string {
   return `${prevLast.getUTCFullYear()}-${String(prevLast.getUTCMonth() + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
 
-export type ChartRange = "1D" | "1M" | "3M" | "1Y" | "MAX";
-export const CHART_RANGES: Array<ChartRange> = ["1D", "1M", "3M", "1Y", "MAX"];
+export type ChartRange = "1M" | "3M" | "YTD" | "2Y";
+export const CHART_RANGES: Array<ChartRange> = ["1M", "3M", "YTD", "2Y"];
 export const RANGE_LABEL: Record<ChartRange, string> = {
-  "1D": "Today",
   "1M": "Past month",
   "3M": "Past 3 months",
-  "1Y": "Past year",
-  MAX: "All time",
+  YTD: "Year to date",
+  "2Y": "Past 2 years",
 };
-const RANGE_MONTHS: Record<Exclude<ChartRange, "1D" | "MAX">, number> = {
+const RANGE_MONTHS: Record<Exclude<ChartRange, "YTD">, number> = {
   "1M": 1,
   "3M": 3,
-  "1Y": 12,
+  "2Y": 24,
 };
 
-/**
- * Points from `range` before the last one; "MAX" keeps everything. "1D" is the last two
- * snapshots: history is daily, so today against the day before.
- */
+/** Points from `range` before the last one; "YTD" starts at the last day of the previous year. */
 export function inRange<T extends { snapshot_date: string }>(
   points: Array<T>,
   range: ChartRange,
 ): Array<T> {
   const lastIso = points.at(-1)?.snapshot_date;
-  if (range === "MAX" || lastIso == null) return points;
-  if (range === "1D") return points.slice(-2);
-  const start = monthAgo(lastIso, RANGE_MONTHS[range]);
+  if (lastIso == null) return points;
+  const start =
+    range === "YTD"
+      ? `${Number(lastIso.slice(0, 4)) - 1}-12-31`
+      : monthAgo(lastIso, RANGE_MONTHS[range]);
   return points.filter((p) => p.snapshot_date >= start);
 }
