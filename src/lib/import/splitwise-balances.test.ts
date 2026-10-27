@@ -2,7 +2,6 @@ import { describe, expect, it, vi } from "vitest";
 import type { SplitwiseFile } from "./splitwise-parse";
 import {
   balancesFromFile,
-  friendsCreditEur,
   saveBalances,
   summarizeBalances,
   type BalanceRow,
@@ -93,16 +92,6 @@ const rows: Array<BalanceRow> = [
   },
 ];
 const rate = (c: string) => (c === "EUR" ? 1 : c === "USD" ? 0.5 : null);
-
-describe("friendsCreditEur", () => {
-  it("adds my balance across groups in euros, keeping the sign", () => {
-    expect(friendsCreditEur(rows, rate)).toBe(150);
-  });
-  it("is null when there are no balances or no rate for a currency", () => {
-    expect(friendsCreditEur([], rate)).toBeNull();
-    expect(friendsCreditEur(rows, () => null)).toBeNull();
-  });
-});
 
 describe("summarizeBalances", () => {
   it("groups people per group, owes first, with my balance and the euro value", () => {

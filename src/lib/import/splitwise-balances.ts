@@ -51,19 +51,6 @@ export async function saveBalances(
 
 type RateToEur = (currency: string) => number | null;
 
-/** What the groups owe me in total, in euros (negative if I owe). Null if unknown. */
-export function friendsCreditEur(rows: Array<BalanceRow>, rate: RateToEur): number | null {
-  const mine = rows.filter((r) => r.is_me);
-  if (mine.length === 0) return null;
-  let total = 0;
-  for (const r of mine) {
-    const r2e = rate(r.currency);
-    if (r2e === null) return null;
-    total += r.balance * r2e;
-  }
-  return total;
-}
-
 export interface GroupSummary {
   group: string;
   myBalance: number;

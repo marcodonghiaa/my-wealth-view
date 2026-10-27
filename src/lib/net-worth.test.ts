@@ -3,13 +3,11 @@ import {
   allocationHistory,
   allocationSeries,
   breakAtGaps,
-  changeOver,
   chartPoints,
   inRange,
   monthAgo,
   monthNetWorth,
   onOrBefore,
-  yearStart,
   periodBaseline,
   withHistory,
 } from "./net-worth";
@@ -162,26 +160,7 @@ describe("allocationSeries", () => {
   });
 });
 
-describe("changeOver / period targets", () => {
-  const r = (d: string, t: number) => ({ snapshot_date: d, total_eur: t });
-
-  it("compares the latest row with the last row on or before the target", () => {
-    const rows = [r("2026-09-04", 100), r("2026-09-18", 110), r("2026-10-18", 120)];
-    expect(changeOver(rows, "2026-09-18")).toBeCloseTo(120 / 110 - 1);
-  });
-
-  it("is null when the nearest earlier row is too old to mean anything", () => {
-    expect(changeOver([r("2025-01-01", 100), r("2026-10-18", 120)], "2026-09-18")).toBeNull();
-  });
-
-  it("is null when nothing exists on or before the target", () => {
-    expect(changeOver([r("2026-10-01", 100), r("2026-10-18", 120)], "2026-09-18")).toBeNull();
-  });
-
-  it("is null for a zero base", () => {
-    expect(changeOver([r("2026-09-18", 0), r("2026-10-18", 5)], "2026-09-18")).toBeNull();
-  });
-
+describe("period targets", () => {
   it("monthAgo clamps to the end of a shorter month", () => {
     expect(monthAgo("2026-03-31")).toBe("2026-02-28");
     expect(monthAgo("2026-10-18")).toBe("2026-09-18");
@@ -204,13 +183,10 @@ describe("changeOver / period targets", () => {
     expect(inRange(pts, "1M").map((p) => p.total_eur)).toEqual([3, 4]);
     expect(inRange(pts, "3M").map((p) => p.total_eur)).toEqual([3, 4]);
     expect(inRange(pts, "1Y").map((p) => p.total_eur)).toEqual([2, 3, 4]);
-    expect(inRange(pts, "6M").map((p) => p.total_eur)).toEqual([2, 3, 4]);
-    expect(inRange(pts, "All")).toBe(pts);
+    expect(inRange(pts, "1D").map((p) => p.total_eur)).toEqual([3, 4]);
+    expect(inRange(pts.slice(0, 1), "1D").map((p) => p.total_eur)).toEqual([1]);
+    expect(inRange(pts, "MAX")).toBe(pts);
     expect(inRange([], "1Y")).toEqual([]);
-  });
-
-  it("yearStart is the last day of the previous year", () => {
-    expect(yearStart("2026-10-18")).toBe("2025-12-31");
   });
 });
 

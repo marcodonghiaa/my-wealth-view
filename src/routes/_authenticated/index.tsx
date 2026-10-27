@@ -13,18 +13,12 @@ import { SegmentedControl } from "@/components/segmented-control";
 import {
   CHART_RANGES,
   RANGE_LABEL,
-  changeOver,
   chartPoints,
   inRange,
-  monthAgo,
   withHistory,
-  yearStart,
   type ChartRange,
 } from "@/lib/net-worth";
 import { fetchHistory, fetchNetWorth, fetchReconstructed } from "@/lib/net-worth-queries";
-import { FriendsCreditLine } from "@/components/splitwise/balances-view";
-import { friendsCreditEur as friendsCreditEurOf } from "@/lib/import/splitwise-balances";
-import { useSplitwiseBalances } from "@/lib/use-splitwise-balances";
 import { TONE_TEXT, toneOf } from "@/lib/tone";
 
 export type NetWorthSnapshot = {
@@ -123,18 +117,9 @@ function NetWorthPage() {
   );
   const chartFirst = chartData.at(0);
   const latest = snapshots.at(-1);
-  const previous = snapshots.at(-2);
 
-  const friends = useSplitwiseBalances();
-
-  // These feed the chart history, the Month/YTD tiles and other currencies; say so when one fails.
-  const extraError = [
-    historyQuery,
-    reconstructedQuery,
-    fxQuery,
-    friends.balances,
-    friends.rates,
-  ].find((q) => q.isError)?.error;
+  // These feed the chart history and other currencies; say so when one fails.
+  const extraError = [historyQuery, reconstructedQuery, fxQuery].find((q) => q.isError)?.error;
 
   const rateToEur = useMemo(() => {
     if (currency === "EUR") return 1;
@@ -143,25 +128,6 @@ function NetWorthPage() {
 
   // Conversion: value in target currency = total_eur / rate_to_eur(target).
   const headline = latest != null && rateToEur != null ? latest.total_eur / rateToEur : null;
-
-  const friendsCreditEur = useMemo(
-    () => friendsCreditEurOf(friends.rows, friends.rate),
-    [friends.rows, friends.rate],
-  );
-
-  const dayChange =
-    latest != null && previous != null && previous.total_eur !== 0
-      ? (latest.total_eur - previous.total_eur) / previous.total_eur
-      : null;
-
-  // Monthly and YTD read from the merged series so they reach back into imported history.
-  const series = useMemo(
-    () => withHistory(historyQuery.data ?? [], snapshots, undefined, reconstructedQuery.data ?? []),
-    [historyQuery.data, snapshots, reconstructedQuery.data],
-  );
-  const latestIso = series.at(-1)?.snapshot_date;
-  const monthChange = latestIso ? changeOver(series, monthAgo(latestIso)) : null;
-  const ytdChange = latestIso ? changeOver(series, yearStart(latestIso)) : null;
 
   // Scrubbing the chart rewrites the headline to that day; leaving it shows today again.
   const [scrubIndex, setScrubIndex] = useState<number | null>(null);
@@ -250,27 +216,13 @@ function NetWorthPage() {
           </p>
         )}
 
-        {/* Today's context only: hidden (space kept) while the headline shows a past day */}
+        {/* Exchange rate for today's figure: hidden (space kept) while scrubbing a past day */}
         <div className={scrubbed ? "invisible" : undefined}>
-          <dl className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-sm">
-            <InlineChange label="Today" value={dayChange} />
-            <InlineChange label="Month" value={monthChange} />
-            <InlineChange label="YTD" value={ytdChange} />
-          </dl>
-
           {currency !== "EUR" && headline != null && rateToEur != null && (
             <p className="mt-2 text-xs text-muted-foreground">
               Rate: 1 {currency} = {rateToEur.toFixed(4)} EUR · ECB,{" "}
               {formatFxDate(fxQuery.data?.[currency]?.date)}
             </p>
-          )}
-
-          {rateToEur != null && (
-            <FriendsCreditLine
-              creditEur={friendsCreditEur}
-              netWorthEur={latest?.total_eur ?? null}
-              format={(eur) => formatMoney(eur / rateToEur, currency)}
-            />
           )}
         </div>
       </section>
@@ -399,15 +351,3 @@ function LegendDot({ color, label, dashed }: { color: string; label: string; das
 
 // Moves under half a percent are noise: show them without alarm colour.
 const NOISE_BAND = 0.005;
-
-function InlineChange({ label, value }: { label: string; value: number | null }) {
-  if (value == null) return null;
-  return (
-    <div className="flex items-baseline gap-1.5">
-      <dt className="text-muted-foreground">{label}</dt>
-      <dd className={`font-figure font-medium ${TONE_TEXT[toneOf(value, NOISE_BAND)]}`}>
-        {formatPercent(value)}
-      </dd>
-    </div>
-  );
-}
