@@ -9,7 +9,7 @@ import { assertHttpsUrl } from "@/lib/consent-url";
 import { functionErrorMessage } from "@/lib/function-error";
 import { consentAlerts, type ConsentAlert } from "@/lib/consent-expiry";
 import { formatISODate } from "@/lib/date";
-import { AccountBadge, bankNameFromLabel } from "@/components/bank-badge";
+import { AccountBadge, bankOf } from "@/components/bank-badge";
 import { formatEur, formatMoney } from "@/lib/transactions";
 import { HeadlineFigure } from "@/components/headline-figure";
 
@@ -42,6 +42,9 @@ interface BankAccountRow {
   amount: number | null;
   amount_eur: number | null;
   consent_valid_until: string | null;
+  // Absent on a database without the bank columns yet, null until the bank is renewed.
+  bank_name?: string | null;
+  bank_logo?: string | null;
 }
 
 interface BankGroup {
@@ -68,7 +71,8 @@ interface CdRow {
 async function fetchBankAccounts(): Promise<Array<BankAccountRow>> {
   const { data, error } = await supabase
     .from("v_bank_accounts_latest")
-    .select("uid,label,iban,currency,snapshot_date,amount,amount_eur,consent_valid_until")
+    // "*" rather than a column list, so the page still loads on a database without bank_name/bank_logo.
+    .select("*")
     .order("amount_eur", { ascending: false });
   if (error) throw error;
   return (data ?? []) as Array<BankAccountRow>;
@@ -135,7 +139,7 @@ function AccountsPage() {
   const bankGroups = useMemo<Array<BankGroup>>(() => {
     const byBank = new Map<string, Array<BankAccountRow>>();
     for (const a of bankAccounts) {
-      const bank = bankNameFromLabel(a.label ?? "Bank account");
+      const bank = bankOf(a);
       const list = byBank.get(bank) ?? [];
       list.push(a);
       byBank.set(bank, list);
@@ -481,7 +485,11 @@ function AccountsPage() {
                   <li key={group.bank} className="px-4 py-3 sm:px-5">
                     {/* Main (EUR) account */}
                     <div className="flex items-center gap-3">
-                      <AccountBadge label={group.main.label ?? group.bank} />
+                      <AccountBadge
+                        label={group.main.label ?? group.bank}
+                        bank={group.bank}
+                        logo={group.main.bank_logo ?? null}
+                      />
                       <div className="min-w-0 flex-1">
                         <div className="truncate text-sm font-medium text-foreground">
                           {group.bank}

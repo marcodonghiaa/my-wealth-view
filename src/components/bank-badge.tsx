@@ -18,19 +18,36 @@ export function bankNameFromLabel(label: string): string {
   return parts.join(" ");
 }
 
-export function AccountBadge({ label }: { label: string }) {
-  const bankName = bankNameFromLabel(label);
-  const logo = BANK_LOGO[bankName.toLowerCase()];
-  if (logo) {
+// The bank's name: the one stored at link time, else read from the label (rows linked before
+// bank_name existed, until the bank is renewed).
+export function bankOf(a: { bank_name?: string | null; label: string | null }): string {
+  return a.bank_name || bankNameFromLabel(a.label ?? "Bank account");
+}
+
+// `logo` is the URL Enable Banking lists for the bank, used only when we have no local file.
+export function AccountBadge({
+  label,
+  bank,
+  logo,
+}: {
+  label: string;
+  bank?: string;
+  logo?: string | null;
+}) {
+  const bankName = bank ?? bankNameFromLabel(label);
+  const local = BANK_LOGO[bankName.toLowerCase()];
+  const src = local?.src ?? (logo?.startsWith("https://") ? logo : null);
+  if (src) {
     return (
       <span
         title={label}
         className="inline-flex size-7 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white"
       >
         <img
-          src={logo.src}
+          src={src}
           alt={bankName}
-          className={logo.fill ? "size-full object-cover" : "size-5 object-contain"}
+          referrerPolicy="no-referrer"
+          className={local?.fill ? "size-full object-cover" : "size-5 object-contain"}
         />
       </span>
     );

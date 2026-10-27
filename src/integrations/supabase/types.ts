@@ -10,6 +10,9 @@ export type Database = {
     Tables: {
       accounts: {
         Row: {
+          bank_country: string | null;
+          bank_logo: string | null;
+          bank_name: string | null;
           consent_valid_until: string | null;
           created_at: string | null;
           currency: string;
@@ -20,6 +23,9 @@ export type Database = {
           user_id: string;
         };
         Insert: {
+          bank_country?: string | null;
+          bank_logo?: string | null;
+          bank_name?: string | null;
           consent_valid_until?: string | null;
           created_at?: string | null;
           currency: string;
@@ -30,6 +36,9 @@ export type Database = {
           user_id: string;
         };
         Update: {
+          bank_country?: string | null;
+          bank_logo?: string | null;
+          bank_name?: string | null;
           consent_valid_until?: string | null;
           created_at?: string | null;
           currency?: string;
@@ -710,6 +719,8 @@ export type Database = {
         Row: {
           amount: number | null;
           amount_eur: number | null;
+          bank_logo: string | null;
+          bank_name: string | null;
           consent_valid_until: string | null;
           currency: string | null;
           iban: string | null;
