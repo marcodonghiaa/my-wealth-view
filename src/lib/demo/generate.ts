@@ -148,6 +148,7 @@ export function generateDemoData(now: Date = new Date()): DemoDb {
   const v_bank_accounts_latest: DemoDb["v_bank_accounts_latest"] = accounts.map((a) => ({
     amount: balances.find((b) => b.uid === a.uid && b.n === todayNum)!.amount,
     amount_eur: balances.find((b) => b.uid === a.uid && b.n === todayNum)!.amount,
+    bank_country: a.bank_country,
     bank_logo: a.bank_logo,
     bank_name: a.bank_name,
     consent_valid_until: a.consent_valid_until,

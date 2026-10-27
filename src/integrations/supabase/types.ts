@@ -719,6 +719,7 @@ export type Database = {
         Row: {
           amount: number | null;
           amount_eur: number | null;
+          bank_country: string | null;
           bank_logo: string | null;
           bank_name: string | null;
           consent_valid_until: string | null;
