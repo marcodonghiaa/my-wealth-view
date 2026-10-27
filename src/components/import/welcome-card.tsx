@@ -1,7 +1,8 @@
 import { Link } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check } from "lucide-react";
-import { PushSubscribeButton } from "@/components/push-subscribe";
+import { PushSubscribeButton, pushSupport } from "@/components/push-subscribe";
 import { supabase } from "@/integrations/supabase/client";
 import { checklistSteps, shouldShowChecklist, type StepId } from "@/lib/import/welcome";
 
@@ -56,6 +57,22 @@ const STEP_COPY: Record<StepId, { title: string; detail: string; to?: string; ct
     detail: "A nudge after discretionary purchases, and before a bank's access runs out.",
   },
 };
+
+// Push only works from the installed app, so a browser tab gets install steps instead of a button.
+// Computed after mount: pushSupport() reads window, and SSR must render the same first pass.
+function NotificationsAction() {
+  const [support, setSupport] = useState<ReturnType<typeof pushSupport> | null>(null);
+  useEffect(() => setSupport(pushSupport()), []);
+  if (support === "ok") return <PushSubscribeButton />;
+  if (support !== "install") return null;
+  return (
+    <p className="max-w-xs text-xs text-muted-foreground">
+      Install the app first: on iPhone, Safari → Share → Add to Home Screen; on Android, Chrome menu
+      → Install app; on a computer, the install icon in the address bar. Then open the app and turn
+      this on.
+    </p>
+  );
+}
 
 /** Getting-started checklist. Ticks itself off from your data; gone once a bank and investments are in, or when dismissed. */
 export function WelcomeCard({ history }: { history: number }) {
@@ -135,7 +152,7 @@ export function WelcomeCard({ history }: { history: number }) {
                     {copy.cta}
                   </Link>
                 ) : (
-                  <PushSubscribeButton />
+                  <NotificationsAction />
                 ))}
             </li>
           );

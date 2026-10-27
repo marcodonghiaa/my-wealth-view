@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 let counts: Record<string, number> = {};
 let dismissed = false;
@@ -9,7 +9,13 @@ vi.mock("@tanstack/react-router", () => ({
     <a href={to}>{children}</a>
   ),
 }));
-vi.mock("@/components/push-subscribe", () => ({ PushSubscribeButton: () => null }));
+let demo = false;
+vi.mock("@/lib/demo/mode", () => ({ isDemoMode: () => demo }));
+// Real pushSupport(), stub button (the real one talks to the service worker and Supabase).
+vi.mock("@/components/push-subscribe", async (importActual) => ({
+  ...(await importActual<typeof import("@/components/push-subscribe")>()),
+  PushSubscribeButton: () => <button type="button">Enable purchase check-ins</button>,
+}));
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
     from: (table: string) => ({ select: async () => ({ count: counts[table] ?? 0, error: null }) }),
@@ -71,5 +77,56 @@ describe("WelcomeCard", () => {
     setup();
     await new Promise((r) => setTimeout(r, 50));
     expect(screen.queryByText(/of 4 done/)).toBeNull();
+  });
+
+  describe("notifications row", () => {
+    const INSTALL_HINT =
+      "Install the app first: on iPhone, Safari → Share → Add to Home Screen; on Android, Chrome menu → Install app; on a computer, the install icon in the address bar. Then open the app and turn this on.";
+
+    afterEach(() => {
+      demo = false;
+      vi.unstubAllGlobals();
+      Reflect.deleteProperty(navigator, "serviceWorker");
+    });
+
+    function standaloneWithPush() {
+      vi.stubGlobal("matchMedia", (query: string) => ({
+        matches: query === "(display-mode: standalone)",
+        media: query,
+      }));
+      vi.stubGlobal("PushManager", function PushManager() {});
+      Object.defineProperty(navigator, "serviceWorker", { value: {}, configurable: true });
+    }
+
+    // protects=a browser-tab user learns push needs the installed app instead of a silent empty row;
+    // fails_when=the row shows no action in a plain tab, or the hint shows where the button works / in the demo
+    it("shows the install hint in a regular browser tab", async () => {
+      counts = {};
+      dismissed = false;
+      setup();
+      expect(await screen.findByText(INSTALL_HINT)).toBeTruthy();
+      expect(screen.queryByRole("button", { name: "Enable purchase check-ins" })).toBeNull();
+    });
+
+    it("shows the subscribe button once installed with push support", async () => {
+      counts = {};
+      dismissed = false;
+      standaloneWithPush();
+      setup();
+      expect(await screen.findByRole("button", { name: "Enable purchase check-ins" })).toBeTruthy();
+      expect(screen.queryByText(INSTALL_HINT)).toBeNull();
+    });
+
+    it("shows neither hint nor button in the demo", async () => {
+      counts = {};
+      dismissed = false;
+      demo = true;
+      standaloneWithPush();
+      setup();
+      await screen.findByText(/^0 of 4 done/);
+      await new Promise((r) => setTimeout(r, 20));
+      expect(screen.queryByText(INSTALL_HINT)).toBeNull();
+      expect(screen.queryByRole("button", { name: "Enable purchase check-ins" })).toBeNull();
+    });
   });
 });
