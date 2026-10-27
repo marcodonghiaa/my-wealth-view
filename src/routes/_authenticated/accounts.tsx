@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { MaskedIban } from "@/components/masked-iban";
 import { supabase } from "@/integrations/supabase/client";
 import { assertHttpsUrl } from "@/lib/consent-url";
+import { functionErrorMessage } from "@/lib/function-error";
 import { consentAlerts, type ConsentAlert } from "@/lib/consent-expiry";
 import { formatISODate } from "@/lib/date";
 import { AccountBadge, bankNameFromLabel } from "@/components/bank-badge";
@@ -180,7 +181,8 @@ function AccountsPage() {
         banks?: Array<{ name: string; logo: string | null }>;
         error?: string;
       }>("list-banks", { body: { country: bankCountry } });
-      if (error) throw error;
+      if (error)
+        throw new Error(await functionErrorMessage(error, "Couldn't load banks for this country."));
       if (!data?.banks) throw new Error(data?.error ?? "No bank list returned");
       return data.banks;
     },
@@ -195,7 +197,8 @@ function AccountsPage() {
         url?: string;
         error?: string;
       }>("start-bank-consent", { body: input });
-      if (error) throw error;
+      if (error)
+        throw new Error(await functionErrorMessage(error, "Couldn't start bank connection"));
       if (!data?.url) throw new Error(data?.error ?? "No consent URL returned");
       return assertHttpsUrl(data.url);
     },
@@ -425,8 +428,8 @@ function AccountsPage() {
                     ))}
                   </select>
                   {banksQuery.isError && (
-                    <p className="mt-1 text-xs text-negative">
-                      Couldn't load banks for this country.
+                    <p className="mt-1 break-words text-xs text-negative">
+                      {banksQuery.error.message}
                     </p>
                   )}
                 </div>
