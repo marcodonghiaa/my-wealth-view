@@ -20,6 +20,17 @@ function isStandalone() {
   );
 }
 
+/**
+ * Whether push can work here: "ok", "install" (regular browser tab: needs the home-screen app),
+ * or "unsupported" (demo, or installed without serviceWorker/PushManager). Client-only.
+ */
+export function pushSupport(): "ok" | "install" | "unsupported" {
+  // No push registration in the demo: it would talk to the browser vendor's push service.
+  if (typeof window === "undefined" || isDemoMode()) return "unsupported";
+  if (!isStandalone()) return "install";
+  return "serviceWorker" in navigator && "PushManager" in window ? "ok" : "unsupported";
+}
+
 function urlBase64ToUint8Array(base64: string) {
   const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), "=");
   const raw = atob(padded.replace(/-/g, "+").replace(/_/g, "/"));
@@ -38,9 +49,7 @@ export function PushSubscribeButton() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    // No push registration in the demo: it would talk to the browser vendor's push service.
-    const ok =
-      !isDemoMode() && isStandalone() && "serviceWorker" in navigator && "PushManager" in window;
+    const ok = pushSupport() === "ok";
     setSupported(ok);
     if ("Notification" in window) setPermission(Notification.permission);
     if (!ok) return;
