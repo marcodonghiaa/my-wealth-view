@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
-import { Github, Loader2, LockKeyhole, TrendingUp } from "lucide-react";
+import { Github, Loader2, LockKeyhole } from "lucide-react";
+import { BrandMark } from "@/components/brand-mark";
 import { supabase } from "@/integrations/supabase/client";
 import { exitDemoMode } from "@/lib/demo/mode";
 
@@ -110,9 +111,7 @@ function AuthPage() {
     <div className="flex min-h-dvh items-center justify-center bg-background px-4">
       <div className="w-full max-w-sm">
         <div className="mb-8 flex flex-col items-center text-center">
-          <div className="mb-4 flex size-12 items-center justify-center rounded-2xl bg-primary/15 text-primary">
-            <TrendingUp className="size-6" />
-          </div>
+          <BrandMark className="mb-4 size-12" />
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">MyFinances</h1>
           <p className="mt-1 text-sm text-muted-foreground">Sign in to view your finances</p>
         </div>
