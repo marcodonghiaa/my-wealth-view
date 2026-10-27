@@ -1,7 +1,15 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { ChevronDown } from "lucide-react";
+import {
+  Building2,
+  ChevronDown,
+  ChartPie,
+  Layers,
+  ScrollText,
+  Shapes,
+  type LucideIcon,
+} from "lucide-react";
 import { shortHoldingName } from "@/lib/holding-name";
 import { supabase } from "@/integrations/supabase/client";
 import { formatEur } from "@/lib/transactions";
@@ -10,6 +18,14 @@ import { AddHoldingPanel } from "@/components/holdings/add-holding-panel";
 import { EditHolding } from "@/components/holdings/edit-holding";
 import { HeadlineFigure } from "@/components/headline-figure";
 import { ShareBar } from "@/components/share-bar";
+import { trendSummary } from "@/lib/chart-summary";
+import { SegmentedControl } from "@/components/segmented-control";
+import { ValueChart } from "@/components/value-chart";
+import { formatDay } from "@/lib/date";
+import { CHART_RANGES, RANGE_LABEL, chartPoints, inRange, withHistory } from "@/lib/net-worth";
+import type { ChartRange } from "@/lib/net-worth";
+import { fetchHistory, fetchNetWorth, fetchReconstructed } from "@/lib/net-worth-queries";
+import { TONE_TEXT, toneOf } from "@/lib/tone";
 
 export const Route = createFileRoute("/_authenticated/portfolio")({
   head: () => ({
@@ -60,6 +76,16 @@ function colorForType(type: string): string {
   // UNCLASSIFIED is always a key in TYPE_COLORS -- defined right above.
   return TYPE_COLORS[type] ?? TYPE_COLORS[UNCLASSIFIED]!;
 }
+
+const TYPE_ICONS: Record<string, LucideIcon> = {
+  Stock: Building2,
+  ETF: Layers,
+  Fund: ChartPie,
+  Bond: ScrollText,
+};
+
+// Moves under half a percent are noise: show them without alarm colour.
+const NOISE_BAND = 0.005;
 
 async function fetchPortfolio(): Promise<Array<PortfolioRow>> {
   const { data, error } = await supabase
@@ -130,6 +156,33 @@ function PortfolioPage() {
     [query.data],
   );
 
+  // Value over time comes from the same merged history as net worth (shared query cache).
+  const [range, setRange] = useState<ChartRange>("1Y");
+  const netWorthQuery = useQuery({ queryKey: ["net-worth-daily"], queryFn: fetchNetWorth });
+  const historyQuery = useQuery({ queryKey: ["net-worth-history"], queryFn: fetchHistory });
+  const reconstructedQuery = useQuery({
+    queryKey: ["net-worth-reconstructed"],
+    queryFn: fetchReconstructed,
+  });
+  const chartData = useMemo(
+    () =>
+      inRange(
+        chartPoints(
+          withHistory(
+            historyQuery.data ?? [],
+            netWorthQuery.data ?? [],
+            undefined,
+            reconstructedQuery.data ?? [],
+          ),
+        ),
+        range,
+      ),
+    [historyQuery.data, netWorthQuery.data, reconstructedQuery.data, range],
+  );
+  const chartFirst = chartData.at(0);
+  const [scrubIndex, setScrubIndex] = useState<number | null>(null);
+  const scrubbed = scrubIndex != null ? chartData.at(scrubIndex) : undefined;
+
   // Groups start collapsed: the header already carries the count, total and share.
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const toggleGroup = (type: string) =>
@@ -161,10 +214,22 @@ function PortfolioPage() {
       .sort((a, b) => b.totalEur - a.totalEur);
   }, [holdings]);
 
+  // Scrubbing shows that day's value; otherwise today's, from the holdings below.
+  const shownEur = scrubbed?.portfolio_total_eur ?? totalEur;
+  const rangeDelta = chartFirst ? shownEur - chartFirst.portfolio_total_eur : null;
+  const rangeChange =
+    rangeDelta != null && chartFirst && chartFirst.portfolio_total_eur !== 0
+      ? rangeDelta / Math.abs(chartFirst.portfolio_total_eur)
+      : null;
+  const chartError = [netWorthQuery, historyQuery, reconstructedQuery].find(
+    (q) => q.isError,
+  )?.error;
+
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-8 md:py-12">
-      <header className="mb-3">
-        <h1 className="text-[0.9375rem] font-medium text-muted-foreground">Portfolio</h1>
+      <header className="mb-3 text-[0.9375rem] font-medium text-muted-foreground">
+        <h1 className="inline">Portfolio</h1>
+        {scrubbed && <span> · {formatDay(scrubbed.snapshot_date)}</span>}
       </header>
 
       {query.isError && (
@@ -176,28 +241,86 @@ function PortfolioPage() {
         </div>
       )}
 
-      {/* Headline: total value, then how it splits by type */}
-      <section aria-label="Total portfolio value" className="mb-8">
-        <div className="min-h-16">
+      {chartError && (
+        <div
+          role="alert"
+          className="mb-6 rounded-2xl bg-negative/10 px-4 py-3 text-sm text-negative"
+        >
+          Couldn't load your portfolio history: {chartError.message}
+        </div>
+      )}
+
+      {/* Headline: total value and its change over the chart range */}
+      <section aria-label="Total portfolio value" className="mb-6">
+        <div className="min-h-16" aria-live="polite">
           {query.isPending ? (
             <div className="h-16 w-72 animate-pulse rounded-2xl bg-muted" />
           ) : (
-            <HeadlineFigure value={totalEur} currency="EUR" />
+            <HeadlineFigure value={shownEur} currency="EUR" />
           )}
         </div>
-        {!query.isPending && holdings.length > 0 && totalEur > 0 && (
-          <div className="mt-5">
-            <ShareBar
-              title="Allocation by type"
-              shares={groups.map((g) => ({
-                label: g.type,
-                value: g.totalEur,
-                color: colorForType(g.type),
-              }))}
-            />
-          </div>
+        {!query.isPending && rangeDelta != null && rangeChange != null && (
+          <p className="mt-3 flex flex-wrap items-baseline gap-x-2 text-[0.9375rem]">
+            <span
+              className={`font-figure font-medium ${TONE_TEXT[toneOf(rangeChange, NOISE_BAND)]}`}
+            >
+              {rangeDelta >= 0 ? "+" : "−"}
+              {formatEur(Math.abs(rangeDelta))} ({rangeChange >= 0 ? "+" : "−"}
+              {Math.abs(rangeChange * 100).toFixed(2)}%)
+            </span>
+            <span className="text-muted-foreground">
+              {scrubbed && chartFirst
+                ? `${formatDay(chartFirst.snapshot_date)} – ${formatDay(scrubbed.snapshot_date)}`
+                : RANGE_LABEL[range]}
+            </span>
+          </p>
         )}
       </section>
+
+      {/* Chart: portfolio value over time; scrub it to read any day */}
+      {chartData.length > 1 && (
+        <section aria-label="Portfolio value over time" className="mb-8">
+          <div
+            className="-mx-1 h-64 sm:h-72"
+            role="img"
+            aria-label={trendSummary(
+              "Portfolio value over time",
+              chartData[0]!.portfolio_total_eur,
+              chartData.at(-1)!.portfolio_total_eur,
+              formatEur,
+            )}
+          >
+            <ValueChart
+              data={chartData}
+              dataKey="portfolio_total_eur"
+              name="Portfolio"
+              onScrub={setScrubIndex}
+            />
+          </div>
+          <div className="mt-4 flex">
+            <SegmentedControl
+              label="Chart range"
+              options={CHART_RANGES.map((r) => ({ value: r, label: r }))}
+              value={range}
+              onChange={setRange}
+            />
+          </div>
+        </section>
+      )}
+
+      {/* How it splits by type */}
+      {!query.isPending && holdings.length > 0 && totalEur > 0 && (
+        <div className="mb-6">
+          <ShareBar
+            title="Allocation by type"
+            shares={groups.map((g) => ({
+              label: g.type,
+              value: g.totalEur,
+              color: colorForType(g.type),
+            }))}
+          />
+        </div>
+      )}
 
       {query.isPending ? (
         <>
@@ -215,6 +338,7 @@ function PortfolioPage() {
             {groups.map((group) => {
               const percent = totalEur > 0 ? (group.totalEur / totalEur) * 100 : 0;
               const color = colorForType(group.type);
+              const TypeIcon = TYPE_ICONS[group.type] ?? Shapes;
               const isOpen = expanded.has(group.type);
               return (
                 <section key={group.type}>
@@ -226,12 +350,13 @@ function PortfolioPage() {
                   >
                     <span
                       aria-hidden
-                      className="flex size-10 shrink-0 items-center justify-center rounded-full text-[0.9375rem] font-semibold text-foreground"
+                      className="flex size-10 shrink-0 items-center justify-center rounded-full"
                       style={{
-                        backgroundColor: `color-mix(in oklab, ${color} 22%, var(--color-card))`,
+                        color,
+                        backgroundColor: `color-mix(in oklab, ${color} 16%, var(--color-card))`,
                       }}
                     >
-                      {group.type.charAt(0).toUpperCase()}
+                      <TypeIcon className="size-[1.125rem]" strokeWidth={2} />
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className="block text-[0.9375rem] font-medium text-foreground">

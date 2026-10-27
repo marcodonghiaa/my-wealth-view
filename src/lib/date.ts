@@ -26,3 +26,12 @@ export function axisDateFormatter(
       : { day: "numeric", month: "short" };
   return (iso) => new Date(`${iso}T00:00:00`).toLocaleDateString("en-GB", options);
 }
+
+// A day as people read it: 3 Mar 2026.
+export function formatDay(iso: string): string {
+  return new Date(`${iso}T00:00:00`).toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}

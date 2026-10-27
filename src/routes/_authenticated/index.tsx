@@ -1,17 +1,18 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { Area, ComposedChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Bitcoin, Briefcase, Landmark } from "lucide-react";
 import { trendSummary } from "@/lib/chart-summary";
 import { supabase } from "@/integrations/supabase/client";
 import { WelcomeCard } from "@/components/import/welcome-card";
 import { AllocationChart } from "@/components/allocation-chart";
 import { HeadlineFigure } from "@/components/headline-figure";
+import { formatDay } from "@/lib/date";
+import { ValueChart } from "@/components/value-chart";
 import { SegmentedControl } from "@/components/segmented-control";
-import { axisDateFormatter, formatISODate } from "@/lib/date";
 import {
   CHART_RANGES,
+  RANGE_LABEL,
   changeOver,
   chartPoints,
   inRange,
@@ -294,77 +295,13 @@ function NetWorthPage() {
               No data to chart yet.
             </div>
           ) : (
-            <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart
-                data={chartData}
-                margin={{ top: 8, right: 4, bottom: 0, left: 4 }}
-                onMouseMove={(state) =>
-                  setScrubIndex(
-                    state?.isTooltipActive && state.activeTooltipIndex != null
-                      ? state.activeTooltipIndex
-                      : null,
-                  )
-                }
-                onMouseLeave={() => setScrubIndex(null)}
-              >
-                <defs>
-                  <linearGradient id="net-worth-fill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="var(--color-primary)" stopOpacity={0.16} />
-                    <stop offset="100%" stopColor="var(--color-primary)" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <XAxis
-                  dataKey="ts"
-                  type="number"
-                  scale="time"
-                  domain={["dataMin", "dataMax"]}
-                  tickFormatter={(ts: number) =>
-                    axisDateFormatter(
-                      chartFirst?.snapshot_date,
-                      latest?.snapshot_date,
-                    )(formatISODate(new Date(ts)))
-                  }
-                  tick={{ fill: "var(--color-muted-foreground)", fontSize: 11 }}
-                  tickLine={false}
-                  axisLine={false}
-                  minTickGap={56}
-                  interval="preserveStartEnd"
-                />
-                <YAxis hide domain={["auto", "auto"]} />
-                <Tooltip
-                  content={() => null}
-                  cursor={{ stroke: "var(--color-foreground)", strokeOpacity: 0.25 }}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="total_eur"
-                  name="Net worth"
-                  isAnimationActive={false}
-                  stroke="var(--color-primary)"
-                  strokeWidth={2}
-                  fill="url(#net-worth-fill)"
-                  dot={false}
-                  activeDot={{
-                    r: 4,
-                    fill: "var(--color-primary)",
-                    stroke: "var(--color-background)",
-                    strokeWidth: 2,
-                  }}
-                />
-                <Line
-                  type="linear"
-                  dataKey="estimated_eur"
-                  name="Estimate"
-                  isAnimationActive={false}
-                  stroke="var(--color-muted-foreground)"
-                  strokeWidth={1.5}
-                  strokeDasharray="2 4"
-                  dot={false}
-                  activeDot={false}
-                  connectNulls
-                />
-              </ComposedChart>
-            </ResponsiveContainer>
+            <ValueChart
+              data={chartData}
+              dataKey="total_eur"
+              name="Net worth"
+              estimateKey="estimated_eur"
+              onScrub={setScrubIndex}
+            />
           )}
         </div>
 
@@ -435,22 +372,6 @@ const BREAKDOWN = [
   { key: "portfolio_total_eur", label: "Portfolio", icon: Briefcase },
   { key: "crypto_total_eur", label: "Crypto", icon: Bitcoin },
 ] as const;
-
-const RANGE_LABEL: Record<ChartRange, string> = {
-  "1M": "Past month",
-  "3M": "Past 3 months",
-  "6M": "Past 6 months",
-  "1Y": "Past year",
-  All: "All time",
-};
-
-function formatDay(iso: string): string {
-  return new Date(`${iso}T00:00:00`).toLocaleDateString("en-GB", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-}
 
 function formatPercent(value: number, signed = true): string {
   const sign = signed ? (value > 0 ? "+" : value < 0 ? "−" : "") : "";
