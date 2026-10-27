@@ -242,22 +242,6 @@ export function breakAtGaps(points: Array<AllocationPoint>): Array<AllocationPlo
   });
 }
 
-// Latest vs the last row on or before targetIso. Null when that row is more than maxStaleDays
-// older than the target (a hole in the data, so the number would be misleading).
-export function changeOver(
-  rows: Array<{ snapshot_date: string; total_eur: number }>,
-  targetIso: string,
-  maxStaleDays = GAP_DAYS,
-): number | null {
-  const latest = rows.at(-1);
-  const base = rows.filter((r) => r.snapshot_date <= targetIso).at(-1);
-  if (!latest || !base || base.total_eur === 0) return null;
-  const stale =
-    (Date.parse(`${targetIso}T00:00:00`) - Date.parse(`${base.snapshot_date}T00:00:00`)) / DAY_MS;
-  if (stale > maxStaleDays) return null;
-  return latest.total_eur / base.total_eur - 1;
-}
-
 // Same day one month earlier, clamped to that month's last day (31 Mar -> 28 Feb).
 export function monthAgo(iso: string, months = 1): string {
   const [y = 0, m = 1, d = 1] = iso.split("-").map(Number);
@@ -266,35 +250,30 @@ export function monthAgo(iso: string, months = 1): string {
   return `${prevLast.getUTCFullYear()}-${String(prevLast.getUTCMonth() + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
 
-export function yearStart(iso: string): string {
-  return `${Number(iso.slice(0, 4)) - 1}-12-31`;
-}
-
-export type ChartRange = "1M" | "3M" | "6M" | "1Y" | "All";
-export const CHART_RANGES: Array<ChartRange> = ["1M", "6M", "1Y", "All"];
-// Allocation shifts slowly, so its shortest useful window is a quarter.
-export const ALLOCATION_RANGES: Array<ChartRange> = ["3M", "6M", "1Y", "All"];
+export type ChartRange = "1M" | "3M" | "YTD" | "2Y";
+export const CHART_RANGES: Array<ChartRange> = ["1M", "3M", "YTD", "2Y"];
 export const RANGE_LABEL: Record<ChartRange, string> = {
   "1M": "Past month",
   "3M": "Past 3 months",
-  "6M": "Past 6 months",
-  "1Y": "Past year",
-  All: "All time",
+  YTD: "Year to date",
+  "2Y": "Past 2 years",
 };
-const RANGE_MONTHS: Record<Exclude<ChartRange, "All">, number> = {
+const RANGE_MONTHS: Record<Exclude<ChartRange, "YTD">, number> = {
   "1M": 1,
   "3M": 3,
-  "6M": 6,
-  "1Y": 12,
+  "2Y": 24,
 };
 
-/** Points from `range` before the last one; "All" keeps everything. */
+/** Points from `range` before the last one; "YTD" starts at the last day of the previous year. */
 export function inRange<T extends { snapshot_date: string }>(
   points: Array<T>,
   range: ChartRange,
 ): Array<T> {
   const lastIso = points.at(-1)?.snapshot_date;
-  if (range === "All" || lastIso == null) return points;
-  const start = monthAgo(lastIso, RANGE_MONTHS[range]);
+  if (lastIso == null) return points;
+  const start =
+    range === "YTD"
+      ? `${Number(lastIso.slice(0, 4)) - 1}-12-31`
+      : monthAgo(lastIso, RANGE_MONTHS[range]);
   return points.filter((p) => p.snapshot_date >= start);
 }

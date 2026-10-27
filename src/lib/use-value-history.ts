@@ -11,7 +11,7 @@ type ValueKey = "portfolio_total_eur" | "crypto_total_eur";
  * Net Worth page (shared query cache). Scrubbing the chart swaps `shownEur` to that day.
  */
 export function useValueHistory(key: ValueKey, todayEur: number) {
-  const [range, setRange] = useState<ChartRange>("1Y");
+  const [range, setRange] = useState<ChartRange>("YTD");
   const netWorthQuery = useQuery({ queryKey: ["net-worth-daily"], queryFn: fetchNetWorth });
   const historyQuery = useQuery({ queryKey: ["net-worth-history"], queryFn: fetchHistory });
   const reconstructedQuery = useQuery({

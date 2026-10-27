@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import type { GroupSummary } from "@/lib/import/splitwise-balances";
-import { BalancesView, FriendsCreditLine } from "./balances-view";
+import { BalancesView } from "./balances-view";
 
 const group: GroupSummary = {
   group: "berkeley",
@@ -40,26 +40,5 @@ describe("BalancesView", () => {
   it("explains that these are group totals, not who pays whom", () => {
     render(<BalancesView groups={[group]} />);
     expect(screen.getByText(/not who pays whom/)).toBeTruthy();
-  });
-});
-
-describe("FriendsCreditLine", () => {
-  it("shows what friends owe you and the net worth including it", () => {
-    render(<FriendsCreditLine creditEur={360} netWorthEur={10000} format={(v) => `€${v}`} />);
-    expect(screen.getByText(/Friends owe you/)).toBeTruthy();
-    expect(screen.getByText(/€360/)).toBeTruthy();
-    expect(screen.getByText(/€10360/)).toBeTruthy();
-  });
-
-  it("says you owe the group when the balance is negative", () => {
-    render(<FriendsCreditLine creditEur={-50} netWorthEur={100} format={(v) => `€${v}`} />);
-    expect(screen.getByText(/You owe your groups/)).toBeTruthy();
-  });
-
-  it("renders nothing without a balance", () => {
-    const { container } = render(
-      <FriendsCreditLine creditEur={null} netWorthEur={100} format={(v) => `${v}`} />,
-    );
-    expect(container.textContent).toBe("");
   });
 });

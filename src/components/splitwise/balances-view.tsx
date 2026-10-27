@@ -61,34 +61,3 @@ export function BalancesView({ groups }: { groups: Array<GroupSummary> }) {
     </div>
   );
 }
-
-/** One line under the net worth headline: friends' credit, kept out of the main total. */
-export function FriendsCreditLine({
-  creditEur,
-  netWorthEur,
-  format,
-}: {
-  creditEur: number | null;
-  netWorthEur: number | null;
-  format: (eurValue: number) => string;
-}) {
-  if (creditEur === null) return null;
-  const owed = creditEur >= 0;
-  return (
-    <div className="mt-3 space-y-0.5 text-xs text-muted-foreground">
-      <p>
-        {owed ? "Friends owe you" : "You owe your groups"}{" "}
-        <span className="font-figure text-foreground">{format(Math.abs(creditEur))}</span>
-      </p>
-      <p>
-        On Splitwise, not counted above
-        {netWorthEur !== null && (
-          <>
-            {" · "}with it{" "}
-            <span className="font-figure text-foreground">{format(netWorthEur + creditEur)}</span>
-          </>
-        )}
-      </p>
-    </div>
-  );
-}
