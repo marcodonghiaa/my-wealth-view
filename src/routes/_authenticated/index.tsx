@@ -1,7 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { Bitcoin, Briefcase, Landmark } from "lucide-react";
 import { trendSummary } from "@/lib/chart-summary";
 import { supabase } from "@/integrations/supabase/client";
 import { WelcomeCard } from "@/components/import/welcome-card";
@@ -145,7 +144,6 @@ function NetWorthPage() {
     rangeDeltaEur != null && chartFirst && chartFirst.total_eur !== 0
       ? rangeDeltaEur / Math.abs(chartFirst.total_eur)
       : null;
-  const breakdown = scrubbed ?? latest;
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-8 md:py-12">
@@ -291,54 +289,18 @@ function NetWorthPage() {
         </div>
       </section>
 
-      {/* What it is made of, on the scrubbed day when scrubbing */}
-      {breakdown != null && rateToEur != null && (
-        <section aria-labelledby="breakdown-title" className="mb-8">
-          <h2 id="breakdown-title" className="mb-2 px-1 text-lg font-semibold text-foreground">
-            Breakdown
-          </h2>
-          <ul className="divide-y overflow-hidden rounded-2xl bg-card">
-            {BREAKDOWN.map(({ key, label, icon: Icon }) => {
-              const valueEur = breakdown[key];
-              const share = breakdown.total_eur !== 0 ? valueEur / breakdown.total_eur : 0;
-              return (
-                <li key={key} className="flex min-h-16 items-center gap-3 px-4 py-3">
-                  <span
-                    aria-hidden
-                    className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted text-foreground"
-                  >
-                    <Icon className="size-[1.125rem]" />
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[0.9375rem] font-medium text-foreground">{label}</p>
-                    <p className="font-figure text-xs text-muted-foreground">
-                      {formatPercent(share, false)} of total
-                    </p>
-                  </div>
-                  <p className="font-figure text-[0.9375rem] font-semibold text-foreground">
-                    {formatMoney(valueEur / rateToEur, currency)}
-                  </p>
-                </li>
-              );
-            })}
-          </ul>
-        </section>
-      )}
-
       <AllocationChart
         history={historyQuery.data ?? []}
         snapshots={snapshots}
         reconstructed={reconstructedQuery.data ?? []}
+        asOf={scrubbed?.snapshot_date}
+        format={(eur) =>
+          rateToEur != null ? formatMoney(eur / rateToEur, currency) : formatMoney(eur, "EUR")
+        }
       />
     </div>
   );
 }
-
-const BREAKDOWN = [
-  { key: "bank_total_eur", label: "Bank", icon: Landmark },
-  { key: "portfolio_total_eur", label: "Portfolio", icon: Briefcase },
-  { key: "crypto_total_eur", label: "Crypto", icon: Bitcoin },
-] as const;
 
 function formatPercent(value: number, signed = true): string {
   const sign = signed ? (value > 0 ? "+" : value < 0 ? "−" : "") : "";
