@@ -19,6 +19,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { supabase } from "@/integrations/supabase/client";
 import { PushSubscribeButton } from "@/components/push-subscribe";
 import { MadeWith } from "@/components/made-with";
+import { BrandMark } from "@/components/brand-mark";
 import { DemoBadge } from "@/components/demo-badge";
 
 export const Route = createFileRoute("/_authenticated")({
@@ -117,9 +118,7 @@ function AuthenticatedLayout() {
       {/* Sidebar */}
       <aside className="glass fixed inset-y-0 left-0 z-30 hidden w-64 flex-col border-r md:flex">
         <div className="flex h-14 items-center gap-2.5 px-5">
-          <div className="flex size-8 items-center justify-center rounded-lg bg-primary/15 text-primary">
-            <TrendingUp className="size-4" />
-          </div>
+          <BrandMark className="size-8" />
           <span className="text-sm font-semibold tracking-tight text-sidebar-foreground">
             MyFinances
           </span>
