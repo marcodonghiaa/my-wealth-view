@@ -21,6 +21,13 @@ export function currentValueEur({
   return valueEur * ((quantity * price) / valueAtPrice);
 }
 
+// The snapshot's price in EUR, at the same exchange rate the snapshot's value_eur used.
+// Null when the snapshot has no price or no value to take the rate from.
+export function priceEur({ price, valueAtPrice, valueEur }: Omit<SnapshotValue, "quantity">) {
+  if (price == null || !valueAtPrice || valueEur == null) return null;
+  return price * (valueEur / valueAtPrice);
+}
+
 // "3,5" and "3.5" both mean three and a half. Null for anything that isn't a positive number.
 export function parseQuantity(input: string): number | null {
   const text = input.trim().replace(",", ".");
