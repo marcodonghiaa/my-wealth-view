@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { Bitcoin, Coins } from "lucide-react";
 import { colorsForAssets } from "@/lib/crypto-colors";
 import { supabase } from "@/integrations/supabase/client";
-import { currentValueEur, isEditableCryptoSource } from "@/lib/holdings";
+import { currentValueEur, isEditableCryptoSource, priceEur } from "@/lib/holdings";
 import { AddHoldingPanel } from "@/components/holdings/add-holding-panel";
 import { EditHolding } from "@/components/holdings/edit-holding";
 import { HeadlineFigure } from "@/components/headline-figure";
@@ -43,6 +43,7 @@ interface CryptoRow {
   price_usd: number | null;
   value_usd: number | null;
   value_eur: number | null;
+  price_eur?: number | null;
 }
 
 interface AssetGroup {
@@ -50,6 +51,7 @@ interface AssetGroup {
   name: string;
   amount: number;
   priceUsd: number | null;
+  priceEur: number | null;
   valueEur: number;
   bySource: Array<{ source: string; amount: number; valueEur: number }>;
 }
@@ -61,6 +63,12 @@ async function fetchCrypto(): Promise<Array<CryptoRow>> {
     .order("value_eur", { ascending: false });
   if (error) throw error;
   return (data ?? []) as Array<CryptoRow>;
+}
+
+// EUR like every other figure on the page; USD only when the snapshot has no rate to convert with.
+function formatPrice(asset: AssetGroup): string {
+  if (asset.priceEur != null) return formatEur(asset.priceEur);
+  return asset.priceUsd != null ? formatUsd(asset.priceUsd) : "—";
 }
 
 function formatAmount(value: number): string {
@@ -82,6 +90,7 @@ function groupBySymbol(rows: Array<CryptoRow>): Array<AssetGroup> {
     if (existing) {
       existing.amount += amount;
       existing.valueEur += valueEur;
+      existing.priceEur ??= row.price_eur ?? null; // first source that has a rate
       existing.bySource.push({ source: row.source ?? "—", amount, valueEur });
     } else {
       bySymbol.set(symbol, {
@@ -89,6 +98,7 @@ function groupBySymbol(rows: Array<CryptoRow>): Array<AssetGroup> {
         name: row.name ?? symbol,
         amount,
         priceUsd: row.price_usd,
+        priceEur: row.price_eur ?? null,
         valueEur,
         bySource: [{ source: row.source ?? "—", amount, valueEur }],
       });
@@ -108,19 +118,22 @@ function CryptoPage() {
     () =>
       (query.data ?? [])
         .filter((row) => row.amount !== 0)
-        .map((row) =>
-          row.amount == null
-            ? row
-            : {
-                ...row,
-                value_eur: currentValueEur({
-                  quantity: row.amount,
-                  price: row.price_usd,
-                  valueAtPrice: row.value_usd,
-                  valueEur: row.value_eur,
-                }),
-              },
-        ),
+        .map((row) => {
+          // price_eur uses the snapshot's own value_eur/value_usd rate, before the rescale below.
+          const snapshot = {
+            price: row.price_usd,
+            valueAtPrice: row.value_usd,
+            valueEur: row.value_eur,
+          };
+          return {
+            ...row,
+            price_eur: priceEur(snapshot),
+            value_eur:
+              row.amount == null
+                ? row.value_eur
+                : currentValueEur({ ...snapshot, quantity: row.amount }),
+          };
+        }),
     [query.data],
   );
   const assets = useMemo(() => groupBySymbol(rows), [rows]);
@@ -253,7 +266,7 @@ function CryptoPage() {
                           )}
                         </td>
                         <td className="px-4 py-3 font-figure text-foreground sm:px-5">
-                          {asset.priceUsd != null ? formatUsd(asset.priceUsd) : "—"}
+                          {formatPrice(asset)}
                         </td>
                         <td className="px-4 py-3 text-right font-figure font-medium text-foreground sm:px-5">
                           {formatEur(asset.valueEur)}
@@ -311,9 +324,7 @@ function CryptoPage() {
                     </div>
                     <div>
                       <div className="text-xs text-muted-foreground">Price</div>
-                      <div className="font-figure text-foreground">
-                        {asset.priceUsd != null ? formatUsd(asset.priceUsd) : "—"}
-                      </div>
+                      <div className="font-figure text-foreground">{formatPrice(asset)}</div>
                     </div>
                     <div>
                       <div className="text-xs text-muted-foreground">Value</div>
