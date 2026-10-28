@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { accountName } from "@/components/bank-badge";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { Search, Trash2 } from "lucide-react";
@@ -109,7 +110,7 @@ async function fetchSharesForMonth(month: Date): Promise<Array<SplitwiseShare>> 
 }
 
 async function fetchAccounts(): Promise<Record<string, AccountRow>> {
-  const { data, error } = await supabase.from("accounts").select("uid,label,currency");
+  const { data, error } = await supabase.from("accounts").select("*");
   if (error) throw error;
   const map: Record<string, AccountRow> = {};
   for (const row of (data ?? []) as Array<AccountRow>) map[row.uid] = row;
@@ -253,6 +254,11 @@ function TransactionsPage() {
   const savingShare = (tx: TransactionRow) =>
     updateShare.isPending && updateShare.variables?.id === shareId(tx);
 
+  const labelFor = (uid: string | null) => {
+    if (!uid) return "—";
+    const account = accounts[uid];
+    return account ? accountName(account) : "Unknown account";
+  };
   const viewProps = (tx: TransactionRow): TransactionViewProps => ({
     tx,
     selected: selected.has(txId(tx)),
@@ -266,7 +272,7 @@ function TransactionsPage() {
         : updateCategory.mutate({ tx, value: next }),
     savingType: updateType.isPending && isSameTx(updateType.variables?.tx, tx),
     onSelectType: (next) => updateType.mutate({ tx, value: next }),
-    accountLabel: tx.account_uid ? (accounts[tx.account_uid]?.label ?? "Unknown account") : "—",
+    accountLabel: labelFor(tx.account_uid),
     onAnswerWorthIt: (worthIt) => answerWorthIt.mutate({ tx, value: worthIt }),
     savingSplit: updateSplit.isPending && isSameTx(updateSplit.variables?.tx, tx),
     onSaveSplit: (personalAmount, owedBy) => updateSplit.mutate({ tx, personalAmount, owedBy }),
