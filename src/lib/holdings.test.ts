@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { currentValueEur, isEditableCryptoSource, parseQuantity } from "./holdings";
+import { currentValueEur, isEditableCryptoSource, parseQuantity, priceEur } from "./holdings";
 
 describe("currentValueEur", () => {
   it("is the snapshot value when the quantity has not changed", () => {
@@ -22,6 +22,21 @@ describe("currentValueEur", () => {
   it("falls back to the stored value when the snapshot can't be rescaled", () => {
     expect(currentValueEur({ quantity: 3, price: null, valueAtPrice: 0, valueEur: 12 })).toBe(12);
     expect(currentValueEur({ quantity: 3, price: 5, valueAtPrice: 15, valueEur: null })).toBe(0);
+  });
+});
+
+// protects=the crypto price reads in the same currency as its value; fails_when=the EUR price
+// uses a different rate than value_eur, or a missing rate shows a made-up price
+describe("priceEur", () => {
+  it("converts the price at the snapshot's own rate", () => {
+    // 0.5 BTC at $60,000: value_usd 30,000, value_eur 27,000 -> rate 0.9.
+    expect(priceEur({ price: 60000, valueAtPrice: 30000, valueEur: 27000 })).toBe(54000);
+  });
+
+  it("is null when there is no rate to use", () => {
+    expect(priceEur({ price: null, valueAtPrice: 30000, valueEur: 27000 })).toBeNull();
+    expect(priceEur({ price: 60000, valueAtPrice: 0, valueEur: 27000 })).toBeNull();
+    expect(priceEur({ price: 60000, valueAtPrice: 30000, valueEur: null })).toBeNull();
   });
 });
 
