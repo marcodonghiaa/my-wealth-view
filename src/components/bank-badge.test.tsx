@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { render, screen } from "@testing-library/react";
-import { AccountBadge, bankOf } from "./bank-badge";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { AccountBadge, accountName, bankOf } from "./bank-badge";
 
 describe("AccountBadge", () => {
   // protects=a known bank shows its own logo from our own files; fails_when=the logo is missing
@@ -51,6 +51,20 @@ describe("AccountBadge", () => {
     expect(screen.getByRole("img").getAttribute("src")).toBe("/banks/fineco.jpg");
   });
 
+  it("knows Enable Banking's name for a bank we have a logo for", () => {
+    render(<AccountBadge label="x" bank="FinecoBank" />);
+    expect(screen.getByRole("img", { name: "FinecoBank" }).getAttribute("src")).toBe(
+      "/banks/fineco.jpg",
+    );
+  });
+
+  it("falls back to the monogram when the remote logo fails to load", () => {
+    render(<AccountBadge label="x" bank="Intesa" logo="https://cdn.example/gone.png" />);
+    fireEvent.error(screen.getByRole("img", { name: "Intesa" }));
+    expect(screen.queryByRole("img")).toBeNull();
+    expect(screen.getByText("I")).toBeInTheDocument();
+  });
+
   it("ignores a logo that is not an https URL", () => {
     const { container } = render(
       <AccountBadge label="x" bank="Intesa" logo="javascript:alert(1)" />,
@@ -69,5 +83,17 @@ describe("bankOf", () => {
     expect(bankOf({ bank_name: null, label: "Revolut EUR" })).toBe("Revolut");
     expect(bankOf({ label: "Fineco" })).toBe("Fineco");
     expect(bankOf({ label: null })).toBe("Bank account");
+  });
+});
+
+describe("accountName", () => {
+  it("names an account by bank and currency, not by holder", () => {
+    expect(accountName({ bank_name: "FinecoBank", label: "D'ONGHIA MARCO", currency: "EUR" })).toBe(
+      "FinecoBank EUR",
+    );
+  });
+
+  it("keeps an older label that already ends with the currency", () => {
+    expect(accountName({ label: "Revolut EUR", currency: "EUR" })).toBe("Revolut EUR");
   });
 });

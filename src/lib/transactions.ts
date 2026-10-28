@@ -103,6 +103,7 @@ export interface AccountRow {
   uid: string;
   label: string | null;
   currency: string;
+  bank_name?: string | null; // absent on a database without the column
 }
 
 // Mirrors the allowlist in the backend's notify-worth-it.js — kept in sync by hand,
