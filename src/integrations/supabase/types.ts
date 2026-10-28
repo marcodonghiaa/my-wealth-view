@@ -911,6 +911,10 @@ export type Database = {
       };
     };
     Functions: {
+      register_dashboard_origin: {
+        Args: Record<PropertyKey, never>;
+        Returns: string;
+      };
       import_splitwise: {
         Args: {
           p_batch: string;

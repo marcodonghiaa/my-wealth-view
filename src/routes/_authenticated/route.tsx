@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { supabase } from "@/integrations/supabase/client";
+import { registerDashboardOrigin } from "@/lib/register-origin";
 import { PushSubscribeButton } from "@/components/push-subscribe";
 import { MadeWith } from "@/components/made-with";
 import { BrandMark } from "@/components/brand-mark";
@@ -95,6 +96,11 @@ function AuthenticatedLayout() {
   const navigate = useNavigate();
   const [signingOut, setSigningOut] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+
+  // Once per page load: tells the backend this address is the dashboard (setup no longer asks for it).
+  useEffect(() => {
+    void registerDashboardOrigin(() => supabase.rpc("register_dashboard_origin"));
+  }, []);
 
   // Keep route data in sync with auth transitions (e.g. token expiry).
   useEffect(() => {
