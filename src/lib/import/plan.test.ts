@@ -24,6 +24,15 @@ describe("planNetWorth", () => {
     ]);
   });
 
+  // protects=imported figures show as whole cents; fails_when=float drift like
+  // 0.30000000000000004 reaches the rows (and the preview) from summing the split
+  it("rounds the split, other and liabilities to cents", () => {
+    const { rows } = planNetWorth([["2024-04", "", "0.1", "0.2", "", ""]], nw);
+    expect(rows[0]).toMatchObject({ total_eur: 0.3, other_eur: 0, liabilities_eur: 0 });
+    const gap = planNetWorth([["2024-04", "0.3", "0.1", "0.1", "", ""]], nw);
+    expect(gap.rows[0]).toMatchObject({ other_eur: 0.1 });
+  });
+
   it("puts a total with no split into other", () => {
     const { rows } = planNetWorth([["2024-03", "1.500,50"]], { ...none, month: 0, total: 1 });
     expect(rows[0]).toMatchObject({ other_eur: 1500.5, total_eur: 1500.5, stocks_eur: 0 });

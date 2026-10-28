@@ -38,6 +38,19 @@ describe("ImportWizard", () => {
     expect(await screen.findByText(/Undo this import/)).toBeTruthy();
   });
 
+  // protects=the check step reads like a table of euros; fails_when=values run together
+  // unlabeled, or raw floats show instead of money
+  it("previews the rows as a labeled table of euro amounts", async () => {
+    setup();
+    upload("Month,Stocks,Bonds\n2024-02,0.1,0.2\n");
+    expect(await screen.findByRole("columnheader", { name: "Month end" })).toBeTruthy();
+    expect(screen.getByRole("columnheader", { name: "Liabilities" })).toBeTruthy();
+    const cells = screen.getAllByRole("cell").map((c) => c.textContent);
+    expect(cells[0]).toBe("2024-02-29");
+    expect(cells[1]).toMatch(/0[.,]30/);
+    expect(cells.join(" ")).not.toMatch(/0000/);
+  });
+
   it("removes the import when Undo is pressed", async () => {
     setup();
     upload("Month,Total\n2024-02,100\n");

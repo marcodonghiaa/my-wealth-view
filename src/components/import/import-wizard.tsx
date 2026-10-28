@@ -16,6 +16,7 @@ import {
 import { guessColumns, type Role } from "@/lib/import/guess-columns";
 import { MAX_CHARS, parseCsv, type ParsedCsv } from "@/lib/import/parse-csv";
 import { planNetWorth, planSpend } from "@/lib/import/plan";
+import { formatEur } from "@/lib/transactions";
 
 const KINDS: Array<{ value: ImportKind; label: string }> = [
   { value: "net_worth", label: "Net worth by month" },
@@ -38,6 +39,27 @@ const ROLES_BY_KIND: Record<ImportKind, Array<{ role: Role; label: string; requi
     { role: "currency", label: "Currency", required: false },
   ],
 };
+
+// What the preview table shows for each kind, in order: the row field and its header.
+const PREVIEW_COLUMNS: Record<ImportKind, Array<[string, string]>> = {
+  net_worth: [
+    ["snapshot_date", "Month end"],
+    ["total_eur", "Total"],
+    ["stocks_eur", "Stocks"],
+    ["bonds_eur", "Bonds"],
+    ["crypto_eur", "Crypto"],
+    ["cash_eur", "Cash"],
+    ["other_eur", "Other"],
+    ["liabilities_eur", "Liabilities"],
+  ],
+  spend: [
+    ["month", "Month"],
+    ["category", "Category"],
+    ["spend_eur", "Spent"],
+  ],
+};
+const previewCell = (value: unknown) =>
+  typeof value === "number" ? formatEur(value) : String(value ?? "");
 
 const PREVIEW_ROWS = 5;
 const SKIPPED_SHOWN = 5;
@@ -202,11 +224,30 @@ export function ImportWizard() {
             </p>
           )}
           {plan.rows.length > 0 && (
-            <ul className="mb-3 space-y-1 font-figure text-sm">
-              {plan.rows.slice(0, PREVIEW_ROWS).map((row, i) => (
-                <li key={i}>{Object.values(row).join("  ·  ")}</li>
-              ))}
-            </ul>
+            <div className="mb-3 overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-xs text-muted-foreground">
+                    {PREVIEW_COLUMNS[kind].map(([key, label]) => (
+                      <th key={key} scope="col" className="py-1 pr-4 font-medium whitespace-nowrap">
+                        {label}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="font-figure">
+                  {plan.rows.slice(0, PREVIEW_ROWS).map((row, i) => (
+                    <tr key={i} className="border-t">
+                      {PREVIEW_COLUMNS[kind].map(([key]) => (
+                        <td key={key} className="py-1 pr-4 whitespace-nowrap">
+                          {previewCell((row as unknown as Record<string, unknown>)[key])}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
           {plan.skipped.length > 0 && (
             <details className="mb-3 text-sm text-muted-foreground">
