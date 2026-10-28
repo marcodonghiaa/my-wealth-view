@@ -66,7 +66,7 @@ Open **Import data** (a link on the Accounts page, also offered on a new empty d
 
 ## Deploy on Vercel
 
-Use the Deploy button above, or import the repo in Vercel yourself (framework: Other, defaults for build). Vercel sets `VERCEL=1`, which switches the Nitro preset to `vercel` in `vite.config.ts`. Add `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY` (and `VITE_VAPID_PUBLIC_KEY` for push) as environment variables, then add the Vercel domain under Supabase → Authentication → URL Configuration so login redirects work. Every merge to `main` deploys; every PR gets a preview URL.
+Use the Deploy button above, or import the repo in Vercel yourself (framework: Other, defaults for build). Vercel sets `VERCEL=1`, which switches the Nitro preset to `vercel` in `vite.config.ts`. Add `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY` (and `VITE_VAPID_PUBLIC_KEY` for push) as environment variables, then add the Vercel domain under Supabase → Authentication → URL Configuration so login redirects work: set it as Site URL and add `https://<your-domain>/reset-password` to the Redirect URLs, or the "Forgot password?" email links back to the wrong address. Every merge to `main` deploys; every PR gets a preview URL.
 
 ## Scripts
 
