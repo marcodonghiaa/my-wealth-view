@@ -33,6 +33,8 @@ type Columns<K extends string> = Record<K, number | null>;
 const CLASS_ROLES = ["stocks", "bonds", "crypto", "cash"] as const;
 const cell = (row: Array<string>, index: number | null) =>
   index === null ? "" : (row[index] ?? "").trim();
+// Sums of parsed floats drift (0.1 + 0.2 = 0.30000000000000004): store whole cents.
+const cents = (n: number) => Math.round(n * 100) / 100;
 // Line 1 is the header, so the first data row is line 2.
 const lineOf = (i: number) => i + 2;
 const monthEnd = (ym: string) => {
@@ -67,7 +69,7 @@ export function planNetWorth(
       parts.push(value);
     }
     const [stocks, bonds, crypto, cash] = parts as [number, number, number, number];
-    const split = stocks + bonds + crypto + cash;
+    const split = cents(stocks + bonds + crypto + cash);
 
     const totalText = cell(raw, columns.total);
     const hasSplit = CLASS_ROLES.some((role) => cell(raw, columns[role]) !== "");
@@ -90,8 +92,8 @@ export function planNetWorth(
         bonds_eur: bonds,
         crypto_eur: crypto,
         cash_eur: cash,
-        other_eur: Math.max(0, total - split),
-        liabilities_eur: Math.max(0, split - total),
+        other_eur: Math.max(0, cents(total - split)),
+        liabilities_eur: Math.max(0, cents(split - total)),
         total_eur: total,
       },
     });
@@ -132,7 +134,7 @@ export function planSpend(
 
     const key = `${month}|${category}`;
     const spend = (totals.get(key)?.spend_eur ?? 0) + Math.abs(amount);
-    totals.set(key, { month: `${month}-01`, category, spend_eur: Math.round(spend * 100) / 100 });
+    totals.set(key, { month: `${month}-01`, category, spend_eur: cents(spend) });
     return undefined;
   });
 
