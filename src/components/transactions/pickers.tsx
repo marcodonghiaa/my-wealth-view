@@ -2,15 +2,19 @@ import { useState } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { CATEGORIES, TRANSACTION_TYPES, categoryColor } from "@/lib/categories";
 import type { TransactionRow } from "@/lib/transactions";
+import { CategoryAvatar } from "@/components/category-avatar";
 
 export function CategoryPicker({
   tx,
   onSelect,
   saving,
+  variant = "pill",
 }: {
   tx: TransactionRow;
   onSelect: (category: string) => void;
   saving: boolean;
+  // "icon": the row's round category icon is the trigger (desktop table rows).
+  variant?: "pill" | "icon";
 }) {
   const [open, setOpen] = useState(false);
 
@@ -23,7 +27,11 @@ export function CategoryPicker({
           disabled={saving}
           className="-m-2 inline-flex min-h-11 cursor-pointer items-center p-2 disabled:opacity-60"
         >
-          {tx.category ? (
+          {variant === "icon" ? (
+            <span className="rounded-full transition-opacity hover:opacity-80">
+              <CategoryAvatar category={tx.category} />
+            </span>
+          ) : tx.category ? (
             <span
               className="inline-flex min-w-24 items-center justify-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium text-foreground transition-colors"
               style={{

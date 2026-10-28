@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { estimatedMonthlyEur, splitSubscriptions } from "@/lib/subscriptions";
 import { formatMoney } from "@/lib/transactions";
-import { MerchantAvatar } from "@/components/merchant-avatar";
+import { CategoryAvatar } from "@/components/category-avatar";
 
 export const Route = createFileRoute("/_authenticated/subscriptions")({
   head: () => ({
@@ -321,7 +321,7 @@ function SubscriptionCard({
   return (
     <li className="px-4 py-3">
       <div className="flex items-center gap-3">
-        <MerchantAvatar name={name} category={sub.category} />
+        <CategoryAvatar category={sub.category} />
         <div className="min-w-0 flex-1">
           <h2 className="truncate text-[0.9375rem] font-medium text-foreground">{name}</h2>
           <p className="truncate text-[0.8125rem] text-muted-foreground">{details.join(" · ")}</p>

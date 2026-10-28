@@ -450,8 +450,6 @@ function TransactionsPage() {
                 </th>
                 <th className="px-4 py-3 font-medium">Date</th>
                 <th className="px-4 py-3 font-medium">Merchant</th>
-                <th className="px-4 py-3 font-medium">Category</th>
-                <th className="px-4 py-3 font-medium">Account</th>
                 <th className="px-4 py-3 text-right font-medium">Amount</th>
                 <th className="w-12 px-2 py-3">
                   <span className="sr-only">Edit</span>
@@ -462,14 +460,14 @@ function TransactionsPage() {
               {txQuery.isPending ? (
                 Array.from({ length: 8 }).map((_, i) => (
                   <tr key={i} className="border-b last:border-0">
-                    <td colSpan={7} className="px-4 py-3">
+                    <td colSpan={5} className="px-4 py-3">
                       <div className="h-5 animate-pulse rounded bg-muted" />
                     </td>
                   </tr>
                 ))
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-12 text-center text-sm text-muted-foreground">
+                  <td colSpan={5} className="px-4 py-12 text-center text-sm text-muted-foreground">
                     {transactions.length === 0
                       ? `No transactions for ${monthLabel}.`
                       : "No transactions match your filters."}

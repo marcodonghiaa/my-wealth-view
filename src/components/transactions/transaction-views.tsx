@@ -4,7 +4,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { useIsMobile } from "@/lib/use-is-mobile";
 import { AccountBadge } from "@/components/bank-badge";
 import { RefundedBadge } from "@/components/refunded-badge";
-import { MerchantAvatar } from "@/components/merchant-avatar";
+import { CategoryAvatar } from "@/components/category-avatar";
 import {
   formatBookingDate,
   formatBookingDateShort,
@@ -149,13 +149,14 @@ function TransactionEditSheet({
   );
 }
 
-/** Desktop row: date, merchant, category, account, amount. Type, split and the rest sit behind ›. */
+/** Desktop row: date, merchant (its category icon opens the category picker), amount with its account. Type, split and the rest sit behind ›. */
 export function TransactionRowView(props: TransactionViewProps) {
   const { tx, accountLabel, selected, onToggleSelect, highlighted } = props;
   const [open, setOpen] = useState(false);
   // A Splitwise share lives in its own table: nothing here can edit, select or delete it.
   const share = isSplitwiseShare(tx);
   const notes = [
+    tx.category ?? "Uncategorized",
     tx.transaction_type,
     isSplit(tx)
       ? `split, owed ${formatMoney(Math.abs(tx.amount ?? 0) - (tx.personal_amount ?? 0), tx.currency ?? "EUR")}`
@@ -183,9 +184,14 @@ export function TransactionRowView(props: TransactionViewProps) {
       <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">
         {formatBookingDateShort(tx.booking_date)}
       </td>
-      <td className="max-w-72 px-4 py-3">
+      <td className="w-full px-4 py-3">
         <div className="flex items-center gap-3">
-          <MerchantAvatar name={tx.creditor_name} category={tx.category} />
+          <CategoryPicker
+            tx={tx}
+            onSelect={props.onSelectCategory}
+            saving={props.savingCategory}
+            variant="icon"
+          />
           <div className="min-w-0">
             <div className="truncate font-medium text-foreground">
               <NameEditor
@@ -194,22 +200,19 @@ export function TransactionRowView(props: TransactionViewProps) {
                 saving={props.savingRename}
               />
             </div>
-            {!share && notes.length > 0 && (
-              <div className="truncate text-xs text-muted-foreground">{notes.join(" · ")}</div>
-            )}
+            <div className="truncate text-xs text-muted-foreground">
+              {(share ? notes.slice(0, 1) : notes).join(" · ")}
+            </div>
             <RefundedBadge flowType={tx.flow_type} />
             {!share && <WorthItPrompt tx={tx} onAnswer={props.onAnswerWorthIt} />}
           </div>
         </div>
       </td>
       <td className="px-4 py-3">
-        <CategoryPicker tx={tx} onSelect={props.onSelectCategory} saving={props.savingCategory} />
-      </td>
-      <td className="px-4 py-3">
-        <AccountBadge label={share ? "Splitwise" : accountLabel} />
-      </td>
-      <td className="px-4 py-3 text-right">
-        <AmountText tx={tx} />
+        <div className="flex items-center justify-end gap-3">
+          <AmountText tx={tx} />
+          <AccountBadge label={share ? "Splitwise" : accountLabel} />
+        </div>
       </td>
       <td className="w-12 px-2 py-3 text-right">
         {!share && (
@@ -238,7 +241,7 @@ export function TransactionCardView(props: TransactionViewProps) {
 
   const summary = (
     <>
-      <MerchantAvatar name={tx.creditor_name} category={tx.category} />
+      <CategoryAvatar category={tx.category} />
       <div className="min-w-0 flex-1">
         <p className="truncate text-[0.9375rem] font-medium text-foreground">
           {tx.creditor_name ?? "—"}
