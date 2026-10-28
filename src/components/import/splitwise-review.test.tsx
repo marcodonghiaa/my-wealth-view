@@ -96,6 +96,14 @@ const showWithBalances = () =>
       />
     </QueryClientProvider>,
   );
+// The Import button renders once the bank data is read but stays disabled until the signed-in user
+// is known (a separate async call). Clicking it before then does nothing, so wait until enabled.
+const clickImport = async () => {
+  const button = (await screen.findByRole("button", { name: /^Import/ })) as HTMLButtonElement;
+  await waitFor(() => expect(button.disabled).toBe(false));
+  fireEvent.click(button);
+};
+
 describe("SplitwiseReview", () => {
   // protects=a sure match is offered and counted; fails_when=matching or planning is not wired
   it("offers the bank match ticked and counts what will be recorded", async () => {
@@ -142,7 +150,7 @@ describe("SplitwiseReview", () => {
   // failure to store them hides that the shares were imported
   it("also stores the group balances after a successful import", async () => {
     showWithBalances();
-    fireEvent.click(await screen.findByRole("button", { name: /^Import/ }));
+    await clickImport();
     await waitFor(() => expect(rpc).toHaveBeenCalledTimes(2));
     expect(rpc.mock.calls[1]?.[0]).toBe("save_splitwise_balances");
     expect(rpc.mock.calls[1]?.[1]).toMatchObject({ p_group: "berkeley" });
@@ -153,7 +161,7 @@ describe("SplitwiseReview", () => {
     rpc.mockResolvedValueOnce({ data: { shares: 2, links: 1 }, error: null });
     rpc.mockResolvedValueOnce({ data: null, error: { message: "boom" } });
     showWithBalances();
-    fireEvent.click(await screen.findByRole("button", { name: /^Import/ }));
+    await clickImport();
     expect(await screen.findByText(/Imported 2 shares/)).toBeTruthy();
     expect((await screen.findByText(/balances were not saved/)).textContent).toMatch(/boom/);
   });
@@ -174,7 +182,7 @@ describe("SplitwiseReview", () => {
     fireEvent.change(await screen.findByLabelText("Category for Dinner"), {
       target: { value: "Shopping" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /^Import/ }));
+    await clickImport();
     await waitFor(() => expect(rpc).toHaveBeenCalledTimes(1));
     const shares = (
       rpc.mock.calls[0]?.[1] as { p_shares: Array<{ description: string; category: string }> }
@@ -242,7 +250,7 @@ describe("SplitwiseReview", () => {
   // the call is repeated or the result is not shown
   it("sends the reviewed plan on Import and offers Undo", async () => {
     show();
-    fireEvent.click(await screen.findByRole("button", { name: /^Import/ }));
+    await clickImport();
     await waitFor(() => expect(rpc).toHaveBeenCalledTimes(1));
     const [fn, args] = rpc.mock.calls[0] as [string, Record<string, unknown>];
     expect(fn).toBe("import_splitwise");
@@ -269,14 +277,14 @@ describe("SplitwiseReview", () => {
   it("shows why an import failed and offers no Undo", async () => {
     rpc.mockResolvedValue({ data: null, error: { message: "A bank transaction changed" } });
     show();
-    fireEvent.click(await screen.findByRole("button", { name: /^Import/ }));
+    await clickImport();
     expect((await screen.findByRole("alert")).textContent).toMatch(/bank transaction changed/);
     expect(screen.queryByRole("button", { name: /Undo this import/ })).toBeNull();
   });
 
   it("undoes the last import and forgets it", async () => {
     show();
-    fireEvent.click(await screen.findByRole("button", { name: /^Import/ }));
+    await clickImport();
     fireEvent.click(await screen.findByRole("button", { name: /Undo this import/ }));
     await waitFor(() => expect(rpc).toHaveBeenCalledTimes(2));
     expect(rpc.mock.calls[1]?.[0]).toBe("undo_splitwise_import");
@@ -287,7 +295,7 @@ describe("SplitwiseReview", () => {
 
   it("offers Undo again after the page is reopened", async () => {
     const first = show();
-    fireEvent.click(await screen.findByRole("button", { name: /^Import/ }));
+    await clickImport();
     await screen.findByRole("button", { name: /Undo this import/ });
     first.unmount();
     show();
