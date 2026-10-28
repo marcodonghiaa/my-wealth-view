@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const upsert = vi.fn(async () => ({ error: null }));
+const upsert = vi.fn(async (_rows: unknown, _opts?: unknown) => ({ error: null }));
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
     auth: { getUser: async () => ({ data: { user: { id: "u1" } }, error: null }) },
@@ -84,6 +84,23 @@ describe("ImportWizard", () => {
     setup();
     upload("   ");
     expect(await screen.findByRole("alert")).toHaveProperty("textContent", "The file is empty.");
+  });
+
+  // protects=a spending import shows where each file category goes and honors a correction;
+  // fails_when=Subscriptions lands in Entertainment unseen, or the pick isn't what gets written
+  it("shows the category mapping and imports under the category the user picked", async () => {
+    upsert.mockClear();
+    setup();
+    fireEvent.click(screen.getByRole("radio", { name: "Spending by month" }));
+    upload("Month,Category,Amount\n2024-02,Subscriptions,9.99\n");
+    const pick = (await screen.findByLabelText("Subscriptions")) as HTMLSelectElement;
+    expect(pick.value).toBe("Entertainment");
+    fireEvent.change(pick, { target: { value: "Services" } });
+    fireEvent.click(await screen.findByRole("button", { name: /Import 1 rows/ }));
+    await waitFor(() => expect(upsert).toHaveBeenCalledTimes(1));
+    expect(upsert.mock.calls[0]?.[0]).toEqual([
+      expect.objectContaining({ category: "Services", spend_eur: 9.99 }),
+    ]);
   });
 
   it("asks for the required column when none was guessed", async () => {

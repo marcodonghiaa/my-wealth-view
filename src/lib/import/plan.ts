@@ -1,5 +1,5 @@
 import { parseAmount, parseMonth } from "./normalize";
-import { suggestCategory } from "./suggest-category";
+import { suggestCategory, type AppCategory } from "./suggest-category";
 
 export interface Skipped {
   line: number;
@@ -26,6 +26,12 @@ export interface SpendPlanRow {
 export interface Plan<T> {
   rows: Array<T>;
   skipped: Array<Skipped>;
+}
+
+/** A category as written in the file, and the app category its rows are saved under. */
+export interface CategoryMapping {
+  source: string;
+  category: AppCategory;
 }
 
 type Columns<K extends string> = Record<K, number | null>;
@@ -109,13 +115,24 @@ export function planNetWorth(
 const EUR = new Set(["", "EUR", "€"]);
 const NOT_SPEND = new Set(["Income", "Transfer"]);
 
-/** Turns CSV rows into spend_history rows: EUR only, one row per month and category. */
+/** Turns CSV rows into spend_history rows: EUR only, one row per month and category.
+ * overrides: the user's choice for a file category, in place of the suggested one. */
 export function planSpend(
   rows: Array<Array<string>>,
   columns: Columns<"month" | "category" | "amount" | "currency">,
-): Plan<SpendPlanRow> {
+  overrides: Partial<Record<string, AppCategory>> = {},
+): Plan<SpendPlanRow> & { categories: Array<CategoryMapping> } {
   const totals = new Map<string, SpendPlanRow>();
   const skipped: Array<Skipped> = [];
+  // Every file category once, so the user sees (and can change) where its rows go.
+  const mapped = new Map<string, AppCategory>();
+  const categoryOf = (source: string) => {
+    // hasOwn: a file category named "constructor" must not read Object.prototype.
+    const category =
+      (Object.hasOwn(overrides, source) && overrides[source]) || suggestCategory(source);
+    mapped.set(source, category);
+    return category;
+  };
 
   rows.forEach((raw, i): undefined => {
     const line = lineOf(i);
@@ -126,7 +143,7 @@ export function planSpend(
     const month = parseMonth(cell(raw, columns.month));
     if (!month) return skip("Month not readable.");
     if (!EUR.has(cell(raw, columns.currency).toUpperCase())) return skip("Not in EUR.");
-    const category = suggestCategory(cell(raw, columns.category));
+    const category = categoryOf(cell(raw, columns.category));
     if (NOT_SPEND.has(category)) return skip(`${category} is not spending.`);
     const amount = parseAmount(cell(raw, columns.amount));
     if (amount === null) return skip("Amount is not valid.");
@@ -138,5 +155,6 @@ export function planSpend(
     return undefined;
   });
 
-  return { rows: [...totals.values()], skipped };
+  const categories = [...mapped].map(([source, category]) => ({ source, category }));
+  return { rows: [...totals.values()], skipped, categories };
 }
