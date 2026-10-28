@@ -40,7 +40,7 @@ Then put the dashboard online:
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fmarcodonghiaa%2Fmy-wealth-view&project-name=my-finances&repository-name=my-finances&env=VITE_SUPABASE_URL%2CVITE_SUPABASE_PUBLISHABLE_KEY%2CVITE_VAPID_PUBLIC_KEY&envDescription=Printed+at+the+end+of+the+backend%27s+setup.sh&envLink=https%3A%2F%2Fgithub.com%2Fmarcodonghiaa%2Fmyfinances%23-getting-started)
 
-Vercel copies this repo to your GitHub, asks for `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY` and `VITE_VAPID_PUBLIC_KEY` (paste the values setup printed) and gives you an HTTPS address. Run the backend's `./setup.sh` once more with that address, so bank linking sends you back to it. Free on Vercel's Hobby plan; phone and push notifications work because it is HTTPS.
+Vercel copies this repo to your GitHub, asks for `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY` and `VITE_VAPID_PUBLIC_KEY` (paste the values setup printed) and gives you an HTTPS address. Open the address under **Domains** on the Vercel project page (not a per-deployment address) and sign in. On that first sign-in the dashboard tells your database its own address, so bank linking sends you back to it: there is nothing to copy back and no second `./setup.sh` run (the backend's setup waits for it and prints your link). Free on Vercel's Hobby plan; phone and push notifications work because it is HTTPS.
 
 Prefer your own server? `docker compose` in the backend repo runs both apps instead.
 
