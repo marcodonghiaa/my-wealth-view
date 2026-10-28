@@ -5,6 +5,7 @@ import { BrandMark } from "@/components/brand-mark";
 import { TrustNote } from "@/components/trust-note";
 import { supabase } from "@/integrations/supabase/client";
 import { exitDemoMode } from "@/lib/demo/mode";
+import { resetPasswordUrl } from "./reset-password";
 
 export function safeNext(value: unknown): string | undefined {
   if (typeof value !== "string" || !value.startsWith("/")) return undefined;
@@ -64,6 +65,9 @@ function AuthPage() {
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [checkingSession, setCheckingSession] = useState(true);
+  // "reset": the form asks only for the email and sends Supabase's recovery link.
+  const [mode, setMode] = useState<"signin" | "reset">("signin");
+  const [resetSent, setResetSent] = useState(false);
 
   // Already signed in? Go straight to the dashboard.
   useEffect(() => {
@@ -95,6 +99,14 @@ function AuthPage() {
     setError(null);
     setPending(true);
     try {
+      if (mode === "reset") {
+        const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+          redirectTo: resetPasswordUrl(window.location.origin),
+        });
+        if (resetError) throw resetError;
+        setResetSent(true);
+        return;
+      }
       const { error: signInError } = await supabase.auth.signInWithPassword({
         email: email.trim(),
         password,
@@ -142,21 +154,41 @@ function AuthPage() {
                   placeholder="you@example.com"
                 />
               </div>
-              <div className="space-y-1.5">
-                <label htmlFor="password" className="text-xs font-medium text-muted-foreground">
-                  Password
-                </label>
-                <input
-                  id="password"
-                  type="password"
-                  required
-                  autoComplete="current-password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-base text-foreground outline-none transition-colors placeholder:text-muted-foreground/60 focus:border-primary/60 focus:ring-2 focus:ring-ring"
-                  placeholder="••••••••"
-                />
-              </div>
+              {mode === "signin" && (
+                <div className="space-y-1.5">
+                  <div className="flex items-baseline justify-between">
+                    <label htmlFor="password" className="text-xs font-medium text-muted-foreground">
+                      Password
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMode("reset");
+                        setError(null);
+                      }}
+                      className="text-xs text-muted-foreground underline-offset-2 transition-colors hover:text-foreground hover:underline"
+                    >
+                      Forgot password?
+                    </button>
+                  </div>
+                  <input
+                    id="password"
+                    type="password"
+                    required
+                    autoComplete="current-password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-base text-foreground outline-none transition-colors placeholder:text-muted-foreground/60 focus:border-primary/60 focus:ring-2 focus:ring-ring"
+                    placeholder="••••••••"
+                  />
+                </div>
+              )}
+
+              {resetSent && (
+                <p role="status" className="text-sm text-muted-foreground">
+                  If that email has an account, a reset link is on its way. Check your inbox.
+                </p>
+              )}
 
               {error && (
                 <p role="alert" className="text-sm text-negative">
@@ -174,8 +206,21 @@ function AuthPage() {
                 ) : (
                   <LockKeyhole className="size-4" />
                 )}
-                Sign in
+                {mode === "reset" ? "Send reset link" : "Sign in"}
               </button>
+              {mode === "reset" && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMode("signin");
+                    setResetSent(false);
+                    setError(null);
+                  }}
+                  className="w-full text-center text-sm text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  Back to sign in
+                </button>
+              )}
             </form>
           )}
 
