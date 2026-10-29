@@ -4,11 +4,10 @@ import { KeyRound, Loader2 } from "lucide-react";
 import { BrandMark } from "@/components/brand-mark";
 import { supabase } from "@/integrations/supabase/client";
 import { exitDemoMode } from "@/lib/demo/mode";
+import { MIN_PASSWORD_LENGTH } from "@/lib/password";
 
 /** Where the recovery email sends the user: this page, on the dashboard's own origin. */
 export const resetPasswordUrl = (origin: string) => `${origin}/reset-password`;
-
-const MIN_PASSWORD_LENGTH = 8;
 
 export const Route = createFileRoute("/reset-password")({
   ssr: false,
