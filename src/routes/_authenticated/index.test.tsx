@@ -40,6 +40,10 @@ vi.mock("@/integrations/supabase/client", () => ({
     },
   },
 }));
+vi.mock("@tanstack/react-router", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@tanstack/react-router")>()),
+  Link: ({ children }: { children: React.ReactNode }) => <a href="/health">{children}</a>,
+}));
 vi.mock("recharts", async (importOriginal) => ({
   ...(await importOriginal<typeof import("recharts")>()),
   ResponsiveContainer: () => null,
