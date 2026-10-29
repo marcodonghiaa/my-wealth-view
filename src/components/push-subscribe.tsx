@@ -39,7 +39,7 @@ function urlBase64ToUint8Array(base64: string) {
 
 // Only renders once installed to the home screen and notifications are supported --
 // iOS Safari silently refuses permission requests from a regular browser tab.
-export function PushSubscribeButton() {
+export function PushSubscribeButton({ onSubscribed }: { onSubscribed?: () => void } = {}) {
   const [supported, setSupported] = useState(false);
   const [permission, setPermission] = useState<NotificationPermission>("default");
   // Tracks an actual saved subscription, not just OS-level permission -- granting
@@ -104,6 +104,7 @@ export function PushSubscribeButton() {
       if (error) throw error;
 
       setSubscribed(true);
+      onSubscribed?.();
       toast.success("Purchase check-ins enabled");
     } catch (err) {
       // DOMException (what pushManager.subscribe/register actually throw) is not

@@ -16,6 +16,7 @@ import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
 import { Route as AuthenticatedAccountsRouteImport } from './routes/_authenticated/accounts'
 import { Route as AuthenticatedCryptoRouteImport } from './routes/_authenticated/crypto'
+import { Route as AuthenticatedHealthRouteImport } from './routes/_authenticated/health'
 import { Route as AuthenticatedImportRouteImport } from './routes/_authenticated/import'
 import { Route as AuthenticatedIncomeRouteImport } from './routes/_authenticated/income'
 import { Route as AuthenticatedPortfolioRouteImport } from './routes/_authenticated/portfolio'
@@ -58,6 +59,11 @@ const AuthenticatedAccountsRoute = AuthenticatedAccountsRouteImport.update({
 const AuthenticatedCryptoRoute = AuthenticatedCryptoRouteImport.update({
   id: '/crypto',
   path: '/crypto',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedHealthRoute = AuthenticatedHealthRouteImport.update({
+  id: '/health',
+  path: '/health',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedImportRoute = AuthenticatedImportRouteImport.update({
@@ -115,6 +121,7 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/accounts': typeof AuthenticatedAccountsRoute
   '/crypto': typeof AuthenticatedCryptoRoute
+  '/health': typeof AuthenticatedHealthRoute
   '/import': typeof AuthenticatedImportRoute
   '/income': typeof AuthenticatedIncomeRoute
   '/portfolio': typeof AuthenticatedPortfolioRoute
@@ -131,6 +138,7 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/accounts': typeof AuthenticatedAccountsRoute
   '/crypto': typeof AuthenticatedCryptoRoute
+  '/health': typeof AuthenticatedHealthRoute
   '/import': typeof AuthenticatedImportRoute
   '/income': typeof AuthenticatedIncomeRoute
   '/portfolio': typeof AuthenticatedPortfolioRoute
@@ -150,6 +158,7 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/_authenticated/accounts': typeof AuthenticatedAccountsRoute
   '/_authenticated/crypto': typeof AuthenticatedCryptoRoute
+  '/_authenticated/health': typeof AuthenticatedHealthRoute
   '/_authenticated/import': typeof AuthenticatedImportRoute
   '/_authenticated/income': typeof AuthenticatedIncomeRoute
   '/_authenticated/portfolio': typeof AuthenticatedPortfolioRoute
@@ -170,6 +179,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/accounts'
     | '/crypto'
+    | '/health'
     | '/import'
     | '/income'
     | '/portfolio'
@@ -186,6 +196,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/accounts'
     | '/crypto'
+    | '/health'
     | '/import'
     | '/income'
     | '/portfolio'
@@ -204,6 +215,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/_authenticated/accounts'
     | '/_authenticated/crypto'
+    | '/_authenticated/health'
     | '/_authenticated/import'
     | '/_authenticated/income'
     | '/_authenticated/portfolio'
@@ -272,6 +284,13 @@ declare module '@tanstack/react-router' {
       path: '/crypto'
       fullPath: '/crypto'
       preLoaderRoute: typeof AuthenticatedCryptoRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/health': {
+      id: '/_authenticated/health'
+      path: '/health'
+      fullPath: '/health'
+      preLoaderRoute: typeof AuthenticatedHealthRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/import': {
@@ -343,6 +362,7 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAccountsRoute: typeof AuthenticatedAccountsRoute
   AuthenticatedCryptoRoute: typeof AuthenticatedCryptoRoute
+  AuthenticatedHealthRoute: typeof AuthenticatedHealthRoute
   AuthenticatedImportRoute: typeof AuthenticatedImportRoute
   AuthenticatedIncomeRoute: typeof AuthenticatedIncomeRoute
   AuthenticatedPortfolioRoute: typeof AuthenticatedPortfolioRoute
@@ -358,6 +378,7 @@ interface AuthenticatedRouteRouteChildren {
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAccountsRoute: AuthenticatedAccountsRoute,
   AuthenticatedCryptoRoute: AuthenticatedCryptoRoute,
+  AuthenticatedHealthRoute: AuthenticatedHealthRoute,
   AuthenticatedImportRoute: AuthenticatedImportRoute,
   AuthenticatedIncomeRoute: AuthenticatedIncomeRoute,
   AuthenticatedPortfolioRoute: AuthenticatedPortfolioRoute,

@@ -1,9 +1,10 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { trendSummary } from "@/lib/chart-summary";
 import { supabase } from "@/integrations/supabase/client";
 import { WelcomeCard } from "@/components/import/welcome-card";
+import { Activity } from "lucide-react";
 import { AllocationChart } from "@/components/allocation-chart";
 import { HeadlineFigure } from "@/components/headline-figure";
 import { formatDay } from "@/lib/date";
@@ -298,6 +299,14 @@ function NetWorthPage() {
           rateToEur != null ? formatMoney(eur / rateToEur, currency) : formatMoney(eur, "EUR")
         }
       />
+
+      <Link
+        to="/health"
+        className="mt-6 inline-flex min-h-11 items-center gap-2 rounded-full border px-5 text-[0.9375rem] font-medium text-foreground transition-colors hover:bg-muted"
+      >
+        <Activity className="size-4 text-primary" />
+        Health
+      </Link>
     </div>
   );
 }
