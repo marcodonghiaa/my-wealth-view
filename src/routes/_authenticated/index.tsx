@@ -301,7 +301,8 @@ function NetWorthPage() {
       />
 
       <Link
-        to="/health"
+        to="/settings"
+        hash="health"
         className="mt-6 inline-flex min-h-11 items-center gap-2 rounded-full border px-5 text-[0.9375rem] font-medium text-foreground transition-colors hover:bg-muted"
       >
         <Activity className="size-4 text-primary" />
