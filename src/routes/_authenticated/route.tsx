@@ -13,12 +13,12 @@ import {
   FileText,
   ArrowDownLeft,
   Users,
+  Settings,
   type LucideIcon,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { supabase } from "@/integrations/supabase/client";
 import { registerDashboardOrigin } from "@/lib/register-origin";
-import { PushSubscribeButton } from "@/components/push-subscribe";
 import { MadeWith } from "@/components/made-with";
 import { BrandMark } from "@/components/brand-mark";
 import { TrustNote } from "@/components/trust-note";
@@ -160,7 +160,17 @@ function AuthenticatedLayout() {
 
         <div className="border-t p-3">
           <div className="mb-2 truncate px-3 text-xs text-muted-foreground">{user.email}</div>
-          <PushSubscribeButton />
+          <Link
+            to="/settings"
+            className="flex w-full items-center gap-3 rounded-full px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
+            activeProps={{
+              className:
+                "flex w-full items-center gap-3 rounded-full px-3 py-2 text-sm font-medium bg-sidebar-accent text-foreground",
+            }}
+          >
+            <Settings className="size-4" />
+            Settings
+          </Link>
           <button
             type="button"
             onClick={handleSignOut}
@@ -252,9 +262,18 @@ function AuthenticatedLayout() {
               <div className="ios-section-title">Account</div>
               <div className="divide-y overflow-hidden rounded-2xl bg-card">
                 <div className="truncate px-4 py-3 text-sm text-muted-foreground">{user.email}</div>
-                <div className="px-1 py-1">
-                  <PushSubscribeButton />
-                </div>
+                <Link
+                  to="/settings"
+                  onClick={() => setMenuOpen(false)}
+                  className="flex min-h-11 items-center gap-3 px-4 py-2.5 text-[0.9375rem] text-foreground active:bg-accent"
+                  activeProps={{
+                    className:
+                      "flex min-h-11 items-center gap-3 px-4 py-2.5 text-[0.9375rem] font-medium text-primary active:bg-accent",
+                  }}
+                >
+                  <Settings className="size-5 shrink-0" />
+                  Settings
+                </Link>
                 <button
                   type="button"
                   onClick={handleSignOut}

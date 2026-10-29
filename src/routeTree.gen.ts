@@ -22,6 +22,7 @@ import { Route as AuthenticatedIncomeRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedPortfolioRouteImport } from './routes/_authenticated/portfolio'
 import { Route as AuthenticatedReportsRouteImport } from './routes/_authenticated/reports'
 import { Route as AuthenticatedRulesRouteImport } from './routes/_authenticated/rules'
+import { Route as AuthenticatedSettingsRouteImport } from './routes/_authenticated/settings'
 import { Route as AuthenticatedSpendingRouteImport } from './routes/_authenticated/spending'
 import { Route as AuthenticatedSplitwiseRouteImport } from './routes/_authenticated/splitwise'
 import { Route as AuthenticatedSubscriptionsRouteImport } from './routes/_authenticated/subscriptions'
@@ -91,6 +92,11 @@ const AuthenticatedRulesRoute = AuthenticatedRulesRouteImport.update({
   path: '/rules',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedSpendingRoute = AuthenticatedSpendingRouteImport.update({
   id: '/spending',
   path: '/spending',
@@ -127,6 +133,7 @@ export interface FileRoutesByFullPath {
   '/portfolio': typeof AuthenticatedPortfolioRoute
   '/reports': typeof AuthenticatedReportsRoute
   '/rules': typeof AuthenticatedRulesRoute
+  '/settings': typeof AuthenticatedSettingsRoute
   '/spending': typeof AuthenticatedSpendingRoute
   '/splitwise': typeof AuthenticatedSplitwiseRoute
   '/subscriptions': typeof AuthenticatedSubscriptionsRoute
@@ -144,6 +151,7 @@ export interface FileRoutesByTo {
   '/portfolio': typeof AuthenticatedPortfolioRoute
   '/reports': typeof AuthenticatedReportsRoute
   '/rules': typeof AuthenticatedRulesRoute
+  '/settings': typeof AuthenticatedSettingsRoute
   '/spending': typeof AuthenticatedSpendingRoute
   '/splitwise': typeof AuthenticatedSplitwiseRoute
   '/subscriptions': typeof AuthenticatedSubscriptionsRoute
@@ -164,6 +172,7 @@ export interface FileRoutesById {
   '/_authenticated/portfolio': typeof AuthenticatedPortfolioRoute
   '/_authenticated/reports': typeof AuthenticatedReportsRoute
   '/_authenticated/rules': typeof AuthenticatedRulesRoute
+  '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/spending': typeof AuthenticatedSpendingRoute
   '/_authenticated/splitwise': typeof AuthenticatedSplitwiseRoute
   '/_authenticated/subscriptions': typeof AuthenticatedSubscriptionsRoute
@@ -185,6 +194,7 @@ export interface FileRouteTypes {
     | '/portfolio'
     | '/reports'
     | '/rules'
+    | '/settings'
     | '/spending'
     | '/splitwise'
     | '/subscriptions'
@@ -202,6 +212,7 @@ export interface FileRouteTypes {
     | '/portfolio'
     | '/reports'
     | '/rules'
+    | '/settings'
     | '/spending'
     | '/splitwise'
     | '/subscriptions'
@@ -221,6 +232,7 @@ export interface FileRouteTypes {
     | '/_authenticated/portfolio'
     | '/_authenticated/reports'
     | '/_authenticated/rules'
+    | '/_authenticated/settings'
     | '/_authenticated/spending'
     | '/_authenticated/splitwise'
     | '/_authenticated/subscriptions'
@@ -328,6 +340,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedRulesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/settings': {
+      id: '/_authenticated/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof AuthenticatedSettingsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/spending': {
       id: '/_authenticated/spending'
       path: '/spending'
@@ -368,6 +387,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedPortfolioRoute: typeof AuthenticatedPortfolioRoute
   AuthenticatedReportsRoute: typeof AuthenticatedReportsRoute
   AuthenticatedRulesRoute: typeof AuthenticatedRulesRoute
+  AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedSpendingRoute: typeof AuthenticatedSpendingRoute
   AuthenticatedSplitwiseRoute: typeof AuthenticatedSplitwiseRoute
   AuthenticatedSubscriptionsRoute: typeof AuthenticatedSubscriptionsRoute
@@ -384,6 +404,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedPortfolioRoute: AuthenticatedPortfolioRoute,
   AuthenticatedReportsRoute: AuthenticatedReportsRoute,
   AuthenticatedRulesRoute: AuthenticatedRulesRoute,
+  AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedSpendingRoute: AuthenticatedSpendingRoute,
   AuthenticatedSplitwiseRoute: AuthenticatedSplitwiseRoute,
   AuthenticatedSubscriptionsRoute: AuthenticatedSubscriptionsRoute,
