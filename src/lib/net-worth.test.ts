@@ -242,6 +242,59 @@ describe("withHistory with rebuilt months", () => {
   });
 });
 
+describe("withHistory with a partial first live day", () => {
+  const row = (d: string, bank: number, portfolio: number, crypto: number) => ({
+    snapshot_date: d,
+    total_eur: bank + portfolio + crypto,
+    bank_total_eur: bank,
+    portfolio_total_eur: portfolio,
+    crypto_total_eur: crypto,
+  });
+  const rec = {
+    snapshot_date: "2026-08-31",
+    stocks_eur: 50_000,
+    bonds_eur: 10_000,
+    cash_eur: 15_000,
+    crypto_eur: 5_000,
+  };
+  const totals = (rows: Array<{ total_eur: number }>) => rows.map((r) => r.total_eur);
+
+  // protects=no crash to ~2k when live data starts with bank balances only; fails_when=a live day
+  // missing a component the rebuilt history had is plotted
+  it("keeps the rebuilt point until every component has live data", () => {
+    const live = [
+      row("2026-09-02", 2_400, 0, 0),
+      row("2026-09-03", 2_400, 0, 0),
+      row("2026-09-04", 15_000, 60_000, 5_000),
+      row("2026-09-05", 15_100, 60_500, 5_000),
+    ];
+    const out = withHistory([], live, undefined, [rec]);
+    expect(out.map((r) => r.snapshot_date)).toEqual(["2026-08-31", "2026-09-04", "2026-09-05"]);
+    expect(Math.min(...totals(out))).toBe(80_000);
+  });
+
+  it("is unchanged without rebuilt history", () => {
+    const live = [row("2026-09-02", 2_400, 0, 0), row("2026-09-04", 15_000, 60_000, 5_000)];
+    expect(withHistory([], live)).toEqual(live);
+  });
+
+  it("does not touch component gaps after the live data is complete", () => {
+    const live = [
+      row("2026-09-04", 15_000, 60_000, 5_000),
+      row("2026-09-05", 15_000, 0, 5_000),
+      row("2026-09-06", 15_000, 60_000, 5_000),
+    ];
+    const out = withHistory([], live, undefined, [rec]);
+    expect(out.slice(1)).toEqual(live);
+  });
+
+  it("trusts live data after a week even if a component stays at 0", () => {
+    const live = [row("2026-09-02", 15_000, 60_000, 0), row("2026-09-10", 15_000, 60_000, 0)];
+    const out = withHistory([], live, undefined, [rec]);
+    expect(out.map((r) => r.snapshot_date)).toEqual(["2026-08-31", "2026-09-10"]);
+  });
+});
+
 describe("onOrBefore", () => {
   const r = (d: string, t: number) => ({ snapshot_date: d, total_eur: t });
   it("returns the latest row on or before the date", () => {
