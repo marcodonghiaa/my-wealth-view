@@ -1,0 +1,76 @@
+name: update-from-upstream
+
+# For copies made with the "Deploy with Vercel" button: opens a pull request
+# that brings your copy up to date with marcodonghiaa/my-wealth-view.
+# Nothing is pushed to your default branch; merge the PR and Vercel redeploys.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 6 * * 1"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: update-from-upstream
+  cancel-in-progress: false
+
+env:
+  UPSTREAM_REPO: marcodonghiaa/my-wealth-view
+  UPDATE_BRANCH: update-from-upstream
+
+jobs:
+  update:
+    # The upstream repo has nothing to update from itself.
+    if: github.repository != 'marcodonghiaa/my-wealth-view'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch upstream and build the update branch
+        id: sync
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          base=$(gh api "repos/$GITHUB_REPOSITORY" --jq .default_branch)
+          git fetch --quiet origin "$base"
+          git fetch --quiet "https://github.com/$UPSTREAM_REPO.git" main:refs/remotes/upstream/main
+          git checkout -B "$UPDATE_BRANCH" "origin/$base"
+          # Run upstream's copy of the script, so fixes to it reach old copies too.
+          git show upstream/main:scripts/update-from-upstream.sh > "$RUNNER_TEMP/update.sh"
+          rc=0
+          bash "$RUNNER_TEMP/update.sh" upstream/main "$RUNNER_TEMP/body.md" || rc=$?
+          if [ "$rc" -eq 10 ]; then
+            echo "Already up to date."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          [ "$rc" -eq 0 ] || exit "$rc"
+          {
+            echo "changed=true"
+            echo "base=$base"
+            echo "sha=$(git rev-parse --short upstream/main)"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Push branch and open or update the pull request
+        if: steps.sync.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BASE: ${{ steps.sync.outputs.base }}
+          SHA: ${{ steps.sync.outputs.sha }}
+        run: |
+          set -euo pipefail
+          title="Update MyFinances dashboard to $SHA"
+          # Only ever our own bot branch; never the default branch.
+          git push --force origin "$UPDATE_BRANCH"
+          n=$(gh pr list --head "$UPDATE_BRANCH" --base "$BASE" --state open --json number --jq '.[0].number // empty')
+          if [ -n "$n" ]; then
+            gh pr edit "$n" --title "$title" --body-file "$RUNNER_TEMP/body.md"
+          elif ! gh pr create --base "$BASE" --head "$UPDATE_BRANCH" --title "$title" --body-file "$RUNNER_TEMP/body.md"; then
+            echo "::error::Could not open the PR. Enable Settings > Actions > General > 'Allow GitHub Actions to create and approve pull requests', then re-run. Branch $UPDATE_BRANCH is already pushed."
+            exit 1
+          fi
