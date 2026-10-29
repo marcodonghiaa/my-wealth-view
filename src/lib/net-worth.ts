@@ -48,6 +48,38 @@ export type ReconstructedRow = {
   crypto_eur?: number;
 };
 
+// Live snapshots start per component (bank, portfolio, crypto), and the view counts a component
+// with no snapshot yet as 0. So the first live days can hold bank balances only, which next to
+// rebuilt statement history reads as a crash to near zero and then a jump back. Rule: while
+// rebuilt history exists, leading live days are skipped (the rebuilt point stays) until every
+// component the last rebuilt month held (> 0) is also > 0 live. Only the leading run is checked,
+// so later gaps are untouched, and only for the first PARTIAL_START_DAYS, so a component that
+// was really sold off to 0 cannot hide live data forever.
+const PARTIAL_START_DAYS = 7;
+
+function skipPartialStart(
+  live: Array<NetWorthRow>,
+  reconstructed: Array<ReconstructedRow>,
+): Array<NetWorthRow> {
+  const first = live.at(0);
+  if (!first) return live;
+  const lastRebuilt = reconstructed.filter((r) => r.snapshot_date < first.snapshot_date).at(-1);
+  if (!lastRebuilt) return live;
+  const needs = {
+    bank: lastRebuilt.cash_eur > 0,
+    portfolio: lastRebuilt.stocks_eur + lastRebuilt.bonds_eur > 0,
+    crypto: (lastRebuilt.crypto_eur ?? 0) > 0,
+  };
+  const firstTs = Date.parse(`${first.snapshot_date}T00:00:00`);
+  const full = (r: NetWorthRow) =>
+    (Date.parse(`${r.snapshot_date}T00:00:00`) - firstTs) / DAY_MS >= PARTIAL_START_DAYS ||
+    ((!needs.bank || r.bank_total_eur > 0) &&
+      (!needs.portfolio || r.portfolio_total_eur > 0) &&
+      (!needs.crypto || r.crypto_total_eur > 0));
+  const i = live.findIndex(full);
+  return i < 0 ? [] : live.slice(i);
+}
+
 // Chart rows = imported history, rebuilt months for what falls between, then live snapshots from
 // the baseline on. Live snapshots before the baseline are partial (accounts not linked yet) and
 // would drag the line down, so they are dropped, but only when there is history to show instead.
@@ -60,7 +92,10 @@ export function withHistory(
 ): Array<NetWorthRow> {
   if (history.length === 0 && reconstructed.length === 0) return snapshots;
   const base = periodBaseline(snapshots, start);
-  const live = base ? snapshots.filter((s) => s.snapshot_date >= base.snapshot_date) : snapshots;
+  const live = skipPartialStart(
+    base ? snapshots.filter((s) => s.snapshot_date >= base.snapshot_date) : snapshots,
+    reconstructed,
+  );
   const firstLive = live.at(0)?.snapshot_date;
   const before = (d: string) => !firstLive || d < firstLive;
   const imported = history.filter((h) => before(h.snapshot_date));
