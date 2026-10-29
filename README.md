@@ -66,7 +66,19 @@ Open **Import data** (a link on the Accounts page, also offered on a new empty d
 
 ## Deploy on Vercel
 
-Use the Deploy button above, or import the repo in Vercel yourself (framework: Other, defaults for build). Vercel sets `VERCEL=1`, which switches the Nitro preset to `vercel` in `vite.config.ts`. Add `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY` (and `VITE_VAPID_PUBLIC_KEY` for push) as environment variables, then add the Vercel domain under Supabase → Authentication → URL Configuration so login redirects work: set it as Site URL and add `https://<your-domain>/reset-password` to the Redirect URLs, or the "Forgot password?" email links back to the wrong address. Every merge to `main` deploys; every PR gets a preview URL.
+Use the Deploy button above, or import the repo in Vercel yourself (framework: Other, defaults for build). Vercel sets `VERCEL=1`, which switches the Nitro preset to `vercel` in `vite.config.ts`. Add `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY` (and `VITE_VAPID_PUBLIC_KEY` for push) as environment variables, then add the Vercel domain under Supabase → Authentication → URL Configuration so login redirects work: set it as Site URL and add `https://<your-domain>/reset-password` to the Redirect URLs, or the "Forgot password?" email links back to the wrong address. Every merge to `main` deploys; every PR gets a preview URL. The Vercel button copies the code into a new repo that is not a fork, so GitHub's "Sync fork" does not exist for it: see [Keeping your dashboard up to date](#keeping-your-dashboard-up-to-date).
+
+## Keeping your dashboard up to date
+
+Your Vercel copy never receives upstream fixes by itself. It ships a workflow, **update-from-upstream**, that does it as a pull request:
+
+- Runs every Monday and on demand: **Actions** tab → **update-from-upstream** → **Run workflow**.
+- Fetches the latest `main` of this repo and opens a PR titled "Update MyFinances dashboard to <sha>" with the upstream commit list. If one is still open it updates that PR instead of opening another.
+- Never pushes to your default branch. Review the PR and merge it; Vercel redeploys.
+- Copies over the files upstream has, leaving alone `.env*`, `vercel.json`, `.vercel/`, anything your `.gitignore` matches and `.github/workflows/` (GitHub does not let a workflow change workflows). Files only in your copy are kept; edits you made to files upstream also has are overwritten, so keep customisations in new files.
+- First time only: Settings → Actions → General → enable **Allow GitHub Actions to create and approve pull requests**, or the run stops after pushing the branch `update-from-upstream` and you open the PR from it by hand.
+
+The backend repo ([myfinances](https://github.com/marcodonghiaa/myfinances)) is a real fork: use **Sync fork** on GitHub. Run `./setup.sh` again only when the release notes say a database change is needed.
 
 ## Scripts
 
