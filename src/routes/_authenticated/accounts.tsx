@@ -341,6 +341,10 @@ function AccountsPage() {
           <Link to="/import" className="text-primary underline-offset-2 hover:underline">
             Import data
           </Link>
+          {" · "}
+          <Link to="/health" className="text-primary underline-offset-2 hover:underline">
+            Health
+          </Link>
         </p>
       </header>
 
