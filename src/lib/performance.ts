@@ -131,7 +131,23 @@ export function summarize(rows: Array<PerformanceRow>, topN = 2): PerformanceSum
   };
 }
 
+/** The database answers for stocks and coins together; each page summarizes its own kind. */
+export function ofKind(
+  rows: Array<PerformanceRow>,
+  kind: "stock" | "crypto",
+): Array<PerformanceRow> {
+  return rows.filter((r) => r.kind === kind);
+}
+
 /** Rows by the key the page uses: isin for a stock or fund, upper-case symbol for a coin. */
 export function byKey(rows: Array<PerformanceRow>): Map<string, PerformanceRow> {
   return new Map(rows.map((r) => [`${r.kind}:${r.key}`, r]));
+}
+
+// Moves under half a percent are noise: shown without alarm colour (same band as the value change).
+export const RETURN_NOISE_BAND = 0.005;
+
+/** "+4.21%" / "−1.30%": two decimals and a real minus sign, like the rest of the app. */
+export function formatReturn(change: number): string {
+  return `${change >= 0 ? "+" : "−"}${Math.abs(change * 100).toFixed(2)}%`;
 }

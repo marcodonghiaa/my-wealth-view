@@ -20,6 +20,8 @@ import { HeadlineFigure } from "@/components/headline-figure";
 import { ShareBar } from "@/components/share-bar";
 import { RangeChangeLine, ValueHistoryChart } from "@/components/value-history";
 import { useValueHistory } from "@/lib/use-value-history";
+import { usePerformance } from "@/lib/use-performance";
+import { PerformanceSummary, ReturnCell } from "@/components/performance/performance-section";
 import { formatDay } from "@/lib/date";
 
 export const Route = createFileRoute("/_authenticated/portfolio")({
@@ -182,6 +184,7 @@ function PortfolioPage() {
   // Scrubbing shows that day's value; otherwise today's, from the holdings below.
   const history = useValueHistory("portfolio_total_eur", totalEur);
   const { scrubbed } = history;
+  const perf = usePerformance(history.range, history.chartData.at(-1)?.snapshot_date, "stock");
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-8 md:py-12">
@@ -218,6 +221,13 @@ function PortfolioPage() {
           )}
         </div>
         {!query.isPending && <RangeChangeLine history={history} />}
+        {!query.isPending && (
+          <PerformanceSummary
+            perf={perf}
+            range={history.range}
+            note="Prices only, in EUR: buying or selling doesn't count, but currency moves do (anything not priced in EUR)."
+          />
+        )}
       </section>
 
       {/* Chart: portfolio value over time; scrub it to read any day */}
@@ -301,6 +311,7 @@ function PortfolioPage() {
                               <th className="px-4 py-2.5 font-medium sm:px-5">Holding</th>
                               <th className="px-4 py-2.5 font-medium sm:px-5">Shares</th>
                               <th className="px-4 py-2.5 font-medium sm:px-5">Price</th>
+                              <th className="px-4 py-2.5 text-right font-medium sm:px-5">Return</th>
                               <th className="px-4 py-2.5 text-right font-medium sm:px-5">Value</th>
                               <th className="px-4 py-2.5 text-right font-medium sm:px-5">
                                 % of total
@@ -334,6 +345,15 @@ function PortfolioPage() {
                                     {row.price != null && row.currency
                                       ? formatMoney(row.price, row.currency)
                                       : "—"}
+                                  </td>
+                                  <td className="px-4 py-3 text-right sm:px-5">
+                                    <ReturnCell
+                                      row={
+                                        row.isin
+                                          ? perf.rowsByKey.get(`stock:${row.isin}`)
+                                          : undefined
+                                      }
+                                    />
                                   </td>
                                   <td className="px-4 py-3 text-right font-figure font-medium text-foreground sm:px-5">
                                     {formatEur(valueEur)}
@@ -397,6 +417,18 @@ function PortfolioPage() {
                                     {row.price != null && row.currency
                                       ? formatMoney(row.price, row.currency)
                                       : "—"}
+                                  </div>
+                                </div>
+                                <div>
+                                  <div className="text-xs text-muted-foreground">Return</div>
+                                  <div>
+                                    <ReturnCell
+                                      row={
+                                        row.isin
+                                          ? perf.rowsByKey.get(`stock:${row.isin}`)
+                                          : undefined
+                                      }
+                                    />
                                   </div>
                                 </div>
                                 <div>
