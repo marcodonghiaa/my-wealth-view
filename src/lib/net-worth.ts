@@ -285,27 +285,28 @@ export function monthAgo(iso: string, months = 1): string {
   return `${prevLast.getUTCFullYear()}-${String(prevLast.getUTCMonth() + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
 
-export type ChartRange = "1M" | "3M" | "YTD" | "2Y";
-export const CHART_RANGES: Array<ChartRange> = ["1M", "3M", "YTD", "2Y"];
+export type ChartRange = "1M" | "3M" | "YTD" | "2Y" | "ALL";
+export const CHART_RANGES: Array<ChartRange> = ["1M", "3M", "YTD", "2Y", "ALL"];
 export const RANGE_LABEL: Record<ChartRange, string> = {
   "1M": "Past month",
   "3M": "Past 3 months",
   YTD: "Year to date",
   "2Y": "Past 2 years",
+  ALL: "All time",
 };
-const RANGE_MONTHS: Record<Exclude<ChartRange, "YTD">, number> = {
+const RANGE_MONTHS: Record<Exclude<ChartRange, "YTD" | "ALL">, number> = {
   "1M": 1,
   "3M": 3,
   "2Y": 24,
 };
 
-/** Points from `range` before the last one; "YTD" starts at the last day of the previous year. */
+/** Points from `range` before the last one; "YTD" starts at the last day of the previous year, "ALL" keeps everything. */
 export function inRange<T extends { snapshot_date: string }>(
   points: Array<T>,
   range: ChartRange,
 ): Array<T> {
   const lastIso = points.at(-1)?.snapshot_date;
-  if (lastIso == null) return points;
+  if (lastIso == null || range === "ALL") return points;
   const start =
     range === "YTD"
       ? `${Number(lastIso.slice(0, 4)) - 1}-12-31`

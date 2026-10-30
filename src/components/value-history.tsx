@@ -2,7 +2,8 @@ import { SegmentedControl } from "@/components/segmented-control";
 import { ValueChart } from "@/components/value-chart";
 import { trendSummary } from "@/lib/chart-summary";
 import { formatDay } from "@/lib/date";
-import { CHART_RANGES, RANGE_LABEL } from "@/lib/net-worth";
+import { CHART_RANGES } from "@/lib/net-worth";
+import { HOLDING_RANGE_LABEL } from "@/lib/performance";
 import type { NetWorthRow } from "@/lib/net-worth";
 import type { ValueHistory } from "@/lib/use-value-history";
 import { TONE_TEXT, toneOf } from "@/lib/tone";
@@ -25,7 +26,7 @@ export function RangeChangeLine({ history }: { history: ValueHistory }) {
       <span className="text-muted-foreground">
         {scrubbed && first
           ? `${formatDay(first.snapshot_date)} – ${formatDay(scrubbed.snapshot_date)}`
-          : RANGE_LABEL[range]}
+          : HOLDING_RANGE_LABEL[range]}
       </span>
     </p>
   );

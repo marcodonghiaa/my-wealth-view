@@ -189,6 +189,12 @@ describe("period targets", () => {
     ]);
     expect(inRange([], "2Y")).toEqual([]);
   });
+
+  it("inRange ALL keeps every point", () => {
+    const pts = [snap("2019-01-01", 1), snap("2026-10-18", 2)];
+    expect(inRange(pts, "ALL")).toEqual(pts);
+    expect(inRange([], "ALL")).toEqual([]);
+  });
 });
 
 describe("withHistory with rebuilt months", () => {
