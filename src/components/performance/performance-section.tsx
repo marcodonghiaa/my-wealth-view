@@ -1,13 +1,12 @@
-import { formatDay } from "@/lib/date";
+import { TradesDialog } from "@/components/holdings/trades-dialog";
+import { ImportTrades } from "@/components/holdings/import-trades";
 import { shortHoldingName } from "@/lib/holding-name";
-import { HOLDING_RANGE_LABEL, RETURN_NOISE_BAND, formatReturn, rowReturn } from "@/lib/performance";
-import type { HoldingRange, PerformanceRow, Ranked } from "@/lib/performance";
+import { RETURN_NOISE_BAND, formatReturn } from "@/lib/performance";
+import { formatEur } from "@/lib/transactions";
 import type { usePerformance } from "@/lib/use-performance";
 import { TONE_TEXT, toneOf } from "@/lib/tone";
 
 type Performance = ReturnType<typeof usePerformance>;
-
-const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
 
 function Change({ change }: { change: number | null }) {
   if (change == null) return <span className="text-muted-foreground">—</span>;
@@ -18,65 +17,51 @@ function Change({ change }: { change: number | null }) {
   );
 }
 
-/** A holding's price return for the range, or a dash with the reason in the tooltip. */
+const formatGain = (gain: number) => `${gain >= 0 ? "+" : "−"}${formatEur(Math.abs(gain))}`;
+
+/** A holding's total return, or what's stopping it. Tapping it opens its trades. */
 export function ReturnCell({
-  row,
-  pending = false,
-}: {
-  row: PerformanceRow | undefined;
-  pending?: boolean;
-}) {
-  const change = row ? rowReturn(row) : null;
-  if (pending) return <span className="text-muted-foreground">…</span>;
-  if (!row || change == null) {
-    return (
-      <span className="text-muted-foreground" title="No price for this range">
-        —
-      </span>
-    );
-  }
-  return (
-    <span className="inline-flex flex-col items-end">
-      <Change change={change} />
-      {row.status === "since" && row.start_date && (
-        <span className="text-xs text-muted-foreground">since {formatDay(row.start_date)}</span>
-      )}
-    </span>
-  );
-}
-
-function Movers({ title, items }: { title: string; items: Array<Ranked> }) {
-  if (items.length === 0) return null;
-  return (
-    <div className="min-w-0 flex-1">
-      <h3 className="text-xs font-medium text-muted-foreground">{title}</h3>
-      <ul className="mt-1 space-y-0.5 text-sm">
-        {items.map((item) => (
-          <li key={item.key} className="flex items-baseline justify-between gap-3">
-            <span className="min-w-0 truncate text-foreground">
-              {shortHoldingName(item.name ?? item.key)}
-            </span>
-            <Change change={item.change} />
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-/**
- * Price return for the chosen range, best and worst holdings, and what the number leaves out.
- * `note` says what moves the EUR figure besides the price (currency).
- */
-export function PerformanceSummary({
   perf,
-  range,
-  note,
+  holdingKey,
+  name,
+  quantity,
 }: {
   perf: Performance;
-  range: HoldingRange;
-  note: string;
+  holdingKey: string | null;
+  name: string;
+  quantity: number;
 }) {
+  if (perf.isPending) return <span className="text-muted-foreground">…</span>;
+  if (perf.unavailable || perf.error || holdingKey == null) {
+    return <span className="text-muted-foreground">—</span>;
+  }
+  const measured = perf.measuredByKey.get(holdingKey);
+  const trades = perf.tradesByKey.get(holdingKey) ?? [];
+  // Always the same trigger, so adding the first trade keeps the dialog open.
+  return (
+    <TradesDialog
+      kind={perf.kind}
+      holdingKey={holdingKey}
+      name={name}
+      quantity={quantity}
+      trades={trades}
+      label={
+        trades.length === 0 ? (
+          <span className="text-xs text-primary">Add purchases</span>
+        ) : measured?.state === "ok" ? (
+          <Change change={measured.change} />
+        ) : measured?.state === "mismatch" ? (
+          <span className="text-xs text-negative">Trades don't match</span>
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        )
+      }
+    />
+  );
+}
+
+/** Your total return from your trades, and the best and worst holding. Nothing else. */
+export function PerformanceSummary({ perf }: { perf: Performance }) {
   if (perf.error) {
     return (
       <div role="alert" className="mt-3 rounded-2xl bg-negative/10 px-4 py-3 text-sm text-negative">
@@ -96,28 +81,49 @@ export function PerformanceSummary({
   }
 
   const { summary } = perf;
-  const label = summary.since ? `since ${formatDay(summary.since)}` : HOLDING_RANGE_LABEL[range];
+  const best = summary.best[0];
+  const worst = summary.worst[0];
+  const incomplete = summary.total > summary.counted;
   return (
-    <section aria-label="Price return" className="mt-3">
-      <p className="flex flex-wrap items-baseline gap-x-2 text-[0.9375rem]" aria-live="polite">
-        <span className="font-medium">
-          <Change change={summary.change} />
-        </span>
-        <span className="text-muted-foreground">Return · {label}</span>
-      </p>
-      <p className="mt-1 max-w-2xl text-xs text-muted-foreground">
-        {note}
-        {summary.partial > 0 &&
-          summary.since == null &&
-          ` ${plural(summary.partial, "holding")} measured from the first price we have.`}
-        {summary.excluded > 0 &&
-          ` ${plural(summary.excluded, "holding")} without a price for this range left out.`}
-      </p>
-      {summary.best.length > 0 && (
-        <div className="mt-3 flex gap-6 sm:max-w-md">
-          <Movers title="Best" items={summary.best} />
-          <Movers title="Worst" items={summary.worst} />
-        </div>
+    <section aria-label="Return" className="mt-3 space-y-1">
+      {summary.counted > 0 ? (
+        <p className="flex flex-wrap items-baseline gap-x-2 text-[0.9375rem]" aria-live="polite">
+          <span className="font-medium">
+            <Change change={summary.change} />
+          </span>
+          <span className="font-figure text-foreground">{formatGain(summary.gain)}</span>
+          <span className="text-muted-foreground">Total return</span>
+        </p>
+      ) : (
+        <p className="text-[0.9375rem] text-muted-foreground">
+          Add your purchases to see your return.
+        </p>
+      )}
+      {(best || worst) && (
+        <p className="flex flex-wrap gap-x-4 text-sm">
+          {best && (
+            <span>
+              <span className="text-muted-foreground">Best </span>
+              {shortHoldingName(best.name ?? best.key)} <Change change={best.change} />
+            </span>
+          )}
+          {worst && (
+            <span>
+              <span className="text-muted-foreground">Worst </span>
+              {shortHoldingName(worst.name ?? worst.key)} <Change change={worst.change} />
+            </span>
+          )}
+        </p>
+      )}
+      {(incomplete || summary.counted === 0) && (
+        <p className="flex flex-wrap items-baseline gap-x-2 text-xs text-muted-foreground">
+          {summary.counted > 0 && (
+            <span>
+              On {summary.counted} of {summary.total} holdings
+            </span>
+          )}
+          <ImportTrades kind={perf.kind} saved={[...perf.tradesByKey.values()].flat()} />
+        </p>
       )}
     </section>
   );

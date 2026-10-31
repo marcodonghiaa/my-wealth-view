@@ -186,6 +186,7 @@ class Query implements PromiseLike<Result> {
   private filters: Array<Filter> = [];
   private sorts: Array<{ col: string; asc: boolean }> = [];
   private max: number | undefined;
+  private skip = 0;
   private mode: Mode = "select";
   private payload: Array<Row> = [];
   private patch: Row = {};
@@ -258,6 +259,11 @@ class Query implements PromiseLike<Result> {
     this.sorts.push({ col, asc: opts?.ascending ?? true });
     return this;
   }
+  range(from: number, to: number) {
+    this.skip = from;
+    this.max = to + 1;
+    return this;
+  }
   limit(n: number) {
     this.max = n;
     return this;
@@ -318,7 +324,7 @@ class Query implements PromiseLike<Result> {
         return asc ? compare(a[col], b[col]) : compare(b[col], a[col]);
       });
     }
-    const copies = sorted.slice(0, this.max).map((r) => ({ ...r }));
+    const copies = sorted.slice(this.skip, this.max).map((r) => ({ ...r }));
     if (this.one === null) return { data: copies, error: null, count };
     if (copies.length === 1) return { data: copies[0], error: null, count };
     if (copies.length === 0 && this.one === "maybe") return { data: null, error: null, count };

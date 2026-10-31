@@ -6,6 +6,7 @@ export const EXPORT_TABLES = [
   { name: "cd_holdings", order: ["id"] },
   { name: "crypto_holdings", order: ["source", "asset_symbol"] },
   { name: "portfolio_holdings", order: ["broker_label", "isin"] },
+  { name: "holding_trades", order: ["id"] },
   { name: "crypto_snapshots", order: ["snapshot_date", "source", "asset_symbol"] },
   { name: "portfolio_snapshots", order: ["snapshot_date", "isin"] },
   { name: "net_worth_snapshots", order: ["id"] },

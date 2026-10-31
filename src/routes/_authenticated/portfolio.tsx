@@ -18,7 +18,7 @@ import { AddHoldingPanel } from "@/components/holdings/add-holding-panel";
 import { EditHolding } from "@/components/holdings/edit-holding";
 import { HeadlineFigure } from "@/components/headline-figure";
 import { ShareBar } from "@/components/share-bar";
-import { RangeChangeLine, ValueHistoryChart } from "@/components/value-history";
+import { ValueHistoryChart } from "@/components/value-history";
 import { useValueHistory } from "@/lib/use-value-history";
 import { usePerformance } from "@/lib/use-performance";
 import { PerformanceSummary, ReturnCell } from "@/components/performance/performance-section";
@@ -184,7 +184,7 @@ function PortfolioPage() {
   // Scrubbing shows that day's value; otherwise today's, from the holdings below.
   const history = useValueHistory("portfolio_total_eur", totalEur);
   const { scrubbed } = history;
-  const perf = usePerformance(history.range, history.chartData.at(-1)?.snapshot_date, "stock");
+  const perf = usePerformance("ALL", history.chartData.at(-1)?.snapshot_date, "stock");
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-8 md:py-12">
@@ -220,14 +220,7 @@ function PortfolioPage() {
             <HeadlineFigure value={history.shownEur} currency="EUR" />
           )}
         </div>
-        {!query.isPending && <RangeChangeLine history={history} />}
-        {!query.isPending && (
-          <PerformanceSummary
-            perf={perf}
-            range={history.range}
-            note="Prices only, in EUR: buying or selling doesn't count, but currency moves do (anything not priced in EUR)."
-          />
-        )}
+        {!query.isPending && <PerformanceSummary perf={perf} />}
       </section>
 
       {/* Chart: portfolio value over time; scrub it to read any day */}
@@ -348,12 +341,10 @@ function PortfolioPage() {
                                   </td>
                                   <td className="px-4 py-3 text-right sm:px-5">
                                     <ReturnCell
-                                      pending={perf.isPending}
-                                      row={
-                                        row.isin
-                                          ? perf.rowsByKey.get(`stock:${row.isin}`)
-                                          : undefined
-                                      }
+                                      perf={perf}
+                                      holdingKey={row.isin}
+                                      name={row.name ?? row.isin ?? ""}
+                                      quantity={row.shares ?? 0}
                                     />
                                   </td>
                                   <td className="px-4 py-3 text-right font-figure font-medium text-foreground sm:px-5">
@@ -424,12 +415,10 @@ function PortfolioPage() {
                                   <div className="text-xs text-muted-foreground">Return</div>
                                   <div>
                                     <ReturnCell
-                                      pending={perf.isPending}
-                                      row={
-                                        row.isin
-                                          ? perf.rowsByKey.get(`stock:${row.isin}`)
-                                          : undefined
-                                      }
+                                      perf={perf}
+                                      holdingKey={row.isin}
+                                      name={row.name ?? row.isin ?? ""}
+                                      quantity={row.shares ?? 0}
                                     />
                                   </div>
                                 </div>

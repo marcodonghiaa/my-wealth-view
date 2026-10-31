@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { fetchPerformance } from "./use-performance";
+import { fetchPerformance, fetchTrades } from "./use-performance";
 
 const client = (result: unknown) =>
   ({ rpc: vi.fn(async () => result) }) as unknown as Parameters<typeof fetchPerformance>[0];
@@ -33,5 +33,42 @@ describe("fetchPerformance", () => {
     expect(await fetchPerformance(client({ data: null, error: null }), "2026-09-30", true)).toEqual(
       { rows: [] },
     );
+  });
+});
+
+describe("fetchTrades", () => {
+  const paged = (pages: Array<unknown>) => {
+    const range = vi.fn(async () => pages.shift());
+    return {
+      client: {
+        from: () => ({ select: () => ({ order: () => ({ range }) }) }),
+      } as unknown as Parameters<typeof fetchTrades>[0],
+      range,
+    };
+  };
+
+  it("pages past the 1000-row limit", async () => {
+    const first = Array.from({ length: 1000 }, (_, i) => ({ id: String(i) }));
+    const { client, range } = paged([
+      { data: first, error: null, count: 1001 },
+      { data: [{ id: "last" }], error: null, count: 1001 },
+    ]);
+    const out = await fetchTrades(client);
+    expect("trades" in out && out.trades.length).toBe(1001);
+    expect(range).toHaveBeenCalledTimes(2);
+  });
+
+  it("treats a database without the table as not available yet", async () => {
+    const { client } = paged([
+      { data: null, error: { code: "PGRST205", message: "x" }, count: null },
+    ]);
+    expect(await fetchTrades(client)).toEqual({ unavailable: true });
+  });
+
+  it("throws on any other error", async () => {
+    const { client } = paged([
+      { data: null, error: { code: "500", message: "boom" }, count: null },
+    ]);
+    await expect(fetchTrades(client)).rejects.toThrow("boom");
   });
 });
