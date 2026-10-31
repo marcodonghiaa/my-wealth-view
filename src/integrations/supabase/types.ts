@@ -359,6 +359,45 @@ export type Database = {
         };
         Relationships: [];
       };
+      holding_trades: {
+        Row: {
+          created_at: string;
+          fee_eur: number;
+          id: string;
+          key: string;
+          kind: string;
+          price_eur: number;
+          shares: number;
+          side: string;
+          trade_date: string;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          fee_eur?: number;
+          id?: string;
+          key: string;
+          kind: string;
+          price_eur: number;
+          shares: number;
+          side: string;
+          trade_date: string;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          fee_eur?: number;
+          id?: string;
+          key?: string;
+          kind?: string;
+          price_eur?: number;
+          shares?: number;
+          side?: string;
+          trade_date?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
       price_history: {
         Row: {
           currency: string;

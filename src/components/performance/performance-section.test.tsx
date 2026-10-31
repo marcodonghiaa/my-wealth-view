@@ -1,119 +1,151 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import type { ReactElement } from "react";
 import { describe, expect, it } from "vitest";
-import { summarize } from "@/lib/performance";
+import type { Measured, MeasuredRow } from "@/lib/trades";
+import { summarizeTrades } from "@/lib/trades";
 import type { PerformanceRow } from "@/lib/performance";
 import { PerformanceSummary, ReturnCell } from "./performance-section";
 
-const row = (over: Partial<PerformanceRow> = {}): PerformanceRow => ({
+const row = (key: string): PerformanceRow => ({
   kind: "stock",
-  key: "K",
-  name: "Holding",
+  key,
+  name: key,
   quantity: 10,
   start_date: "2026-09-30",
   start_price_eur: 100,
   end_date: "2026-10-30",
   end_price_eur: 120,
   status: "ok",
-  ...over,
+});
+const ok = (gain: number, base: number, since: string | null = null): Measured => ({
+  state: "ok",
+  gain,
+  base,
+  change: gain / base,
+  since,
 });
 
-const perf = (rows: Array<PerformanceRow>, over: Record<string, unknown> = {}) =>
+const trade = {
+  id: "1",
+  kind: "stock",
+  key: "K",
+  side: "buy",
+  trade_date: "2026-01-01",
+  shares: 10,
+  price_eur: 90,
+  fee_eur: 0,
+};
+
+const perf = (rows: Array<MeasuredRow>, over: Record<string, unknown> = {}) =>
   ({
-    rows,
-    rowsByKey: new Map(),
-    summary: summarize(rows),
+    kind: "stock",
+    summary: summarizeTrades(rows),
+    measuredByKey: new Map(rows.map((r) => [r.row.key, r.measured])),
+    tradesByKey: new Map(
+      rows.filter((r) => r.measured.state !== "no_trades").map((r) => [r.row.key, [trade]]),
+    ),
     isPending: false,
     unavailable: false,
     error: null,
     ...over,
   }) as unknown as Parameters<typeof PerformanceSummary>[0]["perf"];
 
-const NOTE = "Prices only, in EUR.";
+const renderWith = (ui: ReactElement) =>
+  render(<QueryClientProvider client={new QueryClient()}>{ui}</QueryClientProvider>);
 
 describe("PerformanceSummary", () => {
-  it("shows the return, the range and the note", () => {
-    render(<PerformanceSummary perf={perf([row()])} range="1M" note={NOTE} />);
+  it("shows the return, the gain in euros and the range", () => {
+    renderWith(
+      <PerformanceSummary perf={perf([{ row: row("K"), measured: ok(200, 1000) }])} range="1M" />,
+    );
     expect(screen.getByText("+20.00%")).toBeInTheDocument();
+    expect(screen.getByText(/\+.*200/)).toBeInTheDocument();
     expect(screen.getByText(/Return · Past month/)).toBeInTheDocument();
-    expect(screen.getByText(/Prices only, in EUR\./)).toBeInTheDocument();
   });
 
-  it("says since <date> when every holding is younger than the range", () => {
-    const young = [row({ status: "since", start_date: "2026-10-28" })];
-    render(<PerformanceSummary perf={perf(young)} range="3M" note={NOTE} />);
-    expect(screen.getByText(/Return · since 28 Oct 2026/)).toBeInTheDocument();
-  });
-
-  it("counts holdings measured from their first price and holdings left out", () => {
-    const rows = [
-      row({ key: "A" }),
-      row({ key: "B", status: "since", start_date: "2026-10-20" }),
-      row({ key: "C", status: "stale" }),
-    ];
-    render(<PerformanceSummary perf={perf(rows)} range="1M" note={NOTE} />);
-    expect(screen.getByText(/1 holding measured from the first price we have/)).toBeInTheDocument();
-    expect(
-      screen.getByText(/1 holding without a price for this range left out/),
-    ).toBeInTheDocument();
-  });
-
-  it("shows a dash, not NaN, with nothing to measure", () => {
-    render(<PerformanceSummary perf={perf([])} range="1M" note={NOTE} />);
-    expect(screen.queryByText(/NaN/)).toBeNull();
-    expect(screen.getByText("—")).toBeInTheDocument();
-  });
-
-  it("lists best and worst when there are at least two holdings", () => {
-    const rows = [
-      row({ key: "A", name: "Up" }),
-      row({ key: "B", name: "Down", end_price_eur: 80 }),
-    ];
-    render(<PerformanceSummary perf={perf(rows)} range="1M" note={NOTE} />);
-    expect(screen.getByText("Best")).toBeInTheDocument();
-    expect(screen.getByText("Up")).toBeInTheDocument();
-    expect(screen.getByText("Down")).toBeInTheDocument();
-    expect(screen.getByText("−20.00%")).toBeInTheDocument();
-  });
-
-  it("loading: a skeleton, no figure", () => {
-    const { container } = render(
-      <PerformanceSummary perf={perf([], { isPending: true })} range="1M" note={NOTE} />,
+  it("says how many holdings the number covers", () => {
+    renderWith(
+      <PerformanceSummary
+        perf={perf([
+          { row: row("A"), measured: ok(200, 1000) },
+          { row: row("B"), measured: { state: "no_trades" } },
+        ])}
+        range="1M"
+      />,
     );
-    expect(container.querySelector(".animate-pulse")).not.toBeNull();
-    expect(screen.queryByText(/Return/)).toBeNull();
+    expect(screen.getByText(/On 1 of 2 holdings\./)).toBeInTheDocument();
   });
 
-  it("error: an alert with the message", () => {
-    render(
-      <PerformanceSummary perf={perf([], { error: new Error("boom") })} range="1M" note={NOTE} />,
+  it("asks for purchases instead of showing a number when there are none", () => {
+    renderWith(
+      <PerformanceSummary
+        perf={perf([{ row: row("A"), measured: { state: "no_trades" } }])}
+        range="1M"
+      />,
     );
-    expect(screen.getByRole("alert")).toHaveTextContent("Couldn't load returns: boom");
+    expect(screen.getByText("Add your purchases to see your return.")).toBeInTheDocument();
+    expect(screen.queryByText(/Return ·/)).not.toBeInTheDocument();
   });
 
-  it("database without the function: a quiet note, not an error", () => {
-    render(<PerformanceSummary perf={perf([], { unavailable: true })} range="1M" note={NOTE} />);
-    expect(screen.queryByRole("alert")).toBeNull();
+  it("offers CSV import", () => {
+    renderWith(<PerformanceSummary perf={perf([])} range="1M" />);
+    expect(screen.getByText("Import trades from CSV")).toBeInTheDocument();
+  });
+
+  it("shows a load error, a skeleton, and the not-yet-migrated note", () => {
+    const { unmount } = renderWith(
+      <PerformanceSummary perf={perf([], { error: new Error("boom") })} range="1M" />,
+    );
+    expect(screen.getByRole("alert")).toHaveTextContent("boom");
+    unmount();
+    renderWith(<PerformanceSummary perf={perf([], { unavailable: true })} range="1M" />);
     expect(screen.getByText(/latest update/)).toBeInTheDocument();
   });
 });
 
 describe("ReturnCell", () => {
-  it("shows the return, with since <date> for a young holding", () => {
-    render(<ReturnCell row={row({ status: "since", start_date: "2026-10-28" })} />);
+  const cell = (measured: Measured, over: Record<string, unknown> = {}) =>
+    renderWith(
+      <ReturnCell
+        perf={perf([{ row: row("K"), measured }], over)}
+        holdingKey="K"
+        name="Holding"
+        quantity={10}
+      />,
+    );
+
+  it("shows the return and the gain", () => {
+    cell(ok(200, 1000));
     expect(screen.getByText("+20.00%")).toBeInTheDocument();
-    expect(screen.getByText("since 28 Oct 2026")).toBeInTheDocument();
+    expect(screen.getByText("Trades")).toBeInTheDocument();
   });
 
-  it("a dash with the reason for a holding with no number", () => {
-    render(<ReturnCell row={row({ status: "stale" })} />);
-    expect(screen.getByTitle("No price for this range")).toHaveTextContent("—");
+  it("asks for purchases when there are none", () => {
+    cell({ state: "no_trades" });
+    expect(screen.getByText("Add purchases")).toBeInTheDocument();
+    expect(screen.queryByText(/%/)).not.toBeInTheDocument();
   });
 
-  it("a dash when the holding is not in the result at all", () => {
-    render(<ReturnCell row={undefined} pending />);
-    expect(screen.queryByTitle("No price for this range")).not.toBeInTheDocument();
-    cleanup();
-    render(<ReturnCell row={undefined} />);
-    expect(screen.getByTitle("No price for this range")).toBeInTheDocument();
+  it("says when trades don't match, with no number", () => {
+    cell({ state: "mismatch", traded: 8, held: 10 });
+    expect(screen.getByText("Trades don't match")).toBeInTheDocument();
+    expect(screen.queryByText(/%/)).not.toBeInTheDocument();
+  });
+
+  it("shows since when measured from the first price", () => {
+    cell(ok(200, 1000, "2025-11-01"));
+    expect(screen.getByText(/since/)).toBeInTheDocument();
+  });
+
+  it("doesn't ask for purchases you may already have when loading them failed", () => {
+    cell({ state: "no_trades" }, { error: new Error("boom") });
+    expect(screen.queryByText("Add purchases")).not.toBeInTheDocument();
+  });
+
+  it("doesn't claim anything while loading", () => {
+    cell({ state: "no_trades" }, { isPending: true });
+    expect(screen.queryByText("Add purchases")).not.toBeInTheDocument();
+    expect(screen.getByText("…")).toBeInTheDocument();
   });
 });

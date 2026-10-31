@@ -187,6 +187,34 @@ export function generateDemoData(now: Date = new Date()): DemoDb {
     }),
   );
 
+  // One buy per holding at the window's first price, less a bit; the last coin has none, to show
+  // what "Add purchases" looks like.
+  const firstDay = days[0]!;
+  const holding_trades: DemoDb["holding_trades"] = [
+    ...HOLDINGS.map((h) => ({
+      kind: "stock",
+      key: h.isin,
+      shares: h.shares,
+      price_eur: round2(
+        price(h.base, h.isin, firstDay) * (h.currency === "USD" ? usdRate(firstDay) : 1) * 0.92,
+      ),
+    })),
+    ...COINS.slice(0, -1).map((c) => ({
+      kind: "crypto",
+      key: c.symbol,
+      shares: c.amount,
+      price_eur: round2(c.base * usdRate(firstDay) * 0.85),
+    })),
+  ].map((t, i) => ({
+    ...t,
+    id: `demo-trade-${i}`,
+    side: "buy",
+    trade_date: iso(firstDay),
+    fee_eur: 1,
+    created_at: stamp(iso(firstDay)),
+    user_id,
+  }));
+
   const crypto_holdings: DemoDb["crypto_holdings"] = COINS.map((c) => ({
     amount: c.amount,
     asset_symbol: c.symbol,
@@ -425,6 +453,7 @@ export function generateDemoData(now: Date = new Date()): DemoDb {
     ),
     net_worth_snapshots,
     pending_bank_consents: [],
+    holding_trades,
     portfolio_holdings,
     portfolio_snapshots,
     price_history: [],

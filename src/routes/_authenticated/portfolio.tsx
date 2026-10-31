@@ -221,13 +221,7 @@ function PortfolioPage() {
           )}
         </div>
         {!query.isPending && <RangeChangeLine history={history} />}
-        {!query.isPending && (
-          <PerformanceSummary
-            perf={perf}
-            range={history.range}
-            note="Prices only, in EUR: buying or selling doesn't count, but currency moves do (anything not priced in EUR)."
-          />
-        )}
+        {!query.isPending && <PerformanceSummary perf={perf} range={history.range} />}
       </section>
 
       {/* Chart: portfolio value over time; scrub it to read any day */}
@@ -348,12 +342,10 @@ function PortfolioPage() {
                                   </td>
                                   <td className="px-4 py-3 text-right sm:px-5">
                                     <ReturnCell
-                                      pending={perf.isPending}
-                                      row={
-                                        row.isin
-                                          ? perf.rowsByKey.get(`stock:${row.isin}`)
-                                          : undefined
-                                      }
+                                      perf={perf}
+                                      holdingKey={row.isin}
+                                      name={row.name ?? row.isin ?? ""}
+                                      quantity={row.shares ?? 0}
                                     />
                                   </td>
                                   <td className="px-4 py-3 text-right font-figure font-medium text-foreground sm:px-5">
@@ -424,12 +416,10 @@ function PortfolioPage() {
                                   <div className="text-xs text-muted-foreground">Return</div>
                                   <div>
                                     <ReturnCell
-                                      pending={perf.isPending}
-                                      row={
-                                        row.isin
-                                          ? perf.rowsByKey.get(`stock:${row.isin}`)
-                                          : undefined
-                                      }
+                                      perf={perf}
+                                      holdingKey={row.isin}
+                                      name={row.name ?? row.isin ?? ""}
+                                      quantity={row.shares ?? 0}
                                     />
                                   </div>
                                 </div>

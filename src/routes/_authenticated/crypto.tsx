@@ -183,13 +183,7 @@ function CryptoPage() {
           )}
         </div>
         {!query.isPending && <RangeChangeLine history={history} />}
-        {!query.isPending && (
-          <PerformanceSummary
-            perf={perf}
-            range={history.range}
-            note="Prices only, in EUR: buying or selling doesn't count. Coins are priced in dollars, so the dollar's moves against the euro count too (stablecoins move only with it)."
-          />
-        )}
+        {!query.isPending && <PerformanceSummary perf={perf} range={history.range} />}
       </section>
 
       {/* Chart: crypto value over time; scrub it to read any day */}
@@ -281,8 +275,10 @@ function CryptoPage() {
                         </td>
                         <td className="px-4 py-3 text-right sm:px-5">
                           <ReturnCell
-                            row={perf.rowsByKey.get(`crypto:${asset.symbol}`)}
-                            pending={perf.isPending}
+                            perf={perf}
+                            holdingKey={asset.symbol}
+                            name={asset.name}
+                            quantity={asset.amount}
                           />
                         </td>
                         <td className="px-4 py-3 text-right font-figure font-medium text-foreground sm:px-5">
@@ -347,8 +343,10 @@ function CryptoPage() {
                       <div className="text-xs text-muted-foreground">Return</div>
                       <div>
                         <ReturnCell
-                          row={perf.rowsByKey.get(`crypto:${asset.symbol}`)}
-                          pending={perf.isPending}
+                          perf={perf}
+                          holdingKey={asset.symbol}
+                          name={asset.name}
+                          quantity={asset.amount}
                         />
                       </div>
                     </div>
