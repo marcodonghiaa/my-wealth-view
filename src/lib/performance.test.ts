@@ -129,6 +129,8 @@ describe("formatReturn", () => {
     expect(formatReturn(0.04213)).toBe("+4.21%");
     expect(formatReturn(-0.013)).toBe("−1.30%");
     expect(formatReturn(0)).toBe("+0.00%");
+    expect(formatReturn(-0.0000001)).toBe("+0.00%");
+    expect(formatReturn(12.3456)).toBe("+1,234.56%");
   });
 });
 

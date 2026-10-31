@@ -19,8 +19,15 @@ function Change({ change }: { change: number | null }) {
 }
 
 /** A holding's price return for the range, or a dash with the reason in the tooltip. */
-export function ReturnCell({ row }: { row: PerformanceRow | undefined }) {
+export function ReturnCell({
+  row,
+  pending = false,
+}: {
+  row: PerformanceRow | undefined;
+  pending?: boolean;
+}) {
   const change = row ? rowReturn(row) : null;
+  if (pending) return <span className="text-muted-foreground">…</span>;
   if (!row || change == null) {
     return (
       <span className="text-muted-foreground" title="No price for this range">

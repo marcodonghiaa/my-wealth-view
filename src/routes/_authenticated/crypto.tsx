@@ -280,7 +280,10 @@ function CryptoPage() {
                           {formatPrice(asset)}
                         </td>
                         <td className="px-4 py-3 text-right sm:px-5">
-                          <ReturnCell row={perf.rowsByKey.get(`crypto:${asset.symbol}`)} />
+                          <ReturnCell
+                            row={perf.rowsByKey.get(`crypto:${asset.symbol}`)}
+                            pending={perf.isPending}
+                          />
                         </td>
                         <td className="px-4 py-3 text-right font-figure font-medium text-foreground sm:px-5">
                           {formatEur(asset.valueEur)}
@@ -343,7 +346,10 @@ function CryptoPage() {
                     <div>
                       <div className="text-xs text-muted-foreground">Return</div>
                       <div>
-                        <ReturnCell row={perf.rowsByKey.get(`crypto:${asset.symbol}`)} />
+                        <ReturnCell
+                          row={perf.rowsByKey.get(`crypto:${asset.symbol}`)}
+                          pending={perf.isPending}
+                        />
                       </div>
                     </div>
                     <div>

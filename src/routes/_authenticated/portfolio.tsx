@@ -348,6 +348,7 @@ function PortfolioPage() {
                                   </td>
                                   <td className="px-4 py-3 text-right sm:px-5">
                                     <ReturnCell
+                                      pending={perf.isPending}
                                       row={
                                         row.isin
                                           ? perf.rowsByKey.get(`stock:${row.isin}`)
@@ -423,6 +424,7 @@ function PortfolioPage() {
                                   <div className="text-xs text-muted-foreground">Return</div>
                                   <div>
                                     <ReturnCell
+                                      pending={perf.isPending}
                                       row={
                                         row.isin
                                           ? perf.rowsByKey.get(`stock:${row.isin}`)

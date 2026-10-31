@@ -149,5 +149,10 @@ export const RETURN_NOISE_BAND = 0.005;
 
 /** "+4.21%" / "−1.30%": two decimals and a real minus sign, like the rest of the app. */
 export function formatReturn(change: number): string {
-  return `${change >= 0 ? "+" : "−"}${Math.abs(change * 100).toFixed(2)}%`;
+  const pct = Math.round(change * 10000) / 100; // round first so -0.00001 is "+0.00%", not "−0.00%"
+  const text = Math.abs(pct).toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+  return `${pct >= 0 ? "+" : "−"}${text}%`;
 }

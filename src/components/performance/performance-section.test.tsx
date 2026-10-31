@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { summarize } from "@/lib/performance";
 import type { PerformanceRow } from "@/lib/performance";
@@ -110,6 +110,9 @@ describe("ReturnCell", () => {
   });
 
   it("a dash when the holding is not in the result at all", () => {
+    render(<ReturnCell row={undefined} pending />);
+    expect(screen.queryByTitle("No price for this range")).not.toBeInTheDocument();
+    cleanup();
     render(<ReturnCell row={undefined} />);
     expect(screen.getByTitle("No price for this range")).toBeInTheDocument();
   });
