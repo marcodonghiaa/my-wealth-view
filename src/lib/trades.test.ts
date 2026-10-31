@@ -225,6 +225,14 @@ describe("summarizeTrades", () => {
     expect(s.gain).toBe(125); // the sold one still counts in the total
   });
 
+  it("a holding that's up is never worst; flat within the noise band still is", () => {
+    const up = summarizeTrades([okRow("A", 30, 100), okRow("B", 10, 100)]);
+    expect(up.best.map((r) => r.key)).toEqual(["A"]);
+    expect(up.worst).toEqual([]);
+    const flat = summarizeTrades([okRow("A", 30, 100), okRow("B", 0.2, 100)]);
+    expect(flat.worst.map((r) => r.key)).toEqual(["B"]);
+  });
+
   it("names the shared later start date when every holding starts there", () => {
     const withSince = (key: string) => ({
       row: row({ key }),

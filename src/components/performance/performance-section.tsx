@@ -99,16 +99,20 @@ export function PerformanceSummary({ perf }: { perf: Performance }) {
           Add your purchases to see your return.
         </p>
       )}
-      {best && worst && (
+      {(best || worst) && (
         <p className="flex flex-wrap gap-x-4 text-sm">
-          <span>
-            <span className="text-muted-foreground">Best </span>
-            {shortHoldingName(best.name ?? best.key)} <Change change={best.change} />
-          </span>
-          <span>
-            <span className="text-muted-foreground">Worst </span>
-            {shortHoldingName(worst.name ?? worst.key)} <Change change={worst.change} />
-          </span>
+          {best && (
+            <span>
+              <span className="text-muted-foreground">Best </span>
+              {shortHoldingName(best.name ?? best.key)} <Change change={best.change} />
+            </span>
+          )}
+          {worst && (
+            <span>
+              <span className="text-muted-foreground">Worst </span>
+              {shortHoldingName(worst.name ?? worst.key)} <Change change={worst.change} />
+            </span>
+          )}
         </p>
       )}
       {(incomplete || summary.counted === 0) && (

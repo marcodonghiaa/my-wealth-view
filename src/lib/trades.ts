@@ -1,3 +1,4 @@
+import { RETURN_NOISE_BAND } from "@/lib/performance";
 import type { PerformanceRow } from "@/lib/performance";
 
 // Performance the way a broker works it out, from your trades. Over a range:
@@ -113,7 +114,12 @@ function ranked(rows: Array<MeasuredRow>, n: number): Pick<TradeSummary, "best" 
   list.sort((a, b) => b.change - a.change || a.key.localeCompare(b.key));
   if (list.length < 2) return { best: [], worst: [] };
   const take = Math.min(n, Math.floor(list.length / 2));
-  return { best: list.slice(0, take), worst: list.slice(-take).reverse() };
+  // A gain is never "worst": it has to be down, or flat within the noise band.
+  const worst = list
+    .slice(-take)
+    .reverse()
+    .filter((r) => r.change <= RETURN_NOISE_BAND);
+  return { best: list.slice(0, take), worst };
 }
 
 export function summarizeTrades(rows: Array<MeasuredRow>, topN = 2): TradeSummary {

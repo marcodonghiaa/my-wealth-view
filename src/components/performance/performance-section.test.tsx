@@ -76,6 +76,16 @@ describe("PerformanceSummary", () => {
     expect(screen.getByText("−10.00%")).toBeInTheDocument();
   });
 
+  it("leaves out Worst when everything is up", () => {
+    const up = [
+      { row: row("A"), measured: ok(300, 1000) },
+      { row: row("B"), measured: ok(100, 1000) },
+    ];
+    renderWith(<PerformanceSummary perf={perf(up, { summary: summarizeTrades(up, 1) })} />);
+    expect(screen.getByText("Best")).toBeInTheDocument();
+    expect(screen.queryByText("Worst")).not.toBeInTheDocument();
+  });
+
   it("while holdings lack trades, says how many count and offers import", () => {
     renderWith(
       <PerformanceSummary
