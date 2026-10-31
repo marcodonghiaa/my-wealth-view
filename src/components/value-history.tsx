@@ -26,7 +26,9 @@ export function RangeChangeLine({ history }: { history: ValueHistory }) {
         Value change ·{" "}
         {scrubbed && first
           ? `${formatDay(first.snapshot_date)} – ${formatDay(scrubbed.snapshot_date)}`
-          : HOLDING_RANGE_LABEL[range]}
+          : range === "1D"
+            ? "Past week" // the 1D chart window is a week (a day is two points); its return line says "Past day"
+            : HOLDING_RANGE_LABEL[range]}
         {!scrubbed && " (includes purchases)"}
       </span>
     </p>
