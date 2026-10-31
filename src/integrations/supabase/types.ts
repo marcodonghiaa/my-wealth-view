@@ -359,6 +359,33 @@ export type Database = {
         };
         Relationships: [];
       };
+      price_history: {
+        Row: {
+          currency: string;
+          fetched_at: string;
+          price: number;
+          price_date: string;
+          provider: string;
+          symbol: string;
+        };
+        Insert: {
+          currency: string;
+          fetched_at?: string;
+          price: number;
+          price_date: string;
+          provider: string;
+          symbol: string;
+        };
+        Update: {
+          currency?: string;
+          fetched_at?: string;
+          price?: number;
+          price_date?: string;
+          provider?: string;
+          symbol?: string;
+        };
+        Relationships: [];
+      };
       portfolio_holdings: {
         Row: {
           asset_type: string | null;
@@ -911,6 +938,20 @@ export type Database = {
       };
     };
     Functions: {
+      holding_performance: {
+        Args: { p_from: string; p_last_move?: boolean };
+        Returns: Array<{
+          kind: string;
+          key: string;
+          name: string | null;
+          quantity: number | null;
+          start_date: string | null;
+          start_price_eur: number | null;
+          end_date: string | null;
+          end_price_eur: number | null;
+          status: string;
+        }>;
+      };
       register_dashboard_origin: {
         Args: Record<PropertyKey, never>;
         Returns: string;

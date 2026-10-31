@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import { DEMO_USER_ID, generateDemoData, type DemoDb } from "./generate";
+import { demoHoldingPerformance } from "./performance";
 import { deriveViews, todayNumOf } from "./views";
 
 // A stand-in for the Supabase client that answers from generated, in-memory data. It makes no
@@ -441,16 +442,25 @@ export function createFakeClient(now: Date = new Date()): SupabaseClient<Databas
   const client = {
     from: (table: string) => new Query(store, table),
     rpc: async (fn: string, args: Record<string, unknown> = {}) =>
-      fn === "rename_merchant"
+      fn === "holding_performance"
         ? {
-            data: store.renameMerchant(
-              args["p_entry_reference"] as string,
-              args["p_account_uid"],
-              (args["p_name"] as string | null) ?? null,
+            data: demoHoldingPerformance(
+              store.db,
+              args["p_from"] as string,
+              (args["p_last_move"] as boolean | undefined) ?? false,
             ),
             error: null,
           }
-        : { data: null, error: DISABLED },
+        : fn === "rename_merchant"
+          ? {
+              data: store.renameMerchant(
+                args["p_entry_reference"] as string,
+                args["p_account_uid"],
+                (args["p_name"] as string | null) ?? null,
+              ),
+              error: null,
+            }
+          : { data: null, error: DISABLED },
     functions: {
       invoke: async (name: string, opts?: { body?: Record<string, unknown> }) =>
         name === "add-holding"
