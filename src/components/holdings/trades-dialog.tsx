@@ -64,7 +64,7 @@ export function TradesDialog({
   name: string;
   quantity: number;
   trades: Array<SavedTrade>;
-  label: string;
+  label: React.ReactNode;
 }) {
   const queryClient = useQueryClient();
   const [form, setForm] = useState<Form>(blank);
@@ -121,7 +121,10 @@ export function TradesDialog({
 
   return (
     <Dialog>
-      <DialogTrigger className="min-h-6 text-xs text-primary underline-offset-2 hover:underline">
+      <DialogTrigger
+        title={`Trades for ${name}`}
+        className="min-h-6 underline-offset-2 hover:underline"
+      >
         {label}
       </DialogTrigger>
       <DialogContent>

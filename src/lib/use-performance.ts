@@ -90,7 +90,7 @@ export function usePerformance(
     }));
   }, [prices.data, tradesByKey, kind, range]);
 
-  const summary = useMemo(() => summarizeTrades(measured), [measured]);
+  const summary = useMemo(() => summarizeTrades(measured, 1), [measured]);
   const measuredByKey = useMemo(
     () => new Map<string, Measured>(measured.map((m) => [m.row.key, m.measured])),
     [measured],

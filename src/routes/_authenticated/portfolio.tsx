@@ -18,7 +18,7 @@ import { AddHoldingPanel } from "@/components/holdings/add-holding-panel";
 import { EditHolding } from "@/components/holdings/edit-holding";
 import { HeadlineFigure } from "@/components/headline-figure";
 import { ShareBar } from "@/components/share-bar";
-import { RangeChangeLine, ValueHistoryChart } from "@/components/value-history";
+import { ValueHistoryChart } from "@/components/value-history";
 import { useValueHistory } from "@/lib/use-value-history";
 import { usePerformance } from "@/lib/use-performance";
 import { PerformanceSummary, ReturnCell } from "@/components/performance/performance-section";
@@ -184,7 +184,7 @@ function PortfolioPage() {
   // Scrubbing shows that day's value; otherwise today's, from the holdings below.
   const history = useValueHistory("portfolio_total_eur", totalEur);
   const { scrubbed } = history;
-  const perf = usePerformance(history.range, history.chartData.at(-1)?.snapshot_date, "stock");
+  const perf = usePerformance("ALL", history.chartData.at(-1)?.snapshot_date, "stock");
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-8 md:py-12">
@@ -220,8 +220,7 @@ function PortfolioPage() {
             <HeadlineFigure value={history.shownEur} currency="EUR" />
           )}
         </div>
-        {!query.isPending && <RangeChangeLine history={history} />}
-        {!query.isPending && <PerformanceSummary perf={perf} range={history.range} />}
+        {!query.isPending && <PerformanceSummary perf={perf} />}
       </section>
 
       {/* Chart: portfolio value over time; scrub it to read any day */}
