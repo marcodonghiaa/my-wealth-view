@@ -427,6 +427,7 @@ export function generateDemoData(now: Date = new Date()): DemoDb {
     pending_bank_consents: [],
     portfolio_holdings,
     portfolio_snapshots,
+    price_history: [],
     push_subscriptions: [],
     net_worth_reconstructed,
     splitwise_balances,
