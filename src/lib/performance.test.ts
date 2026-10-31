@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { byKey, rangeQuery, rowReturn, summarize } from "./performance";
+import { byKey, formatReturn, ofKind, rangeQuery, rowReturn, summarize } from "./performance";
 import type { PerformanceRow } from "./performance";
 
 const row = (over: Partial<PerformanceRow> = {}): PerformanceRow => ({
@@ -121,5 +121,27 @@ describe("byKey", () => {
   it("keeps a stock and a coin with the same key apart", () => {
     const m = byKey([row({ kind: "stock", key: "X" }), row({ kind: "crypto", key: "X" })]);
     expect(m.size).toBe(2);
+  });
+});
+
+describe("formatReturn", () => {
+  it("shows two decimals, a sign and a real minus", () => {
+    expect(formatReturn(0.04213)).toBe("+4.21%");
+    expect(formatReturn(-0.013)).toBe("−1.30%");
+    expect(formatReturn(0)).toBe("+0.00%");
+    expect(formatReturn(-0.0000001)).toBe("+0.00%");
+    expect(formatReturn(12.3456)).toBe("+1,234.56%");
+  });
+});
+
+describe("ofKind", () => {
+  it("keeps a page's own kind, so the Crypto page never shows the Portfolio return", () => {
+    const rows = [
+      row({ kind: "stock", key: "S" }),
+      row({ kind: "crypto", key: "C", end_price_eur: 200 }),
+    ];
+    expect(ofKind(rows, "crypto").map((r) => r.key)).toEqual(["C"]);
+    expect(summarize(ofKind(rows, "crypto")).change).toBeCloseTo(1);
+    expect(summarize(ofKind(rows, "stock")).change).toBeCloseTo(0.2);
   });
 });

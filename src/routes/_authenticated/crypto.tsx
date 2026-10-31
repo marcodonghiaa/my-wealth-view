@@ -11,6 +11,8 @@ import { HeadlineFigure } from "@/components/headline-figure";
 import { ShareBar } from "@/components/share-bar";
 import { RangeChangeLine, ValueHistoryChart } from "@/components/value-history";
 import { useValueHistory } from "@/lib/use-value-history";
+import { usePerformance } from "@/lib/use-performance";
+import { PerformanceSummary, ReturnCell } from "@/components/performance/performance-section";
 import { formatDay } from "@/lib/date";
 import { formatEur, formatUsd } from "@/lib/transactions";
 
@@ -144,6 +146,7 @@ function CryptoPage() {
   // Scrubbing shows that day's value; otherwise today's, from the coins below.
   const history = useValueHistory("crypto_total_eur", totalEur);
   const { scrubbed } = history;
+  const perf = usePerformance(history.range, history.chartData.at(-1)?.snapshot_date, "crypto");
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-8 md:py-12">
@@ -180,6 +183,13 @@ function CryptoPage() {
           )}
         </div>
         {!query.isPending && <RangeChangeLine history={history} />}
+        {!query.isPending && (
+          <PerformanceSummary
+            perf={perf}
+            range={history.range}
+            note="Prices only, in EUR: buying or selling doesn't count. Coins are priced in dollars, so the dollar's moves against the euro count too (stablecoins move only with it)."
+          />
+        )}
       </section>
 
       {/* Chart: crypto value over time; scrub it to read any day */}
@@ -225,6 +235,7 @@ function CryptoPage() {
                     <th className="px-4 py-3 font-medium sm:px-5">Holding</th>
                     <th className="px-4 py-3 font-medium sm:px-5">Amount</th>
                     <th className="px-4 py-3 font-medium sm:px-5">Price</th>
+                    <th className="px-4 py-3 text-right font-medium sm:px-5">Return</th>
                     <th className="px-4 py-3 text-right font-medium sm:px-5">Value</th>
                     <th className="px-4 py-3 text-right font-medium sm:px-5">% of total</th>
                     <th className="w-14 px-2 py-3">
@@ -267,6 +278,12 @@ function CryptoPage() {
                         </td>
                         <td className="px-4 py-3 font-figure text-foreground sm:px-5">
                           {formatPrice(asset)}
+                        </td>
+                        <td className="px-4 py-3 text-right sm:px-5">
+                          <ReturnCell
+                            row={perf.rowsByKey.get(`crypto:${asset.symbol}`)}
+                            pending={perf.isPending}
+                          />
                         </td>
                         <td className="px-4 py-3 text-right font-figure font-medium text-foreground sm:px-5">
                           {formatEur(asset.valueEur)}
@@ -325,6 +342,15 @@ function CryptoPage() {
                     <div>
                       <div className="text-xs text-muted-foreground">Price</div>
                       <div className="font-figure text-foreground">{formatPrice(asset)}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-muted-foreground">Return</div>
+                      <div>
+                        <ReturnCell
+                          row={perf.rowsByKey.get(`crypto:${asset.symbol}`)}
+                          pending={perf.isPending}
+                        />
+                      </div>
                     </div>
                     <div>
                       <div className="text-xs text-muted-foreground">Value</div>

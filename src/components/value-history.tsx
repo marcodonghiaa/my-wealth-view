@@ -2,8 +2,7 @@ import { SegmentedControl } from "@/components/segmented-control";
 import { ValueChart } from "@/components/value-chart";
 import { trendSummary } from "@/lib/chart-summary";
 import { formatDay } from "@/lib/date";
-import { CHART_RANGES } from "@/lib/net-worth";
-import { HOLDING_RANGE_LABEL } from "@/lib/performance";
+import { HOLDING_RANGES, HOLDING_RANGE_LABEL } from "@/lib/performance";
 import type { NetWorthRow } from "@/lib/net-worth";
 import type { ValueHistory } from "@/lib/use-value-history";
 import { TONE_TEXT, toneOf } from "@/lib/tone";
@@ -12,7 +11,8 @@ import { formatEur } from "@/lib/transactions";
 // Moves under half a percent are noise: show them without alarm colour.
 const NOISE_BAND = 0.005;
 
-// "+€1,234.00 (+5.67%) Past year", or the scrubbed span while hovering the chart.
+// "+€1,234.00 Value change · Past year", or the scrubbed span while hovering the chart. A value
+// change counts purchases and sales, so no percent here: the price return is shown separately.
 export function RangeChangeLine({ history }: { history: ValueHistory }) {
   const { delta, change, scrubbed, first, range } = history;
   if (delta == null || change == null) return null;
@@ -20,13 +20,16 @@ export function RangeChangeLine({ history }: { history: ValueHistory }) {
     <p className="mt-3 flex flex-wrap items-baseline gap-x-2 text-[0.9375rem]">
       <span className={`font-figure font-medium ${TONE_TEXT[toneOf(change, NOISE_BAND)]}`}>
         {delta >= 0 ? "+" : "−"}
-        {formatEur(Math.abs(delta))} ({change >= 0 ? "+" : "−"}
-        {Math.abs(change * 100).toFixed(2)}%)
+        {formatEur(Math.abs(delta))}
       </span>
       <span className="text-muted-foreground">
+        Value change ·{" "}
         {scrubbed && first
           ? `${formatDay(first.snapshot_date)} – ${formatDay(scrubbed.snapshot_date)}`
-          : HOLDING_RANGE_LABEL[range]}
+          : range === "1D"
+            ? "Past week" // the 1D chart window is a week (a day is two points); its return line says "Past day"
+            : HOLDING_RANGE_LABEL[range]}
+        {!scrubbed && " (includes purchases)"}
       </span>
     </p>
   );
@@ -53,7 +56,7 @@ export function ValueHistoryChart({ history, title }: { history: ValueHistory; t
       <div className="mt-4 flex">
         <SegmentedControl
           label="Chart range"
-          options={CHART_RANGES.map((r) => ({ value: r, label: r }))}
+          options={HOLDING_RANGES.map((r) => ({ value: r, label: r }))}
           value={range}
           onChange={setRange}
         />
