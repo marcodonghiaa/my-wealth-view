@@ -2,7 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
-import { rangeQuery, summarize } from "@/lib/performance";
+import { useMemo } from "react";
+import { byKey, ofKind, rangeQuery, summarize } from "@/lib/performance";
 import type { HoldingRange, PerformanceRow } from "@/lib/performance";
 
 export type PerformanceResult = { rows: Array<PerformanceRow> } | { unavailable: true };
@@ -32,17 +33,27 @@ export async function fetchPerformance(
 }
 
 /** `lastIso` is the latest day of the value history; the query waits until it is known. */
-export function usePerformance(range: HoldingRange, lastIso: string | undefined) {
+export function usePerformance(
+  range: HoldingRange,
+  lastIso: string | undefined,
+  kind: "stock" | "crypto",
+) {
   const query = lastIso == null ? null : rangeQuery(range, lastIso);
   const result = useQuery({
     queryKey: ["holding-performance", query?.from, query?.lastMove],
     queryFn: () => fetchPerformance(supabase, query!.from, query!.lastMove),
     enabled: query != null,
   });
-  const rows = result.data && "rows" in result.data ? result.data.rows : [];
+  const rows = useMemo(
+    () => ofKind(result.data && "rows" in result.data ? result.data.rows : [], kind),
+    [result.data, kind],
+  );
+  const summary = useMemo(() => summarize(rows), [rows]);
+  const rowsByKey = useMemo(() => byKey(rows), [rows]);
   return {
     rows,
-    summary: summarize(rows),
+    rowsByKey,
+    summary,
     isPending: lastIso == null || result.isPending,
     unavailable: result.data != null && "unavailable" in result.data,
     error: result.isError ? result.error : null,
