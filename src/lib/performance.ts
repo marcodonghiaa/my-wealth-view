@@ -1,4 +1,4 @@
-import { monthAgo } from "@/lib/net-worth";
+import { RANGE_LABEL, monthAgo } from "@/lib/net-worth";
 import type { ChartRange } from "@/lib/net-worth";
 
 // Price return of what you hold today: sum(q x (p_now - p_start)) / sum(q x p_start), prices in EUR.
@@ -9,11 +9,7 @@ export type HoldingRange = "1D" | ChartRange;
 export const HOLDING_RANGES: Array<HoldingRange> = ["1D", "1M", "3M", "YTD", "2Y", "ALL"];
 export const HOLDING_RANGE_LABEL: Record<HoldingRange, string> = {
   "1D": "Past day",
-  "1M": "Past month",
-  "3M": "Past 3 months",
-  YTD: "Year to date",
-  "2Y": "Past 2 years",
-  ALL: "All time",
+  ...RANGE_LABEL,
 };
 
 // ok: start price is within a week before the range start. since: first price is after the range
