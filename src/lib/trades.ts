@@ -3,8 +3,9 @@ import type { PerformanceRow } from "@/lib/performance";
 
 // Total return the way a broker works it out, from your trades:
 //   gain   = value now + everything sold - everything bought (so profit already taken counts)
-//   return = gain / cost of what you still hold, at average cost
-// Dividing by everything ever paid would let money moved in and out of a fund inflate the base.
+//   return = gain / the most money you ever had in it at once (peak invested)
+// Dividing by everything ever paid would let money moved in and out of a fund inflate the base;
+// dividing by the cost of what's left would make a mostly sold holding show +980% on pennies.
 // Fees count against you. Dividends are not counted.
 
 export interface Trade {
@@ -19,11 +20,14 @@ export interface Trade {
 
 // Trades and holdings are typed and synced apart; rounding dust is not a disagreement.
 const QUANTITY_TOLERANCE = 0.000001;
+// Worth less than this: a leftover. It asks for nothing and can't be best or worst.
+const DUST_EUR = 10;
 
 export type Measured =
   | { state: "no_trades" }
   | { state: "mismatch"; traded: number; held: number }
   | { state: "no_price" }
+  | { state: "dust" }
   | { state: "ok"; gain: number; base: number; change: number | null };
 
 const signed = (t: Trade) => (t.side === "buy" ? t.shares : -t.shares);
@@ -35,39 +39,39 @@ const inOrder = (trades: Array<Trade>) =>
     (a, b) => a.trade_date.localeCompare(b.trade_date) || a.side.localeCompare(b.side),
   );
 
-/** Cash in, cash out, and the average cost of the shares left after every trade. */
+/** Cash in, cash out, and the most that was ever in at once. */
 function replay(trades: Array<Trade>) {
-  let shares = 0;
-  let cost = 0;
   let bought = 0;
   let sold = 0;
+  let peak = 0;
   for (const t of inOrder(trades)) {
-    if (t.side === "buy") {
-      const paid = t.shares * t.price_eur + t.fee_eur;
-      bought += paid;
-      cost += paid;
-      shares += t.shares;
-    } else {
-      sold += t.shares * t.price_eur - t.fee_eur;
-      if (shares > 0) cost -= (cost / shares) * Math.min(t.shares, shares);
-      shares = Math.max(0, shares - t.shares);
-    }
+    if (t.side === "buy") bought += t.shares * t.price_eur + t.fee_eur;
+    else sold += t.shares * t.price_eur - t.fee_eur;
+    peak = Math.max(peak, bought - sold);
   }
-  return { bought, sold, cost: shares > QUANTITY_TOLERANCE ? cost : 0 };
+  return { bought, sold, peak };
 }
 
 /** One holding's total return. Sold to zero: its profit counts, and it needs no current price. */
 export function measure(row: PerformanceRow, trades: Array<Trade>): Measured {
-  if (trades.length === 0) return { state: "no_trades" };
   const held = row.quantity ?? 0;
+  const value = held > 0 && row.end_price_eur != null ? held * row.end_price_eur : null;
+  const isDust = value != null && value < DUST_EUR;
+  if (trades.length === 0) return isDust ? { state: "dust" } : { state: "no_trades" };
   const traded = netShares(trades);
-  if (Math.abs(traded - held) > QUANTITY_TOLERANCE) return { state: "mismatch", traded, held };
-  if (held > 0 && row.end_price_eur == null) return { state: "no_price" };
+  if (Math.abs(traded - held) > QUANTITY_TOLERANCE) {
+    return isDust ? { state: "dust" } : { state: "mismatch", traded, held };
+  }
+  if (held > 0 && value == null) return { state: "no_price" };
 
-  const { bought, sold, cost } = replay(trades);
-  const gain = (held > 0 ? held * row.end_price_eur! : 0) + sold - bought;
-  return { state: "ok", gain, base: cost, change: cost > 0 ? gain / cost : null };
+  const { bought, sold, peak } = replay(trades);
+  const gain = (value ?? 0) + sold - bought;
+  return { state: "ok", gain, base: peak, change: peak > 0 ? gain / peak : null };
 }
+
+/** Too small to rank: what's left is a leftover, however it started. */
+const isRankable = (row: PerformanceRow) =>
+  (row.quantity ?? 0) * (row.end_price_eur ?? 0) >= DUST_EUR;
 
 export interface Ranked {
   key: string;
@@ -91,11 +95,11 @@ export interface MeasuredRow {
   measured: Measured;
 }
 
-/** Sold holdings count towards the total, but only what you still hold is best or worst. */
+/** Sold holdings and leftovers count towards the total, but only real positions are best or worst. */
 function ranked(rows: Array<MeasuredRow>, n: number): Pick<TradeSummary, "best" | "worst"> {
   const list: Array<Ranked> = [];
   for (const { row, measured } of rows) {
-    if (measured.state === "ok" && measured.change != null && (row.quantity ?? 0) > 0) {
+    if (measured.state === "ok" && measured.change != null && isRankable(row)) {
       list.push({ key: row.key, name: row.name, change: measured.change });
     }
   }

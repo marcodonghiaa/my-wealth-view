@@ -43,12 +43,12 @@ describe("measure", () => {
     expect(m.change).toBeCloseTo(399 / 801);
   });
 
-  it("counts profit already taken, against the cost of what's left", () => {
-    // Bought 12 at 80, sold 2 at 150 (300), 10 left at 120 (1200), which cost 800: +540.
+  it("counts profit already taken, against the most ever invested", () => {
+    // Bought 12 at 80 (960 in), sold 2 at 150 (300), 10 left at 120 (1200): +540 on 960.
     const m = ok(measure(row(), [buy("2025-01-10", 12, 80), sell("2025-06-01", 2, 150)]));
     expect(m.gain).toBeCloseTo(540);
-    expect(m.base).toBeCloseTo(800);
-    expect(m.change).toBeCloseTo(540 / 800);
+    expect(m.base).toBeCloseTo(960);
+    expect(m.change).toBeCloseTo(540 / 960);
   });
 
   it("money moved out of a fund and back doesn't inflate the base", () => {
@@ -63,16 +63,25 @@ describe("measure", () => {
     expect(m.change).toBeCloseTo(0.2);
   });
 
-  it("averages cost across buys", () => {
-    // 5 at 100 and 5 at 200: average 150. Sell 5: 750 of cost is left.
+  it("mostly sold: a sane percentage, not a huge one on the pennies left", () => {
+    // 1000 in, 900 back, 1 share left worth 120 (row price): +20 on 1000, not on the 100 left.
     const m = ok(
-      measure(row({ quantity: 5 }), [
+      measure(row({ quantity: 1 }), [buy("2025-01-10", 10, 100), sell("2025-06-01", 9, 100)]),
+    );
+    expect(m.gain).toBeCloseTo(20);
+    expect(m.change).toBeCloseTo(0.02);
+  });
+
+  it("the peak is the most in at once, not the total of all buys", () => {
+    const m = ok(
+      measure(row({ quantity: 10 }), [
         buy("2025-01-10", 5, 100),
         buy("2025-02-10", 5, 200),
         sell("2025-03-10", 5, 150),
+        buy("2025-04-10", 5, 100),
       ]),
     );
-    expect(m.base).toBeCloseTo(750);
+    expect(m.base).toBeCloseTo(1500);
   });
 
   it("a split adds shares at no cost", () => {
@@ -81,11 +90,21 @@ describe("measure", () => {
     expect(m.gain).toBeCloseTo(700);
   });
 
-  it("a sale on the day of the buy has its shares, whatever order they came in", () => {
+  it("a leftover under EUR 10 asks for nothing: no purchases, no mismatch", () => {
+    const small = row({ quantity: 0.5, end_price_eur: 1.6 });
+    expect(measure(small, [])).toEqual({ state: "dust" });
+    expect(measure(small, [buy("2025-01-10", 8, 1)])).toEqual({ state: "dust" });
+  });
+
+  it("just over EUR 10 is a real holding", () => {
+    expect(measure(row({ quantity: 1, end_price_eur: 10 }), []).state).toBe("no_trades");
+  });
+
+  it("a sale on the day of the buy has its money in first, whatever order they came in", () => {
     const m = ok(
       measure(row({ quantity: 5 }), [sell("2025-01-10", 5, 100), buy("2025-01-10", 10, 100)]),
     );
-    expect(m.base).toBeCloseTo(500);
+    expect(m.base).toBeCloseTo(1000);
   });
 
   it("no trades means no number", () => {
@@ -110,7 +129,7 @@ describe("measure", () => {
     );
   });
 
-  it("a holding sold to zero keeps its profit, needs no price, and has no cost left", () => {
+  it("a holding sold to zero keeps its profit and needs no price", () => {
     const m = ok(
       measure(row({ quantity: 0, end_price_eur: null }), [
         buy("2025-01-10", 2, 50),
@@ -118,8 +137,7 @@ describe("measure", () => {
       ]),
     );
     expect(m.gain).toBeCloseTo(50);
-    expect(m.base).toBe(0);
-    expect(m.change).toBeNull();
+    expect(m.change).toBeCloseTo(0.5);
   });
 });
 
@@ -171,6 +189,18 @@ describe("summarizeTrades", () => {
     ]);
     expect(s.gain).toBe(50);
     expect(s.change).toBeCloseTo(0.05);
+  });
+
+  it("leftovers are neither missing nor best or worst, but their gain counts", () => {
+    const dust = { row: row({ key: "D" }), measured: { state: "dust" } as Measured };
+    const tiny = {
+      row: row({ key: "T", quantity: 1, end_price_eur: 1 }),
+      measured: { state: "ok", gain: 900, base: 100, change: 9 } as Measured,
+    };
+    const s = summarizeTrades([okRow("A", 10, 100), okRow("B", -10, 100), dust, tiny]);
+    expect(s.total).toBe(3);
+    expect(s.best.map((r) => r.key)).toEqual(["A"]);
+    expect(s.gain).toBe(900);
   });
 
   it("nothing measurable: no change", () => {

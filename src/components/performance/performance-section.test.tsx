@@ -141,6 +141,12 @@ describe("ReturnCell", () => {
     expect(screen.queryByText(/%/)).not.toBeInTheDocument();
   });
 
+  it("a leftover shows a dash and asks for nothing", () => {
+    cell({ state: "dust" });
+    expect(screen.queryByText("Add purchases")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "—" })).toBeInTheDocument();
+  });
+
   it("says when trades don't match, with no number", () => {
     cell({ state: "mismatch", traded: 8, held: 10 });
     expect(screen.getByText("Trades don't match")).toBeInTheDocument();
