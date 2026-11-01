@@ -19,7 +19,12 @@ import {
 } from "@/lib/import/splitwise-commit";
 import { fingerprintRows, matchBank, type BankTx } from "@/lib/import/splitwise-match";
 import { saveBalances, type FileBalances } from "@/lib/import/splitwise-balances";
-import { planWrite } from "@/lib/import/splitwise-plan";
+import {
+  isShareRow,
+  planWrite,
+  splitAtCheckpoint,
+  type StoredShare,
+} from "@/lib/import/splitwise-plan";
 import { categorizeRow, ruleTextFor, type UserRule } from "@/lib/import/splitwise-categorize";
 import { defaultSelection, makeRate, toBankTx, type FxRow } from "@/lib/import/splitwise-review";
 
@@ -39,7 +44,7 @@ const money = (cents: number) => (cents / 100).toFixed(2);
 interface Loaded {
   bank: Array<BankTx>;
   fx: Array<FxRow>;
-  existing: Map<string, { accountUid: string; entryReference: string }>;
+  stored: Array<StoredShare>;
   rules: Array<UserRule>;
 }
 
@@ -49,7 +54,7 @@ async function load(rows: Array<ClassifiedRow>, group: string): Promise<Loaded> 
   const last = dates[dates.length - 1] ?? "";
   const currencies = [...new Set(rows.map((r) => r.currency))].filter((c) => c !== "EUR");
 
-  const [bank, fx, existing, rules] = await Promise.all([
+  const [bank, fx, stored, rules] = await Promise.all([
     supabase
       .from("transactions")
       .select(
@@ -69,35 +74,29 @@ async function load(rows: Array<ClassifiedRow>, group: string): Promise<Loaded> 
           .limit(PAGE_LIMIT),
     supabase
       .from("splitwise_expenses")
-      .select("fingerprint, linked_account_uid, linked_entry_reference")
-      .eq("group_name", group),
+      .select("fingerprint, booking_date")
+      .eq("group_name", group)
+      .limit(PAGE_LIMIT),
     supabase
       .from("category_rules")
       .select("match_text, set_category, priority")
       .order("priority", { ascending: true }),
   ]);
 
-  const failed = bank.error ?? fx.error ?? existing.error ?? rules.error;
+  const failed = bank.error ?? fx.error ?? stored.error ?? rules.error;
   if (failed) throw new Error(failed.message);
   if ((bank.data ?? []).length >= PAGE_LIMIT || (fx.data ?? []).length >= PAGE_LIMIT) {
     throw new Error("Too many bank transactions in these dates to review safely.");
+  }
+  // A cut list could hide the newest date, and the checkpoint is what protects older rows.
+  if ((stored.data ?? []).length >= PAGE_LIMIT) {
+    throw new Error("Too many stored expenses in this group to review safely.");
   }
   return {
     bank: (bank.data ?? []).flatMap((r) => toBankTx(r) ?? []),
     fx: fx.data ?? [],
     rules: rules.data ?? [],
-    existing: new Map(
-      (existing.data ?? []).flatMap((e) =>
-        e.linked_account_uid && e.linked_entry_reference
-          ? [
-              [
-                e.fingerprint,
-                { accountUid: e.linked_account_uid, entryReference: e.linked_entry_reference },
-              ],
-            ]
-          : [],
-      ),
-    ),
+    stored: stored.data ?? [],
   };
 }
 
@@ -152,18 +151,14 @@ export function SplitwiseReview({
   }, [rows, group]);
 
   const fingerprints = useMemo(() => fingerprintRows(rows), [rows]);
+  const split = useMemo(
+    () => splitAtCheckpoint(rows, fingerprints, loaded?.stored ?? []),
+    [rows, fingerprints, loaded],
+  );
   const rate = useMemo(() => makeRate(loaded?.fx ?? []), [loaded]);
   const matches = useMemo(
-    () =>
-      // An expense linked by an earlier import keeps that link: it is not matched again.
-      loaded
-        ? matchBank(
-            rows.filter((_, i) => !loaded.existing.has(fingerprints[i] ?? "")),
-            loaded.bank,
-            rate,
-          )
-        : [],
-    [loaded, rows, fingerprints, rate],
+    () => (loaded ? matchBank(split.rows, loaded.bank, rate) : []),
+    [loaded, split, rate],
   );
   const ticked = useMemo(() => {
     const picked = defaultSelection(matches);
@@ -175,13 +170,7 @@ export function SplitwiseReview({
   }, [matches, manualTicks]);
 
   // Only expenses that become a share need a category.
-  const categorised = useMemo(
-    () =>
-      rows.filter(
-        (r) => (r.kind === "paid_by_other" || r.kind === "paid_by_me") && (r.shareCents ?? 0) > 0,
-      ),
-    [rows],
-  );
+  const categorised = useMemo(() => split.rows.filter(isShareRow), [split]);
   const rules = useMemo(() => [...(loaded?.rules ?? []), ...extraRules], [loaded, extraRules]);
   const categoryOf = useMemo(
     () =>
@@ -204,7 +193,7 @@ export function SplitwiseReview({
             rows,
             fingerprints,
             confirmed: matches.filter((m) => ticked.has(m.row)),
-            existingLinks: loaded.existing,
+            stored: loaded.stored,
             includeUnmatchedPaidByMe: includeUnmatched,
             categoryFor: (row) => categoryOf.get(row.row) ?? null,
             rate,
@@ -284,13 +273,10 @@ export function SplitwiseReview({
   );
   // An unticked match is not a link, so that expense counts as not in the bank.
   const linkedRows = new Set(confirmed.map((m) => m.row));
-  const unmatched = rows.filter(
-    (r, i) =>
-      r.kind === "paid_by_me" &&
-      (r.shareCents ?? 0) > 0 &&
-      !linkedRows.has(r.row) &&
-      !loaded?.existing.has(fingerprints[i] ?? ""),
+  const unmatched = split.rows.filter(
+    (r) => r.kind === "paid_by_me" && isShareRow(r) && !linkedRows.has(r.row),
   );
+  const nothingToWrite = plan?.shares.length === 0 && plan.links.length === 0;
 
   if (loadError)
     return (
@@ -303,6 +289,29 @@ export function SplitwiseReview({
 
   return (
     <div className="space-y-6">
+      {split.checkpoint && (
+        <div className="rounded-2xl border bg-card p-5 text-sm card-ring">
+          <p>
+            Your last import goes up to {split.checkpoint}. Only what is new from that day on is
+            reviewed; everything already imported stays as it is.
+          </p>
+          {split.older.length > 0 && (
+            <section aria-labelledby="splitwise-older" className="mt-3">
+              <h2 id="splitwise-older" className="mb-1 font-semibold">
+                Older than your last import, not imported
+              </h2>
+              <ul className="space-y-1 text-muted-foreground">
+                {split.older.map((r) => (
+                  <li key={r.row}>
+                    {r.date} {r.description} ({money(r.costCents)} {r.currency})
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+        </div>
+      )}
+
       <div className="rounded-2xl border bg-card p-5 text-sm card-ring">
         <h2 className="mb-1 font-semibold">Categories</h2>
         <p className="mb-3 text-muted-foreground">
@@ -383,7 +392,8 @@ export function SplitwiseReview({
             />
             <span>
               Also count the {unmatched.length} expenses you paid that are not in your bank (your
-              share only)
+              share only). Left out now, any dated before this import's newest expense will not be
+              offered again.
             </span>
           </label>
         )}
@@ -402,9 +412,11 @@ export function SplitwiseReview({
             {p}
           </p>
         ))}
-        <p className="mt-2 text-muted-foreground">
-          Importing again replaces this group's shares in these dates.
-        </p>
+        {split.checkpoint && nothingToWrite && (
+          <p role="status" className="mt-2">
+            Nothing new since your last import. Nothing will be written.
+          </p>
+        )}
         <div className="mt-3">
           <button
             type="button"
@@ -412,7 +424,7 @@ export function SplitwiseReview({
             disabled={
               !userId ||
               plan.problems.length > 0 ||
-              (plan.shares.length === 0 && plan.links.length === 0) ||
+              nothingToWrite ||
               importShares.isPending ||
               importShares.isSuccess
             }
@@ -437,7 +449,7 @@ export function SplitwiseReview({
       {last && (
         <div className="rounded-2xl border bg-card p-5 text-sm card-ring">
           Last Splitwise import: {last.count} shares. Undo removes them and puts the bank
-          transactions it changed back, but shares it replaced are not restored.
+          transactions it changed back. Earlier imports are not touched.
           <div className="mt-3">
             <button
               type="button"
