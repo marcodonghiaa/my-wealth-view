@@ -25,6 +25,7 @@ async function loadStored(): Promise<Array<StoredGroupRow>> {
     .limit(STORED_LIMIT);
   if (error) throw new Error(error.message);
   // A cut list could hide a group, which is what these checks rely on.
+  // ponytail: refuses at 1000 rows across groups, page through them if an install gets there.
   if ((data ?? []).length >= STORED_LIMIT) {
     throw new Error("Too many stored expenses to choose a group safely.");
   }
@@ -172,7 +173,7 @@ export function SplitwisePanel() {
                     value={newName}
                     maxLength={GROUP_MAX}
                     onChange={(e) => setNewName(e.target.value)}
-                    onBlur={() => setSettledName(newName)}
+                    onBlur={() => setSettledName(newName.trim())}
                     className="w-full rounded-lg border bg-background px-3 py-2 text-base focus:ring-2 focus:ring-ring focus:outline-none"
                   />
                 </label>
@@ -232,6 +233,11 @@ export function SplitwisePanel() {
         <SplitwiseReview
           rows={classified}
           group={group}
+          onImported={() => {
+            // The group now exists, so it is no longer new, and the checks must see its rows.
+            setChoice(group);
+            void loadStored().then(setStored, (err: unknown) => setError(readError(err)));
+          }}
           balances={loaded && me !== null ? balancesFromFile(loaded.file, me) : null}
         />
       )}

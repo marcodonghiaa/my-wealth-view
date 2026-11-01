@@ -3,7 +3,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // The bank review is tested on its own; here it only needs something to read.
 vi.mock("./splitwise-review", () => ({
-  SplitwiseReview: ({ group }: { group: string }) => <p>review of {group}</p>,
+  SplitwiseReview: ({ group, onImported }: { group: string; onImported?: () => void }) => (
+    <p>
+      review of {group}
+      <button onClick={onImported}>finish import</button>
+    </p>
+  ),
 }));
 
 const answer: { data: unknown[]; error: { message: string } | null } = { data: [], error: null };
@@ -63,7 +68,7 @@ describe("SplitwisePanel", () => {
     upload(CSV, "berkeley 2026-11-01 export (1).csv");
     expect(((await screen.findByLabelText(/^Group$/)) as HTMLSelectElement).value).toBe("berkeley");
     fireEvent.change(await screen.findByLabelText(/Which one are you/), { target: { value: "0" } });
-    expect(await screen.findByText("review of berkeley")).toBeTruthy();
+    expect(await screen.findByText(/review of berkeley/)).toBeTruthy();
   });
 
   it("makes the user choose between several groups", async () => {
@@ -75,7 +80,7 @@ describe("SplitwisePanel", () => {
     fireEvent.change(await screen.findByLabelText(/Which one are you/), { target: { value: "0" } });
     expect(screen.queryByText(/review of/)).toBeNull();
     fireEvent.change(select, { target: { value: "trip" } });
-    expect(await screen.findByText("review of trip")).toBeTruthy();
+    expect(await screen.findByText(/review of trip/)).toBeTruthy();
   });
 
   it("asks for a name on a first import, with nothing filled in from the file", async () => {
@@ -170,6 +175,31 @@ describe("SplitwisePanel", () => {
 
   // protects=the bank is not re-read on every letter typed; fails_when=the review follows the
   // draft name instead of the finished one
+  // protects=expenses and balances land in one group; fails_when=the review gets the raw text
+  it("trims a new group name", async () => {
+    render(<SplitwisePanel />);
+    upload(CSV);
+    fireEvent.change(await screen.findByLabelText(/Which one are you/), { target: { value: "0" } });
+    const input = await screen.findByLabelText(/New group name/);
+    fireEvent.change(input, { target: { value: " Trip " } });
+    fireEvent.blur(input);
+    expect((await screen.findByText(/review of/)).textContent).toMatch(/^review of Trip(finish|$)/);
+  });
+
+  // protects=the checks see a group just created; fails_when=its case variant passes as new
+  it("treats a group just imported as existing, keeping the review open", async () => {
+    render(<SplitwisePanel />);
+    upload(CSV);
+    fireEvent.change(await screen.findByLabelText(/Which one are you/), { target: { value: "0" } });
+    const input = await screen.findByLabelText(/New group name/);
+    fireEvent.change(input, { target: { value: "trip" } });
+    fireEvent.blur(input);
+    answer.data = groups("trip");
+    fireEvent.click(await screen.findByRole("button", { name: "finish import" }));
+    expect(((await screen.findByLabelText(/^Group$/)) as HTMLSelectElement).value).toBe("trip");
+    expect(screen.getByText(/review of trip/)).toBeTruthy();
+  });
+
   it("passes a new group name to the review only when typing is done", async () => {
     render(<SplitwisePanel />);
     upload(CSV);
@@ -178,6 +208,6 @@ describe("SplitwisePanel", () => {
     fireEvent.change(input, { target: { value: "trip" } });
     expect(screen.queryByText(/review of/)).toBeNull();
     fireEvent.blur(input);
-    expect(await screen.findByText("review of trip")).toBeTruthy();
+    expect(await screen.findByText(/review of trip/)).toBeTruthy();
   });
 });
