@@ -37,8 +37,10 @@ interface Loaded {
   issues: Array<Issue>;
 }
 
-export function SplitwisePanel() {
+export function SplitwisePanel({ onClose }: { onClose: () => void }) {
+  const [step, setStep] = useState<"file" | "review">("file");
   const [loaded, setLoaded] = useState<Loaded | null>(null);
+  const [fileName, setFileName] = useState<string | null>(null);
   const [stored, setStored] = useState<Array<StoredGroupRow> | null>(null);
   // An existing group, or NEW_GROUP; "" until chosen.
   const [choice, setChoice] = useState("");
@@ -69,6 +71,7 @@ export function SplitwisePanel() {
 
   async function onFile(file: File | undefined) {
     setError(null);
+    setStep("file");
     setMe(null);
     if (!file) return;
     try {
@@ -76,10 +79,12 @@ export function SplitwisePanel() {
         throw new Error("The file is too large (limit is 2 MB). Is it the right file?");
       const parsed = parseSplitwiseCsv(await file.text());
       setLoaded({ file: parsed, issues: validateSplitwise(parsed) });
+      setFileName(file.name);
       setNewName("");
       setSettledName("");
     } catch (err) {
       setLoaded(null);
+      setFileName(null);
       setError(readError(err));
     }
   }
@@ -99,15 +104,53 @@ export function SplitwisePanel() {
         : null,
     [isNew, classified, stored, settledName],
   );
+  // The identity saved with this group's balances, when it is in this file.
+  useEffect(() => {
+    if (!loaded || isNew || group === "") return;
+    let current = true;
+    void supabase
+      .from("splitwise_balances")
+      .select("person")
+      .eq("group_name", group)
+      .eq("is_me", true)
+      .then(({ data }) => {
+        const person = data?.[0]?.person;
+        const columns = loaded.file.members.flatMap((m, i) => (m === person ? [i] : []));
+        if (current && columns.length === 1) setMe((m) => m ?? (columns[0] as number));
+      });
+    return () => {
+      current = false;
+    };
+  }, [loaded, isNew, group]);
+
+  const ready = classified && stored && group.trim() !== "" && !groupProblem;
   const summary = useMemo(() => (classified ? summarize(classified) : null), [classified]);
   const currency = loaded?.file.rows[0]?.currency ?? "";
 
+  if (step === "review" && ready) {
+    return (
+      <SplitwiseReview
+        rows={classified}
+        group={group}
+        balances={loaded && me !== null ? balancesFromFile(loaded.file, me) : null}
+        onImported={() => {
+          // The group now exists, so it is no longer new, and the checks must see its rows.
+          setChoice(group);
+          void loadStored().then(setStored, (err: unknown) => setError(readError(err)));
+        }}
+        onBack={() => setStep("file")}
+        onClose={onClose}
+      />
+    );
+  }
+
   return (
     <div className="space-y-6">
+      <h2 className="text-base font-semibold">Step 1 of 3: Choose your file</h2>
       <div className="rounded-2xl border bg-card p-5 card-ring">
         <label className="flex min-h-11 cursor-pointer items-center gap-2 text-sm font-medium">
           <Upload className="size-4 text-primary" />
-          Choose a Splitwise CSV
+          {fileName ?? "Choose a Splitwise CSV"}
           <input
             type="file"
             accept=".csv,text/csv"
@@ -206,8 +249,10 @@ export function SplitwisePanel() {
       )}
 
       {summary && (
-        <div className="rounded-2xl border bg-card p-5 text-sm card-ring">
-          <h2 className="mb-2 font-semibold">What this file says about you</h2>
+        <details className="rounded-2xl border bg-card p-5 text-sm card-ring">
+          <summary className="min-h-11 cursor-pointer font-semibold">
+            What this file says about you
+          </summary>
           <ul className="space-y-1 font-figure">
             <li>
               {summary.paidByOther.count} paid by others, your share{" "}
@@ -227,20 +272,16 @@ export function SplitwisePanel() {
               {money(summary.settledInCents)} {currency}
             </li>
           </ul>
-        </div>
+        </details>
       )}
-      {classified && stored && group.trim() !== "" && !groupProblem && (
-        <SplitwiseReview
-          rows={classified}
-          group={group}
-          onImported={() => {
-            // The group now exists, so it is no longer new, and the checks must see its rows.
-            setChoice(group);
-            void loadStored().then(setStored, (err: unknown) => setError(readError(err)));
-          }}
-          balances={loaded && me !== null ? balancesFromFile(loaded.file, me) : null}
-        />
-      )}
+      <button
+        type="button"
+        className="inline-flex min-h-11 items-center rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+        disabled={!ready}
+        onClick={() => setStep("review")}
+      >
+        Continue
+      </button>
     </div>
   );
 }

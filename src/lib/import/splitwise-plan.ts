@@ -109,8 +109,8 @@ export interface PlanInput {
   fingerprints: Array<string>;
   confirmed: Array<BankMatch>;
   stored: Array<StoredShare>;
-  /** Add expenses I paid that have no bank transaction as shares. */
-  includeUnmatchedPaidByMe: boolean;
+  /** Expenses I paid with no bank transaction that I chose to count, by row. */
+  countedRows: Set<number>;
   categoryFor: (row: ClassifiedRow) => string | null;
   rate: RateToEur;
 }
@@ -183,7 +183,7 @@ export function planWrite(input: PlanInput): WritePlan {
     }
     const wanted =
       r.kind === "paid_by_other" ||
-      (r.kind === "paid_by_me" && (match !== undefined || input.includeUnmatchedPaidByMe));
+      (r.kind === "paid_by_me" && (match !== undefined || input.countedRows.has(r.row)));
     if (!wanted || !r.shareCents || r.shareCents <= 0) return;
 
     if (fingerprint.length > MAX_FINGERPRINT) {
