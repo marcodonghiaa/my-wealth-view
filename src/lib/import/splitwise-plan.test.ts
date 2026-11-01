@@ -292,6 +292,17 @@ describe("the last import is a checkpoint", () => {
     expect(split.older).toEqual([]);
   });
 
+  // protects=a settle-up from the last import is not offered again; only shares are stored, so a
+  // settle-up on the checkpoint day cannot be told from a new one; fails_when=it is re-matched
+  it("leaves out a checkpoint-day row that could never be stored", () => {
+    const sameDay = rowsOf(LAST, { ...SETTLE, date: "2026-08-20" });
+    const fp = fingerprintRows(sameDay);
+    const split = splitAtCheckpoint(sameDay, fp, [
+      { fingerprint: fp[0] as string, booking_date: "2026-08-20" },
+    ]);
+    expect(split.rows).toEqual([]);
+  });
+
   // protects=identical rows stay told apart; fails_when=the counter is computed after filtering
   it("keeps the second of two identical rows on the checkpoint day as new", () => {
     const twins = rowsOf(LAST, { ...LAST, row: 9 });

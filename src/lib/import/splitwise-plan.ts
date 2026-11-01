@@ -81,6 +81,8 @@ export function splitAtCheckpoint(
       if (isShareRow(r)) split.older.push(r);
       return;
     }
+    // Only shares are stored, so anything else on that day may already have been handled.
+    if (r.date === checkpoint && !isShareRow(r)) return;
     split.rows.push(r);
     split.fingerprints.push(fingerprint);
   });
