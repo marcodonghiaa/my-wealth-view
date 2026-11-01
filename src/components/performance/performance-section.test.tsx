@@ -64,8 +64,9 @@ describe("PerformanceSummary", () => {
     expect(screen.getByText("+20.00%")).toBeInTheDocument();
     expect(screen.getByText(/\+.*200/)).toBeInTheDocument();
     expect(screen.getByText("Total return")).toBeInTheDocument();
-    expect(screen.queryByText("Import trades from CSV")).not.toBeInTheDocument();
     expect(screen.queryByText(/holdings/)).not.toBeInTheDocument();
+    // Always there: a new buy still matches your old share count, so nothing else would prompt it.
+    expect(screen.getByText("Import trades from CSV")).toBeInTheDocument();
   });
 
   it("names the best and the worst holding", () => {

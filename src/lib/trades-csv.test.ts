@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { newTrades, parseTradesCsv } from "./trades-csv";
+import { newTrades, parseTradesCsv, shareUpdates } from "./trades-csv";
 
 const opts = { kind: "stock" as const, knownKeys: new Set(["IE00B4L5Y983"]), today: "2026-10-31" };
 
@@ -184,6 +184,11 @@ describe("parseTradesCsv, Trade Republic export", () => {
     expect(errors[0]).toMatch(/Line 2: the price isn't in EUR/);
   });
 
+  it("says it can correct share counts; a plain CSV doesn't", () => {
+    expect(parseTradesCsv(file(), known).setsShares).toBe(true);
+    expect(parseTradesCsv("date,side,isin,shares,price\n", opts).setsShares).toBeUndefined();
+  });
+
   it("belongs on the Portfolio page", () => {
     const { errors } = parseTradesCsv(file(), { ...known, kind: "crypto" });
     expect(errors[0]).toMatch(/Portfolio page/);
@@ -204,5 +209,48 @@ describe("newTrades", () => {
   it("leaves out what's already saved, so re-importing doesn't double up", () => {
     const other = { ...trade, shares: 2 };
     expect(newTrades([trade, other], [trade])).toEqual([other]);
+  });
+});
+
+describe("shareUpdates", () => {
+  const trade = (key: string, shares: number, side = "buy", trade_date = "2026-01-15") => ({
+    kind: "stock",
+    key,
+    side,
+    trade_date,
+    shares,
+    price_eur: 90,
+    fee_eur: 0,
+  });
+
+  it("sets a holding to what its trades add up to", () => {
+    expect(shareUpdates([trade("A", 3), trade("A", 1, "sell")], [], new Map([["A", 1]]))).toEqual([
+      { key: "A", shares: 2 },
+    ]);
+  });
+
+  it("counts trades already saved, without counting a re-import twice", () => {
+    const saved = [trade("A", 2)];
+    const incoming = [trade("A", 2), trade("A", 1, "buy", "2026-02-15")];
+    expect(shareUpdates(incoming, saved, new Map([["A", 2]]))).toEqual([{ key: "A", shares: 3 }]);
+  });
+
+  it("leaves a holding that already matches, one not in the file, and one you have no row for", () => {
+    const holdings = new Map([
+      ["A", 2],
+      ["B", 9],
+    ]);
+    expect(shareUpdates([trade("A", 2), trade("Z", 1)], [], holdings)).toEqual([]);
+  });
+
+  it("sold everything: zero", () => {
+    expect(shareUpdates([trade("A", 2), trade("A", 2, "sell")], [], new Map([["A", 2]]))).toEqual([
+      { key: "A", shares: 0 },
+    ]);
+  });
+
+  it("rounds away floating-point dust", () => {
+    const out = shareUpdates([trade("A", 0.1), trade("A", 0.2)], [], new Map([["A", 1]]));
+    expect(out).toEqual([{ key: "A", shares: 0.3 }]);
   });
 });

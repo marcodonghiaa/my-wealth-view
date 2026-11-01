@@ -11,6 +11,8 @@ export interface CsvResult {
   errors: Array<string>;
   /** Left out on purpose, but you should know. */
   notes: Array<string>;
+  /** The file is your broker's full record, so it can correct how many shares you hold. */
+  setsShares?: boolean;
 }
 
 function splitLine(line: string, separator: string): Array<string> {
@@ -104,7 +106,7 @@ function parseTradeRepublic(
     notes.push(
       `${names.get(key)} isn't in your holdings, so it was left out. Add it, then import again.`,
     );
-  return { trades: trades.filter((t) => !open.includes(t.key)), errors, notes };
+  return { trades: trades.filter((t) => !open.includes(t.key)), errors, notes, setsShares: true };
 }
 
 /** All or nothing: any error means nothing is saved, so a half-imported holding can't look right. */
@@ -174,4 +176,24 @@ const signature = (t: Trade) =>
 export function newTrades(incoming: Array<Trade>, saved: Array<Trade>): Array<Trade> {
   const known = new Set(saved.map(signature));
   return incoming.filter((t) => !known.has(signature(t)));
+}
+
+/**
+ * What each traded holding's share count should become, for those that differ. Counts your saved
+ * trades too, and leaves alone anything the file doesn't mention or you don't hold a row for.
+ */
+export function shareUpdates(
+  incoming: Array<Trade>,
+  saved: Array<Trade>,
+  holdings: Map<string, number>,
+): Array<{ key: string; shares: number }> {
+  const all = [...saved, ...newTrades(incoming, saved)];
+  const keys = [...new Set(incoming.map((t) => t.key))];
+  return keys.flatMap((key) => {
+    const current = holdings.get(key);
+    if (current === undefined) return [];
+    // Rounded: summing many fractional buys leaves floating-point dust.
+    const shares = Math.max(0, Math.round(netShares(all.filter((t) => t.key === key)) * 1e8) / 1e8);
+    return Math.abs(shares - current) > 0.000001 ? [{ key, shares }] : [];
+  });
 }
