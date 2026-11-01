@@ -29,7 +29,7 @@ export interface LinkRow {
 
 export interface WritePlan {
   group: string;
-  /** The dates the file covers: the group's rows inside them are replaced. */
+  /** The group's stored rows inside these dates that are not in this import get deleted. */
   from: string;
   to: string;
   shares: Array<ShareRow>;
@@ -38,14 +38,68 @@ export interface WritePlan {
   problems: Array<string>;
 }
 
+/** A row an earlier import stored for this group. */
+export interface StoredShare {
+  fingerprint: string;
+  booking_date: string;
+}
+
+export interface CheckpointSplit {
+  /** The newest date stored for the group; null on a first import. */
+  checkpoint: string | null;
+  /** The rows this import may touch, and their ids. */
+  rows: Array<ClassifiedRow>;
+  fingerprints: Array<string>;
+  /** Expenses of mine before the checkpoint that are not stored. Shown, never imported. */
+  older: Array<ClassifiedRow>;
+}
+
+export const isShareRow = (r: ClassifiedRow): boolean =>
+  (r.kind === "paid_by_other" || r.kind === "paid_by_me") && (r.shareCents ?? 0) > 0;
+
+/**
+ * The last import is a checkpoint: nothing before it, and nothing already stored on its day, is
+ * reviewed or written. Takes the whole file's ids, since the #counter depends on every row.
+ */
+export function splitAtCheckpoint(
+  rows: Array<ClassifiedRow>,
+  fingerprints: Array<string>,
+  stored: Array<StoredShare>,
+): CheckpointSplit {
+  const checkpoint =
+    stored
+      .map((s) => s.booking_date)
+      .sort()
+      .at(-1) ?? null;
+  const known = new Set(stored.map((s) => s.fingerprint));
+  const split: CheckpointSplit = { checkpoint, rows: [], fingerprints: [], older: [] };
+
+  rows.forEach((r, i) => {
+    const fingerprint = fingerprints[i] ?? "";
+    if (known.has(fingerprint)) return;
+    if (checkpoint !== null && r.date < checkpoint) {
+      if (isShareRow(r)) split.older.push(r);
+      return;
+    }
+    // Only shares are stored, so anything else on that day may already have been handled.
+    if (r.date === checkpoint && !isShareRow(r)) return;
+    split.rows.push(r);
+    split.fingerprints.push(fingerprint);
+  });
+  return split;
+}
+
+const nextDay = (iso: string) =>
+  new Date(Date.parse(`${iso}T00:00:00Z`) + 86_400_000).toISOString().slice(0, 10);
+
 export interface PlanInput {
   group: string;
+  /** The whole file. */
   rows: Array<ClassifiedRow>;
   /** One id per row, same order as `rows`. */
   fingerprints: Array<string>;
   confirmed: Array<BankMatch>;
-  /** Links made by an earlier import of this group, by row id. */
-  existingLinks: Map<string, { accountUid: string; entryReference: string }>;
+  stored: Array<StoredShare>;
   /** Add expenses I paid that have no bank transaction as shares. */
   includeUnmatchedPaidByMe: boolean;
   categoryFor: (row: ClassifiedRow) => string | null;
@@ -61,16 +115,19 @@ const ACTION_FOR_KIND: Record<string, LinkRow["action"] | undefined> = {
 const euros = (cents: number) => cents / 100;
 const txKey = (m: BankMatch) => `${m.accountUid}|${m.entryReference}`;
 
-function checkMatches(input: PlanInput): {
+function checkMatches(
+  rows: Array<ClassifiedRow>,
+  confirmed: Array<BankMatch>,
+): {
   problems: Array<string>;
   byRow: Map<number, BankMatch>;
 } {
   const problems: Array<string> = [];
   const byRow = new Map<number, BankMatch>();
   const usedTx = new Set<string>();
-  const kinds = new Map(input.rows.map((r) => [r.row, r.kind]));
+  const kinds = new Map(rows.map((r) => [r.row, r.kind]));
 
-  for (const m of input.confirmed) {
+  for (const m of confirmed) {
     const expected = ACTION_FOR_KIND[kinds.get(m.row) ?? ""];
     if (!expected || m.action !== expected) {
       problems.push(`Row ${m.row} cannot be linked to a bank transaction.`);
@@ -89,7 +146,12 @@ function checkMatches(input: PlanInput): {
 /** Builds the shares and bank changes for one reviewed import. */
 export function planWrite(input: PlanInput): WritePlan {
   const group = input.group.trim();
-  const { problems, byRow } = checkMatches(input);
+  const { checkpoint, rows, fingerprints } = splitAtCheckpoint(
+    input.rows,
+    input.fingerprints,
+    input.stored,
+  );
+  const { problems, byRow } = checkMatches(rows, input.confirmed);
   if (group === "" || group.length > MAX_GROUP) {
     problems.push(`The group name must be between 1 and ${MAX_GROUP} characters.`);
   }
@@ -97,8 +159,8 @@ export function planWrite(input: PlanInput): WritePlan {
   const shares: Array<ShareRow> = [];
   const links: Array<LinkRow> = [];
 
-  input.rows.forEach((r, i) => {
-    const fingerprint = input.fingerprints[i] ?? "";
+  rows.forEach((r, i) => {
+    const fingerprint = fingerprints[i] ?? "";
     const match = byRow.get(r.row);
 
     if (match) {
@@ -110,20 +172,16 @@ export function planWrite(input: PlanInput): WritePlan {
           match.action === "set_personal_amount" ? euros(match.personalAmountCents ?? 0) : null,
       });
     }
-    const link = match
-      ? { accountUid: match.accountUid, entryReference: match.entryReference }
-      : input.existingLinks.get(fingerprint);
-
     const wanted =
       r.kind === "paid_by_other" ||
-      (r.kind === "paid_by_me" && (link !== undefined || input.includeUnmatchedPaidByMe));
+      (r.kind === "paid_by_me" && (match !== undefined || input.includeUnmatchedPaidByMe));
     if (!wanted || !r.shareCents || r.shareCents <= 0) return;
 
     if (fingerprint.length > MAX_FINGERPRINT) {
       problems.push(`Row ${r.row} is too long to be identified.`);
       return;
     }
-    if (!link && input.rate(r.currency, r.date) === null) {
+    if (!match && input.rate(r.currency, r.date) === null) {
       problems.push(`No exchange rate for ${r.currency} on ${r.date} (row ${r.row}).`);
     }
     shares.push({
@@ -133,16 +191,20 @@ export function planWrite(input: PlanInput): WritePlan {
       category: input.categoryFor(r),
       amount: euros(r.shareCents),
       currency: r.currency,
-      linked_account_uid: link?.accountUid ?? null,
-      linked_entry_reference: link?.entryReference ?? null,
+      linked_account_uid: match?.accountUid ?? null,
+      linked_entry_reference: match?.entryReference ?? null,
     });
   });
 
-  const dates = input.rows.map((r) => r.date).sort();
+  // After a checkpoint the range starts the next day, so the delete step cannot reach a stored
+  // row; a checkpoint-day addition is inserted regardless, since inserts ignore the range.
+  const dates = rows.map((r) => r.date).sort();
+  const from = checkpoint === null ? (dates[0] ?? "") : nextDay(checkpoint);
+  const last = dates[dates.length - 1] ?? "";
   return {
     group,
-    from: dates[0] ?? "",
-    to: dates[dates.length - 1] ?? "",
+    from,
+    to: last > from ? last : from,
     shares,
     links,
     problems,

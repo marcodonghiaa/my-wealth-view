@@ -312,21 +312,51 @@ describe("SplitwiseReview", () => {
     expect(screen.getByText(/2 shares of expenses, 0 bank transactions updated/)).toBeTruthy();
   });
 
-  // protects=a re-import keeps the link made the first time; fails_when=an already linked
-  // expense is matched again to another bank transaction
-  it("does not propose a new match for an expense that is already linked", async () => {
-    tables.splitwise_expenses = {
-      data: [
-        {
-          fingerprint: "2026-08-17|Taxi|2000|USD|1000#1",
-          linked_account_uid: "acc",
-          linked_entry_reference: "old",
-        },
-      ],
-      error: null,
-    };
+  const TAXI = { fingerprint: "2026-08-17|Taxi|2000|USD|1000#1", booking_date: "2026-08-17" };
+  const DINNER = { fingerprint: "2026-08-16|Dinner|3000|USD|-1500#1", booking_date: "2026-08-16" };
+
+  // protects=stored rows get no new bank suggestion; fails_when=an imported expense is matched
+  // again to another bank transaction
+  it("does not propose a new match for an expense already stored", async () => {
+    tables.splitwise_expenses = { data: [TAXI], error: null };
     show();
     expect(await screen.findByText(/No matches found/)).toBeTruthy();
     expect(screen.queryByRole("checkbox", { name: /Taxi/ })).toBeNull();
+  });
+
+  // protects=the user sees where the import starts and what it leaves out; fails_when=an older
+  // row not stored is imported silently or dropped silently
+  it("shows the checkpoint and lists older rows that are not imported", async () => {
+    tables.splitwise_expenses = { data: [TAXI], error: null };
+    show();
+    expect(await screen.findByText(/Your last import goes up to 2026-08-17/)).toBeTruthy();
+    const older = screen.getByRole("region", { name: /Older than your last import/ });
+    expect(older.textContent).toMatch(/2026-08-16 Dinner/);
+    expect(screen.getByText(/0 shares of expenses, 0 bank transactions updated/)).toBeTruthy();
+  });
+
+  it("says so and writes nothing when the same file is imported again", async () => {
+    tables.splitwise_expenses = { data: [TAXI, DINNER], error: null };
+    show();
+    expect(await screen.findByText(/Nothing new since your last import/)).toBeTruthy();
+    expect((screen.getByRole("button", { name: /^Import/ }) as HTMLButtonElement).disabled).toBe(
+      true,
+    );
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it("does not mention a checkpoint on a first import", async () => {
+    show();
+    await screen.findByText(/matches the bank/);
+    expect(screen.queryByText(/Your last import/)).toBeNull();
+    expect(screen.queryByText(/Older than your last import/)).toBeNull();
+  });
+
+  // protects=a checkpoint cannot be read from a cut list; fails_when=the stored rows hit the page
+  // limit and an old row is taken for new
+  it("refuses to review when the stored rows may have been cut at the page limit", async () => {
+    tables.splitwise_expenses = { data: Array.from({ length: 1000 }, () => TAXI), error: null };
+    show();
+    expect((await screen.findByRole("alert")).textContent).toMatch(/Too many stored expenses/);
   });
 });
