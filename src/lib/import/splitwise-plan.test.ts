@@ -3,7 +3,8 @@ import { classifyRows } from "./splitwise-classify";
 import type { BankMatch } from "./splitwise-match";
 import { fingerprintRows } from "./splitwise-match";
 import type { SplitwiseRow } from "./splitwise-parse";
-import { planWrite, splitAtCheckpoint, type StoredShare } from "./splitwise-plan";
+import type { StoredShare } from "./splitwise-corrections";
+import { planWrite, splitAtCheckpoint } from "./splitwise-plan";
 
 const row = (over: Partial<SplitwiseRow>): SplitwiseRow => ({
   row: 1,
@@ -217,11 +218,17 @@ describe("the last import is a checkpoint", () => {
   const NEXT = row({ row: 5, date: "2026-08-25", description: "New dinner" });
   const rows = rowsOf(OLD, OLD_PAID, LAST, SAME_DAY, NEXT);
   const fingerprints = fingerprintRows(rows);
+  const share = (fingerprint: string, booking_date: string): StoredShare => ({
+    id: fingerprint,
+    fingerprint,
+    booking_date,
+    description: "",
+    amount: 1,
+    currency: "USD",
+    linked_entry_reference: null,
+  });
   const storedOf = (...indexes: Array<number>): Array<StoredShare> =>
-    indexes.map((i) => ({
-      fingerprint: fingerprints[i] as string,
-      booking_date: rows[i]?.date as string,
-    }));
+    indexes.map((i) => share(fingerprints[i] as string, rows[i]?.date as string));
   const reviewed = (stored: Array<StoredShare>) => ({
     ...base(rows),
     stored,
@@ -280,7 +287,7 @@ describe("the last import is a checkpoint", () => {
   it("lists shares older than the checkpoint that are not stored, without importing them", () => {
     const split = splitAtCheckpoint(rows, fingerprints, storedOf(0, 2));
     expect(split.checkpoint).toBe("2026-08-20");
-    expect(split.older.map((r) => r.description)).toEqual(["Old uber"]);
+    expect(split.older.map((o) => o.row.description)).toEqual(["Old uber"]);
     expect(split.rows.map((r) => r.description)).toEqual(["Same day taxi", "New dinner"]);
     expect(split.fingerprints).toEqual([fingerprints[3], fingerprints[4]]);
   });
@@ -288,7 +295,7 @@ describe("the last import is a checkpoint", () => {
   it("does not list an old row that would never be a share", () => {
     const old = rowsOf(NOT_MINE, SETTLE, NEXT);
     const fp = fingerprintRows(old);
-    const split = splitAtCheckpoint(old, fp, [{ fingerprint: "x", booking_date: "2026-08-25" }]);
+    const split = splitAtCheckpoint(old, fp, [share("x", "2026-08-25")]);
     expect(split.older).toEqual([]);
   });
 
@@ -297,9 +304,7 @@ describe("the last import is a checkpoint", () => {
   it("leaves out a checkpoint-day row that could never be stored", () => {
     const sameDay = rowsOf(LAST, { ...SETTLE, date: "2026-08-20" });
     const fp = fingerprintRows(sameDay);
-    const split = splitAtCheckpoint(sameDay, fp, [
-      { fingerprint: fp[0] as string, booking_date: "2026-08-20" },
-    ]);
+    const split = splitAtCheckpoint(sameDay, fp, [share(fp[0] as string, "2026-08-20")]);
     expect(split.rows).toEqual([]);
   });
 
@@ -307,9 +312,7 @@ describe("the last import is a checkpoint", () => {
   it("keeps the second of two identical rows on the checkpoint day as new", () => {
     const twins = rowsOf(LAST, { ...LAST, row: 9 });
     const fp = fingerprintRows(twins);
-    const split = splitAtCheckpoint(twins, fp, [
-      { fingerprint: fp[0] as string, booking_date: "2026-08-20" },
-    ]);
+    const split = splitAtCheckpoint(twins, fp, [share(fp[0] as string, "2026-08-20")]);
     expect(split.fingerprints).toEqual([fp[1]]);
   });
 });

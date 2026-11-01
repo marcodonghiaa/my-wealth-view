@@ -1,4 +1,11 @@
 import type { ClassifiedRow } from "./splitwise-classify";
+import {
+  diffStored,
+  isShareRow,
+  type EditedRow,
+  type FileRow,
+  type StoredShare,
+} from "./splitwise-corrections";
 import type { BankMatch, RateToEur } from "./splitwise-match";
 
 // Turns a reviewed Splitwise import into exactly what will be written: my shares, and the
@@ -38,24 +45,17 @@ export interface WritePlan {
   problems: Array<string>;
 }
 
-/** A row an earlier import stored for this group. */
-export interface StoredShare {
-  fingerprint: string;
-  booking_date: string;
-}
-
 export interface CheckpointSplit {
   /** The newest date stored for the group; null on a first import. */
   checkpoint: string | null;
   /** The rows this import may touch, and their ids. */
   rows: Array<ClassifiedRow>;
   fingerprints: Array<string>;
-  /** Expenses of mine before the checkpoint that are not stored. Shown, never imported. */
-  older: Array<ClassifiedRow>;
+  /** Expenses of mine before the checkpoint that are not stored. Only a correction adds them. */
+  older: Array<FileRow>;
+  edited: Array<EditedRow>;
+  removed: Array<StoredShare>;
 }
-
-export const isShareRow = (r: ClassifiedRow): boolean =>
-  (r.kind === "paid_by_other" || r.kind === "paid_by_me") && (r.shareCents ?? 0) > 0;
 
 /**
  * The last import is a checkpoint: nothing before it, and nothing already stored on its day, is
@@ -72,13 +72,22 @@ export function splitAtCheckpoint(
       .sort()
       .at(-1) ?? null;
   const known = new Set(stored.map((s) => s.fingerprint));
-  const split: CheckpointSplit = { checkpoint, rows: [], fingerprints: [], older: [] };
+  const { edited, removed } = diffStored(rows, fingerprints, stored);
+  const isEdit = new Set(edited.map((e) => e.fingerprint));
+  const split: CheckpointSplit = {
+    checkpoint,
+    rows: [],
+    fingerprints: [],
+    older: [],
+    edited,
+    removed,
+  };
 
   rows.forEach((r, i) => {
     const fingerprint = fingerprints[i] ?? "";
-    if (known.has(fingerprint)) return;
+    if (known.has(fingerprint) || isEdit.has(fingerprint)) return;
     if (checkpoint !== null && r.date < checkpoint) {
-      if (isShareRow(r)) split.older.push(r);
+      if (isShareRow(r)) split.older.push({ row: r, fingerprint });
       return;
     }
     // Only shares are stored, so anything else on that day may already have been handled.
