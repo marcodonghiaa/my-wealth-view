@@ -103,10 +103,12 @@ export function SplitwiseReview({
   rows,
   group,
   balances = null,
+  onImported,
 }: {
   rows: Array<ClassifiedRow>;
   group: string;
   balances?: FileBalances | null;
+  onImported?: () => void;
 }) {
   const [loaded, setLoaded] = useState<Loaded | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -247,6 +249,7 @@ export function SplitwiseReview({
       const entry = { batchId, count: shares };
       saveLastImport(browserStorage(), owner, "splitwise", entry);
       setLast(entry);
+      onImported?.();
       setDone(
         `Imported ${shares} shares and updated ${links} bank transactions.` +
           (balancesError
