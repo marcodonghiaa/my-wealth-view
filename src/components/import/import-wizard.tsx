@@ -15,7 +15,9 @@ import {
 } from "@/lib/import/last-import";
 import { guessColumns, type Role } from "@/lib/import/guess-columns";
 import { MAX_CHARS, parseCsv, type ParsedCsv } from "@/lib/import/parse-csv";
+import { CATEGORIES } from "@/lib/categories";
 import { planNetWorth, planSpend } from "@/lib/import/plan";
+import type { AppCategory } from "@/lib/import/suggest-category";
 import { formatEur } from "@/lib/transactions";
 
 const KINDS: Array<{ value: ImportKind; label: string }> = [
@@ -78,6 +80,8 @@ export function ImportWizard() {
   const [error, setError] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [last, setLast] = useState<LastImport | null>(null);
+  // Spending import: categories the user re-assigned, by the name used in the file.
+  const [overrides, setOverrides] = useState<Partial<Record<string, AppCategory>>>({});
 
   useEffect(() => {
     void supabase.auth.getUser().then(({ data }) => setUserId(data.user?.id ?? null));
@@ -92,8 +96,11 @@ export function ImportWizard() {
 
   const plan = useMemo(() => {
     if (!csv || !mapping) return null;
-    return kind === "net_worth" ? planNetWorth(csv.rows, mapping) : planSpend(csv.rows, mapping);
-  }, [csv, mapping, kind]);
+    return kind === "net_worth"
+      ? planNetWorth(csv.rows, mapping)
+      : planSpend(csv.rows, mapping, overrides);
+  }, [csv, mapping, kind, overrides]);
+  const categories = plan && "categories" in plan ? plan.categories : [];
 
   async function onFile(file: File | undefined) {
     setError(null);
@@ -103,6 +110,7 @@ export function ImportWizard() {
       if (file.size > MAX_CHARS)
         throw new Error("The file is too large (limit is 2 MB). Is it the right file?");
       const parsed = parseCsv(await file.text());
+      setOverrides({});
       setCsv(parsed);
       setMapping(guessColumns(parsed.headers));
     } catch (err) {
@@ -202,6 +210,38 @@ export function ImportWizard() {
                   {csv.headers.map((header, index) => (
                     <option key={index} value={index}>
                       {header || `Column ${index + 1}`}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {categories.length > 0 && (
+        <div className="rounded-2xl border bg-card p-5 card-ring">
+          <h2 className="mb-1 text-sm font-semibold">Where each category goes</h2>
+          <p className="mb-3 text-sm text-muted-foreground">
+            Your file's categories are matched to the app's. Change any that look wrong. Income and
+            Transfer rows are not spending, so they are skipped.
+          </p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {categories.map(({ source, category }) => (
+              <label key={source} className="text-sm">
+                <span className="mb-1 block text-muted-foreground">
+                  {source || "(no category)"}
+                </span>
+                <select
+                  value={category}
+                  onChange={(e) =>
+                    setOverrides({ ...overrides, [source]: e.target.value as AppCategory })
+                  }
+                  className="w-full rounded-lg border bg-background px-3 py-2 text-base focus:ring-2 focus:ring-ring focus:outline-none"
+                >
+                  {CATEGORIES.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
                     </option>
                   ))}
                 </select>
