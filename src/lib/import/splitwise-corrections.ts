@@ -52,18 +52,13 @@ export function readFingerprint(
   };
 }
 
-// An edit keeps at least two of the three. Sharing only a date, or only a description, is not
-// enough to call two expenses one.
+// An edit in place keeps its date and one of description or cost. A monthly bill with a new date,
+// or a new expense on another day, must not read as an edit, so a moved date shows as two rows.
 function couldBeEdit(s: StoredShare, r: ClassifiedRow): boolean {
   const old = readFingerprint(s.fingerprint);
-  if (!old) return false;
+  if (!old || old.date !== r.date) return false;
   if (s.linked_entry_reference !== null && r.kind !== "paid_by_me") return false;
-  const same = [
-    old.date === r.date,
-    old.description === r.description,
-    old.costCents === r.costCents,
-  ];
-  return same.filter(Boolean).length >= 2;
+  return old.description === r.description || old.costCents === r.costCents;
 }
 
 /**
@@ -101,7 +96,7 @@ export function diffStored(
   return { edited, removed };
 }
 
-export interface AddItem {
+interface AddItem {
   fingerprint: string;
   booking_date: string;
   description: string;
@@ -110,7 +105,7 @@ export interface AddItem {
   currency: string;
 }
 
-export interface EditItem {
+interface EditItem {
   id: string;
   old_fingerprint: string;
   fingerprint: string;
@@ -121,7 +116,7 @@ export interface EditItem {
   cost: number;
 }
 
-export interface RemoveItem {
+interface RemoveItem {
   id: string;
   old_fingerprint: string;
 }

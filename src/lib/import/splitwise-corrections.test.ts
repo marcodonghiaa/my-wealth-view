@@ -54,12 +54,18 @@ describe("diffStored", () => {
     expect(d.removed).toEqual([]);
   });
 
-  it("pairs a renamed row by date and cost, and a moved one by description and cost", () => {
+  it("pairs a renamed row by date and cost", () => {
     const renamed = diff(rowsOf(row({ description: "Supper" })), [stored(DINNER)]);
     expect(renamed.edited).toHaveLength(1);
+  });
+
+  // protects=a new expense is not swallowed as an edit of an old one; fails_when=a monthly bill
+  // with a new date pairs with last month's, which would hide it from the new rows
+  it("keeps the same description and cost on another date apart", () => {
     const other = row({ row: 2, date: "2026-08-01", description: "Other", costCents: 100 });
-    const moved = diff(rowsOf(other, row({ date: "2026-08-12" })), [stored(DINNER)]);
-    expect(moved.edited).toHaveLength(1);
+    const d = diff(rowsOf(other, row({ date: "2026-08-12" })), [stored(DINNER)]);
+    expect(d.edited).toEqual([]);
+    expect(d.removed).toHaveLength(1);
   });
 
   // protects=two unrelated expenses are not presented as one; fails_when=one shared field pairs
