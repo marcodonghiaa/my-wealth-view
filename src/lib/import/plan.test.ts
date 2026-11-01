@@ -138,4 +138,37 @@ describe("planSpend", () => {
     expect(planSpend([["2024-02", "Rent", "5"]], { ...sp, currency: null }).rows).toHaveLength(1);
     expect(planSpend([["2024-02", "Rent", "5"]], { ...sp, amount: null }).rows).toEqual([]);
   });
+
+  // protects=the user sees where each file category goes and can move it; fails_when=a guess like
+  // Subscriptions -> Entertainment is hidden, or a correction doesn't reach the rows written
+  it("lists each file category once with the category its rows get", () => {
+    const file = [
+      ["2024-02", "Subscriptions", "9.99", "EUR"],
+      ["2024-03", "Subscriptions", "9.99", "EUR"],
+      ["2024-03", "Salary", "2000", "EUR"],
+    ];
+    expect(planSpend(file, sp).categories).toEqual([
+      { source: "Subscriptions", category: "Entertainment" },
+      { source: "Salary", category: "Income" },
+    ]);
+  });
+
+  it("treats a category named like an Object method as plain text", () => {
+    const plan = planSpend([["2024-02", "constructor", "5", "EUR"]], sp);
+    expect(plan.categories).toEqual([{ source: "constructor", category: "Others" }]);
+    expect(plan.rows[0]?.category).toBe("Others");
+  });
+
+  it("saves rows under the category the user picked instead of the guess", () => {
+    const file = [
+      ["2024-02", "Subscriptions", "9.99", "EUR"],
+      ["2024-02", "Salary", "2000", "EUR"],
+    ];
+    const plan = planSpend(file, sp, { Subscriptions: "Services", Salary: "Others" });
+    expect(plan.rows).toEqual([
+      { month: "2024-02-01", category: "Services", spend_eur: 9.99 },
+      { month: "2024-02-01", category: "Others", spend_eur: 2000 },
+    ]);
+    expect(plan.categories[0]).toEqual({ source: "Subscriptions", category: "Services" });
+  });
 });
