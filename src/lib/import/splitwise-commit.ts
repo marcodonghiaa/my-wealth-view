@@ -8,6 +8,9 @@ export interface RpcClient {
   ): PromiseLike<{ data: unknown; error: { message: string } | null }>;
 }
 
+/** The page keeps the flow open while this is running, so the result is always seen. */
+export const IMPORT_KEY = ["splitwise-import"];
+
 export interface ImportCounts {
   shares: number;
   links: number;

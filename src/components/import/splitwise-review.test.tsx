@@ -53,10 +53,12 @@ const CSV = [
 ].join("\n");
 const rows = classifyRows(parseSplitwiseCsv(CSV), 0);
 
+const onBack = vi.fn();
+const onClose = vi.fn();
 const show = () =>
   render(
     <QueryClientProvider client={new QueryClient()}>
-      <SplitwiseReview rows={rows} group="berkeley" />
+      <SplitwiseReview rows={rows} group="berkeley" onBack={onBack} onClose={onClose} />
     </QueryClientProvider>,
   );
 
@@ -93,12 +95,15 @@ const showWithBalances = () =>
         rows={rows}
         group="berkeley"
         balances={balancesFromFile(parseSplitwiseCsv(CSV), 0)}
+        onBack={onBack}
+        onClose={onClose}
       />
     </QueryClientProvider>,
   );
 // The Import button renders once the bank data is read but stays disabled until the signed-in user
 // is known (a separate async call). Clicking it before then does nothing, so wait until enabled.
 const clickImport = async () => {
+  fireEvent.click(await screen.findByRole("button", { name: "Continue" }));
   const button = (await screen.findByRole("button", { name: /^Import/ })) as HTMLButtonElement;
   await waitFor(() => expect(button.disabled).toBe(false));
   fireEvent.click(button);
@@ -106,18 +111,33 @@ const clickImport = async () => {
 
 describe("SplitwiseReview", () => {
   // protects=a sure match is offered and counted; fails_when=matching or planning is not wired
-  it("offers the bank match ticked and counts what will be recorded", async () => {
+  it("offers the bank match ticked and sums up what will be recorded", async () => {
     show();
     expect(await screen.findByText(/matches the bank on 2026-08-18/)).toBeTruthy();
     expect((screen.getByRole("checkbox", { name: /Taxi/ }) as HTMLInputElement).checked).toBe(true);
     // 1 share paid by the friend (Dinner) + the taxi share linked to the bank
-    expect(screen.getByText(/2 shares of expenses, 1 bank transactions updated/)).toBeTruthy();
+    expect(screen.getByText("2 expenses to import: 25.00 USD.")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+    expect(
+      screen.getByText(
+        "Import 2 expenses (25.00 USD) into berkeley and update 1 bank transaction.",
+      ),
+    ).toBeTruthy();
   });
 
-  it("stops counting the bank change when the match is unticked", async () => {
+  // protects=one question per expense, none dropped silently; fails_when=the row is asked twice,
+  // or an unticked match drops it
+  it("asks about an expense whose match is unticked, and blocks until answered", async () => {
     show();
+    expect(await screen.findByRole("checkbox", { name: /Taxi/ })).toBeTruthy();
+    expect(screen.queryByRole("radio", { name: "Leave out" })).toBeNull();
     fireEvent.click(await screen.findByRole("checkbox", { name: /Taxi/ }));
-    expect(screen.getByText(/1 shares of expenses, 0 bank transactions updated/)).toBeTruthy();
+    expect(screen.getByText(/Decide on 1 expense above/)).toBeTruthy();
+    const next = screen.getByRole("button", { name: "Continue" }) as HTMLButtonElement;
+    expect(next.disabled).toBe(true);
+    fireEvent.click(screen.getByRole("radio", { name: "Leave out" }));
+    expect(next.disabled).toBe(false);
+    expect(screen.getByText("1 expense to import: 15.00 USD.")).toBeTruthy();
   });
 
   // protects=nothing is blocked silently; fails_when=a missing exchange rate is not shown
@@ -127,11 +147,16 @@ describe("SplitwiseReview", () => {
     expect((await screen.findByRole("alert")).textContent).toMatch(/No exchange rate for USD/);
   });
 
-  it("offers the unmatched expenses I paid only after a tick", async () => {
+  // protects=an expense I paid never drops silently; fails_when=no choice is required, or the
+  // choice does not reach the plan
+  it("counts an unmatched expense I paid only when I say so", async () => {
     tables.transactions = { data: [], error: null };
     show();
-    fireEvent.click(await screen.findByRole("checkbox", { name: /Also count the 1 expenses/ }));
-    expect(screen.getByText(/2 shares of expenses, 0 bank transactions updated/)).toBeTruthy();
+    const next = (await screen.findByRole("button", { name: "Continue" })) as HTMLButtonElement;
+    expect(next.disabled).toBe(true);
+    fireEvent.click(screen.getByRole("radio", { name: "Count my share" }));
+    expect(next.disabled).toBe(false);
+    expect(screen.getByText("2 expenses to import: 25.00 USD.")).toBeTruthy();
   });
 
   // protects=each row gets its own category from its description; fails_when=rows are grouped by
@@ -196,21 +221,18 @@ describe("SplitwiseReview", () => {
     const oddRows = classifyRows(parseSplitwiseCsv(odd), 0);
     render(
       <QueryClientProvider client={new QueryClient()}>
-        <SplitwiseReview rows={oddRows} group="berkeley" />
+        <SplitwiseReview rows={oddRows} group="berkeley" onBack={onBack} onClose={onClose} />
       </QueryClientProvider>,
     );
     const select = (await screen.findByLabelText("Category for zzz qq")) as HTMLSelectElement;
     expect(select.value).toBe("");
-    expect(screen.getByText(/1 without a category/)).toBeTruthy();
+    expect(screen.getByText(/Categories: 1 to choose/)).toBeTruthy();
     // protects=an unknown row cannot go unnoticed; fails_when=no alert is shown for it
     const alert = (await screen.findByRole("alert")).textContent ?? "";
     expect(alert).toMatch(/1 expense was not recognised/);
     // protects=the user knows the AI fills the gap overnight; fails_when=text still says Uncategorized
     expect(alert).toMatch(/AI will categorize it overnight/);
     expect(alert).not.toMatch(/Uncategorized/);
-    expect(
-      screen.getByText(/1 without a category will be categorized by the AI overnight/),
-    ).toBeTruthy();
     fireEvent.change(select, { target: { value: "Others" } });
     await waitFor(() => expect(screen.queryByRole("alert")).toBeNull());
   });
@@ -260,16 +282,16 @@ describe("SplitwiseReview", () => {
     expect(await screen.findByRole("button", { name: /Undo this import/ })).toBeTruthy();
     expect(screen.getByRole("status").textContent).toMatch(/2 shares/);
     // Importing the same review twice would fail on the bank rows it already changed.
-    expect((screen.getByRole("button", { name: /^Import/ }) as HTMLButtonElement).disabled).toBe(
-      true,
-    );
+    expect(screen.queryByRole("button", { name: /^Import/ })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Close" }));
+    expect(onClose).toHaveBeenCalled();
   });
 
-  it("does not allow Import while there is a problem", async () => {
+  it("does not allow continuing while there is a problem", async () => {
     tables.fx_rates = { data: [], error: null };
     show();
     await screen.findByRole("alert");
-    expect((screen.getByRole("button", { name: /^Import/ }) as HTMLButtonElement).disabled).toBe(
+    expect((screen.getByRole("button", { name: "Continue" }) as HTMLButtonElement).disabled).toBe(
       true,
     );
   });
@@ -293,23 +315,26 @@ describe("SplitwiseReview", () => {
     );
   });
 
-  it("offers Undo again after the page is reopened", async () => {
+  // protects=an old import cannot be undone from a stale memory: that batch may hold every earlier
+  // row; fails_when=Undo is offered on a new visit
+  it("does not offer Undo after the flow is reopened", async () => {
     const first = show();
     await clickImport();
     await screen.findByRole("button", { name: /Undo this import/ });
     first.unmount();
     show();
-    expect(await screen.findByRole("button", { name: /Undo this import/ })).toBeTruthy();
+    await screen.findByRole("button", { name: "Continue" });
+    expect(screen.queryByRole("button", { name: /Undo this import/ })).toBeNull();
   });
 
   // protects=the "not in your bank" count; fails_when=an expense whose match was unticked is not
   // counted, though it is recorded when the box is ticked
-  it("counts an expense with an unticked match as not in the bank", async () => {
+  it("goes back from Confirm to Review, and from Review to the file step", async () => {
     show();
-    fireEvent.click(await screen.findByRole("checkbox", { name: /Taxi/ }));
-    const box = await screen.findByRole("checkbox", { name: /Also count the 1 expenses/ });
-    fireEvent.click(box);
-    expect(screen.getByText(/2 shares of expenses, 0 bank transactions updated/)).toBeTruthy();
+    fireEvent.click(await screen.findByRole("button", { name: "Continue" }));
+    fireEvent.click(screen.getByRole("button", { name: "Back" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Back" }));
+    expect(onBack).toHaveBeenCalled();
   });
 
   const share = (fingerprint: string, description: string, amount: number) => ({
@@ -321,6 +346,18 @@ describe("SplitwiseReview", () => {
     currency: "USD",
     linked_entry_reference: null as string | null,
   });
+  // protects=balances can be refreshed with no new expense; fails_when=the retry the done screen
+  // promises is unreachable
+  it("can update the balances alone when there is nothing new", async () => {
+    tables.splitwise_expenses = { data: [TAXI, DINNER], error: null };
+    rpc.mockResolvedValue({ data: null, error: null });
+    showWithBalances();
+    fireEvent.click(await screen.findByRole("button", { name: /Update balances/ }));
+    await waitFor(() => expect(rpc).toHaveBeenCalledTimes(1));
+    expect(rpc.mock.calls[0]?.[0]).toBe("save_splitwise_balances");
+    expect(await screen.findByText("Balances updated.")).toBeTruthy();
+  });
+
   const TAXI = share("2026-08-17|Taxi|2000|USD|1000#1", "Taxi", 10);
   const DINNER = share("2026-08-16|Dinner|3000|USD|-1500#1", "Dinner", 15);
 
@@ -329,7 +366,8 @@ describe("SplitwiseReview", () => {
   it("does not propose a new match for an expense already stored", async () => {
     tables.splitwise_expenses = { data: [TAXI], error: null };
     show();
-    expect(await screen.findByText(/No matches found/)).toBeTruthy();
+    await screen.findByText(/Your last import goes up to/);
+    expect(screen.queryByText(/matches the bank/)).toBeNull();
     expect(screen.queryByRole("checkbox", { name: /Taxi/ })).toBeNull();
   });
 
@@ -342,14 +380,14 @@ describe("SplitwiseReview", () => {
     const older = screen.getByRole("region", { name: /Added late/ });
     expect(older.textContent).toMatch(/Older than your last import, not imported/);
     expect(older.textContent).toMatch(/2026-08-16 Dinner/);
-    expect(screen.getByText(/0 shares of expenses, 0 bank transactions updated/)).toBeTruthy();
+    expect(screen.getByText(/Nothing new since your last import/)).toBeTruthy();
   });
 
   it("says so and writes nothing when the same file is imported again", async () => {
     tables.splitwise_expenses = { data: [TAXI, DINNER], error: null };
     show();
     expect(await screen.findByText(/Nothing new since your last import/)).toBeTruthy();
-    expect((screen.getByRole("button", { name: /^Import/ }) as HTMLButtonElement).disabled).toBe(
+    expect((screen.getByRole("button", { name: "Continue" }) as HTMLButtonElement).disabled).toBe(
       true,
     );
     expect(rpc).not.toHaveBeenCalled();

@@ -64,7 +64,7 @@ const base = (rows = rowsOf(FRIEND_PAID, I_PAID, PAID_ZERO, SETTLE, NOT_MINE)) =
   fingerprints: fingerprintRows(rows),
   confirmed: [] as Array<BankMatch>,
   stored: [] as Array<StoredShare>,
-  includeUnmatchedPaidByMe: false,
+  countedRows: new Set<number>(),
   categoryFor: () => "Dining",
   rate: (c: string) => (c === "USD" ? 0.9 : null),
 });
@@ -117,7 +117,7 @@ describe("planWrite", () => {
 
   it("leaves an unmatched expense I paid out, unless I choose to add it", () => {
     expect(planWrite(base()).shares.map((s) => s.description)).toEqual(["Dinner"]);
-    const added = planWrite({ ...base(), includeUnmatchedPaidByMe: true });
+    const added = planWrite({ ...base(), countedRows: new Set([2]) });
     expect(added.shares.map((s) => s.description)).toEqual(["Dinner", "Uber"]);
     expect(added.shares[1]).toMatchObject({ linked_account_uid: null, amount: 21 });
   });
@@ -232,7 +232,7 @@ describe("the last import is a checkpoint", () => {
   const reviewed = (stored: Array<StoredShare>) => ({
     ...base(rows),
     stored,
-    includeUnmatchedPaidByMe: true,
+    countedRows: new Set([1, 2, 3, 4, 5]),
   });
 
   // protects=no earlier row can be written, deleted or matched; fails_when=an old row is sent, or
