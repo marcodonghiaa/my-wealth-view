@@ -1,13 +1,16 @@
-import { parseAmount } from "@/lib/trades";
+import { netShares, parseAmount } from "@/lib/trades";
 import type { Trade } from "@/lib/trades";
 
 // Your trades as a spreadsheet export. Header row required, in any order and either case:
 //   date, side, isin (or symbol for coins), shares, price, fee (optional)
 // Separated by comma, semicolon or tab. Prices are per share in EUR. Dates are 2026-10-30 or 30/10/2026.
+// A Trade Republic transaction export is recognised by its columns and read as it comes.
 
 export interface CsvResult {
   trades: Array<Trade>;
   errors: Array<string>;
+  /** Left out on purpose, but you should know. */
+  notes: Array<string>;
 }
 
 function splitLine(line: string, separator: string): Array<string> {
@@ -36,17 +39,88 @@ function parseDate(text: string): string | null {
   return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === iso ? iso : null;
 }
 
+/**
+ * Trade Republic: BUY and SELL rows are trades, a split adds shares at no cost. Dividends, card
+ * payments and MIGRATION rows (a move in and straight out again) are not trades, so they're skipped.
+ * Things you sold that aren't in your holdings are kept, so their profit counts.
+ */
+function parseTradeRepublic(
+  lines: Array<string>,
+  separator: string,
+  header: Array<string>,
+  { kind, knownKeys }: { kind: "stock" | "crypto"; knownKeys: Set<string> },
+): CsvResult {
+  if (kind !== "stock") {
+    return {
+      trades: [],
+      errors: ["This is a Trade Republic export: import it on the Portfolio page."],
+      notes: [],
+    };
+  }
+  const trades: Array<Trade> = [];
+  const errors: Array<string> = [];
+  const notes: Array<string> = [];
+  const names = new Map<string, string>();
+  lines.slice(1).forEach((line, i) => {
+    const cells = splitLine(line, separator);
+    const get = (name: string) => cells[header.indexOf(name)] ?? "";
+    const type = get("type");
+    const key = get("symbol").toUpperCase();
+    const date = get("date");
+    const shares = Math.abs(Number(get("shares")));
+    if (type !== "BUY" && type !== "SELL" && type !== "SPLIT") return;
+    names.set(key, get("name"));
+    if (type === "SPLIT" && Number(get("shares")) < 0) {
+      notes.push(`${get("name")}: a reverse split on ${date} wasn't imported. Add it by hand.`);
+      return;
+    }
+    const price = type === "SPLIT" ? 0 : Number(get("price"));
+    const fee = type === "SPLIT" ? 0 : Math.abs(Number(get("fee")));
+    if (!key || parseDate(date) == null || !(shares > 0) || !(price >= 0) || !(fee >= 0)) {
+      errors.push(`Line ${i + 2}: couldn't read this ${type} row.`);
+      return;
+    }
+    if (type !== "SPLIT" && get("currency") !== "EUR") {
+      errors.push(`Line ${i + 2}: the price isn't in EUR.`);
+      return;
+    }
+    trades.push({
+      kind,
+      key,
+      side: type === "SELL" ? "sell" : "buy",
+      trade_date: date,
+      shares,
+      price_eur: price,
+      fee_eur: fee,
+    });
+  });
+
+  // Not in your holdings and not fully sold: there's no price to value what's left.
+  const open = [...new Set(trades.map((t) => t.key))].filter(
+    (key) =>
+      !knownKeys.has(key) && Math.abs(netShares(trades.filter((t) => t.key === key))) > 0.000001,
+  );
+  for (const key of open)
+    notes.push(
+      `${names.get(key)} isn't in your holdings, so it was left out. Add it, then import again.`,
+    );
+  return { trades: trades.filter((t) => !open.includes(t.key)), errors, notes };
+}
+
 /** All or nothing: any error means nothing is saved, so a half-imported holding can't look right. */
 export function parseTradesCsv(
   text: string,
   { kind, knownKeys, today }: { kind: "stock" | "crypto"; knownKeys: Set<string>; today: string },
 ): CsvResult {
   const lines = text.split(/\r?\n/).filter((l) => l.trim() !== "");
-  if (lines.length === 0) return { trades: [], errors: ["The file is empty."] };
+  if (lines.length === 0) return { trades: [], errors: ["The file is empty."], notes: [] };
 
   const headerLine = lines[0]!.replace(/^\uFEFF/, "");
   const separator = [";", "\t", ","].find((s) => headerLine.includes(s)) ?? ",";
   const header = splitLine(headerLine, separator).map((h) => h.toLowerCase());
+  if (header.includes("transaction_id") && header.includes("category")) {
+    return parseTradeRepublic(lines, separator, header, { kind, knownKeys });
+  }
   const keyName = kind === "stock" ? "isin" : "symbol";
   const at = (name: string) => header.indexOf(name);
   const missing = ["date", "side", keyName, "shares", "price"].filter((n) => at(n) < 0);
@@ -54,6 +128,7 @@ export function parseTradesCsv(
     return {
       trades: [],
       errors: [`Missing column${missing.length > 1 ? "s" : ""}: ${missing.join(", ")}.`],
+      notes: [],
     };
   }
 
@@ -81,7 +156,7 @@ export function parseTradesCsv(
     if (fee == null) return fail("fee must be a number.");
     trades.push({ kind, key, side, trade_date: date, shares, price_eur: price, fee_eur: fee });
   });
-  return { trades, errors };
+  return { trades, errors, notes: [] };
 }
 
 const signature = (t: Trade) =>

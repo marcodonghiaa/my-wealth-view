@@ -3,8 +3,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
-import { ofKind, rangeQuery } from "@/lib/performance";
-import type { HoldingRange, PerformanceRow } from "@/lib/performance";
+import { ofKind } from "@/lib/performance";
+import type { PerformanceRow } from "@/lib/performance";
 import { fetchAllRows } from "@/lib/export/fetch-all";
 import type { ExportRow } from "@/lib/export/tables";
 import { measure, summarizeTrades } from "@/lib/trades";
@@ -58,17 +58,15 @@ export async function fetchTrades(client: SupabaseClient<Database>): Promise<Tra
   return missing ? { unavailable: true } : { trades: rows as unknown as Array<SavedTrade> };
 }
 
-/** `lastIso` is the latest day of the value history; the query waits until it is known. */
-export function usePerformance(
-  range: HoldingRange,
-  lastIso: string | undefined,
-  kind: "stock" | "crypto",
-) {
-  const query = lastIso == null ? null : rangeQuery(range, lastIso);
+// Every holding's latest price: total return has no range, so any early date will do.
+const EARLIEST = "1970-01-01";
+
+/** Total return from your trades. `lastIso` is the latest data day; refetches when it moves. */
+export function usePerformance(lastIso: string | undefined, kind: "stock" | "crypto") {
   const prices = useQuery({
-    queryKey: ["holding-performance", query?.from, query?.lastMove],
-    queryFn: () => fetchPerformance(supabase, query!.from, query!.lastMove),
-    enabled: query != null,
+    queryKey: ["holding-performance", lastIso],
+    queryFn: () => fetchPerformance(supabase, EARLIEST, false),
+    enabled: lastIso != null,
   });
   const saved = useQuery({ queryKey: ["holding-trades"], queryFn: () => fetchTrades(supabase) });
 
@@ -84,11 +82,26 @@ export function usePerformance(
 
   const measured = useMemo(() => {
     const rows = ofKind(prices.data && "rows" in prices.data ? prices.data.rows : [], kind);
-    return rows.map((row) => ({
+    // Trades of something no longer in your holdings: sold, so their profit still counts.
+    const known = new Set(rows.map((r) => r.key));
+    const sold: Array<PerformanceRow> = [...tradesByKey.keys()]
+      .filter((key) => !known.has(key))
+      .map((key) => ({
+        kind,
+        key,
+        name: null,
+        quantity: 0,
+        start_date: null,
+        start_price_eur: null,
+        end_date: null,
+        end_price_eur: null,
+        status: "no_price",
+      }));
+    return [...rows, ...sold].map((row) => ({
       row,
-      measured: measure(row, tradesByKey.get(row.key) ?? [], range === "ALL"),
+      measured: measure(row, tradesByKey.get(row.key) ?? []),
     }));
-  }, [prices.data, tradesByKey, kind, range]);
+  }, [prices.data, tradesByKey, kind]);
 
   const summary = useMemo(() => summarizeTrades(measured, 1), [measured]);
   const measuredByKey = useMemo(

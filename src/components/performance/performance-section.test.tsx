@@ -23,7 +23,6 @@ const ok = (gain: number, base: number): Measured => ({
   gain,
   base,
   change: gain / base,
-  since: null,
 });
 
 const trade = {

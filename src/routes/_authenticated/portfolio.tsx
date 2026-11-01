@@ -184,7 +184,7 @@ function PortfolioPage() {
   // Scrubbing shows that day's value; otherwise today's, from the holdings below.
   const history = useValueHistory("portfolio_total_eur", totalEur);
   const { scrubbed } = history;
-  const perf = usePerformance("ALL", history.chartData.at(-1)?.snapshot_date, "stock");
+  const perf = usePerformance(history.chartData.at(-1)?.snapshot_date, "stock");
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-8 md:py-12">
