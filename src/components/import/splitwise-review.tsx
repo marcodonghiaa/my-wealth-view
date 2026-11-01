@@ -19,12 +19,9 @@ import {
 } from "@/lib/import/splitwise-commit";
 import { fingerprintRows, matchBank, type BankTx } from "@/lib/import/splitwise-match";
 import { saveBalances, type FileBalances } from "@/lib/import/splitwise-balances";
-import {
-  isShareRow,
-  planWrite,
-  splitAtCheckpoint,
-  type StoredShare,
-} from "@/lib/import/splitwise-plan";
+import { SplitwiseCorrections } from "@/components/import/splitwise-corrections";
+import { isShareRow, type StoredShare } from "@/lib/import/splitwise-corrections";
+import { planWrite, splitAtCheckpoint } from "@/lib/import/splitwise-plan";
 import { categorizeRow, ruleTextFor, type UserRule } from "@/lib/import/splitwise-categorize";
 import { defaultSelection, makeRate, toBankTx, type FxRow } from "@/lib/import/splitwise-review";
 
@@ -74,7 +71,9 @@ async function load(rows: Array<ClassifiedRow>, group: string): Promise<Loaded> 
           .limit(PAGE_LIMIT),
     supabase
       .from("splitwise_expenses")
-      .select("fingerprint, booking_date")
+      .select(
+        "id, fingerprint, booking_date, description, amount, currency, linked_entry_reference",
+      )
       .eq("group_name", group)
       .limit(PAGE_LIMIT),
     supabase
@@ -136,9 +135,14 @@ export function SplitwiseReview({
       refreshKeys("splitwise").map((queryKey) => queryClient.invalidateQueries({ queryKey })),
     );
 
+  // A new file starts over; a reload after a write keeps the screen up while it reads.
+  const [reloads, setReloads] = useState(0);
+  const reload = () => setReloads((n) => n + 1);
+  useEffect(() => {
+    setLoaded(null);
+  }, [rows, group]);
   useEffect(() => {
     let current = true;
-    setLoaded(null);
     setLoadError(null);
     load(rows, group.trim())
       .then((data) => current && setLoaded(data))
@@ -148,7 +152,7 @@ export function SplitwiseReview({
     return () => {
       current = false;
     };
-  }, [rows, group]);
+  }, [rows, group, reloads]);
 
   const fingerprints = useMemo(() => fingerprintRows(rows), [rows]);
   const split = useMemo(
@@ -249,6 +253,7 @@ export function SplitwiseReview({
             ? ` The friends' balances were not saved (${balancesError}); import again to retry.`
             : ""),
       );
+      reload();
       void refresh();
     },
   });
@@ -263,6 +268,7 @@ export function SplitwiseReview({
       setLast(null);
       setDone(null);
       importShares.reset();
+      reload();
       void refresh();
     },
   });
@@ -295,22 +301,18 @@ export function SplitwiseReview({
             Your last import goes up to {split.checkpoint}. Only what is new from that day on is
             reviewed; everything already imported stays as it is.
           </p>
-          {split.older.length > 0 && (
-            <section aria-labelledby="splitwise-older" className="mt-3">
-              <h2 id="splitwise-older" className="mb-1 font-semibold">
-                Older than your last import, not imported
-              </h2>
-              <ul className="space-y-1 text-muted-foreground">
-                {split.older.map((r) => (
-                  <li key={r.row}>
-                    {r.date} {r.description} ({money(r.costCents)} {r.currency})
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
         </div>
       )}
+
+      <SplitwiseCorrections
+        group={group}
+        older={split.older}
+        edited={split.edited}
+        removed={split.removed}
+        rate={rate}
+        categoryFor={(row) => categorizeRow(row, rules).category}
+        onApplied={reload}
+      />
 
       <div className="rounded-2xl border bg-card p-5 text-sm card-ring">
         <h2 className="mb-1 font-semibold">Categories</h2>

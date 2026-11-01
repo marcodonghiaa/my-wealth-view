@@ -312,8 +312,17 @@ describe("SplitwiseReview", () => {
     expect(screen.getByText(/2 shares of expenses, 0 bank transactions updated/)).toBeTruthy();
   });
 
-  const TAXI = { fingerprint: "2026-08-17|Taxi|2000|USD|1000#1", booking_date: "2026-08-17" };
-  const DINNER = { fingerprint: "2026-08-16|Dinner|3000|USD|-1500#1", booking_date: "2026-08-16" };
+  const share = (fingerprint: string, description: string, amount: number) => ({
+    id: `id-${description}`,
+    fingerprint,
+    booking_date: fingerprint.slice(0, 10),
+    description,
+    amount,
+    currency: "USD",
+    linked_entry_reference: null as string | null,
+  });
+  const TAXI = share("2026-08-17|Taxi|2000|USD|1000#1", "Taxi", 10);
+  const DINNER = share("2026-08-16|Dinner|3000|USD|-1500#1", "Dinner", 15);
 
   // protects=stored rows get no new bank suggestion; fails_when=an imported expense is matched
   // again to another bank transaction
@@ -330,7 +339,8 @@ describe("SplitwiseReview", () => {
     tables.splitwise_expenses = { data: [TAXI], error: null };
     show();
     expect(await screen.findByText(/Your last import goes up to 2026-08-17/)).toBeTruthy();
-    const older = screen.getByRole("region", { name: /Older than your last import/ });
+    const older = screen.getByRole("region", { name: /Added late/ });
+    expect(older.textContent).toMatch(/Older than your last import, not imported/);
     expect(older.textContent).toMatch(/2026-08-16 Dinner/);
     expect(screen.getByText(/0 shares of expenses, 0 bank transactions updated/)).toBeTruthy();
   });
@@ -349,7 +359,7 @@ describe("SplitwiseReview", () => {
     show();
     await screen.findByText(/matches the bank/);
     expect(screen.queryByText(/Your last import/)).toBeNull();
-    expect(screen.queryByText(/Older than your last import/)).toBeNull();
+    expect(screen.queryByText(/Added late/)).toBeNull();
   });
 
   // protects=a checkpoint cannot be read from a cut list; fails_when=the stored rows hit the page
@@ -358,5 +368,72 @@ describe("SplitwiseReview", () => {
     tables.splitwise_expenses = { data: Array.from({ length: 1000 }, () => TAXI), error: null };
     show();
     expect((await screen.findByRole("alert")).textContent).toMatch(/Too many stored expenses/);
+  });
+
+  describe("corrections", () => {
+    const GONE = share("2026-08-16|Lunch|5000|USD|-1500#1", "Lunch", 15);
+    const EDITED = share("2026-08-16|Dinner|4000|USD|-2000#1", "Dinner", 20);
+    const applyButton = () => screen.findByRole("button", { name: /^Apply \d+ corrections/ });
+
+    beforeEach(() => {
+      rpc.mockResolvedValue({ data: { added: 1, edited: 0, removed: 0 }, error: null });
+    });
+
+    // protects=nothing old changes without a tick; fails_when=a category starts ticked
+    it("starts with nothing ticked and nothing to apply", async () => {
+      tables.splitwise_expenses = { data: [TAXI, GONE], error: null };
+      show();
+      const box = await screen.findByRole("checkbox", { name: /Lunch/ });
+      expect((box as HTMLInputElement).checked).toBe(false);
+      expect((await applyButton()) as HTMLButtonElement).toHaveProperty("disabled", true);
+    });
+
+    it("shows old and new values for an edit", async () => {
+      tables.splitwise_expenses = { data: [TAXI, EDITED], error: null };
+      show();
+      const section = await screen.findByRole("region", { name: /Edited in Splitwise/ });
+      expect(section.textContent).toMatch(/Was 2026-08-16 Dinner \(40.00 USD/);
+      expect(section.textContent).toMatch(/Now 2026-08-16 Dinner \(30.00 USD/);
+    });
+
+    // protects=corrections take their own confirmation, and say Undo does not cover them;
+    // fails_when=the first click writes, or the warning is dropped
+    it("asks to confirm, says Undo does not cover it, and sends only the ticked row", async () => {
+      tables.splitwise_expenses = { data: [TAXI, GONE], error: null };
+      show();
+      fireEvent.click(await screen.findByRole("checkbox", { name: /Lunch/ }));
+      fireEvent.click(await applyButton());
+      expect(rpc).not.toHaveBeenCalled();
+      expect(screen.getByText(/Undo does not cover corrections/)).toBeTruthy();
+      fireEvent.click(screen.getByRole("button", { name: /Yes, apply 1 corrections/ }));
+      await waitFor(() => expect(rpc).toHaveBeenCalledTimes(1));
+      const [fn, args] = rpc.mock.calls[0] as [string, Record<string, unknown>];
+      expect(fn).toBe("apply_splitwise_corrections");
+      expect(args["p_remove"]).toEqual([{ id: GONE.id, old_fingerprint: GONE.fingerprint }]);
+      expect(args["p_add"]).toEqual([]);
+      expect(await screen.findByText(/Applied: 1 added/)).toBeTruthy();
+    });
+
+    it("shows a clear message when the database function is missing", async () => {
+      rpc.mockResolvedValue({
+        data: null,
+        error: { message: "Could not find the function public.apply_splitwise_corrections" },
+      });
+      tables.splitwise_expenses = { data: [TAXI, GONE], error: null };
+      show();
+      fireEvent.click(await screen.findByRole("checkbox", { name: /Lunch/ }));
+      fireEvent.click(await applyButton());
+      fireEvent.click(screen.getByRole("button", { name: /Yes, apply/ }));
+      expect((await screen.findByRole("alert")).textContent).toMatch(/database update/);
+    });
+
+    it("warns that a linked removal gives the bank transaction back in full", async () => {
+      tables.splitwise_expenses = {
+        data: [TAXI, { ...GONE, linked_entry_reference: "e9" }],
+        error: null,
+      };
+      show();
+      expect(await screen.findByText(/it counts in full again/)).toBeTruthy();
+    });
   });
 });

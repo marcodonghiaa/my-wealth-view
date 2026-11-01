@@ -995,6 +995,16 @@ export type Database = {
         Args: Record<PropertyKey, never>;
         Returns: string;
       };
+      apply_splitwise_corrections: {
+        Args: {
+          p_add: Json;
+          p_batch: string;
+          p_edit: Json;
+          p_group: string;
+          p_remove: Json;
+        };
+        Returns: Json;
+      };
       import_splitwise: {
         Args: {
           p_batch: string;
