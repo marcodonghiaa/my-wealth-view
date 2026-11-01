@@ -115,16 +115,14 @@ export function PerformanceSummary({ perf }: { perf: Performance }) {
           )}
         </p>
       )}
-      {(incomplete || summary.counted === 0) && (
-        <p className="flex flex-wrap items-baseline gap-x-2 text-xs text-muted-foreground">
-          {summary.counted > 0 && (
-            <span>
-              On {summary.counted} of {summary.total} holdings
-            </span>
-          )}
-          <ImportTrades kind={perf.kind} saved={[...perf.tradesByKey.values()].flat()} />
-        </p>
-      )}
+      <p className="flex flex-wrap items-baseline gap-x-2 text-xs text-muted-foreground">
+        {incomplete && summary.counted > 0 && (
+          <span>
+            On {summary.counted} of {summary.total} holdings
+          </span>
+        )}
+        <ImportTrades kind={perf.kind} saved={[...perf.tradesByKey.values()].flat()} />
+      </p>
     </section>
   );
 }

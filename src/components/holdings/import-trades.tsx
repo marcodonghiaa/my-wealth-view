@@ -13,18 +13,18 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { localToday } from "@/lib/trades";
 import type { Trade } from "@/lib/trades";
-import { newTrades, parseTradesCsv } from "@/lib/trades-csv";
+import { newTrades, parseTradesCsv, shareUpdates } from "@/lib/trades-csv";
 
-// Keys of every holding, sold ones too: the old trades of something you sold are still yours to import.
-async function fetchKeys(kind: "stock" | "crypto"): Promise<Set<string>> {
+// Every holding and its count, sold ones too: the old trades of something you sold are still yours.
+async function fetchHoldings(kind: "stock" | "crypto"): Promise<Map<string, number>> {
   if (kind === "stock") {
-    const { data, error } = await supabase.from("portfolio_holdings").select("isin");
+    const { data, error } = await supabase.from("portfolio_holdings").select("isin,shares");
     if (error) throw error;
-    return new Set(data.map((r) => r.isin.toUpperCase()));
+    return new Map(data.map((r) => [r.isin.toUpperCase(), r.shares]));
   }
-  const { data, error } = await supabase.from("crypto_holdings").select("asset_symbol");
+  const { data, error } = await supabase.from("crypto_holdings").select("asset_symbol,amount");
   if (error) throw error;
-  return new Set(data.map((r) => r.asset_symbol.toUpperCase()));
+  return new Map(data.map((r) => [r.asset_symbol.toUpperCase(), r.amount]));
 }
 
 /** Paste or upload a CSV of trades; shows what it found and saves only on your say-so. */
@@ -36,35 +36,55 @@ export function ImportTrades({ kind, saved }: { kind: "stock" | "crypto"; saved:
 
   const keys = useQuery({
     queryKey: ["holding-keys", kind],
-    queryFn: () => fetchKeys(kind),
+    queryFn: () => fetchHoldings(kind),
     enabled: open,
   });
 
   const parsed = useMemo(
     () =>
       text.trim() && keys.data
-        ? parseTradesCsv(text, { kind, knownKeys: keys.data, today: localToday() })
+        ? parseTradesCsv(text, { kind, knownKeys: new Set(keys.data.keys()), today: localToday() })
         : null,
     [text, keys.data, kind],
   );
   const fresh = useMemo(() => (parsed ? newTrades(parsed.trades, saved) : []), [parsed, saved]);
+  const updates = useMemo(
+    () => (parsed?.setsShares && keys.data ? shareUpdates(parsed.trades, saved, keys.data) : []),
+    [parsed, saved, keys.data],
+  );
 
   const save = useMutation({
-    // One insert is one statement: all the rows land, or none do.
     mutationFn: async () => {
-      const { data } = await supabase.auth.getUser();
-      if (!data.user) throw new Error("You're signed out. Sign in and try again.");
-      const userId = data.user.id;
-      const { error } = await supabase
-        .from("holding_trades")
-        .insert(fresh.map((t) => ({ ...t, user_id: userId })));
-      if (error) throw error;
+      // One insert is one statement: all the rows land, or none do.
+      if (fresh.length > 0) {
+        const { data } = await supabase.auth.getUser();
+        if (!data.user) throw new Error("You're signed out. Sign in and try again.");
+        const userId = data.user.id;
+        const { error } = await supabase
+          .from("holding_trades")
+          .insert(fresh.map((t) => ({ ...t, user_id: userId })));
+        if (error) throw error;
+      }
+      // If this fails the trades are safe: importing again skips them and retries the counts.
+      for (const { key, shares } of updates) {
+        const { error } = await supabase
+          .from("portfolio_holdings")
+          .update({ shares })
+          .eq("isin", key);
+        if (error) throw error;
+      }
     },
     onSuccess: () => {
       toast.success(`${fresh.length} trade${fresh.length === 1 ? "" : "s"} imported`);
-      void queryClient.invalidateQueries({ queryKey: ["holding-trades"] });
       setText("");
       setOpen(false);
+    },
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: ["holding-trades"] });
+      void queryClient.invalidateQueries({ queryKey: ["holding-keys", kind] });
+      void queryClient.invalidateQueries({ queryKey: ["holding-performance"] });
+      void queryClient.invalidateQueries({ queryKey: ["portfolio-latest"] });
+      void queryClient.invalidateQueries({ queryKey: ["net-worth-daily"] });
     },
   });
 
@@ -121,6 +141,8 @@ export function ImportTrades({ kind, saved }: { kind: "stock" | "crypto"; saved:
             {parsed.trades.length > fresh.length &&
               `, ${parsed.trades.length - fresh.length} already saved and left out`}
             .
+            {updates.length > 0 &&
+              ` Share count${updates.length === 1 ? "" : "s"} will be updated on ${updates.length} holding${updates.length === 1 ? "" : "s"}.`}
           </p>
         )}
         {parsed?.notes.map((note) => (
@@ -135,7 +157,12 @@ export function ImportTrades({ kind, saved }: { kind: "stock" | "crypto"; saved:
         )}
         <button
           type="button"
-          disabled={!parsed || parsed.errors.length > 0 || fresh.length === 0 || save.isPending}
+          disabled={
+            !parsed ||
+            parsed.errors.length > 0 ||
+            (fresh.length === 0 && updates.length === 0) ||
+            save.isPending
+          }
           onClick={() => save.mutate()}
           className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground disabled:opacity-50"
         >
