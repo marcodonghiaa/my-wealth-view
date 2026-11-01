@@ -450,11 +450,7 @@ export function createFakeClient(now: Date = new Date()): SupabaseClient<Databas
     rpc: async (fn: string, args: Record<string, unknown> = {}) =>
       fn === "holding_performance"
         ? {
-            data: demoHoldingPerformance(
-              store.db,
-              args["p_from"] as string,
-              (args["p_last_move"] as boolean | undefined) ?? false,
-            ),
+            data: demoHoldingPerformance(store.db),
             error: null,
           }
         : fn === "rename_merchant"

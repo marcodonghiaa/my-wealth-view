@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { demoHoldingPerformance } from "./performance";
 
-// Same cases as the database function's rehearsal, on a tiny hand-made db.
 const snap = (isin: string, d: string, price: number) => ({
   isin,
   snapshot_date: d,
@@ -52,30 +51,20 @@ const get = (rows: ReturnType<typeof demoHoldingPerformance>, key: string) =>
   rows.find((r) => r.key === key)!;
 
 describe("demoHoldingPerformance", () => {
-  const rows = demoHoldingPerformance(db, "2026-09-30", false);
+  const rows = demoHoldingPerformance(db);
 
   it("returns held stocks and one row per coin, not sold holdings", () => {
     expect(rows.map((r) => r.key).sort()).toEqual(["AAA", "BBB", "BTC", "DDD"]);
     expect(get(rows, "BTC").quantity).toBe(1.5);
   });
 
-  it("uses each snapshot's own rate for EUR", () => {
-    expect(get(rows, "BBB").end_price_eur).toBeCloseTo(5.5);
-  });
-
-  it("flags a start in a hole as stale and a young holding as since", () => {
-    expect(get(rows, "AAA").status).toBe("stale");
-    expect(get(rows, "BBB")).toMatchObject({ status: "since", start_date: "2026-10-28" });
-  });
-
-  it("1D compares with the latest earlier price that differs", () => {
-    const d = demoHoldingPerformance(db, "2026-10-30", true);
-    expect(get(d, "DDD")).toMatchObject({ status: "ok", start_date: "2026-10-22" });
-    expect(get(d, "BTC")).toMatchObject({ start_date: "2026-10-29" });
+  it("uses the latest price, at that snapshot's own rate", () => {
+    expect(get(rows, "BBB")).toMatchObject({ end_date: "2026-10-30", end_price_eur: 5.5 });
+    expect(get(rows, "BTC").end_price_eur).toBeCloseTo(90);
   });
 
   it("a holding with no prices is no_price", () => {
-    const r = demoHoldingPerformance({ ...db, portfolio_snapshots: [] }, "2026-09-30", false);
-    expect(get(r, "AAA")).toMatchObject({ status: "no_price", start_price_eur: null });
+    const r = demoHoldingPerformance({ ...db, portfolio_snapshots: [] });
+    expect(get(r, "AAA")).toMatchObject({ status: "no_price", end_price_eur: null });
   });
 });
