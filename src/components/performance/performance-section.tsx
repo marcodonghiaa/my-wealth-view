@@ -46,7 +46,9 @@ export function ReturnCell({
       quantity={quantity}
       trades={trades}
       label={
-        trades.length === 0 ? (
+        measured?.state === "dust" ? (
+          <span className="text-muted-foreground">—</span>
+        ) : trades.length === 0 ? (
           <span className="text-xs text-primary">Add purchases</span>
         ) : measured?.state === "ok" ? (
           <Change change={measured.change} />
