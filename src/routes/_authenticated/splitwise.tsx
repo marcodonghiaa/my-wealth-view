@@ -1,6 +1,8 @@
+import { useIsMutating } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { SplitwisePanel } from "@/components/import/splitwise-panel";
+import { IMPORT_KEY } from "@/lib/import/splitwise-commit";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { BalancesView } from "@/components/splitwise/balances-view";
 import { summarizeBalances } from "@/lib/import/splitwise-balances";
@@ -24,6 +26,7 @@ function SplitwisePage() {
   const { balances, rows, rate } = useSplitwiseBalances();
   const groups = useMemo(() => summarizeBalances(rows, rate), [rows, rate]);
   const [importing, setImporting] = useState(false);
+  const writing = useIsMutating({ mutationKey: IMPORT_KEY }) > 0;
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-8 md:py-12">
@@ -58,7 +61,7 @@ function SplitwisePage() {
         <BalancesView groups={groups} />
       )}
 
-      <Dialog open={importing} onOpenChange={setImporting}>
+      <Dialog open={importing} onOpenChange={(open) => writing || setImporting(open)}>
         <DialogContent className="left-0 top-0 block h-dvh max-h-dvh w-screen max-w-none translate-x-0 translate-y-0 rounded-none border-0 p-0 sm:rounded-none">
           <div className="mx-auto max-w-2xl px-4 py-6 sm:px-8">
             <DialogTitle className="mb-1 pr-10 text-xl">Import from Splitwise</DialogTitle>

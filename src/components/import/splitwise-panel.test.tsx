@@ -98,6 +98,7 @@ describe("SplitwisePanel", () => {
     fireEvent.change(await screen.findByLabelText(/Which one are you/), { target: { value: "0" } });
     expect(screen.queryByText(/review of/)).toBeNull();
     fireEvent.change(select, { target: { value: "trip" } });
+    fireEvent.change(screen.getByLabelText(/Which one are you/), { target: { value: "0" } });
     await proceed();
     expect(await screen.findByText(/review of trip/)).toBeTruthy();
   });
@@ -114,8 +115,8 @@ describe("SplitwisePanel", () => {
   const startNewGroup = async (name: string) => {
     render(<SplitwisePanel onClose={() => undefined} />);
     upload(CSV);
-    fireEvent.change(await screen.findByLabelText(/Which one are you/), { target: { value: "0" } });
     fireEvent.change(await screen.findByLabelText(/^Group$/), { target: { value: "__new__" } });
+    fireEvent.change(await screen.findByLabelText(/Which one are you/), { target: { value: "0" } });
     const input = await screen.findByLabelText(/New group name/);
     fireEvent.change(input, { target: { value: name } });
     fireEvent.blur(input);
@@ -253,5 +254,17 @@ describe("SplitwisePanel", () => {
     const select = (await screen.findByLabelText(/Which one are you/)) as HTMLSelectElement;
     await screen.findByLabelText(/^Group$/);
     expect(select.value).toBe("");
+  });
+
+  // protects=shares are never computed for the previous group's person; fails_when=me survives
+  it("forgets who you are when the group changes", async () => {
+    answer.data = groups("berkeley", "trip");
+    render(<SplitwisePanel onClose={() => undefined} />);
+    upload(CSV);
+    const select = (await screen.findByLabelText(/Which one are you/)) as HTMLSelectElement;
+    fireEvent.change(await screen.findByLabelText(/^Group$/), { target: { value: "trip" } });
+    fireEvent.change(select, { target: { value: "0" } });
+    fireEvent.change(screen.getByLabelText(/^Group$/), { target: { value: "berkeley" } });
+    expect((screen.getByLabelText(/Which one are you/) as HTMLSelectElement).value).toBe("");
   });
 });

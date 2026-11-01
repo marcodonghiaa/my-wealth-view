@@ -33,6 +33,7 @@ async function loadStored(): Promise<Array<StoredGroupRow>> {
 }
 
 interface Loaded {
+  name: string;
   file: SplitwiseFile;
   issues: Array<Issue>;
 }
@@ -40,7 +41,6 @@ interface Loaded {
 export function SplitwisePanel({ onClose }: { onClose: () => void }) {
   const [step, setStep] = useState<"file" | "review">("file");
   const [loaded, setLoaded] = useState<Loaded | null>(null);
-  const [fileName, setFileName] = useState<string | null>(null);
   const [stored, setStored] = useState<Array<StoredGroupRow> | null>(null);
   // An existing group, or NEW_GROUP; "" until chosen.
   const [choice, setChoice] = useState("");
@@ -78,13 +78,12 @@ export function SplitwisePanel({ onClose }: { onClose: () => void }) {
       if (file.size > MAX_CHARS)
         throw new Error("The file is too large (limit is 2 MB). Is it the right file?");
       const parsed = parseSplitwiseCsv(await file.text());
-      setLoaded({ file: parsed, issues: validateSplitwise(parsed) });
-      setFileName(file.name);
+      setMe(null);
+      setLoaded({ name: file.name, file: parsed, issues: validateSplitwise(parsed) });
       setNewName("");
       setSettledName("");
     } catch (err) {
       setLoaded(null);
-      setFileName(null);
       setError(readError(err));
     }
   }
@@ -150,7 +149,7 @@ export function SplitwisePanel({ onClose }: { onClose: () => void }) {
       <div className="rounded-2xl border bg-card p-5 card-ring">
         <label className="flex min-h-11 cursor-pointer items-center gap-2 text-sm font-medium">
           <Upload className="size-4 text-primary" />
-          {fileName ?? "Choose a Splitwise CSV"}
+          {loaded?.name ?? "Choose a Splitwise CSV"}
           <input
             type="file"
             accept=".csv,text/csv"
@@ -196,7 +195,11 @@ export function SplitwisePanel({ onClose }: { onClose: () => void }) {
                   <span className="mb-1 block text-muted-foreground">Group</span>
                   <select
                     value={choice}
-                    onChange={(e) => setChoice(e.target.value)}
+                    onChange={(e) => {
+                      // Who you are depends on the group; it is read again for this one.
+                      setMe(null);
+                      setChoice(e.target.value);
+                    }}
                     className="w-full rounded-lg border bg-background px-3 py-2 text-base focus:ring-2 focus:ring-ring focus:outline-none"
                   >
                     {choice === "" && <option value="">Choose…</option>}

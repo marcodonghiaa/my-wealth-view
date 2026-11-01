@@ -6,6 +6,7 @@ import { CategoryTable } from "@/components/import/splitwise-category-table";
 import type { ClassifiedRow } from "@/lib/import/splitwise-classify";
 import { refreshKeys } from "@/lib/import/last-import";
 import {
+  IMPORT_KEY,
   runSplitwiseImport,
   undoSplitwiseImport,
   type RpcClient,
@@ -238,7 +239,16 @@ export function SplitwiseReview({
     },
   });
 
+  // Balances move without new expenses (a settle-up), and a first attempt can fail.
+  const saveOnlyBalances = useMutation({
+    mutationFn: async () => {
+      if (balances) await saveBalances(supabase as unknown as RpcClient, group, balances);
+    },
+    onSuccess: () => void refresh(),
+  });
+
   const importShares = useMutation({
+    mutationKey: IMPORT_KEY,
     mutationFn: async () => {
       if (!plan || !userId) throw new Error("You are signed out. Sign in again.");
       const client = supabase as unknown as RpcClient;
@@ -541,6 +551,30 @@ export function SplitwiseReview({
           {p}
         </p>
       ))}
+
+      {nothingToWrite && balances && (
+        <div className="text-sm">
+          <button
+            type="button"
+            className={SECONDARY}
+            disabled={saveOnlyBalances.isPending || saveOnlyBalances.isSuccess}
+            onClick={() => saveOnlyBalances.mutate()}
+          >
+            {saveOnlyBalances.isPending && <Loader2 className="size-4 animate-spin" />}
+            Update balances from this file
+          </button>
+          {saveOnlyBalances.isSuccess && (
+            <p role="status" className="mt-2">
+              Balances updated.
+            </p>
+          )}
+          {saveOnlyBalances.error && (
+            <p role="alert" className="mt-2 text-negative">
+              Could not save the balances: {saveOnlyBalances.error.message}
+            </p>
+          )}
+        </div>
+      )}
 
       <div className="text-sm">
         {undecided > 0 && (

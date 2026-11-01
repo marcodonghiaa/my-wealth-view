@@ -346,6 +346,18 @@ describe("SplitwiseReview", () => {
     currency: "USD",
     linked_entry_reference: null as string | null,
   });
+  // protects=balances can be refreshed with no new expense; fails_when=the retry the done screen
+  // promises is unreachable
+  it("can update the balances alone when there is nothing new", async () => {
+    tables.splitwise_expenses = { data: [TAXI, DINNER], error: null };
+    rpc.mockResolvedValue({ data: null, error: null });
+    showWithBalances();
+    fireEvent.click(await screen.findByRole("button", { name: /Update balances/ }));
+    await waitFor(() => expect(rpc).toHaveBeenCalledTimes(1));
+    expect(rpc.mock.calls[0]?.[0]).toBe("save_splitwise_balances");
+    expect(await screen.findByText("Balances updated.")).toBeTruthy();
+  });
+
   const TAXI = share("2026-08-17|Taxi|2000|USD|1000#1", "Taxi", 10);
   const DINNER = share("2026-08-16|Dinner|3000|USD|-1500#1", "Dinner", 15);
 
