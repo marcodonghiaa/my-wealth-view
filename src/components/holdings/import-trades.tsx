@@ -79,6 +79,7 @@ export function ImportTrades({ kind, saved }: { kind: "stock" | "crypto"; saved:
           <DialogDescription>
             Needs a header row with <code>date, side, {keyColumn}, shares, price</code>, and
             optionally <code>fee</code>. Side is buy or sell; price is per share in EUR.
+            {kind === "stock" && " Or upload a Trade Republic transaction export as it comes."}
           </DialogDescription>
         </DialogHeader>
         <input
@@ -122,6 +123,11 @@ export function ImportTrades({ kind, saved }: { kind: "stock" | "crypto"; saved:
             .
           </p>
         )}
+        {parsed?.notes.map((note) => (
+          <p key={note} className="text-sm text-muted-foreground">
+            {note}
+          </p>
+        ))}
         {save.isError && (
           <p role="alert" className="text-sm text-negative">
             {save.error.message}

@@ -146,7 +146,7 @@ function CryptoPage() {
   // Scrubbing shows that day's value; otherwise today's, from the coins below.
   const history = useValueHistory("crypto_total_eur", totalEur);
   const { scrubbed } = history;
-  const perf = usePerformance("ALL", history.chartData.at(-1)?.snapshot_date, "crypto");
+  const perf = usePerformance(history.chartData.at(-1)?.snapshot_date, "crypto");
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-8 md:py-12">

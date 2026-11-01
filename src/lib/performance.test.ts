@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatReturn, ofKind, rangeQuery } from "./performance";
+import { formatReturn, ofKind } from "./performance";
 import type { PerformanceRow } from "./performance";
 
 const row = (over: Partial<PerformanceRow> = {}): PerformanceRow => ({
@@ -13,23 +13,6 @@ const row = (over: Partial<PerformanceRow> = {}): PerformanceRow => ({
   end_price_eur: 120,
   status: "ok",
   ...over,
-});
-
-describe("rangeQuery", () => {
-  const last = "2026-10-30";
-  it("starts every range from the latest data day", () => {
-    expect(rangeQuery("1M", last)).toEqual({ from: "2026-09-30", lastMove: false });
-    expect(rangeQuery("3M", last)).toEqual({ from: "2026-07-30", lastMove: false });
-    expect(rangeQuery("YTD", last)).toEqual({ from: "2025-12-31", lastMove: false });
-    expect(rangeQuery("2Y", last)).toEqual({ from: "2024-10-30", lastMove: false });
-  });
-  it("clamps to the end of a shorter month", () => {
-    expect(rangeQuery("1M", "2026-03-31").from).toBe("2026-02-28");
-  });
-  it("1D compares with the previous different price, ALL starts at each first price", () => {
-    expect(rangeQuery("1D", last)).toEqual({ from: last, lastMove: true });
-    expect(rangeQuery("ALL", last)).toEqual({ from: "1970-01-01", lastMove: false });
-  });
 });
 
 describe("formatReturn", () => {

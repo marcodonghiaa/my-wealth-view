@@ -1,11 +1,11 @@
 import { RETURN_NOISE_BAND } from "@/lib/performance";
 import type { PerformanceRow } from "@/lib/performance";
 
-// Performance the way a broker works it out, from your trades. Over a range:
-//   gain   = value now + sold in the range - value at the start - bought in the range
-//   return = gain / (value at the start + bought in the range)
-// Fees count against you. ALL has no start value, so it is the total return: everything you got or
-// still hold, minus everything you paid. Dividends are not counted. Not time-weighted.
+// Total return the way a broker works it out, from your trades:
+//   gain   = value now + everything sold - everything bought (so profit already taken counts)
+//   return = gain / cost of what you still hold, at average cost
+// Dividing by everything ever paid would let money moved in and out of a fund inflate the base.
+// Fees count against you. Dividends are not counted.
 
 export interface Trade {
   kind: string;
@@ -24,57 +24,49 @@ export type Measured =
   | { state: "no_trades" }
   | { state: "mismatch"; traded: number; held: number }
   | { state: "no_price" }
-  // You held none of it at any point in this range: it has nothing to say here.
-  | { state: "not_held" }
-  | { state: "ok"; gain: number; base: number; change: number | null; since: string | null };
+  | { state: "ok"; gain: number; base: number; change: number | null };
 
 const signed = (t: Trade) => (t.side === "buy" ? t.shares : -t.shares);
 export const netShares = (trades: Array<Trade>) => trades.reduce((s, t) => s + signed(t), 0);
 
-const cash = (trades: Array<Trade>, side: string) =>
-  trades
-    .filter((t) => t.side === side)
-    .reduce((s, t) => s + t.shares * t.price_eur + (side === "buy" ? t.fee_eur : -t.fee_eur), 0);
+// Oldest first; on one day buys go first, so a same-day sale has shares to sell.
+const inOrder = (trades: Array<Trade>) =>
+  [...trades].sort(
+    (a, b) => a.trade_date.localeCompare(b.trade_date) || a.side.localeCompare(b.side),
+  );
 
-/** One holding over a range. `all` is the ALL range: no start value, every trade is inside it. */
-export function measure(row: PerformanceRow, trades: Array<Trade>, all: boolean): Measured {
+/** Cash in, cash out, and the average cost of the shares left after every trade. */
+function replay(trades: Array<Trade>) {
+  let shares = 0;
+  let cost = 0;
+  let bought = 0;
+  let sold = 0;
+  for (const t of inOrder(trades)) {
+    if (t.side === "buy") {
+      const paid = t.shares * t.price_eur + t.fee_eur;
+      bought += paid;
+      cost += paid;
+      shares += t.shares;
+    } else {
+      sold += t.shares * t.price_eur - t.fee_eur;
+      if (shares > 0) cost -= (cost / shares) * Math.min(t.shares, shares);
+      shares = Math.max(0, shares - t.shares);
+    }
+  }
+  return { bought, sold, cost: shares > QUANTITY_TOLERANCE ? cost : 0 };
+}
+
+/** One holding's total return. Sold to zero: its profit counts, and it needs no current price. */
+export function measure(row: PerformanceRow, trades: Array<Trade>): Measured {
   if (trades.length === 0) return { state: "no_trades" };
   const held = row.quantity ?? 0;
   const traded = netShares(trades);
   if (Math.abs(traded - held) > QUANTITY_TOLERANCE) return { state: "mismatch", traded, held };
+  if (held > 0 && row.end_price_eur == null) return { state: "no_price" };
 
-  // A holding sold to zero is worth nothing now, whatever its last price.
-  const endPrice = row.end_price_eur;
-  if (held > 0 && endPrice == null) return { state: "no_price" };
-  const valueNow = held > 0 ? held * endPrice! : 0;
-
-  let start: string | null = null;
-  let inside = trades;
-  let startValue = 0;
-  let since: string | null = null;
-  if (!all) {
-    const measurable = row.status === "ok" || row.status === "since";
-    if (!measurable || row.start_date == null || row.start_price_eur == null) {
-      return { state: "no_price" };
-    }
-    if (row.start_date === row.end_date) return { state: "no_price" };
-    start = row.start_date;
-    // A range starts at that day's close, so that day's trades are already in the start value. But
-    // on the first price we have there is no earlier value: a buy that day still counts at cost.
-    const onStart = (t: Trade) => row.status === "ok" && t.trade_date === start;
-    const before = trades.filter((t) => t.trade_date < start! || onStart(t));
-    startValue = netShares(before) * row.start_price_eur;
-    inside = trades.filter((t) => !before.includes(t));
-    // Bought before the first price we have, so the range can only start at that price.
-    if (row.status === "since" && before.length > 0) since = row.start_date;
-  }
-
-  const bought = cash(inside, "buy");
-  const sold = cash(inside, "sell");
-  const base = startValue + bought;
-  if (inside.length === 0 && startValue === 0) return { state: "not_held" };
-  const gain = valueNow + sold - startValue - bought;
-  return { state: "ok", gain, base, change: base > 0 ? gain / base : null, since };
+  const { bought, sold, cost } = replay(trades);
+  const gain = (held > 0 ? held * row.end_price_eur! : 0) + sold - bought;
+  return { state: "ok", gain, base: cost, change: cost > 0 ? gain / cost : null };
 }
 
 export interface Ranked {
@@ -90,10 +82,6 @@ export interface TradeSummary {
   counted: number;
   /** Holdings that should have a number: counted, or missing trades or a price. */
   total: number;
-  /** Of those counted, measured from their first price because the trades are older. */
-  partial: number;
-  /** Set when every counted holding starts at the same later date. */
-  since: string | null;
   best: Array<Ranked>;
   worst: Array<Ranked>;
 }
@@ -132,15 +120,11 @@ export function summarizeTrades(rows: Array<MeasuredRow>, topN = 2): TradeSummar
   );
   const gain = counted.reduce((s, m) => s + m.gain, 0);
   const base = counted.reduce((s, m) => s + m.base, 0);
-  const partial = counted.filter((m) => m.since != null);
-  const starts = new Set(partial.map((m) => m.since));
   return {
     change: base > 0 ? gain / base : null,
     gain,
     counted: counted.length,
     total: counted.length + missing.length,
-    partial: partial.length,
-    since: partial.length === counted.length && starts.size === 1 ? [...starts][0]! : null,
     ...ranked(rows, topN),
   };
 }

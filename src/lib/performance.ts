@@ -1,4 +1,4 @@
-import { RANGE_LABEL, monthAgo } from "@/lib/net-worth";
+import { RANGE_LABEL } from "@/lib/net-worth";
 import type { ChartRange } from "@/lib/net-worth";
 
 // The database picks each holding's prices for a range (holding_performance); lib/trades turns them
@@ -26,29 +26,6 @@ export interface PerformanceRow {
   end_date: string | null;
   end_price_eur: number | null;
   status: string;
-}
-
-export interface RangeQuery {
-  from: string; // p_from
-  lastMove: boolean; // p_last_move
-}
-
-/** What to ask the database for: dates come from the latest data day, not the browser clock. */
-export function rangeQuery(range: HoldingRange, lastIso: string): RangeQuery {
-  switch (range) {
-    case "1D":
-      return { from: lastIso, lastMove: true };
-    case "YTD":
-      return { from: `${Number(lastIso.slice(0, 4)) - 1}-12-31`, lastMove: false };
-    case "ALL":
-      return { from: "1970-01-01", lastMove: false }; // every holding starts at its first price
-    case "1M":
-      return { from: monthAgo(lastIso, 1), lastMove: false };
-    case "3M":
-      return { from: monthAgo(lastIso, 3), lastMove: false };
-    case "2Y":
-      return { from: monthAgo(lastIso, 24), lastMove: false };
-  }
 }
 
 /** The database answers for stocks and coins together; each page summarizes its own kind. */

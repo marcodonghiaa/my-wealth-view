@@ -83,6 +83,113 @@ describe("parseTradesCsv", () => {
   });
 });
 
+describe("parseTradesCsv, Trade Republic export", () => {
+  const HEADER =
+    '"datetime","date","account_type","category","type","asset_class","name","symbol","shares","price","amount","fee","tax","currency","transaction_id"';
+  const line = (
+    date: string,
+    category: string,
+    type: string,
+    name: string,
+    symbol: string,
+    shares: string,
+    price: string,
+    fee = "",
+    currency = "EUR",
+  ) =>
+    `"${date}T10:00:00Z","${date}","DEFAULT","${category}","${type}","FUND","${name}","${symbol}","${shares}","${price}","","${fee}","","${currency}","id"`;
+  const file = (...rows: Array<string>) => [HEADER, ...rows].join("\n");
+  const known = { kind: "stock" as const, knownKeys: new Set(["AA", "BB"]), today: "2026-10-31" };
+
+  it("reads buys and sells, with the fee as a positive number", () => {
+    const { trades, errors } = parseTradesCsv(
+      file(
+        line("2026-01-02", "TRADING", "BUY", "A", "AA", "2.5000000000", "10.000000"),
+        line("2026-02-02", "TRADING", "SELL", "A", "AA", "-1.0000000000", "12.000000", "-1.00"),
+      ),
+      known,
+    );
+    expect(errors).toEqual([]);
+    expect(trades).toEqual([
+      {
+        kind: "stock",
+        key: "AA",
+        side: "buy",
+        trade_date: "2026-01-02",
+        shares: 2.5,
+        price_eur: 10,
+        fee_eur: 0,
+      },
+      {
+        kind: "stock",
+        key: "AA",
+        side: "sell",
+        trade_date: "2026-02-02",
+        shares: 1,
+        price_eur: 12,
+        fee_eur: 1,
+      },
+    ]);
+  });
+
+  it("a split adds shares at no cost", () => {
+    const { trades } = parseTradesCsv(
+      file(line("2026-04-06", "CORPORATE_ACTION", "SPLIT", "A", "AA", "2.0", "", "", "")),
+      known,
+    );
+    expect(trades[0]).toMatchObject({ side: "buy", shares: 2, price_eur: 0, fee_eur: 0 });
+  });
+
+  it("skips dividends, migrations, saveback credits and card payments", () => {
+    const { trades, errors } = parseTradesCsv(
+      file(
+        line("2026-01-02", "CASH", "DIVIDEND", "A", "AA", "7.0", ""),
+        line("2026-01-02", "DELIVERY", "MIGRATION", "A", "AA", "-7.0", "90"),
+        line("2026-01-02", "DELIVERY", "MIGRATION", "A", "AA", "7.0", "90"),
+        line("2026-01-02", "CASH", "BENEFITS_SAVEBACK", "A", "AA", "", ""),
+        line("2026-01-02", "CASH", "CARD_TRANSACTION", "Shop", "", "", ""),
+      ),
+      known,
+    );
+    expect(errors).toEqual([]);
+    expect(trades).toEqual([]);
+  });
+
+  it("keeps something fully sold that isn't in your holdings, so its profit counts", () => {
+    const { trades, notes } = parseTradesCsv(
+      file(
+        line("2026-01-02", "TRADING", "BUY", "Sold", "ZZ", "1.0", "10"),
+        line("2026-02-02", "TRADING", "SELL", "Sold", "ZZ", "-1.0", "12"),
+      ),
+      known,
+    );
+    expect(trades).toHaveLength(2);
+    expect(notes).toEqual([]);
+  });
+
+  it("leaves out something still held that isn't in your holdings, and says so", () => {
+    const { trades, notes } = parseTradesCsv(
+      file(line("2026-01-02", "TRADING", "BUY", "Other", "ZZ", "1.0", "10")),
+      known,
+    );
+    expect(trades).toEqual([]);
+    expect(notes[0]).toMatch(/Other isn't in your holdings/);
+  });
+
+  it("refuses a price that isn't in EUR", () => {
+    const { errors } = parseTradesCsv(
+      file(line("2026-01-02", "TRADING", "BUY", "A", "AA", "1.0", "10", "", "USD")),
+      known,
+    );
+    expect(errors[0]).toMatch(/Line 2: the price isn't in EUR/);
+  });
+
+  it("belongs on the Portfolio page", () => {
+    const { errors } = parseTradesCsv(file(), { ...known, kind: "crypto" });
+    expect(errors[0]).toMatch(/Portfolio page/);
+  });
+});
+
 describe("newTrades", () => {
   const trade = {
     kind: "stock",
