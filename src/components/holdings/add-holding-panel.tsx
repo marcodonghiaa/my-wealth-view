@@ -18,17 +18,19 @@ const ISIN = /^[A-Z]{2}[A-Z0-9]{9}[0-9]$/;
 
 const COPY: Record<
   HoldingKind,
-  { title: string; placeholder: string; quantity: string; queryKey: string }
+  { title: string; placeholder: string; nothingFound: string; quantity: string; queryKey: string }
 > = {
   stock: {
     title: "Add an investment",
     placeholder: "Name, ticker or ISIN, e.g. VWCE or IE00BK5BQT80",
+    nothingFound: "Nothing found. Try the ISIN or a shorter name.",
     quantity: "Shares",
     queryKey: "portfolio-latest",
   },
   crypto: {
     title: "Add a coin",
     placeholder: "Name or symbol, e.g. Bitcoin or ETH",
+    nothingFound: "Nothing found. Try the full name or the ticker.",
     quantity: "Amount",
     queryKey: "crypto-latest",
   },
@@ -188,9 +190,7 @@ export function AddHoldingPanel({
           </form>
 
           {results && results.length === 0 && (
-            <p className="text-sm text-muted-foreground">
-              Nothing found. Try the ISIN or a shorter name.
-            </p>
+            <p className="text-sm text-muted-foreground">{copy.nothingFound}</p>
           )}
 
           {results && results.length > 0 && (
