@@ -19,7 +19,7 @@ export function CategoryPicker({
   const [open, setOpen] = useState(false);
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover modal open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <button
           type="button"
@@ -86,7 +86,7 @@ export function BulkCategoryPicker({
   const [open, setOpen] = useState(false);
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover modal open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <button
           type="button"
@@ -129,7 +129,7 @@ export function TypePicker({
   const [open, setOpen] = useState(false);
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover modal open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <button
           type="button"
