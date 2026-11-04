@@ -380,7 +380,7 @@ function RulesPage() {
                     onClick={() => deleteRule.mutate(rule.id)}
                     disabled={deleteRule.isPending}
                     aria-label={`Delete rule for ${rule.match_text}`}
-                    className="rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
+                    className="-m-2 inline-flex size-11 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
                   >
                     <Trash2 className="size-4" />
                   </button>

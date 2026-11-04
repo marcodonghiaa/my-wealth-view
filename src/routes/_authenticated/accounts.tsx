@@ -741,7 +741,7 @@ function AccountsPage() {
                       onClick={() => deleteCd.mutate(cd.id)}
                       disabled={deleteCd.isPending}
                       aria-label={`Remove ${cd.label}`}
-                      className="shrink-0 rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-negative/10 hover:text-negative disabled:opacity-50"
+                      className="-m-2 inline-flex size-11 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-negative/10 hover:text-negative disabled:opacity-50"
                     >
                       <Trash2 className="size-4" />
                     </button>
