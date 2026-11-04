@@ -123,7 +123,7 @@ export function TradesDialog({
     <Dialog>
       <DialogTrigger
         title={`Trades for ${name}`}
-        className="min-h-6 underline-offset-2 hover:underline"
+        className="-my-2.5 inline-flex min-h-11 items-center underline-offset-2 hover:underline"
       >
         {label}
       </DialogTrigger>

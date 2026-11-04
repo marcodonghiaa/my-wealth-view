@@ -96,7 +96,8 @@ describe("PerformanceSummary", () => {
       />,
     );
     expect(screen.getByText(/On 1 of 2 holdings/)).toBeInTheDocument();
-    expect(screen.getByText("Import trades from CSV")).toBeInTheDocument();
+    // 44px tall so it's easy to tap on a phone (it was 24px).
+    expect(screen.getByRole("button", { name: "Import trades from CSV" })).toHaveClass("min-h-11");
   });
 
   it("asks for purchases instead of showing a number when there are none", () => {
@@ -132,7 +133,8 @@ describe("ReturnCell", () => {
 
   it("shows the return, as the way into its trades", () => {
     cell(ok(200, 1000));
-    expect(screen.getByRole("button", { name: "+20.00%" })).toBeInTheDocument();
+    // 44px tall so it's easy to tap on a phone (it was 24px).
+    expect(screen.getByRole("button", { name: "+20.00%" })).toHaveClass("min-h-11");
   });
 
   it("asks for purchases when there are none", () => {

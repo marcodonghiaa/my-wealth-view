@@ -90,7 +90,7 @@ export function ImportTrades({ kind, saved }: { kind: "stock" | "crypto"; saved:
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger className="min-h-6 text-xs text-primary underline-offset-2 hover:underline">
+      <DialogTrigger className="-my-2.5 inline-flex min-h-11 items-center text-xs text-primary underline-offset-2 hover:underline">
         Import trades from CSV
       </DialogTrigger>
       <DialogContent>

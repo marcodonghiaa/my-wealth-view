@@ -3,11 +3,16 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
+const rows = vi.hoisted(() => ({ v_cd_holdings: [] as Array<Record<string, unknown>> }));
 vi.mock("@/integrations/supabase/client", () => {
-  const q: Record<string, unknown> = {};
-  for (const m of ["select", "order", "eq"]) q[m] = () => q;
-  q["then"] = (resolve: (v: unknown) => void) => resolve({ data: [], error: null });
-  return { supabase: { from: () => q } };
+  const query = (table: string) => {
+    const q: Record<string, unknown> = {};
+    for (const m of ["select", "order", "eq"]) q[m] = () => q;
+    q["then"] = (resolve: (v: unknown) => void) =>
+      resolve({ data: rows[table as keyof typeof rows] ?? [], error: null });
+    return q;
+  };
+  return { supabase: { from: query } };
 });
 vi.mock("@tanstack/react-router", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@tanstack/react-router")>()),
@@ -41,5 +46,39 @@ describe("Add certificate of deposit form", () => {
     await userEvent.click(screen.getByRole("button", { name: /add certificate|add cd|add/i }));
     const start = container.querySelector<HTMLInputElement>('input[type="date"]');
     expect(start?.value).toBe("2026-10-20");
+  });
+});
+
+describe("CD card", () => {
+  afterEach(() => {
+    rows.v_cd_holdings = [];
+  });
+
+  // Regression: the remove button was 28px, hard to hit with a thumb on a phone.
+  it("has a remove button big enough to tap (44px)", async () => {
+    rows.v_cd_holdings = [
+      {
+        id: "cd1",
+        label: "12-month deposit",
+        bank_label: "Demo Bank",
+        currency: "EUR",
+        principal: 1000,
+        annual_rate: 0.03,
+        start_date: "2026-01-01",
+        maturity_date: "2027-01-01",
+        is_matured: false,
+        current_value_native: 1025,
+        current_value_eur: 1025,
+      },
+    ];
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <Page />
+      </QueryClientProvider>,
+    );
+
+    const remove = await screen.findByRole("button", { name: "Remove 12-month deposit" });
+
+    expect(remove).toHaveClass("size-11");
   });
 });
