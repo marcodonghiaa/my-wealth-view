@@ -298,6 +298,15 @@ export function useShareMutation(queryClient: QueryClient, monthKey: string) {
   });
 }
 
+// Counting a transfer again also clears its "Transfer" label, which would otherwise stay on a
+// row that now counts as spend, and block picking Transfer again (the picker ignores the
+// current category). The next sync categorizes it.
+export function restorePatch(tx: Pick<TransactionRow, "credit_debit_indicator" | "category">) {
+  return tx.category === TRANSFER_CATEGORY
+    ? { flow_type: restoredFlow(tx), category: null, category_source: null }
+    : { flow_type: restoredFlow(tx) };
+}
+
 // Puts a transaction marked as a transfer back into spending or income. The row leaves the
 // transfers list at once; the month's totals are refetched.
 export function useFlowMutation(queryClient: QueryClient, monthKey: string) {
@@ -307,10 +316,9 @@ export function useFlowMutation(queryClient: QueryClient, monthKey: string) {
 
   return useMutation<void, Error, Vars, Context>({
     mutationFn: async ({ tx }) => {
-      const { error } = await forTx(
-        supabase.from("transactions").update({ flow_type: restoredFlow(tx) }),
-        tx,
-      );
+      // `as never`: category_source is not in the generated types.
+      const patch = restorePatch(tx) as never;
+      const { error } = await forTx(supabase.from("transactions").update(patch), tx);
       if (error) throw error;
     },
     onMutate: async ({ tx }) => {

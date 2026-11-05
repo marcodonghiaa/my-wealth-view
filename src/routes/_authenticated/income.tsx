@@ -106,7 +106,11 @@ function IncomePage() {
       <section aria-label="Total income" className="mb-8">
         <p className="text-[0.9375rem] font-medium text-muted-foreground">Total income</p>
         <div className="mt-1">
-          <HeadlineFigure value={total} currency="EUR" />
+          {incomeQuery.isError ? (
+            <p className="figure-display text-muted-foreground">—</p>
+          ) : (
+            <HeadlineFigure value={total} currency="EUR" />
+          )}
         </div>
       </section>
 
@@ -117,7 +121,7 @@ function IncomePage() {
               <div key={i} className="h-14 animate-pulse rounded-xl bg-muted" />
             ))}
           </div>
-        ) : rows.length === 0 ? (
+        ) : incomeQuery.isError ? null : rows.length === 0 ? (
           <div className="px-4 py-12 text-center text-sm text-muted-foreground">
             No income recorded for {monthLabel}.
           </div>

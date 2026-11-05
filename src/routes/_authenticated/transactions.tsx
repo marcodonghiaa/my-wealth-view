@@ -482,7 +482,7 @@ function TransactionsPage() {
               <div key={i} className="h-14 animate-pulse rounded-2xl bg-muted" />
             ))}
           </div>
-        ) : filtered.length === 0 ? (
+        ) : txQuery.isError ? null : filtered.length === 0 ? (
           <div className="px-4 py-12 text-center text-sm text-muted-foreground md:hidden">
             {transactions.length === 0
               ? `No transactions for ${monthLabel}.`
@@ -491,7 +491,7 @@ function TransactionsPage() {
         ) : (
           <ul className="divide-y md:hidden">
             {filtered.map((tx) => (
-              <TransactionCardView key={tx.entry_reference} {...viewProps(tx)} />
+              <TransactionCardView key={txId(tx)} {...viewProps(tx)} />
             ))}
           </ul>
         )}
@@ -528,7 +528,7 @@ function TransactionsPage() {
                     </td>
                   </tr>
                 ))
-              ) : filtered.length === 0 ? (
+              ) : txQuery.isError ? null : filtered.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="px-4 py-12 text-center text-sm text-muted-foreground">
                     {transactions.length === 0
@@ -537,9 +537,7 @@ function TransactionsPage() {
                   </td>
                 </tr>
               ) : (
-                filtered.map((tx) => (
-                  <TransactionRowView key={tx.entry_reference} {...viewProps(tx)} />
-                ))
+                filtered.map((tx) => <TransactionRowView key={txId(tx)} {...viewProps(tx)} />)
               )}
             </tbody>
           </table>
