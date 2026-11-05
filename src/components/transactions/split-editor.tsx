@@ -54,10 +54,14 @@ export function SplitEditor({
       </PopoverTrigger>
       <PopoverContent align="start" className="w-64 space-y-2.5 p-3">
         <div>
-          <label className="mb-1 block text-xs font-medium text-muted-foreground">
+          <label
+            htmlFor="split-your-share-full-amount"
+            className="mb-1 block text-xs font-medium text-muted-foreground"
+          >
             Your share ({tx.currency ?? "EUR"}, full amount {formatAmountPlain(fullAmount)})
           </label>
           <input
+            id="split-your-share-full-amount"
             type="number"
             inputMode="decimal"
             step="0.01"
@@ -69,10 +73,14 @@ export function SplitEditor({
           />
         </div>
         <div>
-          <label className="mb-1 block text-xs font-medium text-muted-foreground">
+          <label
+            htmlFor="split-owed-by-optional"
+            className="mb-1 block text-xs font-medium text-muted-foreground"
+          >
             Owed by (optional)
           </label>
           <input
+            id="split-owed-by-optional"
             type="text"
             placeholder="e.g. Anna, Luca"
             value={owedByInput}

@@ -451,8 +451,11 @@ function AccountsPage() {
               </ol>
               <div className="grid gap-3 sm:grid-cols-[auto_1fr]">
                 <div>
-                  <label className="mb-1 block text-xs text-muted-foreground">Country</label>
+                  <label htmlFor="acc-country" className="mb-1 block text-xs text-muted-foreground">
+                    Country
+                  </label>
                   <select
+                    id="acc-country"
                     value={bankCountry}
                     onChange={(e) => {
                       setBankCountry(e.target.value);
@@ -468,8 +471,11 @@ function AccountsPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs text-muted-foreground">Bank</label>
+                  <label htmlFor="acc-bank" className="mb-1 block text-xs text-muted-foreground">
+                    Bank
+                  </label>
                   <select
+                    id="acc-bank"
                     value={bankName}
                     onChange={(e) => setBankName(e.target.value)}
                     disabled={banksQuery.isPending || banksQuery.isError}
@@ -615,8 +621,11 @@ function AccountsPage() {
             <div className="px-5 pb-5">
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
                 <div className="lg:col-span-2">
-                  <label className="mb-1 block text-xs text-muted-foreground">Name</label>
+                  <label htmlFor="acc-name" className="mb-1 block text-xs text-muted-foreground">
+                    Name
+                  </label>
                   <input
+                    id="acc-name"
                     type="text"
                     value={label}
                     onChange={(e) => setLabel(e.target.value)}
@@ -625,10 +634,14 @@ function AccountsPage() {
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs text-muted-foreground">
+                  <label
+                    htmlFor="acc-bank-optional"
+                    className="mb-1 block text-xs text-muted-foreground"
+                  >
                     Bank (optional)
                   </label>
                   <input
+                    id="acc-bank-optional"
                     type="text"
                     value={bankLabel}
                     onChange={(e) => setBankLabel(e.target.value)}
@@ -637,8 +650,14 @@ function AccountsPage() {
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs text-muted-foreground">Currency</label>
+                  <label
+                    htmlFor="acc-currency"
+                    className="mb-1 block text-xs text-muted-foreground"
+                  >
+                    Currency
+                  </label>
                   <select
+                    id="acc-currency"
                     value={currency}
                     onChange={(e) => setCurrency(e.target.value)}
                     className="w-full rounded-lg border bg-background px-3 py-2 text-base focus:ring-2 focus:ring-ring focus:outline-none"
@@ -650,8 +669,14 @@ function AccountsPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs text-muted-foreground">Principal</label>
+                  <label
+                    htmlFor="acc-principal"
+                    className="mb-1 block text-xs text-muted-foreground"
+                  >
+                    Principal
+                  </label>
                   <input
+                    id="acc-principal"
                     type="number"
                     min={0}
                     step="0.01"
@@ -662,8 +687,11 @@ function AccountsPage() {
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs text-muted-foreground">APY %</label>
+                  <label htmlFor="acc-apy" className="mb-1 block text-xs text-muted-foreground">
+                    APY %
+                  </label>
                   <input
+                    id="acc-apy"
                     type="number"
                     min={0}
                     step="0.01"
@@ -674,8 +702,14 @@ function AccountsPage() {
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs text-muted-foreground">Start date</label>
+                  <label
+                    htmlFor="acc-start-date"
+                    className="mb-1 block text-xs text-muted-foreground"
+                  >
+                    Start date
+                  </label>
                   <input
+                    id="acc-start-date"
                     type="date"
                     value={startDate}
                     onChange={(e) => setStartDate(e.target.value)}
@@ -683,8 +717,14 @@ function AccountsPage() {
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs text-muted-foreground">Maturity date</label>
+                  <label
+                    htmlFor="acc-maturity-date"
+                    className="mb-1 block text-xs text-muted-foreground"
+                  >
+                    Maturity date
+                  </label>
                   <input
+                    id="acc-maturity-date"
                     type="date"
                     value={maturityDate}
                     onChange={(e) => setMaturityDate(e.target.value)}

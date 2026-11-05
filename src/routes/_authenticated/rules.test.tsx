@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 vi.mock("@/integrations/supabase/client", () => {
@@ -39,5 +39,20 @@ describe("Rules list", () => {
     const remove = await screen.findByRole("button", { name: "Delete rule for Netflix" });
 
     expect(remove).toHaveClass("size-11");
+  });
+
+  // Regression: the form's labels weren't tied to their fields, so screen readers read the
+  // match-text box and the pickers with no name.
+  it("names every field of the new-rule form", async () => {
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <Page />
+      </QueryClientProvider>,
+    );
+    fireEvent.click(await screen.findByRole("button", { name: /Add rule/ }));
+    expect(screen.getByLabelText("contains this text")).toHaveAttribute("type", "text");
+    for (const label of ["If this field", "set category (optional)", "set type (optional)"]) {
+      expect(screen.getByLabelText(label).tagName).toBe("BUTTON");
+    }
   });
 });

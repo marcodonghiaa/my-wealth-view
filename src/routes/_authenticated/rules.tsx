@@ -166,10 +166,13 @@ function RulesPage() {
           <div className="px-5 pb-5">
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
               <div className="lg:col-span-1">
-                <label className="mb-1 block text-xs text-muted-foreground">If this field</label>
+                <label htmlFor="rule-field" className="mb-1 block text-xs text-muted-foreground">
+                  If this field
+                </label>
                 <Popover open={fieldOpen} onOpenChange={setFieldOpen}>
                   <PopoverTrigger asChild>
                     <button
+                      id="rule-field"
                       type="button"
                       className="flex w-full items-center justify-between rounded-lg border bg-background px-3 py-2 text-base"
                     >
@@ -199,10 +202,14 @@ function RulesPage() {
               </div>
 
               <div className="lg:col-span-2">
-                <label className="mb-1 block text-xs text-muted-foreground">
+                <label
+                  htmlFor="rule-match-text"
+                  className="mb-1 block text-xs text-muted-foreground"
+                >
                   contains this text
                 </label>
                 <input
+                  id="rule-match-text"
                   type="text"
                   value={matchText}
                   onChange={(e) => setMatchText(e.target.value)}
@@ -212,12 +219,13 @@ function RulesPage() {
               </div>
 
               <div className="lg:col-span-1">
-                <label className="mb-1 block text-xs text-muted-foreground">
+                <label htmlFor="rule-category" className="mb-1 block text-xs text-muted-foreground">
                   set category (optional)
                 </label>
                 <Popover open={categoryOpen} onOpenChange={setCategoryOpen}>
                   <PopoverTrigger asChild>
                     <button
+                      id="rule-category"
                       type="button"
                       className="flex w-full items-center justify-between rounded-lg border bg-background px-3 py-2 text-base"
                     >
@@ -262,12 +270,13 @@ function RulesPage() {
               </div>
 
               <div className="lg:col-span-1">
-                <label className="mb-1 block text-xs text-muted-foreground">
+                <label htmlFor="rule-type" className="mb-1 block text-xs text-muted-foreground">
                   set type (optional)
                 </label>
                 <Popover open={typeOpen} onOpenChange={setTypeOpen}>
                   <PopoverTrigger asChild>
                     <button
+                      id="rule-type"
                       type="button"
                       className="flex w-full items-center justify-between rounded-lg border bg-background px-3 py-2 text-base"
                     >
