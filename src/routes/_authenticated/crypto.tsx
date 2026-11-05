@@ -6,6 +6,7 @@ import { colorsForAssets } from "@/lib/crypto-colors";
 import { supabase } from "@/integrations/supabase/client";
 import { currentValueEur, isEditableCryptoSource, priceEur } from "@/lib/holdings";
 import { AddHoldingPanel } from "@/components/holdings/add-holding-panel";
+import { SoldHoldings } from "@/components/holdings/sold-holdings";
 import { EditHolding } from "@/components/holdings/edit-holding";
 import { HeadlineFigure } from "@/components/headline-figure";
 import { ShareBar } from "@/components/share-bar";
@@ -363,6 +364,21 @@ function CryptoPage() {
           </section>
         </>
       )}
+
+      {/* Coinbase coins come back on their own when the sync sees them again. */}
+      <SoldHoldings
+        items={(query.data ?? []).flatMap((row) =>
+          row.amount === 0 && row.asset_symbol && row.source && isEditableCryptoSource(row.source)
+            ? [
+                {
+                  key: `${row.asset_symbol}:${row.source}`,
+                  name: `${row.name ?? row.asset_symbol} (${row.source})`,
+                  target: { kind: "crypto" as const, symbol: row.asset_symbol, source: row.source },
+                },
+              ]
+            : [],
+        )}
+      />
 
       {!query.isPending && (
         <div className="mt-6">

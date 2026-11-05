@@ -15,6 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { formatEur } from "@/lib/transactions";
 import { currentValueEur } from "@/lib/holdings";
 import { AddHoldingPanel } from "@/components/holdings/add-holding-panel";
+import { SoldHoldings } from "@/components/holdings/sold-holdings";
 import { EditHolding } from "@/components/holdings/edit-holding";
 import { HeadlineFigure } from "@/components/headline-figure";
 import { ShareBar } from "@/components/share-bar";
@@ -447,6 +448,20 @@ function PortfolioPage() {
           </div>
         </>
       )}
+
+      <SoldHoldings
+        items={(query.data ?? []).flatMap((row) =>
+          row.shares === 0 && row.isin
+            ? [
+                {
+                  key: row.isin,
+                  name: row.name ?? row.isin,
+                  target: { kind: "stock" as const, isin: row.isin },
+                },
+              ]
+            : [],
+        )}
+      />
 
       {!query.isPending && (
         <div className="mt-6">
