@@ -96,6 +96,19 @@ describe("Net worth page when an extra source fails to load", () => {
     await new Promise((r) => setTimeout(r, 50));
     expect(screen.queryByRole("alert")).toBeNull();
   });
+
+  // Health lives in Settings now; the dashboard no longer links to it.
+  it("has no Health shortcut", async () => {
+    render(
+      <QueryClientProvider
+        client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+      >
+        <Page />
+      </QueryClientProvider>,
+    );
+    await screen.findByRole("radio", { name: "USD" });
+    expect(screen.queryByRole("link", { name: /health/i })).toBeNull();
+  });
 });
 
 describe("Net worth page with only imported history", () => {
