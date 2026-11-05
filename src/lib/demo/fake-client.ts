@@ -172,6 +172,39 @@ class Store {
     this.refresh();
     return changed.length;
   }
+  /** Mirror of the database function delete_holding: returns how many holdings were deleted. */
+  deleteHolding(kind: unknown, key: unknown, source: unknown): number {
+    const db = this.db;
+    const stock = kind === "stock";
+    const isRow = (r: Row) =>
+      stock ? r["isin"] === key : r["asset_symbol"] === key && r["source"] === source;
+    const snapTable = stock ? "portfolio_snapshots" : "crypto_snapshots";
+    const holdTable = stock ? "portfolio_holdings" : "crypto_holdings";
+    // The demo's net worth is generated once, so take the deleted value out of it by hand.
+    const removed = new Map<string, number>();
+    for (const s of db[snapTable]!.filter(isRow)) {
+      const d = s["snapshot_date"] as string;
+      removed.set(d, (removed.get(d) ?? 0) + ((s["value_eur"] as number | null) ?? 0));
+    }
+    for (const r of db["v_net_worth_daily"] ?? []) {
+      const minus = removed.get(r["snapshot_date"] as string) ?? 0;
+      const field = stock ? "portfolio_total_eur" : "crypto_total_eur";
+      r[field] = (r[field] as number) - minus;
+      r["total_eur"] = (r["total_eur"] as number) - minus;
+    }
+    db[snapTable] = db[snapTable]!.filter((r) => !isRow(r));
+    const before = db[holdTable]!.length;
+    db[holdTable] = db[holdTable]!.filter((r) => !isRow(r));
+    const count = before - db[holdTable]!.length;
+    const coinLeft = !stock && db[holdTable]!.some((r) => r["asset_symbol"] === key);
+    if (!coinLeft) {
+      db["holding_trades"] = (db["holding_trades"] ?? []).filter(
+        (t) => !(t["kind"] === (stock ? "stock" : "crypto") && t["key"] === key),
+      );
+    }
+    this.refresh();
+    return count;
+  }
   refresh(): void {
     Object.assign(this.db, deriveViews(this.db as unknown as DemoDb, this.todayNum));
   }
@@ -465,7 +498,12 @@ export function createFakeClient(now: Date = new Date()): SupabaseClient<Databas
               ),
               error: null,
             }
-          : { data: null, error: DISABLED },
+          : fn === "delete_holding"
+            ? {
+                data: store.deleteHolding(args["p_kind"], args["p_key"], args["p_source"]),
+                error: null,
+              }
+            : { data: null, error: DISABLED },
     functions: {
       invoke: async (name: string, opts?: { body?: Record<string, unknown> }) =>
         name === "add-holding"

@@ -308,3 +308,55 @@ describe("fake client: adding and editing holdings", () => {
     ]);
   });
 });
+
+describe("fake client: delete_holding", () => {
+  type Rpc = (f: string, a: object) => PromiseLike<{ data: number; error: unknown }>;
+  const latestTotal = async (c: ReturnType<typeof fresh>) => {
+    const { data } = await c.from("v_net_worth_daily").select("snapshot_date,total_eur");
+    return data!.reduce((a, r) => (r.snapshot_date! > a.snapshot_date! ? r : a)).total_eur!;
+  };
+
+  it("removes a stock with its snapshots and trades, and its value leaves net worth", async () => {
+    const c = fresh();
+    const { data: holdings } = await c.from("portfolio_holdings").select("isin");
+    const isin = holdings![0]!.isin!;
+    const { data: snaps } = await c
+      .from("portfolio_snapshots")
+      .select("snapshot_date,value_eur")
+      .eq("isin", isin);
+    const lastValue = snaps!.reduce((a, s) =>
+      s.snapshot_date! > a.snapshot_date! ? s : a,
+    ).value_eur!;
+    const before = await latestTotal(c);
+
+    const res = await (c.rpc as unknown as Rpc)("delete_holding", { p_kind: "stock", p_key: isin });
+    expect(res).toEqual({ data: 1, error: null });
+    expect((await c.from("portfolio_holdings").select("isin").eq("isin", isin)).data).toEqual([]);
+    expect((await c.from("portfolio_snapshots").select("isin").eq("isin", isin)).data).toEqual([]);
+    expect((await c.from("holding_trades").select("key").eq("key", isin)).data).toEqual([]);
+    expect(await latestTotal(c)).toBeCloseTo(before - lastValue, 1);
+  });
+
+  it("removes one crypto source and returns 0 when there is nothing to delete", async () => {
+    const c = fresh();
+    const { data: coins } = await c.from("crypto_holdings").select("asset_symbol,source");
+    const { asset_symbol, source } = coins![0]!;
+    const del = () =>
+      (c.rpc as unknown as Rpc)("delete_holding", {
+        p_kind: "crypto",
+        p_key: asset_symbol,
+        p_source: source,
+      });
+    expect((await del()).data).toBe(1);
+    expect(
+      (
+        await c
+          .from("crypto_snapshots")
+          .select("asset_symbol")
+          .eq("asset_symbol", asset_symbol!)
+          .eq("source", source!)
+      ).data,
+    ).toEqual([]);
+    expect((await del()).data).toBe(0);
+  });
+});

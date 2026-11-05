@@ -24,6 +24,24 @@ async function saveQuantity(target: HoldingTarget, quantity: number): Promise<vo
   if (error) throw error;
 }
 
+// Deletes the holding for good, with its price history and trades (database function
+// delete_holding): for one added by mistake. Its value also leaves past net worth.
+async function deleteHolding(target: HoldingTarget): Promise<void> {
+  const { error } = await supabase.rpc("delete_holding", {
+    p_kind: target.kind,
+    p_key: target.kind === "stock" ? target.isin : target.symbol,
+    p_source: target.kind === "crypto" ? target.source : null,
+  });
+  if (error) {
+    // PGRST202: the function does not exist yet, so the backend migration was not applied.
+    throw new Error(
+      (error as { code?: string }).code === "PGRST202"
+        ? "Deleting needs a database update first: run supabase db push in the backend."
+        : error.message,
+    );
+  }
+}
+
 // Change how many you hold, or mark it sold. Sold sets the quantity to 0 instead of deleting the
 // row, so the holding's price history (and past net worth) stays.
 export function EditHolding({
@@ -39,15 +57,30 @@ export function EditHolding({
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState(String(quantity));
   const [error, setError] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  const refresh = () => {
+    void queryClient.invalidateQueries({
+      queryKey: [target.kind === "stock" ? "portfolio-latest" : "crypto-latest"],
+    });
+    void queryClient.invalidateQueries({ queryKey: ["net-worth-daily"] });
+  };
+
+  const remove = useMutation({
+    mutationFn: () => deleteHolding(target),
+    onSuccess: () => {
+      toast.success(`${name} deleted`);
+      refresh();
+      setOpen(false);
+    },
+    onError: (err) => setError(err instanceof Error ? err.message : "Couldn't delete"),
+  });
 
   const save = useMutation({
     mutationFn: (next: number) => saveQuantity(target, next),
     onSuccess: (_data, next) => {
       toast.success(next === 0 ? `${name} marked as sold` : `${name} updated`);
-      void queryClient.invalidateQueries({
-        queryKey: [target.kind === "stock" ? "portfolio-latest" : "crypto-latest"],
-      });
-      void queryClient.invalidateQueries({ queryKey: ["net-worth-daily"] });
+      refresh();
       setOpen(false);
     },
     onError: (err) => setError(err instanceof Error ? err.message : "Couldn't save"),
@@ -72,6 +105,7 @@ export function EditHolding({
         if (next) {
           setValue(String(quantity));
           setError(null);
+          setConfirmDelete(false);
         }
       }}
     >
@@ -112,6 +146,40 @@ export function EditHolding({
         >
           Mark as sold
         </button>
+        {confirmDelete ? (
+          <div className="space-y-2 rounded-lg bg-negative/10 p-3">
+            <p className="text-xs text-foreground">
+              Deletes {name}, its price history and trades. It also leaves your past net worth. Sold
+              it? Use Mark as sold instead.
+            </p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setConfirmDelete(false)}
+                className="min-h-11 flex-1 rounded-lg border px-3 text-sm font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => remove.mutate()}
+                disabled={remove.isPending}
+                className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-lg bg-negative px-3 text-sm font-medium text-white disabled:opacity-50"
+              >
+                {remove.isPending && <Loader2 className="size-4 animate-spin" />}
+                Delete for good
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setConfirmDelete(true)}
+            className="min-h-11 w-full rounded-lg px-3 text-sm text-muted-foreground hover:bg-muted"
+          >
+            Delete
+          </button>
+        )}
         {error && (
           <p role="alert" className="text-sm text-negative">
             {error}
