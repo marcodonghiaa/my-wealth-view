@@ -10,7 +10,7 @@ export function CategoryPicker({
   saving,
   variant = "pill",
 }: {
-  tx: TransactionRow;
+  tx: Pick<TransactionRow, "category" | "creditor_name">;
   onSelect: (category: string) => void;
   saving: boolean;
   // "icon": the row's round category icon is the trigger (desktop table rows).

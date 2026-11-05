@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { ArrowDownLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,6 +7,8 @@ import { formatISODate } from "@/lib/date";
 import { formatEur, formatMoney, incomeTitle } from "@/lib/transactions";
 import { MonthSwitcher } from "@/components/month-switcher";
 import { HeadlineFigure } from "@/components/headline-figure";
+import { CategoryPicker } from "@/components/transactions/pickers";
+import { useIncomeCategoryMutation } from "@/components/transactions/mutations";
 
 export const Route = createFileRoute("/_authenticated/income")({
   head: () => ({
@@ -30,6 +32,7 @@ export const Route = createFileRoute("/_authenticated/income")({
 
 interface IncomeRow {
   entry_reference: string;
+  account_uid: string | null;
   booking_date: string | null;
   category: string | null;
   creditor_name: string | null;
@@ -47,7 +50,9 @@ async function fetchIncomeForMonth(month: Date): Promise<Array<IncomeRow>> {
   const end = formatISODate(new Date(month.getFullYear(), month.getMonth() + 1, 1));
   const { data, error } = await supabase
     .from("v_transactions_eur")
-    .select("entry_reference,booking_date,category,creditor_name,currency,amount,signed_amount_eur")
+    .select(
+      "entry_reference,account_uid,booking_date,category,creditor_name,currency,amount,signed_amount_eur",
+    )
     .eq("flow_type", "income")
     .gte("booking_date", start)
     .lt("booking_date", end)
@@ -58,6 +63,7 @@ async function fetchIncomeForMonth(month: Date): Promise<Array<IncomeRow>> {
 
 function IncomePage() {
   const [month, setMonth] = useState<Date>(() => startOfMonth(new Date()));
+  const updateCategory = useIncomeCategoryMutation(useQueryClient());
 
   const incomeQuery = useQuery({
     queryKey: ["income", formatISODate(month)],
@@ -119,7 +125,7 @@ function IncomePage() {
           <ul className="divide-y">
             {rows.map((r) => (
               <li
-                key={r.entry_reference}
+                key={`${r.account_uid}:${r.entry_reference}`}
                 className="flex items-center justify-between gap-3 px-4 py-3 text-sm sm:px-5"
               >
                 <div className="min-w-0">
@@ -131,11 +137,15 @@ function IncomePage() {
                           month: "short",
                         })
                       : "—"}
-                    {r.category && (
-                      <span className="rounded-full border border-primary/25 bg-primary/10 px-2 py-0.5 text-primary">
-                        {r.category}
-                      </span>
-                    )}
+                    <CategoryPicker
+                      tx={r}
+                      saving={
+                        updateCategory.isPending &&
+                        updateCategory.variables?.tx.entry_reference === r.entry_reference &&
+                        updateCategory.variables.tx.account_uid === r.account_uid
+                      }
+                      onSelect={(category) => updateCategory.mutate({ tx: r, category })}
+                    />
                   </div>
                 </div>
                 <span className="inline-flex shrink-0 items-center gap-1 font-figure font-medium text-positive">
