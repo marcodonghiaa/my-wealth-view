@@ -22,6 +22,7 @@ import {
 } from "@/lib/transactions";
 import { BulkCategoryPicker } from "@/components/transactions/pickers";
 import { TransfersSection } from "@/components/transactions/transfers-section";
+import { AddTransaction } from "@/components/transactions/add-transaction";
 import {
   useBulkCategoryMutation,
   useDeleteMutation,
@@ -329,11 +330,14 @@ function TransactionsPage() {
         onClose={() => setSpotlightTx(null)}
       />
 
-      <header className="mb-8">
-        <h1 className="ios-large-title">Transactions</h1>
-        <p className="mt-0.5 text-sm text-muted-foreground">
-          Every transaction for the selected month, newest first.
-        </p>
+      <header className="mb-8 flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="ios-large-title">Transactions</h1>
+          <p className="mt-0.5 text-sm text-muted-foreground">
+            Every transaction for the selected month, newest first.
+          </p>
+        </div>
+        <AddTransaction today={formatISODate(new Date())} />
       </header>
 
       {txQuery.isError && (

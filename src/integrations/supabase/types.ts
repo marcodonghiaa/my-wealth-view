@@ -19,6 +19,7 @@ export type Database = {
           iban: string | null;
           identification_hash: string | null;
           label: string | null;
+          manual: boolean;
           uid: string;
           user_id: string;
         };
@@ -32,6 +33,7 @@ export type Database = {
           iban?: string | null;
           identification_hash?: string | null;
           label?: string | null;
+          manual?: boolean;
           uid: string;
           user_id: string;
         };
@@ -45,6 +47,7 @@ export type Database = {
           iban?: string | null;
           identification_hash?: string | null;
           label?: string | null;
+          manual?: boolean;
           uid?: string;
           user_id?: string;
         };
@@ -977,6 +980,18 @@ export type Database = {
       };
     };
     Functions: {
+      add_manual_transaction: {
+        Args: {
+          p_booking_date: string;
+          p_description: string;
+          p_amount: number;
+          p_direction: string;
+          p_currency?: string;
+          p_category?: string | null;
+          p_source?: string | null;
+        };
+        Returns: Array<{ account_uid: string; entry_reference: string }>;
+      };
       delete_holding: {
         Args: { p_kind: string; p_key: string; p_source?: string | null };
         Returns: number;

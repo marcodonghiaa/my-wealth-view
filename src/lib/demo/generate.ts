@@ -142,6 +142,7 @@ export function generateDemoData(now: Date = new Date()): DemoDb {
     consent_valid_until: `${iso(todayNum + 80)}T00:00:00Z`,
     created_at: stamp(iso(days[0]!)),
     identification_hash: null,
+    manual: false,
     user_id,
   }));
 

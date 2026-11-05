@@ -172,6 +172,67 @@ class Store {
     this.refresh();
     return changed.length;
   }
+  /** Mirror of the database function add_manual_transaction: returns the new row's key. */
+  addManualTransaction(args: Record<string, unknown>): {
+    data: Array<{ account_uid: string; entry_reference: string }> | null;
+    error: { message: string } | null;
+  } {
+    const amount = Number(args["p_amount"]);
+    const description = String(args["p_description"] ?? "").trim();
+    const direction = args["p_direction"];
+    if (!(amount > 0)) return { data: null, error: { message: "amount must be above zero" } };
+    if (!description) return { data: null, error: { message: "description is required" } };
+    if (direction !== "DBIT" && direction !== "CRDT")
+      return { data: null, error: { message: "direction must be DBIT or CRDT" } };
+    const source = String(args["p_source"] ?? "").trim() || "Manual";
+    const currency =
+      String(args["p_currency"] ?? "")
+        .trim()
+        .toUpperCase() || "EUR";
+    const category = (args["p_category"] as string | null | undefined) ?? null;
+    const accounts = this.db["accounts"]!;
+    let account = accounts.find(
+      (a) => a["manual"] && a["label"] === source && a["currency"] === currency,
+    );
+    if (!account) {
+      account = this.withDefaults("accounts", {
+        uid: `demo-manual-${this.nextId++}`,
+        currency,
+        label: source,
+        bank_name: source,
+        manual: true,
+        consent_valid_until: null,
+        iban: null,
+      });
+      accounts.push(account);
+    }
+    const entry_reference = `manual-${this.nextId++}`;
+    const date = String(args["p_booking_date"]);
+    this.db["transactions"]!.push(
+      this.withDefaults("transactions", {
+        entry_reference,
+        account_uid: account["uid"],
+        amount,
+        currency,
+        credit_debit_indicator: direction,
+        creditor_name: description,
+        custom_name: null,
+        booking_date: date,
+        value_date: date,
+        category,
+        category_source: category ? "manual" : null,
+        flow_type: category === "Transfer" ? "transfer" : direction === "DBIT" ? "spend" : "income",
+        transaction_type: null,
+        worth_it: null,
+        personal_amount: null,
+        owed_by: null,
+        refund_of: null,
+        deleted_at: null,
+      }),
+    );
+    this.refresh();
+    return { data: [{ account_uid: account["uid"] as string, entry_reference }], error: null };
+  }
   /** Mirror of the database function delete_holding: returns how many holdings were deleted. */
   deleteHolding(kind: unknown, key: unknown, source: unknown): number {
     const db = this.db;
@@ -498,12 +559,14 @@ export function createFakeClient(now: Date = new Date()): SupabaseClient<Databas
               ),
               error: null,
             }
-          : fn === "delete_holding"
-            ? {
-                data: store.deleteHolding(args["p_kind"], args["p_key"], args["p_source"]),
-                error: null,
-              }
-            : { data: null, error: DISABLED },
+          : fn === "add_manual_transaction"
+            ? store.addManualTransaction(args)
+            : fn === "delete_holding"
+              ? {
+                  data: store.deleteHolding(args["p_kind"], args["p_key"], args["p_source"]),
+                  error: null,
+                }
+              : { data: null, error: DISABLED },
     functions: {
       invoke: async (name: string, opts?: { body?: Record<string, unknown> }) =>
         name === "add-holding"
