@@ -50,7 +50,7 @@ describe("Add certificate of deposit form", () => {
 
   // Regression: principal and APY had no upper bound, so 1e308 (a valid number
   // input) was saved and the CD's value grew to €∞ and "1e+308% APY".
-  async function submitCd(principal: string, apy: string) {
+  async function submitCd(principal: string, apy: string, start?: string) {
     render(
       <QueryClientProvider client={new QueryClient()}>
         <Page />
@@ -63,6 +63,7 @@ describe("Add certificate of deposit form", () => {
     fireEvent.change(screen.getByPlaceholderText("10000"), { target: { value: principal } });
     fireEvent.change(screen.getByPlaceholderText("3.5"), { target: { value: apy } });
     const dates = document.querySelectorAll<HTMLInputElement>('input[type="date"]');
+    if (start) fireEvent.change(dates[0]!, { target: { value: start } });
     fireEvent.change(dates[1]!, { target: { value: "2099-01-01" } });
     await userEvent.click(screen.getByRole("button", { name: "Add CD" }));
   }
@@ -75,6 +76,16 @@ describe("Add certificate of deposit form", () => {
   it("rejects an APY above 100%", async () => {
     await submitCd("10000", "1e308");
     expect(screen.getByText(/APY\) must be between 0 and 100%/i)).toBeInTheDocument();
+  });
+
+  it("rejects a start date so far back the value can't be shown", async () => {
+    await submitCd("1000000000000", "100", "0001-01-01");
+    expect(screen.getByText(/too large to show/i)).toBeInTheDocument();
+  });
+
+  it("accepts the largest principal and APY", async () => {
+    await submitCd("1000000000000", "100");
+    expect(screen.queryByText(/must be|too large/i)).not.toBeInTheDocument();
   });
 });
 

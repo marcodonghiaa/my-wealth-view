@@ -72,6 +72,8 @@ interface CdRow {
 }
 
 const MAX_CD_PRINCIPAL = 1e12;
+const MAX_CD_APY_PCT = 100;
+const DAY_MS = 86_400_000;
 
 async function fetchBankAccounts(): Promise<Array<BankAccountRow>> {
   const { data, error } = await supabase
@@ -305,15 +307,24 @@ function AccountsPage() {
     }
     // Upper bounds keep the CD's growth (principal × (1 + APY)^years) a showable number.
     if (!Number.isFinite(principalNum) || principalNum <= 0 || principalNum > MAX_CD_PRINCIPAL) {
-      setFormError("Principal must be a positive number up to 1,000,000,000,000.");
+      setFormError(
+        `Principal must be a positive number up to ${MAX_CD_PRINCIPAL.toLocaleString("en-IE")}.`,
+      );
       return;
     }
-    if (!Number.isFinite(ratePctNum) || ratePctNum < 0 || ratePctNum > 100) {
-      setFormError("Annual rate (APY) must be between 0 and 100%.");
+    if (!Number.isFinite(ratePctNum) || ratePctNum < 0 || ratePctNum > MAX_CD_APY_PCT) {
+      setFormError(`Annual rate (APY) must be between 0 and ${MAX_CD_APY_PCT}%.`);
       return;
     }
-    if (!maturityDate || maturityDate <= startDate) {
+    if (!startDate || !maturityDate || maturityDate <= startDate) {
       setFormError("Maturity date must be after the start date.");
+      return;
+    }
+    const years = (Date.parse(maturityDate) - Date.parse(startDate)) / DAY_MS / 365.25;
+    if (!Number.isFinite(principalNum * (1 + ratePctNum / 100) ** years)) {
+      setFormError(
+        "These numbers grow too large to show by maturity. Check the start date and APY.",
+      );
       return;
     }
     setFormError(null);
