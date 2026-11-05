@@ -10,6 +10,19 @@ import {
   type TxKey,
 } from "@/lib/transactions";
 
+// Picking the Transfer category also moves the row out of spending and income (flow_type),
+// the same way the bank sync marks a transfer: it then shows in the Transfers list.
+export const TRANSFER_CATEGORY = "Transfer";
+export function categoryPatch(category: string | null): TablesUpdate<"transactions"> {
+  return category === TRANSFER_CATEGORY ? { category, flow_type: "transfer" } : { category };
+}
+
+// Lists and totals a move into or out of the transfers changes.
+const FLOW_KEYS = ["transactions", "transfers", "spend-by-category", "category-transactions"];
+function refetchFlows(queryClient: QueryClient) {
+  for (const k of FLOW_KEYS) void queryClient.invalidateQueries({ queryKey: [k] });
+}
+
 // account_uid is part of the primary key; filtering on the reference alone would also
 // touch the same reference in another account.
 function forTx<Q extends { eq: (c: string, v: string) => Q; is: (c: string, v: null) => Q }>(
@@ -41,17 +54,23 @@ export function useTransactionFieldMutation<
 
   return useMutation<void, Error, Vars, Context>({
     mutationFn: async ({ tx, value }) => {
-      const { error } = await forTx(
-        supabase.from("transactions").update({ [opts.writeColumn ?? column]: value } as never),
-        tx,
-      );
+      const patch =
+        column === "category"
+          ? categoryPatch(value as string | null)
+          : { [opts.writeColumn ?? column]: value };
+      const { error } = await forTx(supabase.from("transactions").update(patch as never), tx);
       if (error) throw error;
     },
     onMutate: async ({ tx, value }) => {
       await queryClient.cancelQueries({ queryKey: ["transactions", monthKey] });
       const previous = queryClient.getQueryData<Array<TransactionRow>>(["transactions", monthKey]);
+      const toTransfer = column === "category" && value === TRANSFER_CATEGORY;
       queryClient.setQueryData<Array<TransactionRow>>(["transactions", monthKey], (old) =>
-        old ? old.map((row) => (txId(row) === txId(tx) ? { ...row, [column]: value } : row)) : old,
+        old
+          ? toTransfer
+            ? old.filter((row) => txId(row) !== txId(tx))
+            : old.map((row) => (txId(row) === txId(tx) ? { ...row, [column]: value } : row))
+          : old,
       );
       return { previous };
     },
@@ -62,8 +81,9 @@ export function useTransactionFieldMutation<
     onSuccess: (_data, vars) => {
       if (opts.successMessage) toast.success(opts.successMessage(vars.value));
     },
-    onSettled: () => {
-      if (opts.writeColumn)
+    onSettled: (_data, _error, vars) => {
+      if (column === "category" && vars.value === TRANSFER_CATEGORY) refetchFlows(queryClient);
+      else if (opts.writeColumn)
         void queryClient.invalidateQueries({ queryKey: ["transactions", monthKey] });
     },
   });
@@ -131,14 +151,18 @@ export function useBulkCategoryMutation(
 ) {
   return useMutation({
     mutationFn: ({ txs, category: next }: { txs: Array<TxKey>; category: string }) =>
-      updateTxs(txs, { category: next }),
+      updateTxs(txs, categoryPatch(next)),
     onSuccess: (_data, vars) => {
       const ids = new Set(vars.txs.map(txId));
+      const toTransfer = vars.category === TRANSFER_CATEGORY;
       queryClient.setQueryData<Array<TransactionRow>>(["transactions", monthKey], (old) =>
         old
-          ? old.map((row) => (ids.has(txId(row)) ? { ...row, category: vars.category } : row))
+          ? toTransfer
+            ? old.filter((row) => !ids.has(txId(row)))
+            : old.map((row) => (ids.has(txId(row)) ? { ...row, category: vars.category } : row))
           : old,
       );
+      if (toTransfer) refetchFlows(queryClient);
       toast.success(
         `Set ${vars.txs.length} transaction${vars.txs.length === 1 ? "" : "s"} to ${vars.category}`,
       );
@@ -262,10 +286,6 @@ export function useFlowMutation(queryClient: QueryClient, monthKey: string) {
     onSuccess: (_data, { tx }) => {
       toast.success(`Counted as ${restoredFlow(tx)}`);
     },
-    onSettled: () => {
-      for (const k of ["transactions", "transfers", "spend-by-category", "category-transactions"]) {
-        void queryClient.invalidateQueries({ queryKey: [k] });
-      }
-    },
+    onSettled: () => refetchFlows(queryClient),
   });
 }
