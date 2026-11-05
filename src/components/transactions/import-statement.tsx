@@ -18,6 +18,7 @@ import {
   type StatementRow,
 } from "@/lib/import/statement";
 import { importStatement, newRows, type StatementClient } from "@/lib/import/statement-commit";
+import { readStatementPdf } from "@/lib/import/statement-pdf";
 import { formatMoney } from "@/lib/transactions";
 
 const client = supabase as unknown as StatementClient;
@@ -29,6 +30,14 @@ const FIELD_LABELS: Array<[keyof StatementColumns, string]> = [
   ["in", "Money in"],
   ["out", "Money out"],
 ];
+
+const NO_COLUMNS: StatementColumns = {
+  date: null,
+  description: null,
+  amount: null,
+  in: null,
+  out: null,
+};
 
 const field =
   "h-11 w-full min-w-0 rounded-full border bg-background px-4 text-base focus:ring-2 focus:ring-ring focus:outline-none";
@@ -49,6 +58,7 @@ export function ImportStatement() {
   const [source, setSource] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState<number | null>(null);
+  const [readingPdf, setReadingPdf] = useState(false);
 
   function reset() {
     setText(null);
@@ -76,15 +86,32 @@ export function ImportStatement() {
     }
   }
 
+  async function handlePdf(file: File) {
+    setReadingPdf(true);
+    try {
+      const rows = await readStatementPdf(
+        (name, opts) => supabase.functions.invoke(name, opts),
+        file,
+      );
+      setStatement({ headers: [], columns: NO_COLUMNS, rows, skipped: 0 });
+      setFresh(await newRows(client, rows));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Couldn't read the PDF.");
+    } finally {
+      setReadingPdf(false);
+    }
+  }
+
   async function handleFile(file: File) {
     reset();
+    setSource(sourceFromFile(file.name));
+    if (/\.pdf$/i.test(file.name)) return handlePdf(file);
     if (!/\.(csv|txt)$/i.test(file.name)) {
-      setError("Save the statement as CSV first (in Excel or Sheets: File → Save as → CSV).");
+      setError("Use a CSV or PDF. Excel files: File → Save as → CSV first.");
       return;
     }
     const csv = await file.text();
     setText(csv);
-    setSource(sourceFromFile(file.name));
     // Headers for the column pickers, even when the columns can't be guessed.
     const firstLine = csv.replace(/^\uFEFF/, "").split(/\r?\n/)[0] ?? "";
     setHeaders(firstLine.split(/[;,\t]/).map((h) => h.trim()));
@@ -94,7 +121,7 @@ export function ImportStatement() {
   function pick(key: keyof StatementColumns, value: string) {
     if (!text) return;
     const next = {
-      ...(columns ?? { date: null, description: null, amount: null, in: null, out: null }),
+      ...(columns ?? NO_COLUMNS),
       [key]: value === "" ? null : Number(value),
     };
     setColumns(next);
@@ -149,16 +176,17 @@ export function ImportStatement() {
         <DialogHeader>
           <DialogTitle>Import statement</DialogTitle>
           <DialogDescription>
-            A CSV from your bank (Fineco, any bank) or a spreadsheet. Excel files: save as CSV
-            first. Transactions already here are left out.
+            A CSV or PDF statement from your bank (Fineco, any bank), or a spreadsheet saved as CSV.
+            A PDF is read by the AI: check the rows before importing. Transactions already here are
+            left out.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
           <input
             aria-label="Statement file"
             type="file"
-            accept=".csv,.txt,text/csv"
-            disabled={importing}
+            accept=".csv,.txt,.pdf,text/csv,application/pdf"
+            disabled={importing || readingPdf}
             onChange={(e) => {
               const file = e.target.files?.[0];
               if (file) void handleFile(file);
@@ -236,6 +264,12 @@ export function ImportStatement() {
                 />
               </label>
             </>
+          )}
+
+          {readingPdf && (
+            <p className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="size-4 animate-spin" /> Reading the PDF, this can take a minute…
+            </p>
           )}
 
           {error && (
