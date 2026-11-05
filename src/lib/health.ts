@@ -112,7 +112,7 @@ export function pushRow(
       title,
       state: "warn",
       detail:
-        "Install the app first: on iPhone, Safari → Share → Add to Home Screen; on Android, Chrome menu → Install app; on a computer, the install icon in the address bar. Then open the app and turn this on.",
+        "Install the app first (iPhone: Safari → Share → Add to Home Screen), then turn this on.",
     };
   }
   return subscribed

@@ -176,8 +176,7 @@ export function ImportWizard() {
           />
         </label>
         <p className="mt-1 text-sm text-muted-foreground">
-          In Excel: File, Save As, CSV. The file is read in your browser and nothing is uploaded
-          until you press Import. Amounts are read as EUR.
+          CSV, amounts in EUR. Nothing uploads until Import.
         </p>
         {error && (
           <p role="alert" className="mt-3 text-sm text-negative">
@@ -318,8 +317,7 @@ export function ImportWizard() {
 
       {last && (
         <div role="status" className="rounded-2xl border bg-card p-5 text-sm card-ring">
-          Last import: {last.count} rows. Undo removes them, but values they replaced are not
-          restored.
+          Last import: {last.count} rows. Undo won't restore overwritten months.
           <div className="mt-3">
             <button
               type="button"

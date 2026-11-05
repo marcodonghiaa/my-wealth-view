@@ -145,10 +145,7 @@ function RulesPage() {
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-8 md:py-12">
       <header className="mb-8">
         <h1 className="ios-large-title">Rules</h1>
-        <p className="mt-0.5 text-sm text-muted-foreground">
-          Rules run automatically before AI categorization — if a transaction's chosen field
-          contains your match text, it's categorized instantly, no AI needed.
-        </p>
+        <p className="mt-0.5 text-sm text-muted-foreground">Matched before AI categorization.</p>
       </header>
 
       {/* Add rule form — collapsed by default so it doesn't push the
@@ -349,10 +346,7 @@ function RulesPage() {
         ) : rulesQuery.isError ? (
           <div className="p-5 text-sm text-destructive">Failed to load rules.</div>
         ) : rules.length === 0 ? (
-          <div className="p-8 text-center text-sm text-muted-foreground">
-            No rules yet. Add your first one above — e.g. any transaction whose creditor contains
-            "spotify" becomes Entertainment / Subscription.
-          </div>
+          <div className="p-8 text-center text-sm text-muted-foreground">No rules yet.</div>
         ) : (
           <ul className="divide-y">
             {rules.map((rule) => (
