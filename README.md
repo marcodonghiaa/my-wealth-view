@@ -53,7 +53,7 @@ bun install
 bun run dev
 ```
 
-Set your own `.env`: in a browser on a self-hosted domain the app throws rather than silently connecting to the maintainer's Supabase project.
+Set your own `.env`. Without it a production build refuses to start, and `bun run dev` runs only the demo (`/demo`): the app never connects to anyone else's Supabase project.
 
 ## Import your history
 

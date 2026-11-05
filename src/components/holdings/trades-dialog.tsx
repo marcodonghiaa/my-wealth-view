@@ -74,6 +74,7 @@ export function TradesDialog({
   const done = (message: string) => {
     toast.success(message);
     void queryClient.invalidateQueries({ queryKey: ["holding-trades"] });
+    void queryClient.invalidateQueries({ queryKey: ["holding-performance"] });
     setForm(blank());
     setEditing(null);
     setError(null);

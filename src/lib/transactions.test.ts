@@ -16,6 +16,8 @@ import {
   nativeSignedAmount,
   personalAmountEur,
   restoredFlow,
+  selectedOnly,
+  txId,
   startOfMonth,
   type TransactionRow,
   formatEur,
@@ -334,5 +336,17 @@ describe("formatEur / formatUsd", () => {
     expect(formatEur(1234.5)).toBe("€1,234.50");
     expect(formatEur(0)).toBe("€0.00");
     expect(formatUsd(10)).toBe("US$10.00");
+  });
+});
+
+// Regression: selecting rows, then changing the filter, made Delete also remove rows you could
+// no longer see.
+describe("selectedOnly", () => {
+  it("keeps only selected rows that are shown", () => {
+    const a = tx({ entry_reference: "a", account_uid: "acc" });
+    const b = tx({ entry_reference: "b", account_uid: "acc" });
+    const hidden = tx({ entry_reference: "c", account_uid: "acc" });
+    const selected = new Set([txId(a), txId(hidden)]);
+    expect(selectedOnly([a, b], selected).map((r) => r.entry_reference)).toEqual(["a"]);
   });
 });

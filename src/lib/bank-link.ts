@@ -25,6 +25,23 @@ export function linkedMessage(params: URLSearchParams): string | null {
   return `${linked} account${linked === "1" ? "" : "s"} connected`;
 }
 
+// Every message bank-consent-callback can send in ?bank_link_error. The URL can be crafted, so
+// anything else shows a fixed message instead of the link's own text.
+const LINK_ERRORS = new Set([
+  "Couldn't link the bank, please try again",
+  "The bank did not approve the connection",
+  "Missing code or state",
+  "Invalid or expired consent request",
+  "Consent request expired, please try again",
+  "Enable Banking didn't share any accounts. Link this bank once on enablebanking.com → API applications → your app → Link accounts, then try again.",
+]);
+
+export function linkErrorMessage(params: URLSearchParams): string | null {
+  const error = params.get("bank_link_error");
+  if (error == null) return null;
+  return LINK_ERRORS.has(error) ? error : "Couldn't link the bank, please try again";
+}
+
 // The bank and country to prefill when renewing `bank`, from the first of its rows that stored
 // both at link time. Null for rows linked before they were stored: the form opens unprefilled.
 export function renewTarget(

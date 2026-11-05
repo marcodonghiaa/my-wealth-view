@@ -233,6 +233,47 @@ class Store {
     this.refresh();
     return { data: [{ account_uid: account["uid"] as string, entry_reference }], error: null };
   }
+  /** Mirror of the database function set_holding_quantity: the new quantity, and today's value
+   * from the latest price, taken into net worth at once. Returns how many holdings changed. */
+  setHoldingQuantity(kind: unknown, key: unknown, quantity: unknown, source: unknown): number {
+    const db = this.db;
+    const stock = kind === "stock";
+    const qty = Number(quantity);
+    const isRow = (r: Row) =>
+      stock ? r["isin"] === key : r["asset_symbol"] === key && r["source"] === source;
+    const holding = db[stock ? "portfolio_holdings" : "crypto_holdings"]!.find(isRow);
+    if (!holding || !(qty >= 0)) return 0;
+    const qtyField = stock ? "shares" : "amount";
+    const oldQty = Number(holding[qtyField]);
+    holding[qtyField] = qty;
+    const snaps = db[stock ? "portfolio_snapshots" : "crypto_snapshots"]!.filter(isRow);
+    const last = snaps.reduce<Row | undefined>(
+      (a, r) => (!a || String(r["snapshot_date"]) > String(a["snapshot_date"]) ? r : a),
+      undefined,
+    );
+    if (last && oldQty > 0) {
+      const oldValue = Number(last["value_eur"] ?? 0);
+      const newValue = (oldValue * qty) / oldQty;
+      last["value_eur"] = newValue;
+      if (stock) last["value_native"] = (Number(last["value_native"] ?? 0) * qty) / oldQty;
+      else {
+        last["amount"] = qty;
+        last["value_usd"] = (Number(last["value_usd"] ?? 0) * qty) / oldQty;
+      }
+      const daily = db["v_net_worth_daily"] ?? [];
+      const latest = daily.reduce<Row | undefined>(
+        (a, r) => (!a || String(r["snapshot_date"]) > String(a["snapshot_date"]) ? r : a),
+        undefined,
+      );
+      if (latest) {
+        const field = stock ? "portfolio_total_eur" : "crypto_total_eur";
+        latest[field] = Number(latest[field]) + newValue - oldValue;
+        latest["total_eur"] = Number(latest["total_eur"]) + newValue - oldValue;
+      }
+    }
+    this.refresh();
+    return 1;
+  }
   /** Mirror of the database function delete_holding: returns how many holdings were deleted. */
   deleteHolding(kind: unknown, key: unknown, source: unknown): number {
     const db = this.db;
@@ -561,12 +602,22 @@ export function createFakeClient(now: Date = new Date()): SupabaseClient<Databas
             }
           : fn === "add_manual_transaction"
             ? store.addManualTransaction(args)
-            : fn === "delete_holding"
+            : fn === "set_holding_quantity"
               ? {
-                  data: store.deleteHolding(args["p_kind"], args["p_key"], args["p_source"]),
+                  data: store.setHoldingQuantity(
+                    args["p_kind"],
+                    args["p_key"],
+                    args["p_quantity"],
+                    args["p_source"],
+                  ),
                   error: null,
                 }
-              : { data: null, error: DISABLED },
+              : fn === "delete_holding"
+                ? {
+                    data: store.deleteHolding(args["p_kind"], args["p_key"], args["p_source"]),
+                    error: null,
+                  }
+                : { data: null, error: DISABLED },
     functions: {
       invoke: async (name: string, opts?: { body?: Record<string, unknown> }) =>
         name === "add-holding"

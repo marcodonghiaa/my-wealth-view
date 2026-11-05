@@ -112,6 +112,8 @@ export function AddHoldingPanel({
       );
       void queryClient.invalidateQueries({ queryKey: [copy.queryKey] });
       void queryClient.invalidateQueries({ queryKey: ["net-worth-daily"] });
+      // Returns compare trades with the quantity held, so they need the new holding too.
+      void queryClient.invalidateQueries({ queryKey: ["holding-performance"] });
       setQuery("");
       setResults(null);
       setPicked(null);

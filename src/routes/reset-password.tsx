@@ -12,7 +12,10 @@ export const resetPasswordUrl = (origin: string) => `${origin}/reset-password`;
 export const Route = createFileRoute("/reset-password")({
   ssr: false,
   // The recovery link signs in for real, so a demo visit in this tab ends here.
-  beforeLoad: () => exitDemoMode(),
+  beforeLoad: ({ context }) => {
+    exitDemoMode();
+    context.queryClient.clear();
+  },
   head: () => ({
     meta: [{ title: "Choose a new password — MyFinances" }, { name: "robots", content: "noindex" }],
   }),
