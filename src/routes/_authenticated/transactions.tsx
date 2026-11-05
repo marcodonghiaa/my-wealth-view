@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { accountName } from "@/components/bank-badge";
+import { accountName, bankOf } from "@/components/bank-badge";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Search, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatISODate } from "@/lib/date";
@@ -120,6 +120,8 @@ async function fetchAccounts(): Promise<Record<string, AccountRow>> {
 function TransactionsPage() {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<string>("all");
+  const [bank, setBank] = useState<string>("all");
+  const [day, setDay] = useState("");
   const [month, setMonth] = useState(() => startOfMonth(new Date()));
   const monthKey = useMemo(() => formatISODate(month), [month]);
   const queryClient = useQueryClient();
@@ -212,12 +214,27 @@ function TransactionsPage() {
 
   const categories = useMemo(() => listCategories(transactions), [transactions]);
 
-  const filtered = useMemo(
-    () => filterTransactions(transactions, search, category),
-    [transactions, search, category],
+  const accounts = useMemo(() => accountsQuery.data ?? {}, [accountsQuery.data]);
+  const bankFor = useCallback(
+    (uid: string | null) => {
+      const account = uid ? accounts[uid] : undefined;
+      return account ? bankOf(account) : "—";
+    },
+    [accounts],
+  );
+  // Only banks that appear this month, so every option matches something.
+  const banks = useMemo(
+    () =>
+      [...new Set(transactions.filter((tx) => tx.account_uid).map((tx) => bankFor(tx.account_uid)))]
+        .filter((b) => b !== "—")
+        .sort(),
+    [transactions, bankFor],
   );
 
-  const accounts = accountsQuery.data ?? {};
+  const filtered = useMemo(
+    () => filterTransactions(transactions, search, category, { bank, bankFor, day }),
+    [transactions, search, category, bank, bankFor, day],
+  );
 
   // Shares cannot be bulk edited or deleted: they are not rows of the transactions table.
   const filteredIds = useMemo(
@@ -248,6 +265,7 @@ function TransactionsPage() {
 
   function goToMonth(next: Date) {
     setSelected(new Set());
+    setDay(""); // a day belongs to one month
     setMonth(next);
   }
 
@@ -372,6 +390,30 @@ function TransactionsPage() {
             </option>
           ))}
         </select>
+        {banks.length > 1 && (
+          <select
+            value={bank}
+            onChange={(e) => setBank(e.target.value)}
+            aria-label="Filter by bank"
+            className="h-11 rounded-full bg-card px-4 text-base text-foreground focus:ring-2 focus:ring-ring focus:outline-none"
+          >
+            <option value="all">All banks</option>
+            {banks.map((b) => (
+              <option key={b} value={b}>
+                {b}
+              </option>
+            ))}
+          </select>
+        )}
+        <input
+          type="date"
+          value={day}
+          min={formatISODate(month)}
+          max={formatISODate(new Date(month.getFullYear(), month.getMonth() + 1, 0))}
+          onChange={(e) => setDay(e.target.value)}
+          aria-label="Filter by day"
+          className="h-11 min-w-0 rounded-full bg-card px-4 text-base text-foreground focus:ring-2 focus:ring-ring focus:outline-none"
+        />
       </div>
 
       {/* Bulk action bar */}
