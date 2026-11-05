@@ -1,9 +1,13 @@
-import { resetDemoClient } from "./fake-client";
-
 // Demo mode lasts for the browser tab (sessionStorage). The sign-in page and the sign-out button
 // both end it, so real data and demo data never mix in one visit.
 const KEY = "mwv-demo";
 let inMemory = false;
+// The fake client lives in its own chunk, loaded only for the demo; it registers its reset here
+// so leaving the demo starts the next visit from scratch without this file importing it.
+let resetDemo: (() => void) | null = null;
+export function onDemoExit(reset: () => void): void {
+  resetDemo = reset;
+}
 
 export function isDemoMode(): boolean {
   if (inMemory) return true;
@@ -25,7 +29,7 @@ export function enterDemoMode(): void {
 
 export function exitDemoMode(): void {
   inMemory = false;
-  resetDemoClient();
+  resetDemo?.();
   try {
     window.sessionStorage.removeItem(KEY);
   } catch {

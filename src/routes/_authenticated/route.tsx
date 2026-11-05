@@ -17,7 +17,8 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { supabase } from "@/integrations/supabase/client";
+import { loadDemoClient, supabase } from "@/integrations/supabase/client";
+import { isDemoMode } from "@/lib/demo/mode";
 import { registerDashboardOrigin } from "@/lib/register-origin";
 import { MadeWith } from "@/components/made-with";
 import { BrandMark } from "@/components/brand-mark";
@@ -27,6 +28,8 @@ import { DemoBadge } from "@/components/demo-badge";
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
   beforeLoad: async () => {
+    // A reloaded demo tab needs the fake client (its own chunk) before anything asks for data.
+    if (isDemoMode()) await loadDemoClient();
     try {
       // getSession reads the stored login with no network call; getUser asked Supabase's server
       // on every page change. The database still enforces access, so this only picks the screen.

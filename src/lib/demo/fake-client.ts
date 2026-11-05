@@ -4,6 +4,7 @@ import type { Database } from "@/integrations/supabase/types";
 import { DEMO_USER_ID, generateDemoData, type DemoDb } from "./generate";
 import { demoHoldingPerformance } from "./performance";
 import { deriveViews, todayNumOf } from "./views";
+import { onDemoExit } from "./mode";
 
 // A stand-in for the Supabase client that answers from generated, in-memory data. It makes no
 // network calls at all, and every write lives only in this object: a reload starts over.
@@ -675,3 +676,5 @@ export const getDemoClient = () => (shared ??= createFakeClient());
 export const resetDemoClient = () => {
   shared = null;
 };
+
+onDemoExit(resetDemoClient);
