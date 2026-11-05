@@ -180,6 +180,18 @@
     outline-offset: 2px;
   }
 
+  /* iOS Safari gives date inputs a wide built-in minimum width, so in a narrow
+     grid column they ran past their container. Let them shrink like any input. */
+  input[type="date"] {
+    min-width: 0;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  input[type="date"]::-webkit-date-and-time-value {
+    text-align: left;
+  }
+
   ::selection {
     background-color: var(--color-mint);
     color: oklch(0.3 0.05 167);
