@@ -977,6 +977,10 @@ export type Database = {
       };
     };
     Functions: {
+      set_holding_quantity: {
+        Args: { p_kind: string; p_key: string; p_quantity: number; p_source?: string | null };
+        Returns: number;
+      };
       delete_holding: {
         Args: { p_kind: string; p_key: string; p_source?: string | null };
         Returns: number;
