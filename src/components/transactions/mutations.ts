@@ -18,7 +18,13 @@ export function categoryPatch(category: string | null): TablesUpdate<"transactio
 }
 
 // Lists and totals a move into or out of the transfers changes.
-const FLOW_KEYS = ["transactions", "transfers", "spend-by-category", "category-transactions"];
+const FLOW_KEYS = [
+  "transactions",
+  "transfers",
+  "income",
+  "spend-by-category",
+  "category-transactions",
+];
 function refetchFlows(queryClient: QueryClient) {
   for (const k of FLOW_KEYS) void queryClient.invalidateQueries({ queryKey: [k] });
 }
@@ -86,6 +92,24 @@ export function useTransactionFieldMutation<
       else if (opts.writeColumn)
         void queryClient.invalidateQueries({ queryKey: ["transactions", monthKey] });
     },
+  });
+}
+
+// Category of an income row (Income page). Picking Transfer moves it out of income.
+export function useIncomeCategoryMutation(queryClient: QueryClient) {
+  return useMutation<void, Error, { tx: TxKey; category: string }>({
+    mutationFn: async ({ tx, category }) => {
+      const { error } = await forTx(
+        supabase.from("transactions").update(categoryPatch(category)),
+        tx,
+      );
+      if (error) throw error;
+    },
+    onError: (error) => toast.error("Couldn't save category", { description: error.message }),
+    onSuccess: (_data, { category }) => {
+      if (category === TRANSFER_CATEGORY) toast.success("Moved to transfers");
+    },
+    onSettled: () => refetchFlows(queryClient),
   });
 }
 

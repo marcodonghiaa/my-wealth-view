@@ -49,6 +49,7 @@ import {
   useBulkCategoryMutation,
   useDeleteMutation,
   useFlowMutation,
+  useIncomeCategoryMutation,
   useRenameMerchantMutation,
   useShareMutation,
   useSplitMutation,
@@ -215,6 +216,33 @@ describe("transaction mutations are scoped to one account", () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(calls[0]?.update).toEqual({ category: "Transfer", flow_type: "transfer" });
     expect(cached().map((r) => r.account_uid)).toEqual(["a1"]);
+  });
+
+  it("income: picking Transfer moves the row out of income and refetches the income list", async () => {
+    const { queryClient, wrapper } = setup();
+    const invalidate = vi.spyOn(queryClient, "invalidateQueries");
+    const { result } = renderHook(() => useIncomeCategoryMutation(queryClient), { wrapper });
+    await act(() =>
+      result.current.mutateAsync({
+        tx: { account_uid: "a1", entry_reference: "r1" },
+        category: "Transfer",
+      }),
+    );
+    expect(calls[0]?.update).toEqual({ category: "Transfer", flow_type: "transfer" });
+    expect(calls[0]?.eq).toEqual({ account_uid: "a1", entry_reference: "r1" });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ["income"] });
+  });
+
+  it("income: another category changes only the label", async () => {
+    const { queryClient, wrapper } = setup();
+    const { result } = renderHook(() => useIncomeCategoryMutation(queryClient), { wrapper });
+    await act(() =>
+      result.current.mutateAsync({
+        tx: { account_uid: "a1", entry_reference: "r1" },
+        category: "Income",
+      }),
+    );
+    expect(calls[0]?.update).toEqual({ category: "Income" });
   });
 
   it("soft delete stamps deleted_at per account and undo clears it", async () => {
