@@ -26,22 +26,27 @@ describe("error page Try again", () => {
   afterEach(() => {
     Object.defineProperty(window, "location", { configurable: true, value: original });
     vi.clearAllMocks();
+    vi.restoreAllMocks();
   });
 
   // Regression: after a page's code failed to download, "Try again" re-rendered
   // the same failed import and never recovered. The browser keeps a failed
   // module import, so only a full reload fetches it again.
-  it("reloads the page when the page's code failed to load", async () => {
+  it.each([
+    "Failed to fetch dynamically imported module: https://x/assets/reports-abc.js", // Chrome
+    "error loading dynamically imported module: https://x/assets/reports-abc.js", // Firefox
+    "Importing a module script failed.", // Safari
+  ])("reloads the page when the page's code failed to load (%s)", async (message) => {
     const reset = vi.fn();
-    const error = new TypeError(
-      "Failed to fetch dynamically imported module: https://x/assets/reports-abc.js",
+    render(
+      <ErrorPage error={new TypeError(message)} reset={reset} info={{ componentStack: "" }} />,
     );
-    render(<ErrorPage error={error} reset={reset} info={{ componentStack: "" }} />);
 
     await userEvent.click(screen.getByRole("button", { name: "Try again" }));
 
     expect(reload).toHaveBeenCalledTimes(1);
     expect(invalidate).not.toHaveBeenCalled();
+    expect(reset).not.toHaveBeenCalled();
   });
 
   it("retries in place for any other error", async () => {
