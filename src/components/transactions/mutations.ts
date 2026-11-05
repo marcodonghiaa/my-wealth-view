@@ -95,6 +95,19 @@ export function useTransactionFieldMutation<
   });
 }
 
+// New amount for a transaction added by hand. The database refuses it on bank rows.
+export function useManualAmountMutation(queryClient: QueryClient) {
+  return useMutation<void, Error, { tx: TxKey; amount: number }>({
+    mutationFn: async ({ tx, amount }) => {
+      const { error } = await forTx(supabase.from("transactions").update({ amount }), tx);
+      if (error) throw error;
+    },
+    onError: (error) => toast.error("Couldn't change amount", { description: error.message }),
+    onSuccess: () => toast.success("Amount changed"),
+    onSettled: () => refetchFlows(queryClient),
+  });
+}
+
 // Category of an income row (Income page). Picking Transfer moves it out of income.
 export function useIncomeCategoryMutation(queryClient: QueryClient) {
   return useMutation<void, Error, { tx: TxKey; category: string }>({

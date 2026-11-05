@@ -50,6 +50,7 @@ import {
   useDeleteMutation,
   useFlowMutation,
   useIncomeCategoryMutation,
+  useManualAmountMutation,
   useRenameMerchantMutation,
   useShareMutation,
   useSplitMutation,
@@ -243,6 +244,19 @@ describe("transaction mutations are scoped to one account", () => {
       }),
     );
     expect(calls[0]?.update).toEqual({ category: "Income" });
+  });
+
+  it("a manual row's new amount is written to that row only and the totals refetch", async () => {
+    const { queryClient, wrapper } = setup();
+    const invalidate = vi.spyOn(queryClient, "invalidateQueries");
+    const { result } = renderHook(() => useManualAmountMutation(queryClient), { wrapper });
+    await act(() =>
+      result.current.mutateAsync({ tx: { account_uid: "a2", entry_reference: "r1" }, amount: 40 }),
+    );
+    expect(calls[0]?.update).toEqual({ amount: 40 });
+    expect(calls[0]?.eq).toEqual({ account_uid: "a2", entry_reference: "r1" });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ["transactions"] });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ["spend-by-category"] });
   });
 
   it("soft delete stamps deleted_at per account and undo clears it", async () => {

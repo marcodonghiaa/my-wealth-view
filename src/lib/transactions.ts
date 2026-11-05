@@ -104,6 +104,7 @@ export interface AccountRow {
   label: string | null;
   currency: string;
   bank_name?: string | null; // absent on a database without the column
+  manual?: boolean; // transactions added by hand; absent before the backend migration
 }
 
 // Mirrors the allowlist in the backend's notify-worth-it.js — kept in sync by hand,

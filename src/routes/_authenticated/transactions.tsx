@@ -27,6 +27,7 @@ import {
   useBulkCategoryMutation,
   useDeleteMutation,
   useFlowMutation,
+  useManualAmountMutation,
   useRenameMerchantMutation,
   useShareMutation,
   useSplitMutation,
@@ -149,6 +150,7 @@ function TransactionsPage() {
   const updateShare = useShareMutation(queryClient, monthKey);
 
   const restoreTransfer = useFlowMutation(queryClient, monthKey);
+  const changeAmount = useManualAmountMutation(queryClient);
   const [showTransfers, setShowTransfers] = useState(false);
 
   const bulkUpdateCategory = useBulkCategoryMutation(queryClient, monthKey, () =>
@@ -303,6 +305,12 @@ function TransactionsPage() {
         ? name && updateShare.mutate({ id: shareId(tx), patch: { description: name } })
         : renameTx.mutate({ tx, name }),
     highlighted: tx.entry_reference === highlightRef,
+    ...(tx.account_uid && accounts[tx.account_uid]?.manual
+      ? {
+          onSaveAmount: (amount: number) => changeAmount.mutate({ tx, amount }),
+          savingAmount: changeAmount.isPending && isSameTx(changeAmount.variables?.tx, tx),
+        }
+      : {}),
   });
 
   const monthLabel = month.toLocaleDateString("en-GB", {

@@ -18,6 +18,7 @@ import { NameEditor } from "./name-editor";
 import { CategoryPicker, TypePicker } from "./pickers";
 import { SplitEditor } from "./split-editor";
 import { WorthItPrompt } from "./worth-it";
+import { AmountEditor } from "./amount-editor";
 
 export interface TransactionViewProps {
   tx: TransactionRow;
@@ -33,6 +34,9 @@ export interface TransactionViewProps {
   onSaveSplit: (personalAmount: number | null, owedBy: string | null) => void;
   onRename: (name: string | null) => void;
   savingRename: boolean;
+  /** Only for transactions added by hand: bank amounts can't change. */
+  onSaveAmount?: (amount: number) => void;
+  savingAmount?: boolean;
   highlighted?: boolean;
 }
 
@@ -110,6 +114,16 @@ function TransactionEditSheet({
             <Field label="Name">
               <NameEditor name={tx.creditor_name} onSave={p.onRename} saving={p.savingRename} />
             </Field>
+            {p.onSaveAmount && (
+              <Field label="Amount">
+                <AmountEditor
+                  amount={Math.abs(tx.amount ?? 0)}
+                  currency={tx.currency ?? "EUR"}
+                  onSave={p.onSaveAmount}
+                  saving={p.savingAmount ?? false}
+                />
+              </Field>
+            )}
             <Field label="Category">
               <CategoryPicker tx={tx} onSelect={p.onSelectCategory} saving={p.savingCategory} />
             </Field>
