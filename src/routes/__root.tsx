@@ -35,6 +35,13 @@ function NotFoundComponent() {
   );
 }
 
+// Same messages TanStack Router checks (Chrome, Firefox, Safari).
+const isChunkLoadError = (error: unknown) =>
+  error instanceof Error &&
+  /^(Failed to fetch dynamically imported module|error loading dynamically imported module|Importing a module script failed)/.test(
+    error.message,
+  );
+
 function ErrorComponent({ error, reset }: ErrorComponentProps) {
   console.error(error);
   const router = useRouter();
@@ -51,6 +58,9 @@ function ErrorComponent({ error, reset }: ErrorComponentProps) {
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <button
             onClick={() => {
+              // A page whose code failed to download stays failed until a full
+              // reload: the browser keeps the failed import.
+              if (isChunkLoadError(error)) return window.location.reload();
               router.invalidate();
               reset();
             }}
