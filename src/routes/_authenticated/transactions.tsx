@@ -345,9 +345,6 @@ function TransactionsPage() {
       <header className="mb-8 flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h1 className="ios-large-title">Transactions</h1>
-          <p className="mt-0.5 text-sm text-muted-foreground">
-            Every transaction for the selected month, newest first.
-          </p>
         </div>
         <div className="flex shrink-0 gap-2">
           <ImportStatement />
@@ -369,8 +366,7 @@ function TransactionsPage() {
           role="alert"
           className="mb-6 rounded-2xl bg-negative/10 px-4 py-3 text-sm text-negative"
         >
-          Some data couldn't load (Splitwise shares, account names or transfers), so this list may
-          be incomplete: {extraError.message}
+          List may be incomplete: {extraError.message}
         </div>
       )}
 

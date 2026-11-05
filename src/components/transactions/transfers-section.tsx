@@ -22,9 +22,7 @@ export function TransfersSection({
     <section className="mt-6 overflow-hidden rounded-2xl bg-card">
       <div className="px-4 py-3 sm:px-5">
         <h2 className="text-sm font-semibold text-foreground">Transfers</h2>
-        <p className="mt-0.5 text-xs text-muted-foreground">
-          Not counted as spending or income. Move one back if it was marked by mistake.
-        </p>
+        <p className="mt-0.5 text-xs text-muted-foreground">Not counted.</p>
       </div>
       <ul className="divide-y border-t">
         {rows.map((tx) => {
