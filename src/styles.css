@@ -201,6 +201,8 @@
   line-height: 1;
   letter-spacing: -0.035em;
   color: var(--color-foreground);
+  /* A huge amount wraps rather than pushing the page wider than a phone. */
+  overflow-wrap: anywhere;
 }
 
 /* Cards are flat grouped fills, no outline or drop shadow. */
