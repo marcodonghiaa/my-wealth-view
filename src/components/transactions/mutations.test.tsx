@@ -51,6 +51,7 @@ import {
   useFlowMutation,
   useIncomeCategoryMutation,
   useManualAmountMutation,
+  restorePatch,
   useRenameMerchantMutation,
   useShareMutation,
   useSplitMutation,
@@ -398,5 +399,23 @@ describe("Moving a transfer back to spend or income", () => {
     const { result } = setupTransfers();
     await act(() => result.current.mutateAsync({ tx: transfer("a2", "r2", "CRDT") }));
     expect(calls[0]?.update).toEqual({ flow_type: "income" });
+  });
+});
+
+// Regression: counting a transfer again left its "Transfer" label on a row that now counted as
+// spend, and picking Transfer again did nothing (same category).
+describe("restorePatch", () => {
+  it("clears the Transfer label so the next sync categorizes the row", () => {
+    expect(restorePatch({ credit_debit_indicator: "DBIT", category: "Transfer" })).toEqual({
+      flow_type: "spend",
+      category: null,
+      category_source: null,
+    });
+  });
+
+  it("keeps any other category", () => {
+    expect(restorePatch({ credit_debit_indicator: "CRDT", category: "Income" })).toEqual({
+      flow_type: "income",
+    });
   });
 });
