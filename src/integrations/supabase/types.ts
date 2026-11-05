@@ -977,6 +977,10 @@ export type Database = {
       };
     };
     Functions: {
+      delete_holding: {
+        Args: { p_kind: string; p_key: string; p_source?: string | null };
+        Returns: number;
+      };
       holding_performance: {
         Args: { p_from: string; p_last_move?: boolean };
         Returns: Array<{
