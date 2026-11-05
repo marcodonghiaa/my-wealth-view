@@ -10,7 +10,7 @@ import { assertHttpsUrl } from "@/lib/consent-url";
 import { COUNTRIES, linkErrorMessage, linkedMessage, renewTarget } from "@/lib/bank-link";
 import { functionErrorMessage } from "@/lib/function-error";
 import { consentAlerts, type ConsentAlert } from "@/lib/consent-expiry";
-import { formatISODate } from "@/lib/date";
+import { asOf, formatISODate } from "@/lib/date";
 import { AccountBadge, bankOf } from "@/components/bank-badge";
 import { formatEur, formatMoney } from "@/lib/transactions";
 import { HeadlineFigure } from "@/components/headline-figure";
@@ -558,7 +558,14 @@ function AccountsPage() {
                           {formatEur(group.subtotalEur)}
                         </div>
                         <div className="text-xs text-muted-foreground">
-                          {group.main.snapshot_date ? `${percent.toFixed(1)}%` : "Syncing…"}
+                          {group.main.snapshot_date
+                            ? [
+                                `${percent.toFixed(1)}%`,
+                                asOf(group.main.snapshot_date, formatISODate(new Date())),
+                              ]
+                                .filter(Boolean)
+                                .join(" · ")
+                            : "Syncing…"}
                         </div>
                       </div>
                     </div>

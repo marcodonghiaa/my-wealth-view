@@ -28,8 +28,13 @@ export function SegmentedControl<T extends string>({
     const step = event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0;
     if (!step) return;
     event.preventDefault();
-    const next = options[(index + step + options.length) % options.length];
-    if (next) onChange(next.value);
+    const nextIndex = (index + step + options.length) % options.length;
+    const next = options[nextIndex];
+    if (!next) return;
+    onChange(next.value);
+    // Roving focus: the selected radio is the only tabbable one, so focus follows the selection
+    // (otherwise it stays on a button that just became tabIndex -1).
+    event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="radio"]')[nextIndex]?.focus();
   }
 
   return (

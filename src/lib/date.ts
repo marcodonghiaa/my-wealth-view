@@ -35,3 +35,14 @@ export function formatDay(iso: string): string {
     year: "numeric",
   });
 }
+
+/** "as of 3 Nov" for a balance from before today (the bank didn't sync since), else null. */
+export function asOf(snapshotDate: string | null, today: string): string | null {
+  if (!snapshotDate || snapshotDate >= today) return null;
+  const date = new Date(`${snapshotDate}T00:00:00`);
+  return `as of ${date.toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    ...(snapshotDate.slice(0, 4) === today.slice(0, 4) ? {} : { year: "numeric" }),
+  })}`;
+}

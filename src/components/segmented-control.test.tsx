@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { useState } from "react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { SegmentedControl } from "./segmented-control";
 
@@ -30,5 +31,24 @@ describe("SegmentedControl", () => {
     screen.getByRole("radio", { name: "EUR" }).focus();
     await userEvent.keyboard("{ArrowRight}");
     expect(onChange).toHaveBeenCalledWith("USD");
+  });
+});
+
+function Harness() {
+  const [value, setValue] = useState("EUR");
+  return <SegmentedControl label="Currency" value={value} onChange={setValue} options={options} />;
+}
+
+// Regression: arrow keys changed the value but focus stayed on a button that left the tab order.
+describe("SegmentedControl focus", () => {
+  it("moves focus with the selection on arrow keys", () => {
+    render(<Harness />);
+    const first = screen.getByRole("radio", { name: "EUR" });
+    first.focus();
+    fireEvent.keyDown(first, { key: "ArrowRight" });
+    expect(screen.getByRole("radio", { name: "USD" })).toHaveFocus();
+    fireEvent.keyDown(document.activeElement!, { key: "ArrowLeft" });
+    fireEvent.keyDown(document.activeElement!, { key: "ArrowLeft" });
+    expect(screen.getByRole("radio", { name: "GBP" })).toHaveFocus();
   });
 });
