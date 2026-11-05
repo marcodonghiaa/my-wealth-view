@@ -4,7 +4,12 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 const rpc = vi.fn();
 vi.mock("@/integrations/supabase/client", () => ({
-  supabase: { rpc: (...args: unknown[]) => rpc(...args) },
+  supabase: {
+    rpc: (...args: unknown[]) => rpc(...args),
+    from: () => ({
+      update: () => ({ eq: () => Promise.resolve({ error: null }) }),
+    }),
+  },
 }));
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
@@ -42,6 +47,18 @@ describe("EditHolding delete", () => {
       expect(invalidate).toHaveBeenCalledWith({ queryKey: ["portfolio-latest"] }),
     );
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ["net-worth-daily"] });
+    // Regression: returns kept the deleted holding's trades until a reload.
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ["holding-performance"] });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ["holding-trades"] });
+  });
+
+  it("a new quantity refreshes returns too, which compare trades with it", async () => {
+    const { invalidate } = setup({ kind: "stock", isin: "IE00TEST" });
+    fireEvent.change(screen.getByLabelText("How many you hold now"), { target: { value: "3" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() =>
+      expect(invalidate).toHaveBeenCalledWith({ queryKey: ["holding-performance"] }),
+    );
   });
 
   it("sends the crypto source", async () => {

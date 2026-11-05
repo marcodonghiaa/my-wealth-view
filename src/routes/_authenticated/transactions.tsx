@@ -8,6 +8,7 @@ import { formatISODate } from "@/lib/date";
 import {
   UNCATEGORIZED,
   filterTransactions,
+  selectedOnly,
   isSplitwiseShare,
   shareId,
   listCategories,
@@ -242,6 +243,8 @@ function TransactionsPage() {
     [filtered],
   );
   const allFilteredSelected = filteredIds.length > 0 && filteredIds.every((id) => selected.has(id));
+  // Bulk actions touch only rows you can see: a row selected before a filter hid it stays out.
+  const selectedVisible = useMemo(() => selectedOnly(filtered, selected), [filtered, selected]);
 
   function toggleOne(id: string) {
     setSelected((prev) => {
@@ -417,13 +420,15 @@ function TransactionsPage() {
       </div>
 
       {/* Bulk action bar */}
-      {selected.size > 0 && (
+      {selectedVisible.length > 0 && (
         <div className="sticky top-[calc(2.75rem+env(safe-area-inset-top)+0.5rem)] z-20 mb-4 flex flex-wrap items-center gap-3 rounded-2xl bg-card p-3 shadow-[0_8px_24px_-12px_oklch(0_0_0/0.25)] md:top-4">
-          <span className="text-sm font-medium text-foreground">{selected.size} selected</span>
+          <span className="text-sm font-medium text-foreground">
+            {selectedVisible.length} selected
+          </span>
           <BulkCategoryPicker
             onSelect={(next) =>
               bulkUpdateCategory.mutate({
-                txs: transactions.filter((tx) => selected.has(txId(tx))),
+                txs: selectedVisible,
                 category: next,
               })
             }
@@ -433,7 +438,7 @@ function TransactionsPage() {
             type="button"
             onClick={() =>
               deleteTxs.mutate({
-                txs: transactions.filter((tx) => selected.has(txId(tx))),
+                txs: selectedVisible,
                 deleted: true,
               })
             }

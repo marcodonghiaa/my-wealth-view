@@ -64,6 +64,9 @@ export function EditHolding({
       queryKey: [target.kind === "stock" ? "portfolio-latest" : "crypto-latest"],
     });
     void queryClient.invalidateQueries({ queryKey: ["net-worth-daily"] });
+    // Returns compare trades with the quantity held; delete also removes the trades.
+    void queryClient.invalidateQueries({ queryKey: ["holding-performance"] });
+    void queryClient.invalidateQueries({ queryKey: ["holding-trades"] });
   };
 
   const remove = useMutation({
