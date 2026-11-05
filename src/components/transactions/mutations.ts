@@ -96,10 +96,15 @@ export function useTransactionFieldMutation<
 }
 
 // New amount for a transaction added by hand. The database refuses it on bank rows.
+// A split share above the new amount would break the database's share <= amount rule, so the
+// split goes too and can be set again.
 export function useManualAmountMutation(queryClient: QueryClient) {
-  return useMutation<void, Error, { tx: TxKey; amount: number }>({
+  type Vars = { tx: TxKey & { personal_amount?: number | null }; amount: number };
+  return useMutation<void, Error, Vars>({
     mutationFn: async ({ tx, amount }) => {
-      const { error } = await forTx(supabase.from("transactions").update({ amount }), tx);
+      const splitTooBig = tx.personal_amount != null && tx.personal_amount > amount;
+      const patch = splitTooBig ? { amount, personal_amount: null, owed_by: null } : { amount };
+      const { error } = await forTx(supabase.from("transactions").update(patch), tx);
       if (error) throw error;
     },
     onError: (error) => toast.error("Couldn't change amount", { description: error.message }),
