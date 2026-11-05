@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CATEGORIES, TRANSACTION_TYPES, categoryColor } from "@/lib/categories";
+import { TRANSACTION_TYPES, categoryColor } from "@/lib/categories";
+import { useCategories } from "@/lib/use-categories";
 import type { TransactionRow } from "@/lib/transactions";
 import { CategoryAvatar } from "@/components/category-avatar";
 
@@ -17,6 +18,7 @@ export function CategoryPicker({
   variant?: "pill" | "icon";
 }) {
   const [open, setOpen] = useState(false);
+  const categories = useCategories().list;
 
   return (
     <Popover modal open={open} onOpenChange={setOpen}>
@@ -55,7 +57,7 @@ export function CategoryPicker({
       </PopoverTrigger>
       <PopoverContent align="start" className="w-48 p-1">
         <div className="max-h-72 overflow-y-auto">
-          {CATEGORIES.map((c) => (
+          {categories.map((c) => (
             <button
               key={c}
               type="button"
@@ -84,6 +86,7 @@ export function BulkCategoryPicker({
   disabled: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  const categories = useCategories().list;
 
   return (
     <Popover modal open={open} onOpenChange={setOpen}>
@@ -98,7 +101,7 @@ export function BulkCategoryPicker({
       </PopoverTrigger>
       <PopoverContent align="start" className="w-48 p-1">
         <div className="max-h-72 overflow-y-auto">
-          {CATEGORIES.map((c) => (
+          {categories.map((c) => (
             <button
               key={c}
               type="button"

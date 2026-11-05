@@ -6,7 +6,8 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import { CATEGORIES, TRANSACTION_TYPES } from "@/lib/categories";
+import { TRANSACTION_TYPES } from "@/lib/categories";
+import { useCategories } from "@/lib/use-categories";
 
 export const Route = createFileRoute("/_authenticated/rules")({
   head: () => ({
@@ -67,6 +68,7 @@ function RulesPage() {
   const [typeOpen, setTypeOpen] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const categories = useCategories().list;
 
   const rulesQuery = useQuery({ queryKey: ["category-rules"], queryFn: fetchRules });
 
@@ -249,7 +251,7 @@ function RulesPage() {
                     >
                       None
                     </button>
-                    {CATEGORIES.map((c) => (
+                    {categories.map((c) => (
                       <button
                         key={c}
                         type="button"

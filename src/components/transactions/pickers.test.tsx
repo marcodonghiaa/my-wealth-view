@@ -1,9 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render as rtlRender, screen } from "@testing-library/react";
+import { queryWrapper } from "@/test/query-wrapper";
 import userEvent from "@testing-library/user-event";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { shareToRow } from "@/lib/transactions";
 import { CategoryPicker } from "./pickers";
+
+const render = (ui: React.ReactElement) => rtlRender(ui, { wrapper: queryWrapper() });
 
 const tx = shareToRow({
   id: "s1",
@@ -39,5 +42,20 @@ describe("CategoryPicker inside the transaction sheet", () => {
     const scrolled = fireEvent.wheel(option, { deltaY: 100 });
 
     expect(scrolled).toBe(true);
+  });
+});
+
+// A self-hoster wanted their own categories: the picker offers your list, not the built-in one.
+describe("CategoryPicker with your own categories", () => {
+  it("offers the categories you added and leaves out the ones you hid", async () => {
+    rtlRender(<CategoryPicker tx={tx} onSelect={vi.fn()} saving={false} />, {
+      wrapper: queryWrapper([
+        { name: "Gym", hidden: false },
+        { name: "Taxes", hidden: true },
+      ]),
+    });
+    await userEvent.click(screen.getByRole("button", { name: /change category/i }));
+    expect(await screen.findByRole("button", { name: "Gym" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Taxes" })).toBeNull();
   });
 });
