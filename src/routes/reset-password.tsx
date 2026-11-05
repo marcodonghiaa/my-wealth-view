@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { KeyRound, Loader2 } from "lucide-react";
 import { BrandMark } from "@/components/brand-mark";
-import { supabase } from "@/integrations/supabase/client";
+import { openedFromRecoveryLink, supabase } from "@/integrations/supabase/client";
 import { exitDemoMode } from "@/lib/demo/mode";
 import { MIN_PASSWORD_LENGTH } from "@/lib/password";
 
@@ -22,36 +22,9 @@ export const Route = createFileRoute("/reset-password")({
   component: ResetPasswordPage,
 });
 
-// How long after the recovery link is opened the page still offers the form.
-const RECOVERY_WINDOW_MS = 60 * 60 * 1000;
-
-/**
- * True when the session came from a recovery email link opened in the last hour. Supabase
- * records how the user signed in in the token's amr claim. Any other session (a normal sign-in,
- * or someone at an unlocked laptop) must change the password in Settings, which asks for the
- * current one.
- */
-export function isRecoverySession(accessToken: string | undefined, now = Date.now()): boolean {
-  try {
-    const payload = accessToken?.split(".")[1];
-    if (!payload) return false;
-    const base64 = payload.replace(/-/g, "+").replace(/_/g, "/");
-    const claims = JSON.parse(atob(base64.padEnd(Math.ceil(base64.length / 4) * 4, "="))) as {
-      amr?: Array<{ method?: string; timestamp?: number }>;
-    };
-    return (claims.amr ?? []).some(
-      (a) =>
-        a.method === "recovery" &&
-        typeof a.timestamp === "number" &&
-        now - a.timestamp * 1000 < RECOVERY_WINDOW_MS,
-    );
-  } catch {
-    return false;
-  }
-}
-
 // Supabase signs the user in from the link in the recovery email (the token is in the URL).
-// The form only shows for that session, never for one that was already signed in.
+// The form shows only for that sign-in: a tab that was already signed in (say, an unlocked
+// laptop) must change the password in Settings, which asks for the current one.
 export function ResetPasswordPage() {
   const navigate = useNavigate();
   const [hasSession, setHasSession] = useState<boolean | null>(null);
@@ -64,11 +37,20 @@ export function ResetPasswordPage() {
     supabase.auth
       .getSession()
       .then(
-        ({ data }) => !cancelled && setHasSession(isRecoverySession(data.session?.access_token)),
+        ({ data }) =>
+          !cancelled &&
+          setHasSession((now) => now || (Boolean(data.session) && openedFromRecoveryLink())),
       )
-      .catch(() => !cancelled && setHasSession(false));
+      .catch(() => !cancelled && setHasSession((now) => now ?? false));
+    // The event can come after getSession has answered.
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "PASSWORD_RECOVERY") setHasSession(true);
+    });
     return () => {
       cancelled = true;
+      subscription.unsubscribe();
     };
   }, []);
 

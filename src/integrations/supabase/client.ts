@@ -34,6 +34,15 @@ const realClient = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY
   },
 });
 
+// Supabase signs in from a password-recovery email link with the PASSWORD_RECOVERY event. Listening
+// from load, before the client reads the link, means a page that mounts later still knows.
+let recoveryLink = false;
+realClient.auth.onAuthStateChange((event) => {
+  if (event === "PASSWORD_RECOVERY") recoveryLink = true;
+});
+/** True once this tab was signed in by a password-recovery email link. */
+export const openedFromRecoveryLink = () => recoveryLink;
+
 // The demo's fake client (and its generated data) is a separate chunk, loaded only when the demo
 // is entered or a demo tab is reloaded, so real visits don't download it.
 let demoModule: typeof import("@/lib/demo/fake-client") | null = null;
