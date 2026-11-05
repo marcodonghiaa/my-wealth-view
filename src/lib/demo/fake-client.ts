@@ -1,3 +1,4 @@
+import { formatISODate } from "@/lib/date";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import { DEMO_USER_ID, generateDemoData, type DemoDb } from "./generate";
@@ -133,6 +134,17 @@ function makeFilter(op: string, col: string, v: unknown): Filter {
     default:
       throw new Error(`Demo client: unsupported filter "${op}"`);
   }
+}
+
+// What the AI would find in a statement PDF: in the demo, three made-up rows from the last days.
+function demoStatementRows(now: Date) {
+  const day = (back: number) =>
+    formatISODate(new Date(now.getFullYear(), now.getMonth(), now.getDate() - back));
+  return [
+    { date: day(1), description: "Trattoria Demo", amount: 38.4, direction: "DBIT" },
+    { date: day(2), description: "Farmacia Esempio", amount: 12.9, direction: "DBIT" },
+    { date: day(3), description: "Rimborso spese", amount: 120, direction: "CRDT" },
+  ];
 }
 
 class Store {
@@ -632,7 +644,9 @@ export function createFakeClient(now: Date = new Date()): SupabaseClient<Databas
                 },
                 error: null,
               }
-            : { data: null, error: DISABLED },
+            : name === "parse-statement"
+              ? { data: { rows: demoStatementRows(now) }, error: null }
+              : { data: null, error: DISABLED },
     },
     auth: {
       getSession: async () => ({ data: { session }, error: null }),

@@ -3,10 +3,12 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 const rpc = vi.fn();
+const invoke = vi.fn();
 let existing: Array<object> = [];
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
     rpc: (...args: unknown[]) => rpc(...args),
+    functions: { invoke: (...args: unknown[]) => invoke(...args) },
     from: () => ({
       select: () => ({
         is: () => ({
@@ -85,7 +87,29 @@ describe("ImportStatement", () => {
 
   it("asks for a CSV when given an Excel file", async () => {
     upload("movimenti.xlsx", "binary");
-    expect(await screen.findByRole("alert")).toHaveTextContent(/save the statement as CSV/i);
+    expect(await screen.findByRole("alert")).toHaveTextContent(/Save as → CSV/i);
+  });
+
+  it("sends a PDF to the AI and previews the rows it found", async () => {
+    invoke.mockResolvedValue({
+      data: {
+        rows: [
+          { date: "2026-04-25", description: "Ristorante Mario", amount: 45.5, direction: "DBIT" },
+        ],
+      },
+      error: null,
+    });
+    upload("Fineco_estratto.pdf", "%PDF-1.4");
+    expect(await screen.findByText(/1 new transaction/)).toBeTruthy();
+    expect(invoke).toHaveBeenCalledWith("parse-statement", { body: { pdf: btoa("%PDF-1.4") } });
+    expect(screen.queryByText("Columns")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Import 1" }));
+    await waitFor(() =>
+      expect(rpc).toHaveBeenCalledWith(
+        "add_manual_transaction",
+        expect.objectContaining({ p_description: "Ristorante Mario", p_source: "Fineco" }),
+      ),
+    );
   });
 
   it("lets you pick the columns when they can't be guessed", async () => {

@@ -414,6 +414,24 @@ describe("fake client: add_manual_transaction", () => {
   });
 });
 
+describe("fake client: parse-statement", () => {
+  it("returns made-up statement rows in the shape the import expects", async () => {
+    const c = fresh();
+    const { data, error } = await (
+      c.functions.invoke as unknown as (
+        n: string,
+        o: object,
+      ) => Promise<{ data: { rows: Array<Record<string, unknown>> }; error: unknown }>
+    )("parse-statement", { body: { pdf: "JVBERi0=" } });
+    expect(error).toBeNull();
+    expect(data.rows).toHaveLength(3);
+    for (const r of data.rows) {
+      expect(r["date"]).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      expect(["DBIT", "CRDT"]).toContain(r["direction"]);
+    }
+  });
+});
+
 describe("fake client: set_holding_quantity", () => {
   type Rpc = (f: string, a: object) => PromiseLike<{ data: number; error: unknown }>;
   it("selling a stock takes its value out of today's net worth at once", async () => {
