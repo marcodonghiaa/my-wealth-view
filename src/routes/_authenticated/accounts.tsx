@@ -14,6 +14,7 @@ import { formatISODate } from "@/lib/date";
 import { AccountBadge, bankOf } from "@/components/bank-badge";
 import { formatEur, formatMoney } from "@/lib/transactions";
 import { HeadlineFigure } from "@/components/headline-figure";
+import { activeDepositsEur } from "@/lib/holdings";
 
 export const Route = createFileRoute("/_authenticated/accounts")({
   head: () => ({
@@ -173,10 +174,7 @@ function AccountsPage() {
       })
       .sort((a, b) => b.subtotalEur - a.subtotalEur);
   }, [bankAccounts]);
-  const totalCdEur = useMemo(
-    () => cds.reduce((sum, c) => sum + (c.current_value_eur ?? 0), 0),
-    [cds],
-  );
+  const totalCdEur = useMemo(() => activeDepositsEur(cds), [cds]);
 
   // Connect-a-bank form state
   const [showConnectForm, setShowConnectForm] = useState(false);
@@ -346,6 +344,9 @@ function AccountsPage() {
         <div className="mt-1 min-h-16">
           {bankQuery.isPending || cdQuery.isPending ? (
             <div className="h-16 w-72 animate-pulse rounded-2xl bg-muted" />
+          ) : bankQuery.isError || cdQuery.isError ? (
+            // A total missing one of its two parts would look complete; show none instead.
+            <p className="figure-display text-muted-foreground">—</p>
           ) : (
             <HeadlineFigure value={totalBankEur + totalCdEur} currency="EUR" />
           )}
