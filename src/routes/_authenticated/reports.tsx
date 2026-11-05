@@ -5,7 +5,7 @@ import { TrendingUp, TrendingDown, ArrowLeftRight, ThumbsDown } from "lucide-rea
 import { supabase } from "@/integrations/supabase/client";
 import { formatISODate } from "@/lib/date";
 import { estimatedMonthlyEur, splitSubscriptions } from "@/lib/subscriptions";
-import { formatEur, personalAmountEur } from "@/lib/transactions";
+import { formatEur, personalAmountEur, startOfMonth } from "@/lib/transactions";
 import { monthNetWorth, withHistory } from "@/lib/net-worth";
 import { fetchHistory, fetchNetWorth, fetchReconstructed } from "@/lib/net-worth-queries";
 import { TONE_TEXT, toneOf, type Tone } from "@/lib/tone";
@@ -30,10 +30,6 @@ export const Route = createFileRoute("/_authenticated/reports")({
   }),
   component: ReportsPage,
 });
-
-function startOfMonth(date: Date): Date {
-  return new Date(date.getFullYear(), date.getMonth(), 1);
-}
 
 function endOfMonth(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth() + 1, 0);
