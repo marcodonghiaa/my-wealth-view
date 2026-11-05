@@ -76,6 +76,10 @@ interface SubscriptionTotalRow {
   monthly_equivalent_eur: number | null;
   charge_count: number | null;
   billing_frequency_is_manual: boolean | null;
+  billing_frequency: string | null;
+  last_charged: string | null;
+  custom_interval_value: number | null;
+  custom_interval_unit: string | null;
 }
 
 // Current subscriptions, not historized -- v_subscriptions reflects today's
@@ -84,7 +88,9 @@ interface SubscriptionTotalRow {
 async function fetchSubscriptionsTotal(): Promise<number> {
   const { data, error } = await supabase
     .from("v_subscriptions")
-    .select("monthly_equivalent_eur,charge_count,billing_frequency_is_manual");
+    .select(
+      "monthly_equivalent_eur,charge_count,billing_frequency_is_manual,billing_frequency,last_charged,custom_interval_value,custom_interval_unit",
+    );
   if (error) throw error;
   // Same recurring-only total as the Subscriptions page; one-off charges are not a monthly cost.
   return estimatedMonthlyEur(

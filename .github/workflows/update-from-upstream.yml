@@ -26,18 +26,22 @@ jobs:
     if: github.repository != 'marcodonghiaa/my-wealth-view'
     runs-on: ubuntu-latest
     steps:
+      # No credentials left in .git: the next step runs upstream's script, which must not be able
+      # to push. Only the last step pushes, and only the bot branch.
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Fetch upstream and build the update branch
         id: sync
         env:
-          GH_TOKEN: ${{ github.token }}
+          BASE: ${{ github.event.repository.default_branch }}
         run: |
           set -euo pipefail
-          base=$(gh api "repos/$GITHUB_REPOSITORY" --jq .default_branch)
-          git fetch --quiet origin "$base"
+          base="$BASE"
+          # checkout fetched every branch already (fetch-depth 0), so origin/$base is here; a
+          # second fetch would need credentials on a private copy.
           git fetch --quiet "https://github.com/$UPSTREAM_REPO.git" main:refs/remotes/upstream/main
           git checkout -B "$UPDATE_BRANCH" "origin/$base"
           # Run upstream's copy of the script, so fixes to it reach old copies too.
@@ -65,8 +69,11 @@ jobs:
         run: |
           set -euo pipefail
           title="Update MyFinances dashboard to $SHA"
-          # Only ever our own bot branch; never the default branch.
-          git push --force origin "$UPDATE_BRANCH"
+          # Only ever our own bot branch; never the default branch. Hooks are off so nothing the
+          # previous step wrote into .git runs with the token.
+          git -c core.hooksPath=/dev/null push --force \
+            "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" \
+            "HEAD:refs/heads/$UPDATE_BRANCH"
           n=$(gh pr list --head "$UPDATE_BRANCH" --base "$BASE" --state open --json number --jq '.[0].number // empty')
           if [ -n "$n" ]; then
             gh pr edit "$n" --title "$title" --body-file "$RUNNER_TEMP/body.md"

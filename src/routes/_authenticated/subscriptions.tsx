@@ -184,11 +184,15 @@ function SubscriptionsPage() {
 
   const subscriptions = useMemo(() => query.data ?? [], [query.data]);
 
-  const { recurring, oneOff } = useMemo(() => {
+  const { recurring, stopped, oneOff } = useMemo(() => {
     const byCost = (a: SubscriptionRow, b: SubscriptionRow) =>
       Math.abs(b.monthly_equivalent_eur ?? 0) - Math.abs(a.monthly_equivalent_eur ?? 0);
     const split = splitSubscriptions(subscriptions);
-    return { recurring: split.recurring.sort(byCost), oneOff: split.oneOff.sort(byCost) };
+    return {
+      recurring: split.recurring.sort(byCost),
+      stopped: split.stopped.sort(byCost),
+      oneOff: split.oneOff.sort(byCost),
+    };
   }, [subscriptions]);
 
   const monthlyTotal = useMemo(() => estimatedMonthlyEur(recurring), [recurring]);
@@ -274,6 +278,21 @@ function SubscriptionsPage() {
             ? "No subscription charges found yet."
             : "No recurring charges yet. Set a billing frequency on a charge below to count it."}
         </div>
+      )}
+
+      {stopped.length > 0 && (
+        <details className="group mt-8">
+          <summary className="ios-section-title flex min-h-11 cursor-pointer list-none items-center gap-2">
+            <ChevronDown className="size-4 transition-transform group-open:rotate-180" />
+            Stopped ({stopped.length})
+          </summary>
+          <p className="mb-3 px-4 text-[0.8125rem] text-muted-foreground">
+            No recent charge. Not counted.
+          </p>
+          <ul className="divide-y overflow-hidden rounded-2xl bg-card">
+            {stopped.map(renderCard)}
+          </ul>
+        </details>
       )}
 
       {oneOff.length > 0 && (
