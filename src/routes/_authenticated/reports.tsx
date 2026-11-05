@@ -231,9 +231,6 @@ function ReportsPage() {
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-8 md:py-12">
       <header className="mb-8">
         <h1 className="ios-large-title">Monthly Report</h1>
-        <p className="mt-0.5 text-sm text-muted-foreground">
-          Net worth, income vs expenses, and spending — one month at a time.
-        </p>
       </header>
 
       {loadError && (
@@ -241,7 +238,7 @@ function ReportsPage() {
           role="alert"
           className="mb-6 rounded-2xl bg-negative/10 px-4 py-3 text-sm text-negative"
         >
-          Some figures couldn't load, so the numbers below may be incomplete: {loadError.message}
+          Some figures didn't load: {loadError.message}
         </div>
       )}
 
@@ -357,9 +354,7 @@ function ReportsPage() {
         <div className="flex items-center justify-between px-4 py-3 sm:px-5">
           <div>
             <h2 className="text-sm font-semibold text-foreground">Subscriptions</h2>
-            <p className="mt-0.5 text-xs text-muted-foreground">
-              Current monthly-equivalent total, not historical
-            </p>
+            <p className="mt-0.5 text-xs text-muted-foreground">Current, per month</p>
           </div>
           <span className="font-figure text-sm font-semibold text-foreground">
             {subscriptionsQuery.isPending ? "…" : formatEur(subscriptionsQuery.data ?? 0)}

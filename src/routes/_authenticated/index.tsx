@@ -180,7 +180,7 @@ function NetWorthPage() {
           role="alert"
           className="mb-6 rounded-2xl bg-negative/10 px-4 py-3 text-sm text-negative"
         >
-          Some data couldn't load, so charts and totals may be incomplete: {extraError.message}
+          Some data didn't load: {extraError.message}
         </div>
       )}
 

@@ -506,10 +506,7 @@ function AccountsPage() {
                 </button>
                 {connectError && <p className="text-sm text-negative">{connectError}</p>}
               </div>
-              <p className="mt-3 text-xs text-muted-foreground">
-                You'll be redirected to log into your bank directly — we never see your bank
-                password.
-              </p>
+              <p className="mt-3 text-xs text-muted-foreground">You sign in on your bank's site.</p>
             </div>
           )}
         </form>
@@ -725,7 +722,7 @@ function AccountsPage() {
 
         {!cdQuery.isPending && cds.length === 0 && !cdQuery.isError && (
           <div className="rounded-2xl border border-dashed bg-card/50 p-10 text-center text-sm text-muted-foreground">
-            No certificates of deposit yet — add one above when you open one.
+            No deposits yet.
           </div>
         )}
 

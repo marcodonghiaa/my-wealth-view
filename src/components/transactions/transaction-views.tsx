@@ -146,7 +146,7 @@ function TransactionEditSheet({
                 </Field>
               )}
               <label className="flex min-h-12 cursor-pointer items-center justify-between gap-4 px-4 text-sm">
-                <span className="text-muted-foreground">Select (edit several at once)</span>
+                <span className="text-muted-foreground">Select</span>
                 <input
                   type="checkbox"
                   checked={p.selected}

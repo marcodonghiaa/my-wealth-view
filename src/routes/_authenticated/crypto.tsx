@@ -202,10 +202,7 @@ function CryptoPage() {
             />
           </div>
         )}
-        <p className="mt-4 max-w-2xl text-sm text-muted-foreground">
-          Coins you add here are priced every day; Coinbase syncs automatically. The same asset held
-          in multiple places is combined into one line below.
-        </p>
+        <p className="mt-4 max-w-2xl text-sm text-muted-foreground">Coinbase syncs daily.</p>
       </section>
 
       {query.isPending ? (

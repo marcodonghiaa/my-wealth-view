@@ -246,9 +246,7 @@ function SubscriptionsPage() {
             </p>
           )}
         </div>
-        <p className="mt-3 text-sm text-muted-foreground">
-          Yearly and quarterly charges count pro rata. One-off charges are not included.
-        </p>
+        <p className="mt-3 text-sm text-muted-foreground">One-offs excluded.</p>
       </section>
 
       {/* Recurring subscriptions: one grouped list */}
@@ -274,9 +272,7 @@ function SubscriptionsPage() {
 
       {!query.isPending && recurring.length === 0 && (
         <div className="mt-8 rounded-2xl border border-dashed bg-card/50 p-12 text-center text-sm text-muted-foreground">
-          {oneOff.length === 0
-            ? "No subscription charges found yet."
-            : "No recurring charges yet. Set a billing frequency on a charge below to count it."}
+          {oneOff.length === 0 ? "No subscription charges found yet." : "No recurring charges yet."}
         </div>
       )}
 
@@ -302,7 +298,7 @@ function SubscriptionsPage() {
             One-off charges ({oneOff.length})
           </summary>
           <p className="mb-3 px-4 text-[0.8125rem] text-muted-foreground">
-            Charged once so far, so not counted in the monthly total. Set a frequency to count one.
+            Not counted until you set a frequency.
           </p>
           <ul className="divide-y overflow-hidden rounded-2xl bg-card">{oneOff.map(renderCard)}</ul>
         </details>

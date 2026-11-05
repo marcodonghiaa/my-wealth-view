@@ -211,9 +211,6 @@ function SpendingPage() {
               Not worth it — {formatEur(regretTotal)} across {regretCount} purchase
               {regretCount === 1 ? "" : "s"}
             </h2>
-            <p className="mt-0.5 text-xs text-muted-foreground">
-              From your "worth it?" check-ins this month.
-            </p>
           </div>
           <ul className="divide-y">
             {regretRows.map((row) => (
