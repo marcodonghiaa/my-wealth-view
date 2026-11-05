@@ -22,8 +22,36 @@ export const Route = createFileRoute("/reset-password")({
   component: ResetPasswordPage,
 });
 
-// Supabase signs the user in from the link in the recovery email (the token is in the URL),
-// so the page only needs a session to set the new password on.
+// How long after the recovery link is opened the page still offers the form.
+const RECOVERY_WINDOW_MS = 60 * 60 * 1000;
+
+/**
+ * True when the session came from a recovery email link opened in the last hour. Supabase
+ * records how the user signed in in the token's amr claim. Any other session (a normal sign-in,
+ * or someone at an unlocked laptop) must change the password in Settings, which asks for the
+ * current one.
+ */
+export function isRecoverySession(accessToken: string | undefined, now = Date.now()): boolean {
+  try {
+    const payload = accessToken?.split(".")[1];
+    if (!payload) return false;
+    const base64 = payload.replace(/-/g, "+").replace(/_/g, "/");
+    const claims = JSON.parse(atob(base64.padEnd(Math.ceil(base64.length / 4) * 4, "="))) as {
+      amr?: Array<{ method?: string; timestamp?: number }>;
+    };
+    return (claims.amr ?? []).some(
+      (a) =>
+        a.method === "recovery" &&
+        typeof a.timestamp === "number" &&
+        now - a.timestamp * 1000 < RECOVERY_WINDOW_MS,
+    );
+  } catch {
+    return false;
+  }
+}
+
+// Supabase signs the user in from the link in the recovery email (the token is in the URL).
+// The form only shows for that session, never for one that was already signed in.
 export function ResetPasswordPage() {
   const navigate = useNavigate();
   const [hasSession, setHasSession] = useState<boolean | null>(null);
@@ -35,7 +63,9 @@ export function ResetPasswordPage() {
     let cancelled = false;
     supabase.auth
       .getSession()
-      .then(({ data }) => !cancelled && setHasSession(Boolean(data.session)))
+      .then(
+        ({ data }) => !cancelled && setHasSession(isRecoverySession(data.session?.access_token)),
+      )
       .catch(() => !cancelled && setHasSession(false));
     return () => {
       cancelled = true;
