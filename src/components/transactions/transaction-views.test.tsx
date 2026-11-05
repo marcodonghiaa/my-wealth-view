@@ -122,3 +122,24 @@ describe("Bank card rows", () => {
     expect(screen.getByRole("checkbox")).toBeInTheDocument();
   });
 });
+
+// protects=only transactions added by hand get an amount editor: bank amounts are the bank's
+describe("amount editing", () => {
+  const bankRow = (): TransactionViewProps => ({
+    ...props(),
+    tx: { ...props().tx, account_uid: "acc", entry_reference: "manual-1", amount: 45.5 },
+  });
+
+  it("shows Change amount in the sheet for a manual row", async () => {
+    render(<TransactionCardView {...bankRow()} onSaveAmount={vi.fn()} savingAmount={false} />);
+    await userEvent.click(screen.getAllByRole("button")[0]!);
+    expect(await screen.findByRole("button", { name: "Change amount" })).toBeTruthy();
+  });
+
+  it("has no amount editor for a bank row", async () => {
+    render(<TransactionCardView {...bankRow()} />);
+    await userEvent.click(screen.getAllByRole("button")[0]!);
+    await screen.findByRole("dialog");
+    expect(screen.queryByRole("button", { name: "Change amount" })).toBeNull();
+  });
+});
