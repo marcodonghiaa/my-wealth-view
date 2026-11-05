@@ -184,6 +184,24 @@ describe("parseTradesCsv, Trade Republic export", () => {
     expect(errors[0]).toMatch(/Line 2: the price isn't in EUR/);
   });
 
+  // Regression: a blank price read as 0, saving a buy at no cost and inflating the return.
+  it("refuses a buy or sell with no price", () => {
+    const { trades, errors } = parseTradesCsv(
+      file(line("2026-01-02", "TRADING", "BUY", "A", "AA", "1.0", "")),
+      known,
+    );
+    expect(trades).toEqual([]);
+    expect(errors[0]).toMatch(/Line 2: this BUY row has no price/);
+  });
+
+  it("refuses a date in the future, like the plain CSV import", () => {
+    const { errors } = parseTradesCsv(
+      file(line("2026-12-02", "TRADING", "BUY", "A", "AA", "1.0", "10")),
+      known,
+    );
+    expect(errors[0]).toMatch(/future/);
+  });
+
   it("says it can correct share counts; a plain CSV doesn't", () => {
     expect(parseTradesCsv(file(), known).setsShares).toBe(true);
     expect(parseTradesCsv("date,side,isin,shares,price\n", opts).setsShares).toBeUndefined();
