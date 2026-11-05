@@ -10,7 +10,15 @@ vi.mock("@/integrations/supabase/client", () => ({
     rpc: (...args: unknown[]) => rpc(...args),
     functions: { invoke: (...args: unknown[]) => invoke(...args) },
     from: () => ({
-      select: () => ({ gte: () => ({ lte: async () => ({ data: existing, error: null }) }) }),
+      select: () => ({
+        is: () => ({
+          gte: () => ({
+            lte: () => ({
+              order: () => ({ range: async () => ({ data: existing, error: null }) }),
+            }),
+          }),
+        }),
+      }),
     }),
   },
 }));

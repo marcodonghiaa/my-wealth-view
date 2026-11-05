@@ -7,46 +7,71 @@ type Result<T> = PromiseLike<{ data: T | null; error: { message: string; code?: 
 /** The slice of the Supabase client the import uses; keeps the logic testable without a network. */
 export interface StatementClient {
   rpc(fn: "add_manual_transaction", args: Record<string, unknown>): Result<unknown>;
-  from(table: "v_transactions_eur"): {
+  from(table: "transactions"): {
     select(cols: string): {
-      gte(
+      is(
         col: string,
-        value: string,
+        value: null,
       ): {
-        lte(col: string, value: string): Result<Array<Record<string, unknown>>>;
+        gte(
+          col: string,
+          value: string,
+        ): {
+          lte(
+            col: string,
+            value: string,
+          ): {
+            order(col: string): {
+              range(from: number, to: number): Result<Array<Record<string, unknown>>>;
+            };
+          };
+        };
       };
     };
   };
 }
 
-/** Rows not in the app yet (same day, direction, amount and description), each once. */
+const PAGE = 1000; // PostgREST returns at most 1000 rows per request
+
+/**
+ * Rows not in the app yet (same day, direction, amount and description). Repeats are counted,
+ * not collapsed: two identical coffees in the file stay two, and importing the file again adds
+ * nothing because both are then in the app. Compares the bank's own description, not a rename.
+ */
 export async function newRows(
   client: StatementClient,
   rows: Array<StatementRow>,
 ): Promise<Array<StatementRow>> {
   if (rows.length === 0) return [];
   const dates = rows.map((r) => r.date).sort();
-  const { data, error } = await client
-    .from("v_transactions_eur")
-    .select("booking_date,amount,credit_debit_indicator,creditor_name")
-    .gte("booking_date", dates[0]!)
-    .lte("booking_date", dates.at(-1)!);
-  if (error) throw new Error(error.message);
-  const seen = new Set(
-    (data ?? []).map((t) =>
-      dedupeKey({
+  const inApp = new Map<string, number>();
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await client
+      .from("transactions")
+      .select("booking_date,amount,credit_debit_indicator,creditor_name")
+      .is("deleted_at", null)
+      .gte("booking_date", dates[0]!)
+      .lte("booking_date", dates.at(-1)!)
+      .order("entry_reference")
+      .range(from, from + PAGE - 1);
+    if (error) throw new Error(error.message);
+    for (const t of data ?? []) {
+      const key = dedupeKey({
         date: String(t["booking_date"]),
         description: String(t["creditor_name"] ?? ""),
         amount: Math.abs(Number(t["amount"])),
         direction: t["credit_debit_indicator"] === "DBIT" ? "DBIT" : "CRDT",
-      }),
-    ),
-  );
+      });
+      inApp.set(key, (inApp.get(key) ?? 0) + 1);
+    }
+    if (!data || data.length < PAGE) break;
+  }
   return rows.filter((r) => {
     const key = dedupeKey(r);
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
+    const left = inApp.get(key) ?? 0;
+    if (left === 0) return true;
+    inApp.set(key, left - 1);
+    return false;
   });
 }
 

@@ -15,42 +15,67 @@ const salary: StatementRow = {
   direction: "CRDT",
 };
 
+// Fake client: serves `existing` in pages of 1000 like PostgREST, and records each request.
 function client(existing: Array<Record<string, unknown>>, failOn?: string) {
   const rpc = vi.fn(async (_fn: string, args: Record<string, unknown>) =>
     args["p_description"] === failOn
       ? { data: null, error: { message: "boom" } }
       : { data: [], error: null },
   );
-  const range = vi.fn();
+  const requests: Array<{ from: string; to: string; deleted: unknown; page: [number, number] }> =
+    [];
   const c: StatementClient = {
     rpc,
     from: () => ({
       select: () => ({
-        gte: (_c: string, from: string) => ({
-          lte: async (_c2: string, to: string) => {
-            range(from, to);
-            return { data: existing, error: null };
-          },
+        is: (_col: string, deleted: null) => ({
+          gte: (_c: string, from: string) => ({
+            lte: (_c2: string, to: string) => ({
+              order: () => ({
+                range: async (a: number, b: number) => {
+                  requests.push({ from, to, deleted, page: [a, b] });
+                  return { data: existing.slice(a, b + 1), error: null };
+                },
+              }),
+            }),
+          }),
         }),
       }),
     }),
   };
-  return { c, rpc, range };
+  return { c, rpc, requests };
 }
 
+const inApp = (row: StatementRow, description = row.description) => ({
+  booking_date: row.date,
+  amount: row.amount,
+  credit_debit_indicator: row.direction,
+  creditor_name: description,
+});
+
 describe("newRows", () => {
-  it("leaves out rows already in the app and repeats inside the file", async () => {
-    const { c, range } = client([
-      {
-        booking_date: "2026-04-25",
-        amount: 2.5,
-        credit_debit_indicator: "DBIT",
-        creditor_name: "COFFEE",
-      },
+  it("leaves out rows already in the app, over the file's date range, deleted rows excluded", async () => {
+    const { c, requests } = client([inApp(coffee, "COFFEE")]);
+    expect(await newRows(c, [coffee, salary])).toEqual([salary]);
+    expect(requests[0]).toMatchObject({ from: "2026-04-25", to: "2026-04-26", deleted: null });
+  });
+
+  // Regression: two identical coffees on the same day in one statement became one.
+  it("keeps repeats inside the file, and skips them all once they are in the app", async () => {
+    expect(await newRows(client([]).c, [coffee, coffee])).toEqual([coffee, coffee]);
+    expect(await newRows(client([inApp(coffee)]).c, [coffee, coffee])).toEqual([coffee]);
+    expect(await newRows(client([inApp(coffee), inApp(coffee)]).c, [coffee, coffee])).toEqual([]);
+  });
+
+  // Regression: only the first 1000 rows in the app were compared, so a long history re-imported.
+  it("reads every page of rows already in the app", async () => {
+    const filler = Array.from({ length: 1000 }, () => inApp(salary, "Other"));
+    const { c, requests } = client([...filler, inApp(coffee)]);
+    expect(await newRows(c, [coffee])).toEqual([]);
+    expect(requests.map((r) => r.page)).toEqual([
+      [0, 999],
+      [1000, 1999],
     ]);
-    const rows = await newRows(c, [coffee, salary, salary]);
-    expect(rows).toEqual([salary]);
-    expect(range).toHaveBeenCalledWith("2026-04-25", "2026-04-26");
   });
 });
 
