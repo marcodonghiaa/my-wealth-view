@@ -5,7 +5,7 @@ import { CategoryRow } from "@/components/spending/category-row";
 import { supabase } from "@/integrations/supabase/client";
 import { formatISODate } from "@/lib/date";
 import { categoryColor } from "@/lib/categories";
-import { formatEur, personalAmountEur } from "@/lib/transactions";
+import { formatEur, personalAmountEur, startOfMonth } from "@/lib/transactions";
 import { MonthSwitcher } from "@/components/month-switcher";
 import { HeadlineFigure } from "@/components/headline-figure";
 import { ShareBar } from "@/components/share-bar";
@@ -46,10 +46,6 @@ interface RegretGroup {
   category: string;
   total: number;
   count: number;
-}
-
-function startOfMonth(date: Date): Date {
-  return new Date(date.getFullYear(), date.getMonth(), 1);
 }
 
 async function fetchSpendForMonth(month: Date): Promise<Array<SpendRow>> {

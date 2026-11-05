@@ -4,7 +4,7 @@ import { useState } from "react";
 import { ArrowDownLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatISODate } from "@/lib/date";
-import { formatMoney, incomeTitle } from "@/lib/transactions";
+import { formatMoney, incomeTitle, startOfMonth } from "@/lib/transactions";
 import { MonthSwitcher } from "@/components/month-switcher";
 import { HeadlineFigure } from "@/components/headline-figure";
 import { CategoryPicker } from "@/components/transactions/pickers";
@@ -39,10 +39,6 @@ interface IncomeRow {
   currency: string | null;
   amount: number | null;
   signed_amount_eur: number | null;
-}
-
-function startOfMonth(date: Date): Date {
-  return new Date(date.getFullYear(), date.getMonth(), 1);
 }
 
 async function fetchIncomeForMonth(month: Date): Promise<Array<IncomeRow>> {
