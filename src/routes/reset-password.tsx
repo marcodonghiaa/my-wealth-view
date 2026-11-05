@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { KeyRound, Loader2 } from "lucide-react";
 import { BrandMark } from "@/components/brand-mark";
-import { supabase } from "@/integrations/supabase/client";
+import { openedFromRecoveryLink, supabase } from "@/integrations/supabase/client";
 import { exitDemoMode } from "@/lib/demo/mode";
 import { MIN_PASSWORD_LENGTH } from "@/lib/password";
 
@@ -22,8 +22,9 @@ export const Route = createFileRoute("/reset-password")({
   component: ResetPasswordPage,
 });
 
-// Supabase signs the user in from the link in the recovery email (the token is in the URL),
-// so the page only needs a session to set the new password on.
+// Supabase signs the user in from the link in the recovery email (the token is in the URL).
+// The form shows only for that sign-in: a tab that was already signed in (say, an unlocked
+// laptop) must change the password in Settings, which asks for the current one.
 export function ResetPasswordPage() {
   const navigate = useNavigate();
   const [hasSession, setHasSession] = useState<boolean | null>(null);
@@ -35,10 +36,21 @@ export function ResetPasswordPage() {
     let cancelled = false;
     supabase.auth
       .getSession()
-      .then(({ data }) => !cancelled && setHasSession(Boolean(data.session)))
-      .catch(() => !cancelled && setHasSession(false));
+      .then(
+        ({ data }) =>
+          !cancelled &&
+          setHasSession((now) => now || (Boolean(data.session) && openedFromRecoveryLink())),
+      )
+      .catch(() => !cancelled && setHasSession((now) => now ?? false));
+    // The event can come after getSession has answered.
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "PASSWORD_RECOVERY") setHasSession(true);
+    });
     return () => {
       cancelled = true;
+      subscription.unsubscribe();
     };
   }, []);
 

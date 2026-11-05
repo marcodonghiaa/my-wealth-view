@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const navigate = vi.fn();
@@ -12,11 +12,18 @@ vi.mock("@tanstack/react-router", () => ({
 let session: unknown = null;
 let updateError: Error | null = null;
 const updateUser = vi.fn(async (_args: unknown) => ({ error: updateError }));
+let fromRecoveryLink = true;
+let emit: ((event: string) => void) | null = null;
 vi.mock("@/integrations/supabase/client", () => ({
+  openedFromRecoveryLink: () => fromRecoveryLink,
   supabase: {
     auth: {
       getSession: async () => ({ data: { session } }),
       updateUser: (args: unknown) => updateUser(args),
+      onAuthStateChange: (cb: (event: string) => void) => {
+        emit = cb;
+        return { data: { subscription: { unsubscribe: () => (emit = null) } } };
+      },
     },
   },
 }));
@@ -28,6 +35,7 @@ describe("ResetPasswordPage", () => {
     navigate.mockReset();
     updateUser.mockClear();
     updateError = null;
+    fromRecoveryLink = true;
   });
 
   // protects=a locked-out user can set a new password from the recovery email;
@@ -55,6 +63,25 @@ describe("ResetPasswordPage", () => {
       "Password should be different from the old password.",
     );
     expect(navigate).not.toHaveBeenCalled();
+  });
+
+  // Regression: any signed-in tab got the form, so someone at an unlocked laptop could set a new
+  // password without knowing the current one.
+  it("hides the form for a tab that was signed in without a recovery link", async () => {
+    session = { user: { id: "u" } };
+    fromRecoveryLink = false;
+    render(<ResetPasswordPage />);
+    expect((await screen.findByRole("alert")).textContent).toMatch(/expired or was already used/);
+    expect(screen.queryByLabelText("New password")).toBeNull();
+  });
+
+  it("shows the form when the recovery sign-in lands after the page asked", async () => {
+    session = { user: { id: "u" } };
+    fromRecoveryLink = false;
+    render(<ResetPasswordPage />);
+    await screen.findByRole("alert");
+    act(() => emit?.("PASSWORD_RECOVERY"));
+    expect(await screen.findByLabelText("New password")).toBeTruthy();
   });
 
   it("explains an expired link when there is no recovery session", async () => {
