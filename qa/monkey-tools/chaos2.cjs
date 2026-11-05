@@ -1,0 +1,25 @@
+const { chromium } = require("playwright");
+const BASE = "http://127.0.0.1:5211";
+(async () => {
+  const browser = await chromium.launch();
+  const page = await (await browser.newContext({ viewport: { width: 375, height: 812 } })).newPage();
+  const ev = []; const t0 = Date.now(); const T = () => Date.now() - t0;
+  page.on("load", () => ev.push(`${T()} load ${page.url().replace(BASE,"")}`));
+  page.on("request", (r) => { if (r.url().includes("reports.tsx")) ev.push(`${T()} req ${r.url().replace(BASE,"")}`); });
+  await page.goto(BASE + "/demo", { waitUntil: "networkidle" });
+  const pattern = (u) => u.pathname.endsWith("/reports.tsx") && u.search.includes("tsr-split");
+  await page.route(pattern, (r) => { ev.push(`${T()} ABORT`); r.abort("failed"); });
+  ev.push(`${T()} navigate /reports in-app`);
+  await page.evaluate(() => { history.pushState(history.state, "", "/reports"); dispatchEvent(new PopStateEvent("popstate")); });
+  await page.waitForTimeout(2500);
+  ev.push(`${T()} errorPage=${(await page.innerText("body")).includes("didn't load")} ss=${await page.evaluate(() => JSON.stringify(Object.keys(sessionStorage)))}`);
+  await page.unroute(pattern); ev.push(`${T()} unblocked`);
+  await page.getByRole("button", { name: "Try again" }).click(); await page.waitForTimeout(2000);
+  ev.push(`${T()} after TryAgain errorPage=${(await page.innerText("body")).includes("didn't load")}`);
+  await page.evaluate(() => { history.pushState(history.state, "", "/spending"); dispatchEvent(new PopStateEvent("popstate")); }); await page.waitForTimeout(2000);
+  ev.push(`${T()} in-app /spending errorPage=${(await page.innerText("body")).includes("didn't load")} h1=${await page.locator("main h1").first().innerText().catch(()=>"-")}`);
+  await page.evaluate(() => { history.pushState(history.state, "", "/reports"); dispatchEvent(new PopStateEvent("popstate")); }); await page.waitForTimeout(2000);
+  ev.push(`${T()} in-app back to /reports errorPage=${(await page.innerText("body")).includes("didn't load")}`);
+  await page.screenshot({ path: "chaos/chaos-3-reports-after-unblock-and-renav.png" });
+  console.log(ev.join("\n")); await browser.close();
+})();
