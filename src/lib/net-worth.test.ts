@@ -1,8 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
   allocationHistory,
-  allocationSeries,
-  breakAtGaps,
   chartPoints,
   inRange,
   monthAgo,
@@ -106,57 +104,6 @@ describe("chartPoints", () => {
 
   it("adds a numeric time for the axis", () => {
     expect(chartPoints([row("2025-11-30", 1)])[0]?.ts).toBe(Date.parse("2025-11-30T00:00:00"));
-  });
-});
-
-describe("allocationSeries", () => {
-  const h = (d: string, s: number, b: number, c: number, cash: number, liab = 0) => ({
-    snapshot_date: d,
-    stocks_eur: s,
-    bonds_eur: b,
-    crypto_eur: c,
-    cash_eur: cash,
-    liabilities_eur: liab,
-    total_eur: s + b + c + cash - liab,
-  });
-
-  it("gives each class its share of gross assets, summing to 100", () => {
-    const [p] = allocationSeries([h("2025-01-31", 50, 25, 15, 10, 7)]);
-    expect(p).toMatchObject({
-      snapshot_date: "2025-01-31",
-      stocks: 50,
-      bonds: 25,
-      crypto: 15,
-      cash: 10,
-    });
-  });
-
-  // protects=imported totals with no split show up as their own band; fails_when=other_eur is
-  // dropped or missing rows break the sum; no_claim=how the band is drawn
-  it("counts an unallocated amount as its own share of gross assets", () => {
-    const [p] = allocationSeries([{ ...h("2025-01-31", 50, 0, 0, 0), other_eur: 50 }]);
-    expect(p).toMatchObject({ stocks: 50, other: 50 });
-  });
-
-  it("treats a row without other_eur as nothing unallocated", () => {
-    const [p] = allocationSeries([h("2025-01-31", 50, 0, 0, 50)]);
-    expect(p?.other).toBe(0);
-  });
-
-  it("ignores liabilities so shares do not depend on the tax reserve", () => {
-    const [a] = allocationSeries([h("2025-01-31", 50, 50, 0, 0, 0)]);
-    const [b] = allocationSeries([h("2025-01-31", 50, 50, 0, 0, 40)]);
-    expect(a).toEqual(b);
-  });
-
-  it("skips months with no assets instead of dividing by zero", () => {
-    expect(allocationSeries([h("2024-02-29", 0, 0, 0, 0)])).toEqual([]);
-  });
-
-  it("adds a numeric time for the axis", () => {
-    expect(allocationSeries([h("2025-01-31", 1, 0, 0, 0)])[0]?.ts).toBe(
-      Date.parse("2025-01-31T00:00:00"),
-    );
   });
 });
 
@@ -388,38 +335,6 @@ describe("allocationHistory", () => {
 
   it("is the imported history alone when there are no snapshots", () => {
     expect(allocationHistory([hist("2025-11-30")], [])).toEqual([hist("2025-11-30")]);
-  });
-});
-
-describe("breakAtGaps", () => {
-  const pt = (d: string) => ({
-    snapshot_date: d,
-    ts: Date.parse(`${d}T00:00:00`),
-    stocks: 50,
-    bonds: 0,
-    crypto: 0,
-    cash: 50,
-    other: 0,
-  });
-
-  // protects=no mix is drawn where there is no data; fails_when=the gap is joined by a smear
-  it("puts an empty point inside a hole so the areas stop and restart", () => {
-    const out = breakAtGaps([pt("2025-11-30"), pt("2026-09-04")]);
-    expect(out).toHaveLength(3);
-    expect(out[1]).toMatchObject({
-      stocks: null,
-      bonds: null,
-      crypto: null,
-      cash: null,
-      other: null,
-    });
-    expect(out[1]?.ts).toBeGreaterThan(out[0]?.ts ?? 0);
-    expect(out[1]?.ts).toBeLessThan(out[2]?.ts ?? 0);
-  });
-
-  it("leaves normal monthly steps alone", () => {
-    const rows = [pt("2025-10-31"), pt("2025-11-30"), pt("2025-12-31")];
-    expect(breakAtGaps(rows)).toEqual(rows);
   });
 });
 

@@ -9,9 +9,3 @@ export const TONE_TEXT: Record<Tone, string> = {
   negative: "text-negative",
   neutral: "text-muted-foreground",
 };
-
-export const TONE_PILL: Record<Tone, string> = {
-  positive: "border-positive/30 bg-positive/10 text-positive",
-  negative: "border-negative/30 bg-negative/10 text-negative",
-  neutral: "border-border bg-muted/40 text-muted-foreground",
-};

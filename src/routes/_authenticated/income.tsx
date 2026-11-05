@@ -4,7 +4,7 @@ import { useState } from "react";
 import { ArrowDownLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatISODate } from "@/lib/date";
-import { formatEur, formatMoney, incomeTitle } from "@/lib/transactions";
+import { formatMoney, incomeTitle } from "@/lib/transactions";
 import { MonthSwitcher } from "@/components/month-switcher";
 import { HeadlineFigure } from "@/components/headline-figure";
 import { CategoryPicker } from "@/components/transactions/pickers";

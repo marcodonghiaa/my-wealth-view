@@ -40,19 +40,15 @@ function forTx<Q extends { eq: (c: string, v: string) => Q; is: (c: string, v: n
 }
 
 // Shared shape behind updateCategory/updateType/answerWorthIt: update one column
-// on one transaction, with optimistic cache update + rollback.
-// writeColumn: the column to write when it differs from the one shown (a rename is stored in
-// custom_name so the bank sync never overwrites it); the list is refetched to show the result.
-export function useTransactionFieldMutation<
-  K extends "category" | "transaction_type" | "worth_it" | "creditor_name",
->(
+// on one transaction, with optimistic cache update + rollback. (Renames go through
+// useRenameMerchantMutation, which renames the merchant's other rows too.)
+export function useTransactionFieldMutation<K extends "category" | "transaction_type" | "worth_it">(
   queryClient: QueryClient,
   monthKey: string,
   column: K,
   opts: {
     errorMessage: string;
     successMessage?: (value: TransactionRow[K]) => string;
-    writeColumn?: string;
   },
 ) {
   type Vars = { tx: TxKey; value: TransactionRow[K] };
@@ -61,9 +57,7 @@ export function useTransactionFieldMutation<
   return useMutation<void, Error, Vars, Context>({
     mutationFn: async ({ tx, value }) => {
       const patch =
-        column === "category"
-          ? categoryPatch(value as string | null)
-          : { [opts.writeColumn ?? column]: value };
+        column === "category" ? categoryPatch(value as string | null) : { [column]: value };
       const { error } = await forTx(supabase.from("transactions").update(patch as never), tx);
       if (error) throw error;
     },
@@ -89,8 +83,6 @@ export function useTransactionFieldMutation<
     },
     onSettled: (_data, _error, vars) => {
       if (column === "category" && vars.value === TRANSFER_CATEGORY) refetchFlows(queryClient);
-      else if (opts.writeColumn)
-        void queryClient.invalidateQueries({ queryKey: ["transactions", monthKey] });
     },
   });
 }
