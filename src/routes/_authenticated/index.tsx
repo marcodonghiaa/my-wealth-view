@@ -179,7 +179,7 @@ function NetWorthPage() {
 
       {/* Headline: the number is the screen */}
       <section aria-label="Net worth today" className="mb-6">
-        <div className="min-h-16" aria-live="polite">
+        <div className="min-h-16">
           {netWorthQuery.isPending || (currency !== "EUR" && fxQuery.isPending) ? (
             <div className="h-16 w-72 animate-pulse rounded-2xl bg-muted" />
           ) : latest == null ? (
@@ -239,9 +239,16 @@ function NetWorthPage() {
           className="-mx-1 h-72 sm:h-80"
           role="img"
           aria-label={
-            chartFirst && latest
-              ? trendSummary("Net worth over time", chartFirst.total_eur, latest.total_eur, (v) =>
-                  formatMoney(v, "EUR"),
+            // The chart's own range and the currency on screen, not always EUR and today.
+            chartFirst && chartData.length > 0
+              ? trendSummary(
+                  "Net worth over time",
+                  chartFirst.total_eur,
+                  chartData.at(-1)!.total_eur,
+                  (v) =>
+                    rateToEur != null
+                      ? formatMoney(v / rateToEur, currency)
+                      : formatMoney(v, "EUR"),
                 )
               : "Net worth over time"
           }
