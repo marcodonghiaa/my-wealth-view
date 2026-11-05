@@ -121,7 +121,15 @@ export function TradesDialog({
   const net = netShares(trades);
 
   return (
-    <Dialog>
+    <Dialog
+      onOpenChange={(open) => {
+        // Closing mid-edit must not leave "Save trade" overwriting that trade next time.
+        if (!open) {
+          setForm(blank());
+          setEditing(null);
+        }
+      }}
+    >
       <DialogTrigger
         title={`Trades for ${name}`}
         className="-my-2.5 inline-flex min-h-11 items-center underline-offset-2 hover:underline"

@@ -50,7 +50,7 @@ function parseTradeRepublic(
   lines: Array<string>,
   separator: string,
   header: Array<string>,
-  { kind, knownKeys }: { kind: "stock" | "crypto"; knownKeys: Set<string> },
+  { kind, knownKeys, today }: { kind: "stock" | "crypto"; knownKeys: Set<string>; today: string },
 ): CsvResult {
   if (kind !== "stock") {
     return {
@@ -74,6 +74,15 @@ function parseTradeRepublic(
     names.set(key, get("name"));
     if (type === "SPLIT" && Number(get("shares")) < 0) {
       notes.push(`${get("name")}: a reverse split on ${date} wasn't imported. Add it by hand.`);
+      return;
+    }
+    // A blank price read as 0 and saved a buy at no cost, inflating the return.
+    if (type !== "SPLIT" && get("price").trim() === "") {
+      errors.push(`Line ${i + 2}: this ${type} row has no price.`);
+      return;
+    }
+    if (date > today) {
+      errors.push(`Line ${i + 2}: the date is in the future.`);
       return;
     }
     const price = type === "SPLIT" ? 0 : Number(get("price"));
@@ -121,7 +130,7 @@ export function parseTradesCsv(
   const separator = [";", "\t", ","].find((s) => headerLine.includes(s)) ?? ",";
   const header = splitLine(headerLine, separator).map((h) => h.toLowerCase());
   if (header.includes("transaction_id") && header.includes("category")) {
-    return parseTradeRepublic(lines, separator, header, { kind, knownKeys });
+    return parseTradeRepublic(lines, separator, header, { kind, knownKeys, today });
   }
   const keyName = kind === "stock" ? "isin" : "symbol";
   const at = (name: string) => header.indexOf(name);
