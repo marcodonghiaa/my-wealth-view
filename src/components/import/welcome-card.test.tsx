@@ -46,9 +46,7 @@ describe("WelcomeCard", () => {
     counts = {};
     dismissed = false;
     setup();
-    expect(
-      await screen.findByText("0 of 4 done. Each step ticks itself off once its data is in."),
-    ).toBeTruthy();
+    expect(await screen.findByText("0 of 4 done.")).toBeTruthy();
     expect(screen.getByRole("link", { name: "Connect" }).getAttribute("href")).toBe("/accounts");
     expect(screen.getByRole("link", { name: "Add" }).getAttribute("href")).toBe("/portfolio");
     expect(screen.getByRole("link", { name: "Import" }).getAttribute("href")).toBe("/import");
@@ -81,7 +79,7 @@ describe("WelcomeCard", () => {
 
   describe("notifications row", () => {
     const INSTALL_HINT =
-      "Install the app first: on iPhone, Safari → Share → Add to Home Screen; on Android, Chrome menu → Install app; on a computer, the install icon in the address bar. Then open the app and turn this on.";
+      "Install the app first (iPhone: Safari → Share → Add to Home Screen), then turn this on.";
 
     afterEach(() => {
       demo = false;

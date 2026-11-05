@@ -354,12 +354,7 @@ export function SplitwiseReview({
       <div className="space-y-4 text-sm">
         <h2 className="text-base font-semibold">Step 3 of 3: Done</h2>
         {done && <p role="status">{done}</p>}
-        {last && (
-          <p className="text-muted-foreground">
-            Undo removes this import and puts the bank transactions it changed back. It is offered
-            only here; earlier imports are not touched.
-          </p>
-        )}
+        {last && <p className="text-muted-foreground">Undo is only available now.</p>}
         {undo.error && (
           <p role="alert" className="text-negative">
             Undo failed: {undo.error.message}

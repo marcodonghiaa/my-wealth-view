@@ -67,9 +67,7 @@ function NotificationsAction() {
   if (support !== "install") return null;
   return (
     <p className="max-w-xs text-xs text-muted-foreground">
-      Install the app first: on iPhone, Safari → Share → Add to Home Screen; on Android, Chrome menu
-      → Install app; on a computer, the install icon in the address bar. Then open the app and turn
-      this on.
+      Install the app first (iPhone: Safari → Share → Add to Home Screen), then turn this on.
     </p>
   );
 }
@@ -103,7 +101,7 @@ export function WelcomeCard({ history }: { history: number }) {
             Get started
           </h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            {done} of {steps.length} done. Each step ticks itself off once its data is in.
+            {done} of {steps.length} done.
           </p>
         </div>
         <button
