@@ -176,9 +176,8 @@ export function ImportStatement() {
         <DialogHeader>
           <DialogTitle>Import statement</DialogTitle>
           <DialogDescription>
-            A CSV or PDF statement from your bank (Fineco, any bank), or a spreadsheet saved as CSV.
-            A PDF is read by the AI: check the rows before importing. Transactions already here are
-            left out.
+            CSV or PDF from any bank. A PDF is sent to Google Gemini to be read. Duplicates are
+            skipped.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
