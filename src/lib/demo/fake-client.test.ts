@@ -361,6 +361,59 @@ describe("fake client: delete_holding", () => {
   });
 });
 
+describe("fake client: add_manual_transaction", () => {
+  type Rpc = (
+    f: string,
+    a: object,
+  ) => PromiseLike<{
+    data: Array<{ account_uid: string; entry_reference: string }>;
+    error: unknown;
+  }>;
+  const add = (c: ReturnType<typeof fresh>, args: object) =>
+    (c.rpc as unknown as Rpc)("add_manual_transaction", {
+      p_booking_date: "2026-10-18",
+      p_description: "Cena",
+      p_amount: 45.5,
+      p_direction: "DBIT",
+      ...args,
+    });
+
+  it("adds a spend row that shows in the transactions view, on a manual account per source", async () => {
+    const c = fresh();
+    const { data, error } = await add(c, { p_source: "Fineco" });
+    expect(error).toBeNull();
+    const ref = data[0]!.entry_reference;
+    const { data: rows } = await c
+      .from("v_transactions_eur")
+      .select("creditor_name,signed_amount_eur,flow_type,category")
+      .eq("entry_reference", ref);
+    expect(rows).toMatchObject([
+      { creditor_name: "Cena", signed_amount_eur: -45.5, flow_type: "spend", category: null },
+    ]);
+    const { data: again } = await add(c, { p_source: "Fineco", p_description: "Pizza" });
+    expect(again[0]!.account_uid).toBe(data[0]!.account_uid);
+    const { data: accounts } = await c
+      .from("accounts")
+      .select("uid,bank_name,manual")
+      .eq("uid", data[0]!.account_uid);
+    expect(accounts).toMatchObject([
+      { uid: data[0]!.account_uid, bank_name: "Fineco", manual: true },
+    ]);
+  });
+
+  it("files a Transfer as a transfer and refuses an amount of zero", async () => {
+    const c = fresh();
+    const { data } = await add(c, { p_direction: "CRDT", p_category: "Transfer" });
+    const { data: rows } = await c
+      .from("v_transactions_eur")
+      .select("flow_type")
+      .eq("entry_reference", data[0]!.entry_reference);
+    expect(rows).toMatchObject([{ flow_type: "transfer" }]);
+    const bad = await add(c, { p_amount: 0 });
+    expect(bad.error).toBeTruthy();
+  });
+});
+
 describe("fake client: set_holding_quantity", () => {
   type Rpc = (f: string, a: object) => PromiseLike<{ data: number; error: unknown }>;
   it("selling a stock takes its value out of today's net worth at once", async () => {
