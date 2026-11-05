@@ -134,6 +134,14 @@ export function planSpend(
     return category;
   };
 
+  // Bank exports write spending as negative amounts; there a positive amount is a refund and
+  // lowers the month's spend. A file that is mostly positive lists spending as positive, and
+  // its signs are ignored, as before.
+  const amounts = rows
+    .map((raw) => parseAmount(cell(raw, columns.amount)))
+    .filter((a): a is number => a != null && a !== 0);
+  const signed = amounts.filter((a) => a < 0).length > amounts.length / 2;
+
   rows.forEach((raw, i): undefined => {
     const line = lineOf(i);
     const skip = (reason: string): undefined => {
@@ -150,11 +158,12 @@ export function planSpend(
     if (amount === 0) return skip("Amount is zero.");
 
     const key = `${month}|${category}`;
-    const spend = (totals.get(key)?.spend_eur ?? 0) + Math.abs(amount);
+    const spend = (totals.get(key)?.spend_eur ?? 0) + (signed ? -amount : Math.abs(amount));
     totals.set(key, { month: `${month}-01`, category, spend_eur: cents(spend) });
     return undefined;
   });
 
   const categories = [...mapped].map(([source, category]) => ({ source, category }));
-  return { rows: [...totals.values()], skipped, categories };
+  // Refunds can outweigh a month's spend in a category: nothing was spent there, so no row.
+  return { rows: [...totals.values()].filter((r) => r.spend_eur > 0), skipped, categories };
 }
