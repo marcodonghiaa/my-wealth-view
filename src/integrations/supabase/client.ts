@@ -5,13 +5,12 @@ import { resolveSupabaseConfig } from "./config";
 import { getDemoClient } from "@/lib/demo/fake-client";
 import { isDemoMode } from "@/lib/demo/mode";
 
-// Falls back to the reference deployment's project only where that is expected (the Vite dev
-// server, SSR). A browser on any other host with missing
-// VITE_SUPABASE_* throws instead of sending logins to the maintainer's project.
+// Without VITE_SUPABASE_* a production build throws, and the dev server and server rendering use
+// an address that resolves nowhere: nothing ever reaches another person's project.
 const {
   url: SUPABASE_URL,
   key: SUPABASE_PUBLISHABLE_KEY,
-  usingFallback,
+  configured,
 } = resolveSupabaseConfig({
   url: import.meta.env["VITE_SUPABASE_URL"],
   key: import.meta.env["VITE_SUPABASE_PUBLISHABLE_KEY"],
@@ -19,11 +18,10 @@ const {
   dev: import.meta.env.DEV,
 });
 
-if (usingFallback) {
+if (!configured && typeof window !== "undefined") {
   console.warn(
-    "[my-wealth-view] VITE_SUPABASE_URL / VITE_SUPABASE_PUBLISHABLE_KEY not set — " +
-      "connecting to the maintainer's reference project instead of your own. " +
-      "Self-hosting? Set these in .env (see .env.example) and rebuild.",
+    "[my-wealth-view] VITE_SUPABASE_URL / VITE_SUPABASE_PUBLISHABLE_KEY not set: only /demo works. " +
+      "Set them in .env (see .env.example) to use your own project.",
   );
 }
 
