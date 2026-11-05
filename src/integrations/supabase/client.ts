@@ -2,7 +2,6 @@
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "./types";
 import { resolveSupabaseConfig } from "./config";
-import { getDemoClient } from "@/lib/demo/fake-client";
 import { isDemoMode } from "@/lib/demo/mode";
 
 // Without VITE_SUPABASE_* a production build throws, and the dev server and server rendering use
@@ -35,11 +34,22 @@ const realClient = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY
   },
 });
 
+// The demo's fake client (and its generated data) is a separate chunk, loaded only when the demo
+// is entered or a demo tab is reloaded, so real visits don't download it.
+let demoModule: typeof import("@/lib/demo/fake-client") | null = null;
+export async function loadDemoClient(): Promise<void> {
+  demoModule ??= await import("@/lib/demo/fake-client");
+}
+
 // Every screen uses this one object. In demo mode each call is answered by the in-memory fake
 // instead, so the demo cannot reach the real database, bank functions or login.
 export const supabase = new Proxy(realClient, {
   get(_target, prop) {
-    const target = isDemoMode() ? getDemoClient() : realClient;
+    if (isDemoMode() && !demoModule) {
+      // Never fall back to the real client in the demo: /demo and the root route load it first.
+      throw new Error("The demo is still loading.");
+    }
+    const target = isDemoMode() ? demoModule!.getDemoClient() : realClient;
     const value: unknown = Reflect.get(target, prop);
     return typeof value === "function" ? value.bind(target) : value;
   },

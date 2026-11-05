@@ -5,9 +5,9 @@ import { Route as DemoRoute } from "./demo";
 import { Route as ResetRoute } from "./reset-password";
 
 type BeforeLoad = (args: { context: { queryClient: QueryClient } }) => unknown;
-const run = (route: { options: unknown }, queryClient: QueryClient) => {
+const run = async (route: { options: unknown }, queryClient: QueryClient) => {
   try {
-    (route.options as { beforeLoad: BeforeLoad }).beforeLoad({ context: { queryClient } });
+    await (route.options as { beforeLoad: BeforeLoad }).beforeLoad({ context: { queryClient } });
   } catch {
     // /demo redirects to the dashboard by throwing.
   }
@@ -21,11 +21,11 @@ describe("switching between demo and real data empties the query cache", () => {
     ["/auth", AuthRoute],
     ["/reset-password", ResetRoute],
   ] as const) {
-    it(`${name} clears cached queries`, () => {
+    it(`${name} clears cached queries`, async () => {
       const queryClient = new QueryClient();
       queryClient.setQueryData(["accounts"], { real: true });
       const clear = vi.spyOn(queryClient, "clear");
-      run(route, queryClient);
+      await run(route, queryClient);
       expect(clear).toHaveBeenCalled();
       expect(queryClient.getQueryData(["accounts"])).toBeUndefined();
     });

@@ -1,6 +1,6 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { enterDemoMode, exitDemoMode, isDemoMode } from "./mode";
-import { supabase } from "@/integrations/supabase/client";
+import { loadDemoClient, supabase } from "@/integrations/supabase/client";
 
 afterEach(() => {
   exitDemoMode();
@@ -34,6 +34,9 @@ describe("demo mode flag", () => {
 });
 
 describe("the shared supabase client in demo mode", () => {
+  // In the app, /demo and the root route load the fake client before any screen renders.
+  beforeAll(() => loadDemoClient());
+
   it("answers from fake data and never touches the network", async () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch");
     enterDemoMode();
@@ -59,5 +62,21 @@ describe("the shared supabase client in demo mode", () => {
     enterDemoMode();
     const { data } = await supabase.from("category_rules").select("id");
     expect(data!.length).toBeGreaterThan(0);
+  });
+});
+
+// The fake client is its own chunk: until it has loaded, demo mode must refuse rather than fall
+// back to the real client.
+describe("demo mode before the fake client has loaded", () => {
+  it("never answers from the real client", async () => {
+    vi.resetModules();
+    const fresh = await import("@/integrations/supabase/client");
+    const mode = await import("./mode");
+    mode.enterDemoMode();
+    try {
+      expect(() => fresh.supabase.from("accounts")).toThrow(/demo is still loading/i);
+    } finally {
+      mode.exitDemoMode();
+    }
   });
 });
