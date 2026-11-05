@@ -118,6 +118,25 @@ describe("planSpend", () => {
     ]);
   });
 
+  // Regression: in a bank export (spending negative) a +20 refund was added to the spend,
+  // so -50 and +20 imported as 70 instead of 30.
+  it("subtracts refunds in a file that writes spending as negative", () => {
+    const { rows } = planSpend(
+      [
+        ["2024-02", "Groceries", "-50", "EUR"],
+        ["2024-02", "Groceries", "20", "EUR"],
+        ["2024-02", "Rent", "-500", "EUR"],
+        ["2024-03", "Shopping", "-10", "EUR"],
+        ["2024-03", "Shopping", "15", "EUR"],
+      ],
+      sp,
+    );
+    expect(rows).toEqual([
+      { month: "2024-02-01", category: "Groceries", spend_eur: 30 },
+      { month: "2024-02-01", category: "Housing", spend_eur: 500 },
+    ]);
+  });
+
   it("skips other currencies, income, transfers, zero and unreadable rows", () => {
     const { rows, skipped } = planSpend(
       [
