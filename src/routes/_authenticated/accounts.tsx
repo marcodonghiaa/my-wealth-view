@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { MaskedIban } from "@/components/masked-iban";
 import { supabase } from "@/integrations/supabase/client";
 import { assertHttpsUrl } from "@/lib/consent-url";
-import { COUNTRIES, linkedMessage, renewTarget } from "@/lib/bank-link";
+import { COUNTRIES, linkErrorMessage, linkedMessage, renewTarget } from "@/lib/bank-link";
 import { functionErrorMessage } from "@/lib/function-error";
 import { consentAlerts, type ConsentAlert } from "@/lib/consent-expiry";
 import { formatISODate } from "@/lib/date";
@@ -123,7 +123,7 @@ function AccountsPage() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const linked = linkedMessage(params);
-    const error = params.get("bank_link_error");
+    const error = linkErrorMessage(params);
     if (linked) {
       toast.success(linked);
       void queryClient.invalidateQueries({ queryKey: ["bank-accounts-latest"] });
