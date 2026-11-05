@@ -259,6 +259,26 @@ describe("transaction mutations are scoped to one account", () => {
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ["spend-by-category"] });
   });
 
+  // Regression: lowering the amount below a split share was refused by the database.
+  it("a new amount below the split share clears the split", async () => {
+    const { queryClient, wrapper } = setup();
+    const { result } = renderHook(() => useManualAmountMutation(queryClient), { wrapper });
+    await act(() =>
+      result.current.mutateAsync({
+        tx: { account_uid: "a1", entry_reference: "r1", personal_amount: 30 },
+        amount: 20,
+      }),
+    );
+    expect(calls[0]?.update).toEqual({ amount: 20, personal_amount: null, owed_by: null });
+    await act(() =>
+      result.current.mutateAsync({
+        tx: { account_uid: "a1", entry_reference: "r1", personal_amount: 10 },
+        amount: 20,
+      }),
+    );
+    expect(calls[1]?.update).toEqual({ amount: 20 });
+  });
+
   it("soft delete stamps deleted_at per account and undo clears it", async () => {
     const { queryClient, wrapper } = setup();
     const { result } = renderHook(() => useDeleteMutation(queryClient, vi.fn()), { wrapper });
