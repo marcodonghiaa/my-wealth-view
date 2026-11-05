@@ -11,7 +11,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
-import { CATEGORIES } from "@/lib/categories";
+import { useCategories } from "@/lib/use-categories";
 import { parseQuantity } from "@/lib/holdings";
 
 type Direction = "DBIT" | "CRDT";
@@ -53,6 +53,7 @@ const field =
 export function AddTransaction({ today }: { today: string }) {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
+  const categories = useCategories().list;
   const [direction, setDirection] = useState<Direction>("DBIT");
   const [amount, setAmount] = useState("");
   const [date, setDate] = useState(today);
@@ -207,7 +208,7 @@ export function AddTransaction({ today }: { today: string }) {
               className={field}
             >
               <option value="">Pick for me</option>
-              {CATEGORIES.map((c) => (
+              {categories.map((c) => (
                 <option key={c} value={c}>
                   {c}
                 </option>

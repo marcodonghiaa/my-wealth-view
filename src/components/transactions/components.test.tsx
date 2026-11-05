@@ -1,10 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render as rtlRender, screen } from "@testing-library/react";
+import { queryWrapper } from "@/test/query-wrapper";
 import userEvent from "@testing-library/user-event";
 import type { TransactionRow } from "@/lib/transactions";
 import { CategoryPicker, TypePicker } from "./pickers";
 import { SplitEditor } from "./split-editor";
 import { WorthItPrompt, WorthItSpotlight } from "./worth-it";
+
+const render = (ui: React.ReactElement) => rtlRender(ui, { wrapper: queryWrapper() });
 
 const tx = (over: Partial<TransactionRow> = {}): TransactionRow => ({
   entry_reference: "r1",

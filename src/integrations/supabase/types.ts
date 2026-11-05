@@ -647,6 +647,12 @@ export type Database = {
         };
         Relationships: [];
       };
+      user_categories: {
+        Row: { user_id: string; name: string; hidden: boolean; created_at: string };
+        Insert: { user_id?: string; name: string; hidden?: boolean; created_at?: string };
+        Update: { user_id?: string; name?: string; hidden?: boolean; created_at?: string };
+        Relationships: [];
+      };
       subscription_billing_overrides: {
         Row: {
           billing_frequency: string | null;

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render as rtlRender, screen } from "@testing-library/react";
+import { queryWrapper } from "@/test/query-wrapper";
 import userEvent from "@testing-library/user-event";
 import { shareToRow } from "@/lib/transactions";
 import {
@@ -7,6 +8,8 @@ import {
   TransactionRowView,
   type TransactionViewProps,
 } from "./transaction-views";
+
+const render = (ui: React.ReactElement) => rtlRender(ui, { wrapper: queryWrapper() });
 
 const props = (): TransactionViewProps => ({
   tx: shareToRow({
