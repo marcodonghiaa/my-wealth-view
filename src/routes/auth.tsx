@@ -23,7 +23,11 @@ export function safeNext(value: unknown): string | undefined {
 export const Route = createFileRoute("/auth")({
   ssr: false,
   // Arriving here always ends a demo visit, so a real sign-in never shares a tab with fake data.
-  beforeLoad: () => exitDemoMode(),
+  // Cached queries go too: otherwise the next dashboard shows the previous visit's numbers.
+  beforeLoad: ({ context }) => {
+    exitDemoMode();
+    context.queryClient.clear();
+  },
   validateSearch: (s: Record<string, unknown>) => {
     const next = safeNext(s["next"]);
     return next ? { next } : {};

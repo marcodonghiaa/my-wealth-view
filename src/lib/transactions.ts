@@ -228,3 +228,11 @@ export function filterTransactions(
     return true;
   });
 }
+
+/** The selected rows among those shown, leaving out Splitwise shares (not transactions rows). */
+export function selectedOnly(
+  shown: Array<TransactionRow>,
+  selected: ReadonlySet<string>,
+): Array<TransactionRow> {
+  return shown.filter((tx) => !isSplitwiseShare(tx) && selected.has(txId(tx)));
+}
