@@ -138,6 +138,28 @@ describe("fake client: writes live in memory only", () => {
     expect(n2).toBe(n);
   });
 
+  // Regression: once a table was emptied, new rows got no id, so deleting one
+  // (`.eq("id", undefined)`) matched and removed every new row.
+  it("gives new rows ids even after the table was emptied", async () => {
+    const c = fresh();
+    await c.from("category_rules").delete().neq("match_text", "");
+    const rule = (match_text: string) => ({
+      user_id: DEMO_USER_ID,
+      match_field: "creditor_name",
+      match_text,
+      set_category: "Others",
+    });
+    await c.from("category_rules").insert(rule("alpha"));
+    await c.from("category_rules").insert(rule("beta"));
+    const { data } = await c.from("category_rules").select("id, match_text");
+    const alpha = data!.find((r) => r.match_text === "alpha")!;
+
+    await c.from("category_rules").delete().eq("id", alpha.id);
+
+    const { data: left } = await c.from("category_rules").select("match_text");
+    expect(left!.map((r) => r.match_text)).toEqual(["beta"]);
+  });
+
   it("dismissing a subscription hides it; a manual frequency marks it manual", async () => {
     const c = fresh();
     const { data: subs } = await c.from("v_subscriptions").select("creditor_name");

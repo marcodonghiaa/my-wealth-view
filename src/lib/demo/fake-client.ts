@@ -139,9 +139,12 @@ class Store {
   readonly db: Record<string, Array<Row>>;
   private readonly todayNum: number;
   private nextId = 1;
+  private readonly shapes: Map<string, Row>;
   constructor(now: Date) {
     this.db = generateDemoData(now) as unknown as Record<string, Array<Row>>;
     this.todayNum = todayNumOf(now);
+    // Read each table's shape once: the first row is gone once a table is emptied.
+    this.shapes = new Map(Object.entries(this.db).map(([t, rows]) => [t, rows[0] ?? {}]));
   }
   private readonly aliases = new Map<string, string>();
   /** Mirror of the database function rename_merchant: returns how many rows changed. */
@@ -173,7 +176,7 @@ class Store {
     Object.assign(this.db, deriveViews(this.db as unknown as DemoDb, this.todayNum));
   }
   withDefaults(table: string, row: Row): Row {
-    const sample = this.db[table]![0];
+    const sample = this.shapes.get(table);
     const out = { ...row };
     if (sample && "id" in sample && out["id"] == null) out["id"] = `demo-new-${this.nextId++}`;
     if (sample && "created_at" in sample && out["created_at"] == null)
