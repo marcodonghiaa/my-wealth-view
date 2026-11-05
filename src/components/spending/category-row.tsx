@@ -4,7 +4,7 @@ import { ChevronDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { categoryColor } from "@/lib/categories";
 import { formatISODate } from "@/lib/date";
-import { formatEur } from "@/lib/transactions";
+import { formatBookingDateShort, formatEur } from "@/lib/transactions";
 
 interface BankRow {
   entry_reference: string;
@@ -119,19 +119,12 @@ export function CategoryRow({
             <li className="py-2 text-xs text-negative">Couldn't load transactions.</li>
           )}
           {txQuery.data?.length === 0 && (
-            <li className="py-2 text-xs text-muted-foreground">
-              No individual transactions: this month's total was imported.
-            </li>
+            <li className="py-2 text-xs text-muted-foreground">No transactions.</li>
           )}
           {txQuery.data?.map((tx) => (
             <li key={tx.key} className="flex items-center gap-3 py-2 text-[0.8125rem]">
               <span className="w-14 shrink-0 text-muted-foreground">
-                {tx.booking_date
-                  ? new Date(`${tx.booking_date}T00:00:00`).toLocaleDateString("en-GB", {
-                      day: "numeric",
-                      month: "short",
-                    })
-                  : "—"}
+                {formatBookingDateShort(tx.booking_date)}
               </span>
               <span className="min-w-0 flex-1 truncate text-foreground">{tx.label}</span>
               <span className="font-figure shrink-0 text-foreground">

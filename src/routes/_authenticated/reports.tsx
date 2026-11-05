@@ -118,6 +118,7 @@ async function fetchWorthItForMonth(
     .from("v_transactions_eur")
     .select("personal_signed_amount_eur,signed_amount_eur,worth_it")
     .not("worth_it", "is", null)
+    .eq("flow_type", "spend") // a refunded charge was money back, not a regret
     .gte("booking_date", startISO)
     .lt("booking_date", endExclusiveISO);
   if (error) throw error;
@@ -278,8 +279,9 @@ function ReportsPage() {
           label="Income vs expenses"
           sublabel="net"
           pending={incomeExpensesQuery.isPending}
-          value={formatSigned(net)}
-          tone={toneOf(net)}
+          // No row: nothing was recorded that month (or only imported totals), not a net of zero.
+          value={incomeExpensesQuery.data ? formatSigned(net) : "—"}
+          tone={incomeExpensesQuery.data ? toneOf(net) : "neutral"}
         />
         <HeadlineCard
           icon={<ThumbsDown className="size-4" />}
