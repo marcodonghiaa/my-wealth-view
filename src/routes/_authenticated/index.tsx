@@ -20,14 +20,7 @@ import {
 import { fetchHistory, fetchNetWorth, fetchReconstructed } from "@/lib/net-worth-queries";
 import { TONE_TEXT, toneOf } from "@/lib/tone";
 
-export type NetWorthSnapshot = {
-  snapshot_date: string;
-  total_eur: number;
-  bank_total_eur: number;
-  portfolio_total_eur: number;
-  crypto_total_eur: number;
-};
-export type FxRate = { date: string; currency: string; rate_to_eur: number };
+type FxRate = { date: string; currency: string; rate_to_eur: number };
 
 export const Route = createFileRoute("/_authenticated/")({
   head: () => ({

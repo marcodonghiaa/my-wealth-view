@@ -1,4 +1,3 @@
-import { formatISODate } from "./date";
 import { isDemoMode } from "./demo/mode";
 
 // (The public demo ignores it: its fake history is complete.)
@@ -211,70 +210,6 @@ export function allocationHistory(
       total_eur: s.total_eur,
     })),
   ];
-}
-
-export type AllocationPoint = {
-  snapshot_date: string;
-  ts: number;
-  stocks: number;
-  bonds: number;
-  crypto: number;
-  cash: number;
-  other: number;
-};
-
-// Percent of gross assets per class. Liabilities (tax reserve) are left out so the mix describes
-// what you hold, not what you owe.
-export function allocationSeries(history: Array<HistoryRow>): Array<AllocationPoint> {
-  return history.flatMap((h) => {
-    const other = h.other_eur ?? 0;
-    const gross = h.stocks_eur + h.bonds_eur + h.crypto_eur + h.cash_eur + other;
-    if (gross <= 0) return [];
-    const pct = (v: number) => (v / gross) * 100;
-    return [
-      {
-        snapshot_date: h.snapshot_date,
-        ts: Date.parse(`${h.snapshot_date}T00:00:00`),
-        stocks: pct(h.stocks_eur),
-        bonds: pct(h.bonds_eur),
-        crypto: pct(h.crypto_eur),
-        cash: pct(h.cash_eur),
-        other: pct(other),
-      },
-    ];
-  });
-}
-
-export type AllocationPlotPoint = {
-  snapshot_date: string;
-  ts: number;
-  stocks: number | null;
-  bonds: number | null;
-  crypto: number | null;
-  cash: number | null;
-  other: number | null;
-};
-
-// Adds an empty point in the middle of any hole wider than GAP_DAYS, so the chart stops where
-// there is no data instead of drawing a mix that was never recorded.
-export function breakAtGaps(points: Array<AllocationPoint>): Array<AllocationPlotPoint> {
-  return points.flatMap((p, i) => {
-    const prev = points[i - 1];
-    if (!prev || (p.ts - prev.ts) / DAY_MS <= GAP_DAYS) return [p];
-    const ts = Math.round((p.ts + prev.ts) / 2);
-    return [
-      {
-        snapshot_date: formatISODate(new Date(ts)),
-        ts,
-        stocks: null,
-        bonds: null,
-        crypto: null,
-        cash: null,
-        other: null,
-      },
-      p,
-    ];
-  });
 }
 
 // Same day one month earlier, clamped to that month's last day (31 Mar -> 28 Feb).
