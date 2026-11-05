@@ -62,12 +62,17 @@ describe("CategoryRow", () => {
     expect(calls).toContainEqual(["category", null]);
   });
 
-  it("explains an empty list as an imported monthly total", async () => {
+  // The total can come from imported months or other sources, so the empty list doesn't claim
+  // to know why it's empty.
+  it("says plainly when there are no transactions", async () => {
     rows = [];
-    renderRow("Groceries");
-    await userEvent.click(screen.getByRole("button", { name: /Groceries/ }));
-    expect(await screen.findByText(/total was imported/)).toBeInTheDocument();
-    rows = [LIDL];
+    try {
+      renderRow("Groceries");
+      await userEvent.click(screen.getByRole("button", { name: /Groceries/ }));
+      expect(await screen.findByText("No transactions.")).toBeInTheDocument();
+    } finally {
+      rows = [LIDL];
+    }
   });
 
   // protects=the list adds up to the category total; fails_when=Splitwise shares are in the

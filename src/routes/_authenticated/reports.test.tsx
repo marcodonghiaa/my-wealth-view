@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 const subscriptions = [
@@ -37,7 +37,16 @@ vi.mock("@/integrations/supabase/client", () => ({
         resolve(
           table === failTable
             ? { data: null, error: { message: "boom" } }
-            : { data: table === "v_subscriptions" ? subscriptions : [], error: null },
+            : {
+                // maybeSingle() gives null when the month has no row.
+                data:
+                  table === "v_subscriptions"
+                    ? subscriptions
+                    : table === "v_income_vs_expenses_monthly"
+                      ? null
+                      : [],
+                error: null,
+              },
         );
       return q;
     },
@@ -93,5 +102,17 @@ describe("Reports when a figure fails to load", () => {
     const card = (await screen.findByText("Subscriptions")).closest("section") as HTMLElement;
     await within(card).findByText("€19.00");
     expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  // Regression: a month with nothing recorded showed "+€0.00", as if income matched spending.
+  it("shows a dash, not +€0.00, for a month with no income or expense data", async () => {
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <Page />
+      </QueryClientProvider>,
+    );
+    const card = (await screen.findByText("Income vs expenses")).closest("li")!;
+    await waitFor(() => expect(card).toHaveTextContent("—"));
+    expect(card).not.toHaveTextContent("€0.00");
   });
 });

@@ -69,6 +69,7 @@ async function fetchRegretSpend(month: Date): Promise<Array<RegretGroup>> {
     .from("v_transactions_eur")
     .select("category,personal_signed_amount_eur,signed_amount_eur")
     .eq("worth_it", "no")
+    .eq("flow_type", "spend") // a refunded charge was money back, not a regret
     .gte("booking_date", start)
     .lt("booking_date", end);
   if (error) throw error;

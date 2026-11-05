@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { estimatedMonthlyEur, splitSubscriptions } from "@/lib/subscriptions";
-import { formatMoney } from "@/lib/transactions";
+import { formatBookingDateShort, formatMoney } from "@/lib/transactions";
 import { CategoryAvatar } from "@/components/category-avatar";
 
 export const Route = createFileRoute("/_authenticated/subscriptions")({
@@ -326,12 +326,8 @@ function SubscriptionCard({
   const currency = sub.currency ?? "EUR";
   const monthly = sub.monthly_equivalent_eur;
   const name = sub.creditor_name ?? "—";
-  const lastCharged = sub.last_charged
-    ? new Date(`${sub.last_charged}T00:00:00`).toLocaleDateString("en-GB", {
-        day: "numeric",
-        month: "short",
-      })
-    : null;
+  // With the year when it isn't this year, so a charge from last year doesn't read as recent.
+  const lastCharged = sub.last_charged ? formatBookingDateShort(sub.last_charged) : null;
   const details = [
     sub.category,
     native != null && currency !== "EUR" ? formatMoney(Math.abs(native), currency) : null,
