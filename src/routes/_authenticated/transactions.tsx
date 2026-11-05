@@ -23,6 +23,7 @@ import {
 import { BulkCategoryPicker } from "@/components/transactions/pickers";
 import { TransfersSection } from "@/components/transactions/transfers-section";
 import { AddTransaction } from "@/components/transactions/add-transaction";
+import { ImportStatement } from "@/components/transactions/import-statement";
 import {
   useBulkCategoryMutation,
   useDeleteMutation,
@@ -345,7 +346,10 @@ function TransactionsPage() {
             Every transaction for the selected month, newest first.
           </p>
         </div>
-        <AddTransaction today={formatISODate(new Date())} />
+        <div className="flex shrink-0 gap-2">
+          <ImportStatement />
+          <AddTransaction today={formatISODate(new Date())} />
+        </div>
       </header>
 
       {txQuery.isError && (
