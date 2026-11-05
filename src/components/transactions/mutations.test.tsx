@@ -169,6 +169,54 @@ describe("transaction mutations are scoped to one account", () => {
     expect(cached().map((r) => r.category)).toEqual(["Health", "Others"]);
   });
 
+  // Regression: picking Transfer only changed the label, so the row stayed in spending.
+  it("picking Transfer also marks the row as a transfer and takes it off the list", async () => {
+    const { queryClient, wrapper, cached } = setup();
+    const { result } = renderHook(
+      () => useTransactionFieldMutation(queryClient, MONTH, "category", { errorMessage: "fail" }),
+      { wrapper },
+    );
+    await act(() =>
+      result.current.mutateAsync({
+        tx: { account_uid: "a1", entry_reference: "r1" },
+        value: "Transfer",
+      }),
+    );
+    expect(calls[0]?.update).toEqual({ category: "Transfer", flow_type: "transfer" });
+    expect(cached().map((r) => r.account_uid)).toEqual(["a2"]);
+  });
+
+  it("picking another category leaves flow_type alone", async () => {
+    const { queryClient, wrapper } = setup();
+    const { result } = renderHook(
+      () => useTransactionFieldMutation(queryClient, MONTH, "category", { errorMessage: "fail" }),
+      { wrapper },
+    );
+    await act(() =>
+      result.current.mutateAsync({
+        tx: { account_uid: "a1", entry_reference: "r1" },
+        value: "Health",
+      }),
+    );
+    expect(calls[0]?.update).toEqual({ category: "Health" });
+  });
+
+  it("bulk Transfer marks every chosen row as a transfer and takes them off the list", async () => {
+    const { queryClient, wrapper, cached } = setup();
+    const { result } = renderHook(() => useBulkCategoryMutation(queryClient, MONTH, vi.fn()), {
+      wrapper,
+    });
+    act(() =>
+      result.current.mutate({
+        txs: [{ account_uid: "a2", entry_reference: "r1" }],
+        category: "Transfer",
+      }),
+    );
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(calls[0]?.update).toEqual({ category: "Transfer", flow_type: "transfer" });
+    expect(cached().map((r) => r.account_uid)).toEqual(["a1"]);
+  });
+
   it("soft delete stamps deleted_at per account and undo clears it", async () => {
     const { queryClient, wrapper } = setup();
     const { result } = renderHook(() => useDeleteMutation(queryClient, vi.fn()), { wrapper });
