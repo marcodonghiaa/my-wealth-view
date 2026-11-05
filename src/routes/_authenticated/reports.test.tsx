@@ -3,9 +3,24 @@ import { render, screen, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 const subscriptions = [
-  { monthly_equivalent_eur: -10, charge_count: 3, billing_frequency_is_manual: false },
-  { monthly_equivalent_eur: -5, charge_count: 2, billing_frequency_is_manual: false },
-  { monthly_equivalent_eur: -4, charge_count: 1, billing_frequency_is_manual: true },
+  {
+    monthly_equivalent_eur: -10,
+    charge_count: 3,
+    billing_frequency_is_manual: false,
+    billing_frequency: "Monthly",
+  },
+  {
+    monthly_equivalent_eur: -5,
+    charge_count: 2,
+    billing_frequency_is_manual: false,
+    billing_frequency: "Monthly",
+  },
+  {
+    monthly_equivalent_eur: -4,
+    charge_count: 1,
+    billing_frequency_is_manual: true,
+    billing_frequency: "Monthly",
+  },
   { monthly_equivalent_eur: -1000, charge_count: 1, billing_frequency_is_manual: false },
 ];
 
