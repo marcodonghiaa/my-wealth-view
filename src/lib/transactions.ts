@@ -203,16 +203,28 @@ export function listCategories(transactions: Array<TransactionRow>) {
   };
 }
 
+export type TransactionFilters = {
+  /** Bank name to keep, or "all". */
+  bank?: string;
+  /** Bank name of an account uid; needed only with a bank filter. */
+  bankFor?: (accountUid: string | null) => string;
+  /** YYYY-MM-DD to keep only that day, or "" for every day. */
+  day?: string;
+};
+
 export function filterTransactions(
   transactions: Array<TransactionRow>,
   search: string,
   category: string,
+  { bank = "all", bankFor, day = "" }: TransactionFilters = {},
 ): Array<TransactionRow> {
   const q = search.trim().toLowerCase();
   return transactions.filter((tx) => {
     if (category === UNCATEGORIZED && tx.category != null) return false;
     if (category !== "all" && category !== UNCATEGORIZED && tx.category !== category) return false;
     if (q && !(tx.creditor_name ?? "").toLowerCase().includes(q)) return false;
+    if (bank !== "all" && bankFor?.(tx.account_uid) !== bank) return false;
+    if (day && tx.booking_date !== day) return false;
     return true;
   });
 }

@@ -161,6 +161,36 @@ describe("filterTransactions", () => {
     expect(refs(filterTransactions(rows, "  NETF ", "all"))).toEqual(["2"]);
   });
 
+  it("filters by bank", () => {
+    const banked = [
+      tx({ entry_reference: "1", account_uid: "rev-eur" }),
+      tx({ entry_reference: "2", account_uid: "isp" }),
+      tx({ entry_reference: "3", account_uid: "rev-usd" }),
+      tx({ entry_reference: "4", account_uid: null }),
+    ];
+    const bankFor = (uid: string | null) =>
+      uid?.startsWith("rev") ? "Revolut" : uid ? "Intesa" : "—";
+    expect(refs(filterTransactions(banked, "", "all", { bank: "Revolut", bankFor }))).toEqual([
+      "1",
+      "3",
+    ]);
+    expect(refs(filterTransactions(banked, "", "all", { bank: "all", bankFor }))).toEqual([
+      "1",
+      "2",
+      "3",
+      "4",
+    ]);
+  });
+
+  it("filters to one day", () => {
+    const dated = [
+      tx({ entry_reference: "1", booking_date: "2026-04-25" }),
+      tx({ entry_reference: "2", booking_date: "2026-04-24" }),
+    ];
+    expect(refs(filterTransactions(dated, "", "all", { day: "2026-04-25" }))).toEqual(["1"]);
+    expect(refs(filterTransactions(dated, "", "all", { day: "" }))).toEqual(["1", "2"]);
+  });
+
   it("combines search and category", () => {
     expect(refs(filterTransactions(rows, "amazon", "Entertainment"))).toEqual([]);
   });
