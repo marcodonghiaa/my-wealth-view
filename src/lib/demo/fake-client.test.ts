@@ -431,3 +431,29 @@ describe("fake client: parse-statement", () => {
     }
   });
 });
+
+describe("fake client: set_holding_quantity", () => {
+  type Rpc = (f: string, a: object) => PromiseLike<{ data: number; error: unknown }>;
+  it("selling a stock takes its value out of today's net worth at once", async () => {
+    const c = fresh();
+    const latest = async () => {
+      const { data } = await c.from("v_net_worth_daily").select("snapshot_date,total_eur");
+      return data!.reduce((a, r) => (r.snapshot_date! > a.snapshot_date! ? r : a)).total_eur!;
+    };
+    const { data: holdings } = await c.from("portfolio_holdings").select("isin");
+    const isin = holdings![0]!.isin!;
+    const { data: snaps } = await c
+      .from("portfolio_snapshots")
+      .select("snapshot_date,value_eur")
+      .eq("isin", isin);
+    const value = snaps!.reduce((a, s) => (s.snapshot_date! > a.snapshot_date! ? s : a)).value_eur!;
+    const before = await latest();
+    const res = await (c.rpc as unknown as Rpc)("set_holding_quantity", {
+      p_kind: "stock",
+      p_key: isin,
+      p_quantity: 0,
+    });
+    expect(res).toEqual({ data: 1, error: null });
+    expect(await latest()).toBeCloseTo(before - value, 1);
+  });
+});

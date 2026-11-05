@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { COUNTRIES, linkedMessage, renewTarget } from "./bank-link";
+import { COUNTRIES, linkErrorMessage, linkedMessage, renewTarget } from "./bank-link";
 
 describe("linkedMessage", () => {
   it("names the bank and the currencies found", () => {
@@ -75,5 +75,23 @@ describe("renewTarget", () => {
       "PT",
       "IE",
     ]);
+  });
+});
+
+// Regression: ?bank_link_error was shown word for word, so a crafted link could put any text
+// (a fake support number) in the app's own error toast.
+describe("linkErrorMessage", () => {
+  it("shows the callback's own messages", () => {
+    const p = new URLSearchParams({ bank_link_error: "The bank did not approve the connection" });
+    expect(linkErrorMessage(p)).toBe("The bank did not approve the connection");
+  });
+
+  it("replaces any other text with a fixed message", () => {
+    const p = new URLSearchParams({ bank_link_error: "Call +39 000 000 to verify your account" });
+    expect(linkErrorMessage(p)).toBe("Couldn't link the bank, please try again");
+  });
+
+  it("is null without an error", () => {
+    expect(linkErrorMessage(new URLSearchParams())).toBeNull();
   });
 });
