@@ -71,6 +71,8 @@ interface CdRow {
   current_value_eur: number;
 }
 
+const MAX_CD_PRINCIPAL = 1e12;
+
 async function fetchBankAccounts(): Promise<Array<BankAccountRow>> {
   const { data, error } = await supabase
     .from("v_bank_accounts_latest")
@@ -301,12 +303,13 @@ function AccountsPage() {
       setFormError('Give it a name, e.g. "House deposit CD".');
       return;
     }
-    if (!Number.isFinite(principalNum) || principalNum <= 0) {
-      setFormError("Principal must be a positive number.");
+    // Upper bounds keep the CD's growth (principal × (1 + APY)^years) a showable number.
+    if (!Number.isFinite(principalNum) || principalNum <= 0 || principalNum > MAX_CD_PRINCIPAL) {
+      setFormError("Principal must be a positive number up to 1,000,000,000,000.");
       return;
     }
-    if (!Number.isFinite(ratePctNum) || ratePctNum < 0) {
-      setFormError("Annual rate (APY) must be zero or more.");
+    if (!Number.isFinite(ratePctNum) || ratePctNum < 0 || ratePctNum > 100) {
+      setFormError("Annual rate (APY) must be between 0 and 100%.");
       return;
     }
     if (!maturityDate || maturityDate <= startDate) {
