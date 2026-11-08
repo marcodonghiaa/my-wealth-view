@@ -1,6 +1,9 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { TxKey } from "@/lib/transactions";
 
+export const money = (value: number, currency: string) =>
+  new Intl.NumberFormat("en-IE", { style: "currency", currency }).format(value);
+
 // owed_by is free text; several people are stored comma-separated ("Anna, Luca M").
 export const parseNames = (owedBy: string | null | undefined): Array<string> =>
   (owedBy ?? "")

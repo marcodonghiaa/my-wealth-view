@@ -1,62 +1,49 @@
 import type { GroupSummary } from "@/lib/import/splitwise-balances";
-
-const money = (value: number, currency: string) =>
-  new Intl.NumberFormat("en-IE", { style: "currency", currency }).format(value);
+import { money } from "@/lib/splits";
 
 const day = (iso: string) =>
   new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
 
+/** Per Splitwise group: who owes me and whom I owe, from my last import. */
 export function BalancesView({ groups }: { groups: Array<GroupSummary> }) {
   if (groups.length === 0) {
     return (
-      <div className="flex h-32 items-center justify-center rounded-2xl bg-card px-4 text-center text-sm text-muted-foreground">
-        Import a Splitwise file below to see who owes what.
+      <div className="flex h-24 items-center justify-center rounded-2xl bg-card px-4 text-center text-sm text-muted-foreground">
+        Import a Splitwise file to see who owes you there.
       </div>
     );
   }
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {groups.map((g) => (
         <section key={g.group} className="overflow-hidden rounded-2xl bg-card">
-          <div className="border-b px-4 py-4 sm:px-5">
-            <div className="flex flex-wrap items-baseline justify-between gap-2">
-              <h2 className="text-sm font-semibold text-foreground">{g.group}</h2>
-              <span className="text-xs text-muted-foreground">as of {day(g.updatedAt)}</span>
-            </div>
-            <p className="mt-2 text-xs text-muted-foreground">
-              {g.myBalance >= 0 ? "The group owes you" : "You owe the group"}
-            </p>
-            <p className="font-figure text-3xl font-bold tracking-tight">
-              {money(Math.abs(g.myBalance), g.currency)}
-            </p>
-            {g.myBalanceEur !== null && g.currency !== "EUR" && (
-              <p className="text-xs text-muted-foreground">
-                about {money(Math.abs(g.myBalanceEur), "EUR")}
-              </p>
-            )}
+          <div className="flex flex-wrap items-baseline justify-between gap-2 border-b px-4 py-3 sm:px-5">
+            <h3 className="text-sm font-semibold">{g.group}</h3>
+            <span className="text-xs text-muted-foreground">as of {day(g.updatedAt)}</span>
           </div>
-          <ul className="divide-y">
-            {g.people.map((p) => (
-              <li
-                key={p.person}
-                className="flex items-center justify-between gap-3 px-4 py-3 text-sm sm:px-5"
-              >
-                <span className="font-medium">{p.person}</span>
-                <span className="text-right">
-                  <span className="font-figure">{money(Math.abs(p.balance), g.currency)}</span>{" "}
+          {g.people.length === 0 ? (
+            <p className="px-4 py-3 text-sm text-muted-foreground sm:px-5">You're all square.</p>
+          ) : (
+            <ul className="divide-y">
+              {g.people.map((p) => (
+                <li
+                  key={p.person}
+                  className="flex items-center justify-between gap-3 px-4 py-3 text-sm sm:px-5"
+                >
+                  <span className="font-medium">{p.person}</span>
                   <span className={p.owesYou ? "text-positive" : "text-muted-foreground"}>
-                    {p.owesYou ? "owes the group" : "is owed"}
+                    {p.owesYou ? "owes you" : "you owe"}{" "}
+                    <span className="font-figure">{money(Math.abs(p.balance), g.currency)}</span>
                   </span>
-                </span>
-              </li>
-            ))}
-          </ul>
+                </li>
+              ))}
+            </ul>
+          )}
         </section>
       ))}
       <p className="text-xs text-muted-foreground">
-        These are each person's total balance in the group, as of your last import. Splitwise
-        simplifies debts, so this shows who is ahead or behind, not who pays whom: for that, open
-        Splitwise.
+        Worked out expense by expense, without Splitwise's "simplify debts": per person it can
+        differ from the Splitwise app, your total is the same.
       </p>
     </div>
   );

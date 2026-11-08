@@ -6,7 +6,11 @@ export interface FileBalances {
   entries: Array<{ person: string; cents: number; isMe: boolean }>;
 }
 
-/** One stored balance: how much a person is owed by the group (negative: they owe the group). */
+/**
+ * One stored balance. My row: what the group owes me overall. Anyone else's row: what I owe that
+ * person (negative: they owe me), worked out expense by expense, without Splitwise's debt
+ * simplification.
+ */
 export interface BalanceRow {
   group_name: string;
   person: string;
@@ -16,16 +20,36 @@ export interface BalanceRow {
   updated_at: string;
 }
 
-/** Each member's net balance from the export's totals row, or null if the file has none. */
+/**
+ * What I owe each member (negative: they owe me), from each row: when I'm owed on a row, those who
+ * owe on it pay me in proportion; when I owe, I pay those who are owed in proportion. Settle-up
+ * rows count the same way. Only rows in the totals' currency count, so the sums share one currency.
+ */
+export function pairwiseCents(file: SplitwiseFile, me: number, currency: string): Array<number> {
+  const out = file.members.map(() => 0);
+  for (const row of file.rows) {
+    if (row.currency !== currency) continue;
+    const mine = row.netCents[me] ?? 0;
+    const owed = row.netCents.reduce((sum, n) => sum + Math.max(0, n), 0);
+    if (mine === 0 || owed === 0) continue;
+    row.netCents.forEach((n, i) => {
+      if (i !== me && Math.sign(n) === -Math.sign(mine)) out[i]! += (n * Math.abs(mine)) / owed;
+    });
+  }
+  return out.map((c) => Math.round(c) || 0);
+}
+
+/** My net from the export's totals row and what I owe each other member, or null without totals. */
 export function balancesFromFile(file: SplitwiseFile, me: number): FileBalances | null {
   if (!file.total) return null;
   const { currency, netCents } = file.total;
+  const pairwise = pairwiseCents(file, me, currency);
   return {
     currency,
     entries: file.members.map((name, i) => ({
       person:
         file.members.filter((m) => m === name).length > 1 ? `${name} (column ${i + 1})` : name,
-      cents: netCents[i] ?? 0,
+      cents: i === me ? (netCents[i] ?? 0) : (pairwise[i] ?? 0),
       isMe: i === me,
     })),
   };
@@ -57,7 +81,7 @@ export interface GroupSummary {
   myBalanceEur: number | null;
   currency: string;
   updatedAt: string;
-  /** Everyone but me, those who owe the group first. */
+  /** Everyone but me (leaving out those I'm square with), those who owe me first. */
   people: Array<{ person: string; balance: number; owesYou: boolean }>;
 }
 
@@ -76,7 +100,7 @@ export function summarizeBalances(rows: Array<BalanceRow>, rate: RateToEur): Arr
         currency: me.currency,
         updatedAt: me.updated_at,
         people: inGroup
-          .filter((r) => !r.is_me)
+          .filter((r) => !r.is_me && r.balance !== 0)
           .sort((a, b) => a.balance - b.balance)
           .map((r) => ({ person: r.person, balance: r.balance, owesYou: r.balance < 0 })),
       },
