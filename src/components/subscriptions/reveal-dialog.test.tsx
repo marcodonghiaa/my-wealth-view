@@ -7,13 +7,19 @@ const { db } = vi.hoisted(() => ({ db: { rows: [] as Array<Row> } }));
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: { from: () => ({ select: () => Promise.resolve({ data: db.rows, error: null }) }) },
 }));
-const { demo } = vi.hoisted(() => ({ demo: { on: false } }));
-vi.mock("@/lib/demo/mode", () => ({ isDemoMode: () => demo.on }));
+const { demo } = vi.hoisted(() => ({ demo: { on: false, starts: 0 } }));
+vi.mock("@/lib/demo/mode", () => ({
+  isDemoMode: () => demo.on,
+  get demoStarts() {
+    return demo.starts;
+  },
+}));
 
 const KEY = "mf.subscriptionsReveal.seen";
 const stream = (over: Row): Row => ({
   id: "s1",
   display_name: "Streamflix",
+  detected_at: "2026-11-01T00:00:00Z",
   currency: "EUR",
   cadence: "monthly",
   typical_amount_eur: 10,
@@ -30,8 +36,8 @@ const stream = (over: Row): Row => ({
 const suggested = stream({ id: "s2", display_name: "Cloudbox", detected_status: "suggested" });
 
 // The seen-this-session flag is module state, so each test gets a fresh module.
-async function renderReveal() {
-  vi.resetModules();
+async function renderReveal(fresh = true) {
+  if (fresh) vi.resetModules();
   const { RevealDialog } = await import("./reveal-dialog");
   const view = () => (
     <QueryClientProvider client={new QueryClient()}>
@@ -46,6 +52,7 @@ beforeEach(() => {
   cleanup();
   localStorage.clear();
   demo.on = false;
+  demo.starts = 0;
   db.rows = [stream({})];
   vi.restoreAllMocks();
 });
@@ -94,9 +101,10 @@ describe("RevealDialog", () => {
     section.scrollIntoView = vi.fn();
     document.body.append(section);
     await renderReveal();
-    expect(await screen.findByText("We found 2 subscriptions")).toBeTruthy();
+    expect(await screen.findByText("We found 1 subscription")).toBeTruthy();
+    expect(screen.getByText("and 1 to review")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Review 1 suggestion" }));
-    expect(screen.queryByText("We found 2 subscriptions")).toBeNull();
+    expect(screen.queryByText("We found 1 subscription")).toBeNull();
     await vi.waitFor(() => expect(section.scrollIntoView).toHaveBeenCalled());
     section.remove();
   });
@@ -113,5 +121,36 @@ describe("RevealDialog", () => {
     await renderReveal();
     expect(await screen.findByText("We found 1 subscription")).toBeTruthy();
     expect(localStorage.getItem(KEY)).toBeNull();
+  });
+
+  it("does not count or burn the reveal for rows the detector has not seen", async () => {
+    db.rows = [stream({ detected_at: null })];
+    await renderReveal();
+    await new Promise((r) => setTimeout(r, 20));
+    expect(screen.queryByText(/We found/)).toBeNull();
+    expect(localStorage.getItem(KEY)).toBeNull();
+  });
+
+  it("lists only active streams and shows a dash when the monthly cost is unknown", async () => {
+    db.rows = [
+      stream({}),
+      stream({ id: "s3", display_name: "Mystery", typical_amount_eur: null }),
+      suggested,
+    ];
+    await renderReveal();
+    await screen.findByText("We found 2 subscriptions");
+    expect(screen.queryByText("Cloudbox")).toBeNull();
+    expect(screen.getByText("—")).toBeTruthy();
+  });
+
+  it("shows again on the next demo start within the same page load", async () => {
+    demo.on = true;
+    demo.starts = 1;
+    await renderReveal();
+    fireEvent.click(await screen.findByRole("button", { name: "Got it" }));
+    cleanup();
+    demo.starts = 2;
+    await renderReveal(false);
+    expect(await screen.findByText("We found 1 subscription")).toBeTruthy();
   });
 });

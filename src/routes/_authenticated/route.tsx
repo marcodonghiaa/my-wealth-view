@@ -225,11 +225,14 @@ function AuthenticatedLayout() {
           type="button"
           onClick={() => setMenuOpen(true)}
           aria-haspopup="dialog"
+          aria-label={
+            badges["Subscriptions"] ? `More, ${badges["Subscriptions"]} to review` : "More"
+          }
           className="flex flex-col items-center justify-center gap-0.5 text-muted-foreground transition-opacity active:opacity-60"
         >
           <span className="relative">
             <MoreHorizontal className="size-6" />
-            <span className="absolute -top-1 left-full flex">
+            <span aria-hidden="true" className="absolute -top-1 left-full flex">
               <NavBadge count={badges["Subscriptions"]} />
             </span>
           </span>

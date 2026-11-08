@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
-import { isDemoMode } from "@/lib/demo/mode";
+import { demoStarts, isDemoMode } from "@/lib/demo/mode";
 import { groupStreams, monthlyEur, romeToday } from "@/lib/recurring";
 import { formatMoney } from "@/lib/transactions";
 import { useRecurringStreams } from "@/lib/use-recurring-streams";
@@ -8,8 +8,14 @@ import { useRecurringStreams } from "@/lib/use-recurring-streams";
 const SEEN_KEY = "mf.subscriptionsReveal.seen";
 // Covers the demo (shown on every start, never persisted) and blocked storage (once per page load).
 let seenThisSession = false;
+let seenAtDemoStart = 0;
 
 function claimReveal(): boolean {
+  // Each demo start resets the in-memory flag (ruling 8).
+  if (demoStarts !== seenAtDemoStart) {
+    seenAtDemoStart = demoStarts;
+    seenThisSession = false;
+  }
   if (seenThisSession) return false;
   seenThisSession = true;
   if (isDemoMode()) return true;
@@ -27,17 +33,29 @@ export function RevealDialog() {
   const { data } = useRecurringStreams();
   const [open, setOpen] = useState(false);
 
-  const { toReview, active } = useMemo(() => groupStreams(data ?? [], romeToday()), [data]);
-  const count = active.length + toReview.length;
+  // Rows not yet seen by the detector (migrated overrides) must not burn the one-time reveal.
+  const { toReview, active } = useMemo(
+    () =>
+      groupStreams(
+        (data ?? []).filter((s) => s.detected_at != null),
+        romeToday(),
+      ),
+    [data],
+  );
+  const count = active.length;
+  const show = count + toReview.length;
   const monthly = active.reduce((sum, s) => sum + Math.abs(monthlyEur(s) ?? 0), 0);
-  const top = [...active, ...toReview]
-    .map((s) => ({ s, m: Math.abs(monthlyEur(s) ?? 0) }))
-    .sort((a, b) => b.m - a.m)
+  const top = active
+    .map((s) => {
+      const m = monthlyEur(s);
+      return { s, m: m == null ? null : Math.abs(m) };
+    })
+    .sort((a, b) => (b.m ?? 0) - (a.m ?? 0))
     .slice(0, 5);
 
   useEffect(() => {
-    if (count > 0 && claimReveal()) setOpen(true);
-  }, [count]);
+    if (show > 0 && claimReveal()) setOpen(true);
+  }, [show]);
 
   const review = () => {
     setOpen(false);
@@ -55,18 +73,27 @@ export function RevealDialog() {
         <DialogTitle>
           We found {count} subscription{count === 1 ? "" : "s"}
         </DialogTitle>
-        <DialogDescription className="figure-display">
+        <DialogDescription>Your recurring charges add up to about</DialogDescription>
+        <p className="figure-display">
           ~{formatMoney(monthly, "EUR")}
-          <span className="text-[0.4em] font-medium text-muted-foreground"> /month</span>
-        </DialogDescription>
+          <span className="text-[0.4em] font-medium tracking-normal text-muted-foreground">
+            {" "}
+            /month
+          </span>
+        </p>
         <ul className="divide-y">
           {top.map(({ s, m }) => (
             <li key={s.id} className="flex justify-between gap-3 py-2 text-sm">
               <span className="truncate">{s.display_name ?? "—"}</span>
-              <span className="shrink-0 font-figure">{formatMoney(m, "EUR")}/mo</span>
+              <span className="shrink-0 font-figure">
+                {m == null ? "—" : `${formatMoney(m, "EUR")}/mo`}
+              </span>
             </li>
           ))}
         </ul>
+        {toReview.length > 0 && (
+          <p className="text-sm text-muted-foreground">and {toReview.length} to review</p>
+        )}
         <button
           type="button"
           onClick={toReview.length > 0 ? review : () => setOpen(false)}

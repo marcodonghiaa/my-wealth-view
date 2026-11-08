@@ -56,6 +56,7 @@ describe("nav badge", () => {
     // sidebar, mobile More tab, and menu sheet
     expect(pills.length).toBeGreaterThanOrEqual(2);
     pills.forEach((p) => expect(p.parentElement).toHaveTextContent("2 to review"));
+    expect(screen.getByRole("button", { name: "More, 2 to review" })).toBeTruthy();
   });
 
   it("shows no badge when nothing is to review", async () => {
@@ -64,5 +65,6 @@ describe("nav badge", () => {
     await screen.findAllByText("Subscriptions");
     await new Promise((r) => setTimeout(r, 20)); // let the query settle
     expect(screen.queryByText("to review")).toBeNull();
+    expect(screen.getByRole("button", { name: "More" })).toBeTruthy();
   });
 });
