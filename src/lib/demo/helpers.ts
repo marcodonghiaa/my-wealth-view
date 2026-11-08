@@ -15,7 +15,6 @@ export const DEMO_EXEMPT_TABLES = [
   "pending_bank_consents",
   "price_history",
   "push_subscriptions",
-  "recurring_streams", // TODO(task 6): remove once the demo seeds streams
 ] as const;
 
 export const DEMO_WINDOW_DAYS = 90;

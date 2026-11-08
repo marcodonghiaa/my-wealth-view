@@ -10,6 +10,7 @@ import { effectiveCadence, groupStreams, monthlyEur, romeToday } from "@/lib/rec
 import { RECURRING_KEY, useRecurringStreams } from "@/lib/use-recurring-streams";
 import { formatBookingDateShort, formatMoney } from "@/lib/transactions";
 import { CategoryAvatar } from "@/components/category-avatar";
+import { RevealDialog } from "@/components/subscriptions/reveal-dialog";
 
 export const Route = createFileRoute("/_authenticated/subscriptions")({
   head: () => ({
@@ -143,6 +144,7 @@ function SubscriptionsPage() {
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-8 md:py-12">
+      <RevealDialog />
       <header className="mb-3">
         <h1 className="text-[0.9375rem] font-medium text-muted-foreground">Subscriptions</h1>
       </header>

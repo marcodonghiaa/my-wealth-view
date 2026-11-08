@@ -61,6 +61,7 @@ const renderPage = () =>
 
 beforeEach(() => {
   vi.clearAllMocks();
+  localStorage.setItem("mf.subscriptionsReveal.seen", "1"); // keep the one-time reveal out of these tests
   db.error = null;
   db.rows = [
     stream({}),
