@@ -458,6 +458,7 @@ export function generateDemoData(now: Date = new Date()): DemoDb {
     portfolio_snapshots,
     price_history: [],
     push_subscriptions: [],
+    recurring_streams: [], // demo data arrives with the reveal screen
     net_worth_reconstructed,
     splitwise_balances,
     splitwise_expenses,
