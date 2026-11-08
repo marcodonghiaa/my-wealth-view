@@ -1,3 +1,4 @@
+import { fetchSplitContacts } from "@/lib/splits";
 import { createFileRoute } from "@tanstack/react-router";
 import { accountName, bankOf } from "@/components/bank-badge";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -180,6 +181,12 @@ function TransactionsPage() {
   });
   const transfers = transfersQuery.data ?? [];
 
+  const contactsQuery = useQuery({
+    queryKey: ["split-contacts"],
+    queryFn: fetchSplitContacts,
+    staleTime: 5 * 60_000,
+  });
+
   const sharesQuery = useQuery({
     queryKey: ["splitwise-shares", monthKey],
     queryFn: () => fetchSharesForMonth(month),
@@ -301,6 +308,7 @@ function TransactionsPage() {
     onAnswerWorthIt: (worthIt) => answerWorthIt.mutate({ tx, value: worthIt }),
     savingSplit: updateSplit.isPending && isSameTx(updateSplit.variables?.tx, tx),
     onSaveSplit: (personalAmount, owedBy) => updateSplit.mutate({ tx, personalAmount, owedBy }),
+    splitContacts: contactsQuery.data ?? [],
     savingRename: isSplitwiseShare(tx)
       ? savingShare(tx)
       : renameTx.isPending && isSameTx(renameTx.variables?.tx, tx),

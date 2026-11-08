@@ -157,6 +157,11 @@ export function useSplitMutation(queryClient: QueryClient, monthKey: string) {
       toast.error("Couldn't save split", { description: error.message });
     },
     onSuccess: () => toast.success("Split saved"),
+    // A new name becomes a saved contact; the Splitwise page's owed totals change too.
+    onSettled: () => {
+      for (const k of ["split-contacts", "splits"])
+        void queryClient.invalidateQueries({ queryKey: [k] });
+    },
   });
 }
 
@@ -329,5 +334,24 @@ export function useFlowMutation(queryClient: QueryClient, monthKey: string) {
       toast.success(`Counted as ${restoredFlow(tx)}`);
     },
     onSettled: () => refetchFlows(queryClient),
+  });
+}
+
+// Marks a split as settled (or not): it then drops out of the open total on the Splitwise page.
+export function useSettleSplitMutation(queryClient: QueryClient) {
+  type Vars = { tx: TxKey; settled: boolean };
+  return useMutation<void, Error, Vars>({
+    mutationFn: async ({ tx, settled }) => {
+      const { error } = await forTx(
+        supabase.from("transactions").update({
+          owed_settled: settled,
+          settled_at: settled ? new Date().toISOString() : null,
+        }),
+        tx,
+      );
+      if (error) throw error;
+    },
+    onError: (error) => toast.error("Couldn't save", { description: error.message }),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ["splits"] }),
   });
 }

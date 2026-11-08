@@ -32,6 +32,8 @@ export interface TransactionViewProps {
   onAnswerWorthIt: (worthIt: "yes" | "no") => void;
   savingSplit: boolean;
   onSaveSplit: (personalAmount: number | null, owedBy: string | null) => void;
+  /** Names used on past splits, offered as pills in the split editor. */
+  splitContacts?: Array<string>;
   onRename: (name: string | null) => void;
   savingRename: boolean;
   /** Only for transactions added by hand: bank amounts can't change. */
@@ -133,7 +135,12 @@ function TransactionEditSheet({
                   <TypePicker tx={tx} onSelect={p.onSelectType} saving={p.savingType} />
                 </Field>
                 <Field label="Split">
-                  <SplitEditor tx={tx} onSave={p.onSaveSplit} saving={p.savingSplit} />
+                  <SplitEditor
+                    tx={tx}
+                    onSave={p.onSaveSplit}
+                    saving={p.savingSplit}
+                    contacts={p.splitContacts}
+                  />
                 </Field>
               </>
             )}

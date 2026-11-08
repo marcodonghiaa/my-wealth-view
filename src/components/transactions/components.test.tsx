@@ -109,19 +109,63 @@ describe("SplitEditor", () => {
     render(<SplitEditor tx={tx()} onSave={onSave} saving={false} />);
     await open();
     const share = await screen.findByRole("spinbutton");
-    const owedBy = screen.getByPlaceholderText("e.g. Anna, Luca");
     await userEvent.clear(share);
     await userEvent.type(share, "5");
-    await userEvent.type(owedBy, " Anna ");
+    await userEvent.click(screen.getByRole("button", { name: "+ New" }));
+    await userEvent.type(screen.getByLabelText("New contact name"), " Anna {Enter}");
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
     expect(onSave).toHaveBeenCalledWith(5, "Anna");
+  });
+
+  // protects=quick ÷2/÷3 splits; fails_when=the preset share is wrong or not saved
+  it("fills the share from a quick split", async () => {
+    const onSave = vi.fn();
+    render(<SplitEditor tx={tx()} onSave={onSave} saving={false} />);
+    await open();
+    await userEvent.click(await screen.findByRole("button", { name: "Split in 3" }));
+    expect(screen.getByRole("spinbutton")).toHaveValue(6.67);
+    await userEvent.click(screen.getByRole("button", { name: "Split in 2" }));
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(onSave).toHaveBeenCalledWith(10, null);
+  });
+
+  // protects=saved contacts as pills; fails_when=picking several people loses one
+  it("offers saved contacts as pills and saves everyone picked", async () => {
+    const onSave = vi.fn();
+    render(<SplitEditor tx={tx()} onSave={onSave} saving={false} contacts={["Luca M", "Anna"]} />);
+    await open();
+    await userEvent.click(await screen.findByRole("button", { name: "Split in 3" }));
+    await userEvent.click(screen.getByRole("button", { name: "Luca M" }));
+    await userEvent.click(screen.getByRole("button", { name: "Anna" }));
+    expect(screen.getByRole("button", { name: "Anna" })).toHaveAttribute("aria-pressed", "true");
+    await userEvent.click(screen.getByRole("button", { name: "Anna" }));
+    expect(screen.getByRole("button", { name: "Anna" })).toHaveAttribute("aria-pressed", "false");
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(onSave).toHaveBeenCalledWith(6.67, "Luca M");
+  });
+
+  it("doesn't add a blank or duplicate new contact, and Escape cancels", async () => {
+    const onSave = vi.fn();
+    render(<SplitEditor tx={tx()} onSave={onSave} saving={false} contacts={["Anna"]} />);
+    await open();
+    await userEvent.click(await screen.findByRole("button", { name: "Split in 2" }));
+    await userEvent.click(screen.getByRole("button", { name: "+ New" }));
+    await userEvent.type(screen.getByLabelText("New contact name"), "   {Enter}");
+    await userEvent.click(screen.getByRole("button", { name: "+ New" }));
+    await userEvent.type(screen.getByLabelText("New contact name"), "anna{Enter}");
+    await userEvent.click(screen.getByRole("button", { name: "+ New" }));
+    await userEvent.type(screen.getByLabelText("New contact name"), "Bob{Escape}");
+    expect(screen.queryByRole("button", { name: "Bob" })).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(onSave).toHaveBeenCalledWith(10, "anna");
   });
 
   it("stores the full amount as no split", async () => {
     const onSave = vi.fn();
     render(<SplitEditor tx={tx()} onSave={onSave} saving={false} />);
     await open();
-    await userEvent.type(await screen.findByPlaceholderText("e.g. Anna, Luca"), "Anna");
+    await userEvent.click(await screen.findByRole("button", { name: "+ New" }));
+    await userEvent.type(screen.getByLabelText("New contact name"), "Anna{Enter}");
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
     expect(onSave).toHaveBeenCalledWith(null, null);
   });
@@ -157,6 +201,10 @@ describe("SplitEditor", () => {
     );
     expect(screen.getByRole("button", { name: /Split Amazon/ })).toHaveTextContent("owed €12.00");
     await open();
+    expect(await screen.findByRole("button", { name: "Anna" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
     await userEvent.click(await screen.findByRole("button", { name: "Clear" }));
     expect(onSave).toHaveBeenCalledWith(null, null);
   });

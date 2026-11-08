@@ -1,4 +1,4 @@
-import { useIsMutating } from "@tanstack/react-query";
+import { useIsMutating, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { SplitwisePanel } from "@/components/import/splitwise-panel";
@@ -7,14 +7,23 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/compone
 import { BalancesView } from "@/components/splitwise/balances-view";
 import { summarizeBalances } from "@/lib/import/splitwise-balances";
 import { useSplitwiseBalances } from "@/lib/use-splitwise-balances";
+import { OwedView } from "@/components/splitwise/owed-view";
+import { useSettleSplitMutation } from "@/components/transactions/mutations";
+import { fetchSplits } from "@/lib/splits";
 
 export const Route = createFileRoute("/_authenticated/splitwise")({
   head: () => ({
     meta: [
       { title: "Splitwise — MyFinances" },
-      { name: "description", content: "Who owes what in your Splitwise groups." },
+      {
+        name: "description",
+        content: "Who owes what in your Splitwise groups and your split bills.",
+      },
       { property: "og:title", content: "Splitwise — MyFinances" },
-      { property: "og:description", content: "Who owes what in your Splitwise groups." },
+      {
+        property: "og:description",
+        content: "Who owes what in your Splitwise groups and your split bills.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -27,6 +36,9 @@ function SplitwisePage() {
   const groups = useMemo(() => summarizeBalances(rows, rate), [rows, rate]);
   const [importing, setImporting] = useState(false);
   const writing = useIsMutating({ mutationKey: IMPORT_KEY }) > 0;
+  const queryClient = useQueryClient();
+  const splits = useQuery({ queryKey: ["splits"], queryFn: fetchSplits, staleTime: 60_000 });
+  const settle = useSettleSplitMutation(queryClient);
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-8 md:py-12">
@@ -34,7 +46,7 @@ function SplitwisePage() {
         <div>
           <h1 className="ios-large-title">Splitwise</h1>
           <p className="mt-0.5 text-sm text-muted-foreground">
-            Who owes what in your groups, from your last import.
+            Who owes you: your Splitwise groups and the bills you split.
           </p>
         </div>
         <button
@@ -59,6 +71,23 @@ function SplitwisePage() {
         <div className="h-40 animate-pulse rounded-2xl bg-muted" />
       ) : (
         <BalancesView groups={groups} />
+      )}
+
+      <h2 className="mt-10 mb-1 text-lg font-semibold">From your transactions</h2>
+      <p className="mb-4 text-sm text-muted-foreground">
+        Bills you split in Transactions: what each person still owes you.
+      </p>
+      {splits.isError ? (
+        <div role="alert" className="rounded-2xl bg-negative/10 px-4 py-3 text-sm text-negative">
+          Couldn't load your splits: {splits.error.message}
+        </div>
+      ) : splits.isPending ? (
+        <div className="h-32 animate-pulse rounded-2xl bg-muted" />
+      ) : (
+        <OwedView
+          rows={splits.data}
+          onToggleSettled={(row, settled) => settle.mutate({ tx: row, settled })}
+        />
       )}
 
       <Dialog open={importing} onOpenChange={(open) => writing || setImporting(open)}>
