@@ -168,6 +168,9 @@ class Store {
     const target = txs.find(isTarget);
     const clean = name?.trim() || null;
     const source = target?.["creditor_name"] as string | null | undefined;
+    const rawKey = target?.["merchant_key"] as string | null | undefined;
+    // Aggregators (PayPal, ...) say nothing about the real merchant, so they never group rows.
+    const key = rawKey && !["paypal", "apple", "google"].includes(rawKey) ? rawKey : null;
     let changed: Array<Row>;
     if (!source) {
       changed = txs.filter(isTarget);
@@ -177,7 +180,7 @@ class Store {
       else this.aliases.delete(source);
       changed = txs.filter(
         (r) =>
-          r["creditor_name"] === source &&
+          ((key !== null && r["merchant_key"] === key) || r["creditor_name"] === source) &&
           (r["custom_name"] == null || r["custom_name"] === old || isTarget(r)),
       );
     }

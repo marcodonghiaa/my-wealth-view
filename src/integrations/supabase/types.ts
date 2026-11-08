@@ -693,6 +693,7 @@ export type Database = {
           created_at: string | null;
           credit_debit_indicator: string | null;
           creditor_name: string | null;
+          merchant_key: string | null;
           custom_name: string | null;
           currency: string;
           debtor_name: string | null;
@@ -722,6 +723,7 @@ export type Database = {
           created_at?: string | null;
           credit_debit_indicator?: string | null;
           creditor_name?: string | null;
+          merchant_key?: string | null;
           custom_name?: string | null;
           currency: string;
           debtor_name?: string | null;
@@ -751,6 +753,7 @@ export type Database = {
           created_at?: string | null;
           credit_debit_indicator?: string | null;
           creditor_name?: string | null;
+          merchant_key?: string | null;
           custom_name?: string | null;
           currency?: string;
           debtor_name?: string | null;

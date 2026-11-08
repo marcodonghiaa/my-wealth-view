@@ -95,6 +95,7 @@ function tx(
     worth_it: null,
     worth_it_prompted_at: null,
     ...p,
+    merchant_key: p.creditor_name?.toLowerCase().trim() ?? null,
   };
 }
 

@@ -241,6 +241,46 @@ describe("fake client: auth, functions and rpc", () => {
     expect(back).toHaveLength(rows!.length);
   });
 
+  describe("rename_merchant by merchant_key", () => {
+    const renameAcross = async (key: string) => {
+      const c = fresh();
+      const base = {
+        account_uid: "demo-acc-main",
+        amount: 5,
+        currency: "EUR",
+        booking_date: "2026-10-10",
+      };
+      await c.from("transactions").insert([
+        { ...base, entry_reference: "mk-1", creditor_name: "Cafe Uno Roma", merchant_key: key },
+        { ...base, entry_reference: "mk-2", creditor_name: "Cafe Uno Milano", merchant_key: key },
+      ] as never);
+      const res = await (
+        c.rpc as unknown as (f: string, a: object) => PromiseLike<{ data: number; error: unknown }>
+      )("rename_merchant", {
+        p_entry_reference: "mk-1",
+        p_account_uid: "demo-acc-main",
+        p_name: "Cafe Uno",
+      });
+      const { data } = await c
+        .from("transactions")
+        .select("entry_reference,custom_name")
+        .in("entry_reference", ["mk-1", "mk-2"]);
+      return { res, names: data!.map((r) => r.custom_name) };
+    };
+
+    it("renames every row sharing the merchant_key", async () => {
+      const { res, names } = await renameAcross("cafe uno");
+      expect(res.data).toBe(2);
+      expect(names).toEqual(["Cafe Uno", "Cafe Uno"]);
+    });
+
+    it("does not spread a rename across an aggregator key", async () => {
+      const { res, names } = await renameAcross("paypal");
+      expect(res.data).toBe(1);
+      expect(names).toEqual(["Cafe Uno", undefined]);
+    });
+  });
+
   it("refuses database functions that would import data", async () => {
     const { error } = await fresh().rpc("import_splitwise", {} as never);
     expect(error?.message).toMatch(/demo/i);
