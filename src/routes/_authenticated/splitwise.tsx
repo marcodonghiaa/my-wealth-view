@@ -9,20 +9,20 @@ import { summarizeBalances } from "@/lib/import/splitwise-balances";
 import { useSplitwiseBalances } from "@/lib/use-splitwise-balances";
 import { OwedView } from "@/components/splitwise/owed-view";
 import { useSettleSplitMutation } from "@/components/transactions/mutations";
-import { fetchSplits } from "@/lib/splits";
+import { fetchSplits, money, owedByPerson } from "@/lib/splits";
 
 export const Route = createFileRoute("/_authenticated/splitwise")({
   head: () => ({
     meta: [
-      { title: "Splitwise — MyFinances" },
+      { title: "Who owes you — MyFinances" },
       {
         name: "description",
-        content: "Who owes what in your Splitwise groups and your split bills.",
+        content: "Who owes you, from your Splitwise groups and the bills you split.",
       },
-      { property: "og:title", content: "Splitwise — MyFinances" },
+      { property: "og:title", content: "Who owes you — MyFinances" },
       {
         property: "og:description",
-        content: "Who owes what in your Splitwise groups and your split bills.",
+        content: "Who owes you, from your Splitwise groups and the bills you split.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -40,24 +40,75 @@ function SplitwisePage() {
   const splits = useQuery({ queryKey: ["splits"], queryFn: fetchSplits, staleTime: 60_000 });
   const settle = useSettleSplitMutation(queryClient);
 
+  const totals = useMemo(() => {
+    let owedToYou = owedByPerson(splits.data ?? []).reduce((sum, p) => sum + p.owed, 0);
+    let youOwe = 0;
+    let missingRate = false;
+    for (const g of groups) {
+      const r2e = rate(g.currency);
+      if (r2e === null) missingRate = true;
+      for (const p of g.people) {
+        const value = Math.abs(p.balance) * (r2e ?? 0);
+        if (p.owesYou) owedToYou += value;
+        else youOwe += value;
+      }
+    }
+    return { owedToYou, youOwe, missingRate };
+  }, [groups, rate, splits.data]);
+
   return (
-    <div className="mx-auto max-w-5xl px-4 py-8 sm:px-8 md:py-12">
-      <header className="mb-8 flex flex-wrap items-start justify-between gap-4">
+    <div className="mx-auto max-w-3xl px-4 py-8 sm:px-8 md:py-12">
+      <header className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="ios-large-title">Splitwise</h1>
+          <h1 className="ios-large-title">Who owes you</h1>
           <p className="mt-0.5 text-sm text-muted-foreground">
-            Who owes you: your Splitwise groups and the bills you split.
+            From your Splitwise groups and the bills you split.
           </p>
         </div>
         <button
           type="button"
-          className="inline-flex min-h-11 items-center rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+          className="inline-flex min-h-9 items-center rounded-full border px-3 text-sm transition-colors hover:bg-accent"
           onClick={() => setImporting(true)}
         >
-          Import
+          Import from Splitwise
         </button>
       </header>
 
+      <div className="mb-8 grid grid-cols-2 gap-3">
+        <div className="rounded-2xl bg-card px-4 py-3">
+          <p className="text-xs text-muted-foreground">Owed to you</p>
+          <p className="font-figure text-2xl font-bold tracking-tight text-positive">
+            {money(totals.owedToYou, "EUR")}
+          </p>
+        </div>
+        <div className="rounded-2xl bg-card px-4 py-3">
+          <p className="text-xs text-muted-foreground">You owe</p>
+          <p className="font-figure text-2xl font-bold tracking-tight">
+            {money(totals.youOwe, "EUR")}
+          </p>
+        </div>
+        {totals.missingRate && (
+          <p className="col-span-2 text-xs text-muted-foreground">
+            Some Splitwise amounts are left out: no exchange rate for their currency yet.
+          </p>
+        )}
+      </div>
+
+      <h2 className="mb-3 text-lg font-semibold">Your splits</h2>
+      {splits.isError ? (
+        <div role="alert" className="rounded-2xl bg-negative/10 px-4 py-3 text-sm text-negative">
+          Couldn't load your splits: {splits.error.message}
+        </div>
+      ) : splits.isPending ? (
+        <div className="h-24 animate-pulse rounded-2xl bg-muted" />
+      ) : (
+        <OwedView
+          rows={splits.data}
+          onToggleSettled={(row, settled) => settle.mutate({ tx: row, settled })}
+        />
+      )}
+
+      <h2 className="mt-10 mb-3 text-lg font-semibold">Splitwise</h2>
       {balances.isError && (
         <div
           role="alert"
@@ -66,28 +117,10 @@ function SplitwisePage() {
           Couldn't load Splitwise balances: {balances.error.message}
         </div>
       )}
-
       {balances.isPending ? (
-        <div className="h-40 animate-pulse rounded-2xl bg-muted" />
+        <div className="h-24 animate-pulse rounded-2xl bg-muted" />
       ) : (
         <BalancesView groups={groups} />
-      )}
-
-      <h2 className="mt-10 mb-1 text-lg font-semibold">From your transactions</h2>
-      <p className="mb-4 text-sm text-muted-foreground">
-        Bills you split in Transactions: what each person still owes you.
-      </p>
-      {splits.isError ? (
-        <div role="alert" className="rounded-2xl bg-negative/10 px-4 py-3 text-sm text-negative">
-          Couldn't load your splits: {splits.error.message}
-        </div>
-      ) : splits.isPending ? (
-        <div className="h-32 animate-pulse rounded-2xl bg-muted" />
-      ) : (
-        <OwedView
-          rows={splits.data}
-          onToggleSettled={(row, settled) => settle.mutate({ tx: row, settled })}
-        />
       )}
 
       <Dialog open={importing} onOpenChange={(open) => writing || setImporting(open)}>

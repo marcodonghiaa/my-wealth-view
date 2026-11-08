@@ -16,29 +16,28 @@ const group: GroupSummary = {
 };
 
 describe("BalancesView", () => {
-  // protects=the user sees who owes the group and by how much; fails_when=names or signs are lost
-  it("shows each person with what they owe or are owed", () => {
+  // protects=only money between me and each person shows; fails_when=names or directions are lost
+  it("shows who owes me and whom I owe", () => {
     render(<BalancesView groups={[group]} />);
     expect(screen.getByText("Matteo Mucciarella")).toBeTruthy();
-    expect(screen.getByText(/owes the group/)).toBeTruthy();
-    expect(screen.getByText(/is owed/)).toBeTruthy();
-    expect(screen.getByText(/199\.48/)).toBeTruthy();
+    expect(screen.getByText(/owes you/)).toHaveTextContent("US$199.48");
+    expect(screen.getByText(/you owe/)).toHaveTextContent("US$52.22");
+    expect(screen.queryByText(/the group/)).toBeNull();
   });
 
-  it("shows my balance in the group currency and in euros", () => {
-    render(<BalancesView groups={[group]} />);
-    expect(screen.getByText(/391\.45/)).toBeTruthy();
-    expect(screen.getByText(/360/)).toBeTruthy();
+  it("says when I'm square with everyone in a group", () => {
+    render(<BalancesView groups={[{ ...group, people: [] }]} />);
+    expect(screen.getByText(/all square/)).toBeTruthy();
   });
 
   it("says what to do when nothing has been imported", () => {
     render(<BalancesView groups={[]} />);
-    expect(screen.getByText(/Import a Splitwise file below/)).toBeTruthy();
+    expect(screen.getByText(/Import a Splitwise file/)).toBeTruthy();
   });
 
-  // protects=nobody reads pairwise debts into the numbers; fails_when=the caveat is removed
-  it("explains that these are group totals, not who pays whom", () => {
+  // protects=nobody expects the Splitwise app's simplified numbers; fails_when=the caveat is removed
+  it("explains the amounts are not simplified like in Splitwise", () => {
     render(<BalancesView groups={[group]} />);
-    expect(screen.getByText(/not who pays whom/)).toBeTruthy();
+    expect(screen.getByText(/simplify debts/)).toBeTruthy();
   });
 });

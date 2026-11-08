@@ -73,7 +73,7 @@ const NAV_GROUPS: Array<NavGroup> = [
       { label: "Income", icon: ArrowDownLeft, to: "/income" },
       { label: "Spending", icon: PieChart, to: "/spending" },
       { label: "Subscriptions", icon: Repeat, to: "/subscriptions" },
-      { label: "Splitwise", icon: Users, to: "/splitwise" },
+      { label: "Who owes you", icon: Users, to: "/splitwise" },
     ],
   },
   {
