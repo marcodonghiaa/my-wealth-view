@@ -1,6 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Tables } from "@/integrations/supabase/types";
-import { effectiveCadence, groupStreams, monthlyEur } from "./recurring";
+import { effectiveCadence, groupStreams, monthlyEur, romeToday } from "./recurring";
 
 type Stream = Tables<"recurring_streams">;
 
@@ -105,7 +105,7 @@ describe("groupStreams", () => {
     expect(g.active).toHaveLength(0);
   });
   it("keeps a suggestion inside the grace window", () => {
-    // next 2026-09-01 + 7d + 30.4d = 2026-10-08.4 is past; use 2026-10-10 -> window ends 2026-11-17
+    // monthly window: next_expected + 7d + 30.4d. 2026-10-10 -> 2026-11-16, still ahead of today.
     const g = group(stream({ detected_status: "suggested", next_expected: "2026-10-10" }));
     expect(g.toReview).toHaveLength(1);
   });
@@ -113,19 +113,9 @@ describe("groupStreams", () => {
     const g = group(stream({ detected_status: "suggested", next_expected: "2026-09-01" }));
     expect(g.toReview).toHaveLength(0);
   });
-  it("uses last_charged age when next_expected is null: recent", () => {
-    const g = group(stream({ detected_status: "suggested", next_expected: null }));
-    expect(g.toReview).toHaveLength(1);
-  });
-  it("uses last_charged age when next_expected is null: older than 400 days", () => {
+  it("never stale-filters a suggestion without next_expected", () => {
     const g = group(
-      stream({ detected_status: "suggested", next_expected: null, last_charged: "2025-01-01" }),
-    );
-    expect(g.toReview).toHaveLength(0);
-  });
-  it("treats null next_expected and null last_charged as not stale", () => {
-    const g = group(
-      stream({ detected_status: "suggested", next_expected: null, last_charged: null }),
+      stream({ detected_status: "suggested", next_expected: null, last_charged: "2020-01-01" }),
     );
     expect(g.toReview).toHaveLength(1);
   });
@@ -136,5 +126,51 @@ describe("groupStreams", () => {
   it("ignores a stream that is neither suggested nor active nor reviewed", () => {
     const g = group(stream({ detected_status: null }));
     expect(g.active.length + g.toReview.length + g.stopped.length + g.dismissed.length).toBe(0);
+  });
+  const weekly = (next: string) =>
+    stream({ detected_status: "suggested", cadence: "weekly", next_expected: next });
+  it("keeps a weekly suggestion exactly at the stale edge (7 + 7 days)", () => {
+    expect(group(weekly("2026-10-25")).toReview).toHaveLength(1);
+  });
+  it("drops a weekly suggestion one day past the stale edge", () => {
+    expect(group(weekly("2026-10-24")).toReview).toHaveLength(0);
+  });
+  it("keeps a confirmed stream with stale next_expected out of toReview (active)", () => {
+    const g = group(stream({ user_status: "confirmed", next_expected: "2026-09-01" }));
+    expect(g.toReview).toHaveLength(0);
+    expect(g.active).toHaveLength(1);
+  });
+  it("keeps a confirmed stream with stale next_expected out of toReview (stopped)", () => {
+    const g = group(
+      stream({ user_status: "confirmed", next_expected: "2026-07-01", last_charged: "2026-06-01" }),
+    );
+    expect(g.toReview).toHaveLength(0);
+    expect(g.stopped).toHaveLength(1);
+  });
+  it("stops an overdue suggested stream the user confirmed", () => {
+    const g = group(
+      stream({
+        detected_status: "suggested",
+        user_status: "confirmed",
+        next_expected: "2026-07-01",
+        last_charged: "2026-06-01",
+      }),
+    );
+    expect(g.stopped).toHaveLength(1);
+    expect(g.toReview).toHaveLength(0);
+  });
+});
+
+describe("romeToday", () => {
+  afterEach(() => vi.useRealTimers());
+  it("uses the Rome calendar date, not UTC", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-11-08T23:30:00Z")); // already 9 Nov in Rome
+    expect(romeToday()).toEqual(new Date("2026-11-09T00:00:00"));
+  });
+  it("matches UTC date when both agree", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-11-08T12:00:00Z"));
+    expect(romeToday()).toEqual(new Date("2026-11-08T00:00:00"));
   });
 });

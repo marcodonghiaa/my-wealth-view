@@ -35,11 +35,16 @@ const daysBetween = (from: string, to: Date) =>
 
 // Ruling 6: a suggestion is stale once today > next_expected + 7 days + one period.
 function isStaleSuggestion(s: Stream, today: Date): boolean {
-  if (s.next_expected) {
-    const period = periodDays(asChargeable(s));
-    return period != null && daysBetween(s.next_expected, today) > 7 + period;
-  }
-  return s.last_charged != null && daysBetween(s.last_charged, today) > 400;
+  const period = periodDays(asChargeable(s));
+  return (
+    s.next_expected != null && period != null && daysBetween(s.next_expected, today) > 7 + period
+  );
+}
+
+/** Local-midnight Date of today's calendar date in Europe/Rome (council fix 15). */
+export function romeToday(): Date {
+  const ymd = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Rome" }).format(new Date());
+  return new Date(`${ymd}T00:00:00`);
 }
 
 export function groupStreams(streams: Array<Stream>, today = new Date()) {
