@@ -54,6 +54,7 @@ import {
   restorePatch,
   useRenameMerchantMutation,
   useShareMutation,
+  useSettleSplitMutation,
   useSplitMutation,
   useTransactionFieldMutation,
 } from "./mutations";
@@ -123,6 +124,20 @@ describe("transaction mutations are scoped to one account", () => {
     );
     expect(calls[0]?.eq).toEqual({ account_uid: "a2", entry_reference: "r1" });
     expect(cached().map((r) => r.owed_by)).toEqual([null, "Sam"]);
+  });
+
+  // protects=the Settle button; fails_when=it writes the wrong row or leaves settled_at stale
+  it("settling a split marks that row settled with a date, and unsettling clears it", async () => {
+    const { queryClient, wrapper } = setup();
+    const invalidate = vi.spyOn(queryClient, "invalidateQueries");
+    const { result } = renderHook(() => useSettleSplitMutation(queryClient), { wrapper });
+    const tx = { account_uid: "a2", entry_reference: "r1" };
+    await act(() => result.current.mutateAsync({ tx, settled: true }));
+    expect(calls[0]?.eq).toEqual(tx);
+    expect(calls[0]?.update).toMatchObject({ owed_settled: true, settled_at: expect.any(String) });
+    await act(() => result.current.mutateAsync({ tx, settled: false }));
+    expect(calls[1]?.update).toEqual({ owed_settled: false, settled_at: null });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ["splits"] });
   });
 
   it("bulk update sends one statement per account and changes only the chosen rows", async () => {
