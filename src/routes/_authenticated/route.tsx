@@ -24,6 +24,9 @@ import { MadeWith } from "@/components/made-with";
 import { BrandMark } from "@/components/brand-mark";
 import { TrustNote } from "@/components/trust-note";
 import { DemoBadge } from "@/components/demo-badge";
+import { NavBadge } from "@/components/nav-badge";
+import { groupStreams, romeToday } from "@/lib/recurring";
+import { useRecurringStreams } from "@/lib/use-recurring-streams";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -99,6 +102,10 @@ function AuthenticatedLayout() {
   const navigate = useNavigate();
   const [signingOut, setSigningOut] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const streams = useRecurringStreams().data;
+  const badges: Record<string, number> = {
+    Subscriptions: streams ? groupStreams(streams, romeToday()).toReview.length : 0,
+  };
 
   // Once per page load: tells the backend this address is the dashboard (setup no longer asks for it).
   useEffect(() => {
@@ -154,6 +161,7 @@ function AuthenticatedLayout() {
                   >
                     <item.icon className="size-[1.125rem]" />
                     {item.label}
+                    <NavBadge count={badges[item.label]} />
                   </Link>
                 ))}
               </div>
@@ -255,6 +263,7 @@ function AuthenticatedLayout() {
                     >
                       <item.icon className="size-5 shrink-0" />
                       {item.label}
+                      <NavBadge count={badges[item.label]} />
                     </Link>
                   ))}
                 </div>
