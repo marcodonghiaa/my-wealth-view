@@ -35,6 +35,7 @@ export const Route = createFileRoute("/_authenticated/subscriptions")({
 type Stream = Tables<"recurring_streams">;
 type IntervalUnit = "days" | "weeks" | "months" | "years";
 
+const MUTATION_KEY = ["stream_action"];
 const BILLING_FREQUENCIES = ["Weekly", "Monthly", "Quarterly", "Yearly"];
 const INTERVAL_UNITS: Array<IntervalUnit> = ["days", "weeks", "months", "years"];
 
@@ -68,6 +69,7 @@ function SubscriptionsPage() {
   const query = useRecurringStreams();
 
   const actionMutation = useMutation({
+    mutationKey: MUTATION_KEY,
     mutationFn: async ({ id, action, args }: StreamAction) => {
       const { error } = await supabase.rpc("stream_action", {
         p_stream: id,
@@ -100,6 +102,8 @@ function SubscriptionsPage() {
       });
     },
     onSettled: () => {
+      // Only the last in-flight action refetches, so a slow earlier one can't overwrite a newer optimistic state.
+      if (queryClient.isMutating({ mutationKey: MUTATION_KEY }) !== 1) return;
       void queryClient.invalidateQueries({ queryKey: RECURRING_KEY });
     },
   });
@@ -327,7 +331,7 @@ function SubscriptionCard({
       <div className="mt-1 grid grid-cols-[7rem_minmax(0,1fr)_auto] items-center gap-3 pl-[3.25rem]">
         <FrequencyPicker
           frequency={effectiveCadence(sub)}
-          isManual={sub.user_status === "confirmed"}
+          isManual={sub.user_cadence != null}
           customValue={sub.custom_interval_value}
           customUnit={sub.custom_interval_unit as IntervalUnit | null}
           onSelect={onSelectFrequency}
@@ -382,8 +386,8 @@ function FrequencyPicker({
   }
 
   function submitCustom() {
-    const value = parseInt(draftValue, 10);
-    if (!Number.isFinite(value) || value <= 0) return;
+    const value = Number(draftValue);
+    if (!Number.isInteger(value) || value < 1 || value > 999) return;
     onSelectCustom(value, draftUnit);
     setCustomOpen(false);
     setOpen(false);
@@ -429,6 +433,9 @@ function FrequencyPicker({
               <input
                 type="number"
                 min={1}
+                max={999}
+                step={1}
+                aria-label="Interval"
                 value={draftValue}
                 onChange={(e) => setDraftValue(e.target.value)}
                 className="h-8 w-14 rounded-md border bg-background px-2 text-base text-foreground focus:ring-2 focus:ring-ring focus:outline-none"
@@ -436,6 +443,7 @@ function FrequencyPicker({
               />
               <select
                 value={draftUnit}
+                aria-label="Unit"
                 onChange={(e) => setDraftUnit(e.target.value as IntervalUnit)}
                 className="h-8 flex-1 rounded-md border bg-background px-1.5 text-base text-foreground focus:ring-2 focus:ring-ring focus:outline-none"
               >
@@ -450,14 +458,14 @@ function FrequencyPicker({
               <button
                 type="button"
                 onClick={() => setCustomOpen(false)}
-                className="rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-accent"
+                className="min-h-11 rounded-md px-3 py-1 text-xs text-muted-foreground hover:bg-accent"
               >
                 Back
               </button>
               <button
                 type="button"
                 onClick={submitCustom}
-                className="rounded-md bg-primary px-2.5 py-1 text-xs font-medium text-primary-foreground hover:opacity-90"
+                className="min-h-11 rounded-md bg-primary px-3 py-1 text-xs font-medium text-primary-foreground hover:opacity-90"
               >
                 Save
               </button>

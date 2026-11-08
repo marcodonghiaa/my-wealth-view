@@ -7,6 +7,7 @@ export const RECURRING_KEY = ["recurring_streams"];
 export const useRecurringStreams = () =>
   useQuery({
     queryKey: RECURRING_KEY,
+    staleTime: 60_000,
     queryFn: async () => {
       const { data, error } = await supabase.from("recurring_streams").select("*");
       if (error) throw error;

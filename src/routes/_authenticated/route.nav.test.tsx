@@ -52,7 +52,10 @@ describe("nav badge", () => {
       { ...suggested("c"), user_status: "confirmed" },
     ];
     renderLayout();
-    expect((await screen.findAllByLabelText("2 to review")).length).toBeGreaterThan(0);
+    const pills = await screen.findAllByText("to review");
+    // sidebar, mobile More tab, and menu sheet
+    expect(pills.length).toBeGreaterThanOrEqual(2);
+    pills.forEach((p) => expect(p.parentElement).toHaveTextContent("2 to review"));
   });
 
   it("shows no badge when nothing is to review", async () => {
@@ -60,6 +63,6 @@ describe("nav badge", () => {
     renderLayout();
     await screen.findAllByText("Subscriptions");
     await new Promise((r) => setTimeout(r, 20)); // let the query settle
-    expect(screen.queryByLabelText(/to review/)).toBeNull();
+    expect(screen.queryByText("to review")).toBeNull();
   });
 });

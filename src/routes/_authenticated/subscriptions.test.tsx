@@ -204,4 +204,46 @@ describe("Subscriptions page", () => {
     renderPage();
     expect(await screen.findByRole("alert")).toHaveTextContent("boom");
   });
+
+  it("shows the pencil only for a manual cadence, not after plain Confirm", async () => {
+    db.rows = [
+      stream({ user_status: "confirmed" }),
+      stream({ id: "s4", display_name: "Manualbox", user_cadence: "monthly" }),
+    ];
+    renderPage();
+    expect(await screen.findByTitle("Monthly — auto-detected")).toBeInTheDocument();
+    expect(screen.getByTitle("Monthly — manually set")).toBeInTheDocument();
+  });
+
+  it("rejects an out-of-range custom interval", async () => {
+    renderPage();
+    fireEvent.click(await screen.findByTitle("Monthly — auto-detected"));
+    fireEvent.click(await screen.findByRole("button", { name: /Custom/ }));
+    fireEvent.change(screen.getByLabelText("Interval"), { target: { value: "1000" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    fireEvent.change(screen.getByLabelText("Interval"), { target: { value: "1.5" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it("refetches only after the last of several in-flight actions settles", async () => {
+    const resolvers: Array<() => void> = [];
+    rpc.mockImplementation(() => new Promise((res) => resolvers.push(() => res({ error: null }))));
+    db.rows = [stream({ id: "a", display_name: "Aaa" }), stream({ id: "b", display_name: "Bbb" })];
+    const client = new QueryClient();
+    const spy = vi.spyOn(client, "invalidateQueries");
+    render(
+      <QueryClientProvider client={client}>
+        <Page />
+      </QueryClientProvider>,
+    );
+    fireEvent.click(await screen.findByRole("button", { name: "Remove Aaa" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Remove Bbb" }));
+    await waitFor(() => expect(resolvers).toHaveLength(2));
+    resolvers[0]!();
+    await waitFor(() => expect(toast.success).toHaveBeenCalledTimes(1));
+    expect(spy).not.toHaveBeenCalled();
+    resolvers[1]!();
+    await waitFor(() => expect(spy).toHaveBeenCalledTimes(1));
+  });
 });

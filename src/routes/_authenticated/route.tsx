@@ -227,7 +227,12 @@ function AuthenticatedLayout() {
           aria-haspopup="dialog"
           className="flex flex-col items-center justify-center gap-0.5 text-muted-foreground transition-opacity active:opacity-60"
         >
-          <MoreHorizontal className="size-6" />
+          <span className="relative">
+            <MoreHorizontal className="size-6" />
+            <span className="absolute -top-1 left-full flex">
+              <NavBadge count={badges["Subscriptions"]} />
+            </span>
+          </span>
           <span className="text-[0.6875rem] font-medium">More</span>
         </button>
       </nav>
