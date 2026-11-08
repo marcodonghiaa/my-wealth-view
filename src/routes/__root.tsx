@@ -8,10 +8,11 @@ import {
   Scripts,
   type ErrorComponentProps,
 } from "@tanstack/react-router";
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { Toaster } from "@/components/ui/sonner";
+import { listenForNotificationNav } from "@/lib/notification-nav";
 
 function NotFoundComponent() {
   return (
@@ -153,6 +154,8 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const router = useRouter();
+  useEffect(() => listenForNotificationNav((href) => router.navigate({ href })), [router]);
 
   return (
     <QueryClientProvider client={queryClient}>

@@ -50,15 +50,21 @@ describe("service worker notification click", () => {
     expect(new URL(opened!, ORIGIN).origin).toBe(ORIGIN);
   });
 
-  // protects=tapping a push while the app is already open lands on the tapped page;
-  // fails_when=the open window is only focused, not navigated
-  it("navigates an already-open window instead of just focusing it", async () => {
-    const focus = vi.fn(() => Promise.resolve());
-    const navigate = vi.fn((to: string) => Promise.resolve({ url: to, focus }));
-    const win = { url: `${ORIGIN}/net-worth`, focus: vi.fn(), navigate };
+  // protects=tapping a push while the app is already open lands on the tapped page (iOS resumes
+  // the old page and ignores navigate());
+  // fails_when=the open window is only focused and never told where to go
+  it("tells an already-open window to route to the tapped page", async () => {
+    const win = {
+      url: `${ORIGIN}/splitwise`,
+      focus: vi.fn(() => Promise.resolve()),
+      postMessage: vi.fn(),
+    };
     const opened = await clickedWith("/transactions?highlight=a", [win]);
-    expect(navigate).toHaveBeenCalledWith(`${ORIGIN}/transactions?highlight=a`);
-    expect(focus).toHaveBeenCalled();
+    expect(win.postMessage).toHaveBeenCalledWith({
+      type: "navigate",
+      url: `${ORIGIN}/transactions?highlight=a`,
+    });
+    expect(win.focus).toHaveBeenCalled();
     expect(opened).toBeUndefined();
   });
 
@@ -69,31 +75,14 @@ describe("service worker notification click", () => {
     expect(win.navigate).not.toHaveBeenCalled();
   });
 
-  it("opens a new window when navigating the open one fails", async () => {
+  it("does not open a second window when focus fails", async () => {
     const win = {
       url: `${ORIGIN}/net-worth`,
-      focus: vi.fn(),
-      navigate: vi.fn(() => Promise.reject(new TypeError("not controlled"))),
+      focus: vi.fn(() => Promise.reject(new Error("no"))),
+      postMessage: vi.fn(),
     };
-    const opened = await clickedWith("/transactions?highlight=a", [win]);
-    expect(opened).toBe(`${ORIGIN}/transactions?highlight=a`);
-  });
-
-  it("opens a new window when the open one has no navigate()", async () => {
-    const win = { url: `${ORIGIN}/net-worth`, focus: vi.fn() };
-    const opened = await clickedWith("/transactions?highlight=a", [win]);
-    expect(opened).toBe(`${ORIGIN}/transactions?highlight=a`);
-  });
-
-  it("does not open a second window when focusing after navigate fails", async () => {
-    const focus = vi.fn(() => Promise.reject(new Error("no focus")));
-    const win = {
-      url: `${ORIGIN}/net-worth`,
-      focus,
-      navigate: vi.fn((to: string) => Promise.resolve({ url: to, focus })),
-    };
-    const opened = await clickedWith("/transactions?highlight=a", [win]);
-    expect(focus).toHaveBeenCalled();
+    const opened = await clickedWith("/transactions", [win]);
+    expect(win.postMessage).toHaveBeenCalled();
     expect(opened).toBeUndefined();
   });
 });

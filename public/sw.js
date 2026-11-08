@@ -26,19 +26,18 @@ self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   const url = safeNotificationUrl(event.notification.data?.url || "/");
   event.waitUntil(
-    self.clients.matchAll({ type: "window" }).then((clients) => {
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
       const already = clients.find((c) => c.url === url);
       if (already) return already.focus();
-      // The app is open on another page (common for an installed iOS app):
-      // send that window to the tapped page instead of just showing it.
+      // The app is open on another page (common for an installed iOS app). iOS resumes the
+      // suspended app on its old page and ignores WindowClient.navigate(), so the page
+      // routes itself on this message (see src/lib/notification-nav.ts).
       const client = clients[0];
       if (client) {
-        // Inside .then so a missing navigate() also lands in the openWindow fallback;
-        // a focus() failure after navigating must not open a second window.
+        client.postMessage({ type: "navigate", url });
         return Promise.resolve()
-          .then(() => client.navigate(url))
-          .then((c) => (c ?? client).focus().catch(() => {}))
-          .catch(() => self.clients.openWindow(url));
+          .then(() => client.focus())
+          .catch(() => {});
       }
       if (self.clients.openWindow) return self.clients.openWindow(url);
     }),
