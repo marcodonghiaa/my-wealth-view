@@ -236,7 +236,7 @@ function AuthPage() {
               Try the demo
             </Link>
             <a
-              href="https://github.com/marcodonghiaa/my-wealth-view"
+              href="https://github.com/marcodonghiaa/alopex-web"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"

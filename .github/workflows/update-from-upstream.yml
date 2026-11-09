@@ -1,7 +1,7 @@
 name: update-from-upstream
 
 # For copies made with the "Deploy with Vercel" button: opens a pull request
-# that brings your copy up to date with marcodonghiaa/my-wealth-view.
+# that brings your copy up to date with marcodonghiaa/alopex-web.
 # Nothing is pushed to your default branch; merge the PR and Vercel redeploys.
 on:
   workflow_dispatch:
@@ -17,13 +17,13 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  UPSTREAM_REPO: marcodonghiaa/my-wealth-view
+  UPSTREAM_REPO: marcodonghiaa/alopex-web
   UPDATE_BRANCH: update-from-upstream
 
 jobs:
   update:
     # The upstream repo has nothing to update from itself.
-    if: github.repository != 'marcodonghiaa/my-wealth-view'
+    if: github.repository != 'marcodonghiaa/alopex-web'
     runs-on: ubuntu-latest
     steps:
       # No credentials left in .git: the next step runs upstream's script, which must not be able

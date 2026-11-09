@@ -8,7 +8,7 @@ describe("MadeWith", () => {
     expect(showBranding({})).toBe(true);
     render(<MadeWith />);
     const link = screen.getByRole("link", { name: /made with alopex/i });
-    expect(link.getAttribute("href")).toBe("https://github.com/marcodonghiaa/my-wealth-view");
+    expect(link.getAttribute("href")).toBe("https://github.com/marcodonghiaa/alopex-web");
     expect(link.getAttribute("rel")).toContain("noopener");
   });
 
