@@ -15,7 +15,6 @@ export const EXPORT_TABLES = [
   { name: "spend_history", order: ["month", "category"] },
   { name: "splitwise_balances", order: ["group_name", "person"] },
   { name: "splitwise_expenses", order: ["id"] },
-  { name: "recurring_streams", order: ["stream_key"] },
   { name: "subscription_billing_overrides", order: ["creditor_name"] },
 ] as const;
 
