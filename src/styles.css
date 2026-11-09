@@ -1,4 +1,4 @@
-@import "@fontsource-variable/instrument-sans";
+@import "@fontsource-variable/geist";
 @import "@fontsource/fragment-mono";
 @import "tailwindcss" source(none);
 @source "../src";
@@ -8,7 +8,7 @@
 
 /*
  * Alopex design system.
- * "Arctic Ledger": figures in Fragment Mono (money), words in Instrument Sans.
+ * "Arctic Ledger": figures in Fragment Mono (money), words in Geist.
  * Cold snow ground, cold ink as the one control tint, a single Ember accent
  * (fox fur) for focus, the live cursor and counts. Gains/losses are the only
  * other hues; categories are one hue ordered by lightness. Hairlines, not
@@ -61,7 +61,7 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
   --font-sans:
-    "Instrument Sans Variable", -apple-system, BlinkMacSystemFont, system-ui, "Segoe UI", Roboto, sans-serif;
+    "Geist Variable", -apple-system, BlinkMacSystemFont, system-ui, "Segoe UI", Roboto, sans-serif;
   --font-figure: "Fragment Mono", ui-monospace, "SF Mono", Menlo, monospace;
   --font-mono: "Fragment Mono", ui-monospace, "SF Mono", Menlo, monospace;
   --color-mint: var(--mint);

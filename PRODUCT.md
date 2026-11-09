@@ -53,7 +53,7 @@ A self-hosted net worth dashboard. It brings together bank accounts (synced thro
 
 - Name: Alopex.
 - Mark: Alopex the arctic fox, a flat fox head with a white mask cut out (`src/components/brand-mark.tsx`, `public/icon-*.png`). The mascot and the logo are the same drawing. The outline fox (`src/components/empty-state.tsx`) appears only in empty states: never beside an amount, never in a chart, one per viewport.
-- Look: "Arctic Ledger". Figures in Fragment Mono, text in Instrument Sans; snow ground, cold ink controls, one Ember accent (fox fur, oklch(0.68 0.16 50)) for focus, cursor and counts; categories one hue ranked by lightness; 4px/8px corners, no pills.
+- Look: "Arctic Ledger". Figures in Fragment Mono, text in Geist; snow ground, cold ink controls, one Ember accent (fox fur, oklch(0.68 0.16 50)) for focus, cursor and counts; categories one hue ranked by lightness; 4px/8px corners, no pills.
 - The user asked for a Revolut / Trade Republic direction for the app UI.
 
 ## Evidence on Hand

@@ -38,22 +38,22 @@ typography:
     letterSpacing: "-0.04em"
     fontFeature: "tnum, lnum"
   headline:
-    fontFamily: "Instrument Sans Variable, -apple-system, BlinkMacSystemFont, system-ui, sans-serif"
+    fontFamily: "Geist Variable, -apple-system, BlinkMacSystemFont, system-ui, sans-serif"
     fontSize: "2rem"
     fontWeight: 600
     lineHeight: 1.15
     letterSpacing: "-0.03em"
   title:
-    fontFamily: "Instrument Sans Variable, -apple-system, BlinkMacSystemFont, system-ui, sans-serif"
+    fontFamily: "Geist Variable, -apple-system, BlinkMacSystemFont, system-ui, sans-serif"
     fontSize: "1.25rem"
     fontWeight: 600
     letterSpacing: "-0.02em"
   section:
-    fontFamily: "Instrument Sans Variable, -apple-system, BlinkMacSystemFont, system-ui, sans-serif"
+    fontFamily: "Geist Variable, -apple-system, BlinkMacSystemFont, system-ui, sans-serif"
     fontSize: "1.125rem"
     fontWeight: 600
   body:
-    fontFamily: "Instrument Sans Variable, -apple-system, BlinkMacSystemFont, system-ui, sans-serif"
+    fontFamily: "Geist Variable, -apple-system, BlinkMacSystemFont, system-ui, sans-serif"
     fontSize: "0.9375rem"
     fontWeight: 400
     fontFeature: "tnum"
@@ -64,12 +64,12 @@ typography:
     letterSpacing: "-0.02em"
     fontFeature: "tnum, lnum"
   label:
-    fontFamily: "Instrument Sans Variable, -apple-system, BlinkMacSystemFont, system-ui, sans-serif"
+    fontFamily: "Geist Variable, -apple-system, BlinkMacSystemFont, system-ui, sans-serif"
     fontSize: "0.8125rem"
     fontWeight: 500
     lineHeight: 1.25
   caption:
-    fontFamily: "Instrument Sans Variable, -apple-system, BlinkMacSystemFont, system-ui, sans-serif"
+    fontFamily: "Geist Variable, -apple-system, BlinkMacSystemFont, system-ui, sans-serif"
     fontSize: "0.75rem"
     fontWeight: 400
   eyebrow:
@@ -78,7 +78,7 @@ typography:
     letterSpacing: "0.08em"
     textTransform: "uppercase"
   tab:
-    fontFamily: "Instrument Sans Variable, -apple-system, BlinkMacSystemFont, system-ui, sans-serif"
+    fontFamily: "Geist Variable, -apple-system, BlinkMacSystemFont, system-ui, sans-serif"
     fontSize: "0.6875rem"
     fontWeight: 500
 rounded:
@@ -164,7 +164,7 @@ components:
 
 **Creative North Star: "Arctic Ledger"**
 
-Alopex reads like a well-made bank app: one exact figure at the top of the screen, quiet rows beneath, and nothing else competing. The world is played straight in the Revolut / Trade Republic register the user pinned: a snow ground, white grouped lists floating on it with no outlines, every amount set in Fragment Mono and every word in Instrument Sans, cold ink as the one control tint and Ember (fox fur) as the single accent. Colour carries meaning (gain, loss, warning) or rank (a category, by lightness), never decoration.
+Alopex reads like a well-made bank app: one exact figure at the top of the screen, quiet rows beneath, and nothing else competing. The world is played straight in the Revolut / Trade Republic register the user pinned: a snow ground, white grouped lists floating on it with no outlines, every amount set in Fragment Mono and every word in Geist, cold ink as the one control tint and Ember (fox fur) as the single accent. Colour carries meaning (gain, loss, warning) or rank (a category, by lightness), never decoration.
 
 Density is calm rather than sparse. Rows are generous (40px avatar, 64px breakdown rows, 44px minimum tap targets), sections breathe at 32px, and the page column caps at 64rem so the figure and its chart stay in one glance on a 1440 screen. The interface is read-only in tone: no trading cues, no hype, no tinted stat tiles in boxed cards.
 
@@ -215,7 +215,7 @@ A cold neutral world: snow ground, cold ink for controls, one warm Ember accent,
 ## Typography
 
 **Figures:** Fragment Mono 400 (`font-figure`, `figure-display`, `eyebrow`): every amount, percent, date tick, count and section index.
-**Text:** Instrument Sans Variable (`font-sans`): every word.
+**Text:** Geist Variable (`font-sans`): every word.
 
 **Character:** A ledger. Money is set in a monospace so columns align by construction and a figure is recognisable as a figure before it is read; words sit in a warm grotesk beside it. Tight negative tracking (-0.04em) on the display size keeps the mono from feeling like code.
 
@@ -233,7 +233,7 @@ A cold neutral world: snow ground, cold ink for controls, one warm Ember accent,
 - **Tab** (500, 11px): mobile tab bar labels under 24px icons.
 
 ### Named Rules
-**The Mono Figure Rule.** Every number is set in Fragment Mono; every word in Instrument Sans. Never set an amount in the sans, never a sentence in the mono.
+**The Mono Figure Rule.** Every number is set in Fragment Mono; every word in Geist. Never set an amount in the sans, never a sentence in the mono.
 
 **The Quiet Page Name Rule.** On screens that open on a figure, the page name is the h1 set small (15px, 500, muted) so the figure is the loudest thing. Labels stay sentence case; the eyebrow is the one uppercase style.
 
@@ -311,7 +311,7 @@ Errors are a 10% loss wash with loss text, 8px corners, 12px by 16px padding, ro
 ### Do:
 - **Do** open every screen with one agreed total on the Headline Figure, and list screens on the large title or the month switcher.
 - **Do** keep Ink (white on dark) as the only control tint.
-- **Do** set every amount in Fragment Mono, right-aligned in rows, and every word in Instrument Sans.
+- **Do** set every amount in Fragment Mono, right-aligned in rows, and every word in Geist.
 - **Do** separate rows with hairlines inside white grouped lists on the pale ground.
 - **Do** use 4px corners on controls and 8px on containers.
 - **Do** keep Ember to lines, dots and counts: focus ring, live cursor, badges.
