@@ -44,7 +44,7 @@ export function TransfersSection({
                 type="button"
                 disabled={savingId === txId(tx)}
                 onClick={() => onRestore(tx)}
-                className="h-9 shrink-0 rounded-full bg-muted px-3 text-xs font-medium text-foreground transition-colors hover:bg-accent disabled:opacity-50"
+                className="h-9 shrink-0 rounded-sm bg-muted px-3 text-xs font-medium text-foreground transition-colors hover:bg-accent disabled:opacity-50"
               >
                 Count as {restoredFlow(tx)}
               </button>

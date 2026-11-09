@@ -99,7 +99,7 @@ export function RevealDialog() {
         <button
           type="button"
           onClick={toReview.length > 0 ? review : () => setOpen(false)}
-          className="inline-flex min-h-11 items-center justify-center rounded-full bg-primary px-4 text-sm font-medium text-primary-foreground hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+          className="inline-flex min-h-11 items-center justify-center rounded-sm bg-primary px-4 text-sm font-medium text-primary-foreground hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
         >
           {toReview.length > 0
             ? `Review ${toReview.length} suggestion${toReview.length === 1 ? "" : "s"}`

@@ -402,7 +402,7 @@ function AccountsPage() {
                 connectStepsRef.current?.scrollIntoView({ block: "center" });
                 connectStepsRef.current?.focus({ preventScroll: true });
               }}
-              className="min-h-11 rounded-full px-3 font-medium text-primary hover:bg-primary/10"
+              className="min-h-11 rounded-sm px-3 font-medium text-primary hover:bg-primary/10"
             >
               Renew access
             </button>
@@ -501,7 +501,7 @@ function AccountsPage() {
                 <button
                   type="submit"
                   disabled={connectBank.isPending || !banks.some((b) => b.name === bankName)}
-                  className="inline-flex min-h-11 items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+                  className="inline-flex min-h-11 items-center gap-2 rounded-sm bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
                 >
                   {connectBank.isPending ? (
                     <Loader2 className="size-4 animate-spin" />
@@ -743,7 +743,7 @@ function AccountsPage() {
                 <button
                   type="submit"
                   disabled={addCd.isPending}
-                  className="inline-flex min-h-11 items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+                  className="inline-flex min-h-11 items-center gap-2 rounded-sm bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
                 >
                   {addCd.isPending ? (
                     <Loader2 className="size-4 animate-spin" />
@@ -800,7 +800,7 @@ function AccountsPage() {
                       onClick={() => deleteCd.mutate(cd.id)}
                       disabled={deleteCd.isPending}
                       aria-label={`Remove ${cd.label}`}
-                      className="-m-2 inline-flex size-11 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-negative/10 hover:text-negative disabled:opacity-50"
+                      className="-m-2 inline-flex size-11 shrink-0 items-center justify-center rounded-sm text-muted-foreground transition-colors hover:bg-negative/10 hover:text-negative disabled:opacity-50"
                     >
                       <Trash2 className="size-4" />
                     </button>

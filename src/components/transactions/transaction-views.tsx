@@ -242,7 +242,7 @@ export function TransactionRowView(props: TransactionViewProps) {
               type="button"
               onClick={() => setOpen(true)}
               aria-label={`Edit ${tx.creditor_name ?? "transaction"}`}
-              className="inline-flex size-11 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+              className="inline-flex size-11 items-center justify-center rounded-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
             >
               <ChevronRight className="size-4" />
             </button>

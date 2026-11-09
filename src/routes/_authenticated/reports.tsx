@@ -389,7 +389,7 @@ function HeadlineCard({
         {sublabel && <p className="text-xs text-muted-foreground">{sublabel}</p>}
       </div>
       {pending ? (
-        <div className="h-6 w-24 animate-pulse rounded-full bg-muted" />
+        <div className="h-6 w-24 animate-pulse rounded-sm bg-muted" />
       ) : (
         <p
           className={`font-figure text-lg font-semibold tracking-[-0.02em] ${

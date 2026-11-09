@@ -175,7 +175,7 @@ export function AddHoldingPanel({
               placeholder={copy.placeholder}
               maxLength={50}
               autoComplete="off"
-              className="min-w-0 flex-1 rounded-full border bg-background px-3 py-2 text-base focus:ring-2 focus:ring-ring focus:outline-none"
+              className="min-w-0 flex-1 rounded-sm border bg-background px-3 py-2 text-base focus:ring-2 focus:ring-ring focus:outline-none"
             />
             <button
               type="submit"

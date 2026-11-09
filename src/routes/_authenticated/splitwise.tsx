@@ -150,7 +150,7 @@ function SplitwisePage() {
         </div>
         <button
           type="button"
-          className="inline-flex min-h-11 items-center rounded-full bg-card px-4 text-sm font-medium transition-colors hover:bg-accent"
+          className="inline-flex min-h-11 items-center rounded-sm bg-card px-4 text-sm font-medium transition-colors hover:bg-accent"
           onClick={() => setImporting(true)}
         >
           Import from Splitwise

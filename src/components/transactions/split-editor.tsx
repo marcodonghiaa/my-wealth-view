@@ -6,7 +6,7 @@ import { evenShare, joinNames, parseNames } from "@/lib/splits";
 const QUICK_SPLITS = [2, 3, 4];
 
 const pill = (on: boolean) =>
-  `inline-flex min-h-9 items-center rounded-full border px-3 text-sm transition-colors ${
+  `inline-flex min-h-9 items-center rounded-sm border px-3 text-sm transition-colors ${
     on
       ? "border-primary bg-primary text-primary-foreground"
       : "bg-background text-foreground hover:bg-accent"
@@ -72,11 +72,11 @@ export function SplitEditor({
           className="-m-2 inline-flex min-h-11 cursor-pointer items-center p-2 disabled:opacity-60"
         >
           {isSplit ? (
-            <span className="inline-flex min-w-24 justify-center rounded-full border border-primary/25 bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary transition-colors hover:bg-primary/20">
+            <span className="inline-flex min-w-24 justify-center rounded-sm border border-primary/25 bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary transition-colors hover:bg-primary/20">
               Split · owed {formatMoney(owed, tx.currency ?? "EUR")}
             </span>
           ) : (
-            <span className="inline-flex min-w-24 justify-center rounded-full border border-dashed px-2.5 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-accent">
+            <span className="inline-flex min-w-24 justify-center rounded-sm border border-dashed px-2.5 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-accent">
               Split…
             </span>
           )}
@@ -144,7 +144,7 @@ export function SplitEditor({
               <button
                 type="button"
                 onClick={() => setNewName("")}
-                className="inline-flex min-h-9 items-center rounded-full border border-dashed px-3 text-sm text-muted-foreground transition-colors hover:bg-accent"
+                className="inline-flex min-h-9 items-center rounded-sm border border-dashed px-3 text-sm text-muted-foreground transition-colors hover:bg-accent"
               >
                 + New
               </button>
@@ -163,7 +163,7 @@ export function SplitEditor({
                     addNew();
                   }
                 }}
-                className="h-9 w-32 rounded-full border bg-background px-3 text-sm text-foreground focus:ring-2 focus:ring-ring focus:outline-none"
+                className="h-9 w-32 rounded-sm border bg-background px-3 text-sm text-foreground focus:ring-2 focus:ring-ring focus:outline-none"
               />
             )}
           </div>
@@ -176,7 +176,7 @@ export function SplitEditor({
                 setOpen(false);
                 onSave(null, null);
               }}
-              className="min-h-11 flex-1 rounded-full border px-3 text-sm text-muted-foreground transition-colors hover:bg-accent"
+              className="min-h-11 flex-1 rounded-sm border px-3 text-sm text-muted-foreground transition-colors hover:bg-accent"
             >
               Clear
             </button>
@@ -200,7 +200,7 @@ export function SplitEditor({
                 parsed === fullAmount ? null : joinNames(people),
               );
             }}
-            className="min-h-11 flex-1 rounded-full bg-primary px-3 text-sm font-medium text-primary-foreground transition-colors hover:opacity-90"
+            className="min-h-11 flex-1 rounded-sm bg-primary px-3 text-sm font-medium text-primary-foreground transition-colors hover:opacity-90"
           >
             Save
           </button>

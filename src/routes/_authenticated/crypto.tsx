@@ -259,7 +259,7 @@ function CryptoPage() {
                               {asset.bySource.map((s) => (
                                 <span
                                   key={s.source}
-                                  className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs text-muted-foreground"
+                                  className="inline-flex items-center rounded-sm border px-2 py-0.5 text-xs text-muted-foreground"
                                 >
                                   {s.source}: {formatAmount(s.amount)}
                                 </span>
@@ -317,7 +317,7 @@ function CryptoPage() {
                       {asset.bySource.map((s) => (
                         <span
                           key={s.source}
-                          className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs text-muted-foreground"
+                          className="inline-flex items-center rounded-sm border px-2 py-0.5 text-xs text-muted-foreground"
                         >
                           {s.source}: {formatAmount(s.amount)}
                         </span>

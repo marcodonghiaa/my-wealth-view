@@ -250,7 +250,7 @@ export function TradesDialog({
                       fee: t.fee_eur ? String(t.fee_eur) : "",
                     });
                   }}
-                  className="inline-flex size-11 items-center justify-center rounded-full text-muted-foreground hover:bg-muted"
+                  className="inline-flex size-11 items-center justify-center rounded-sm text-muted-foreground hover:bg-muted"
                 >
                   <Pencil className="size-4" />
                 </button>
@@ -259,7 +259,7 @@ export function TradesDialog({
                   aria-label={`Remove trade of ${t.trade_date}`}
                   disabled={remove.isPending}
                   onClick={() => remove.mutate(t.id)}
-                  className="inline-flex size-11 items-center justify-center rounded-full text-muted-foreground hover:bg-muted"
+                  className="inline-flex size-11 items-center justify-center rounded-sm text-muted-foreground hover:bg-muted"
                 >
                   <Trash2 className="size-4" />
                 </button>

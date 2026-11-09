@@ -106,7 +106,7 @@ export function OwedView({
                     type="button"
                     aria-label={`${isSettled ? "Mark as not settled" : "Settle"}: ${label}, ${day(r.booking_date)}, ${eur(share)}`}
                     onClick={() => onToggleSettled(r, !isSettled)}
-                    className={`min-h-11 min-w-20 shrink-0 rounded-full px-3 text-xs font-medium transition-colors ${
+                    className={`min-h-11 min-w-20 shrink-0 rounded-sm px-3 text-xs font-medium transition-colors ${
                       isSettled
                         ? "text-muted-foreground hover:bg-accent"
                         : "bg-muted text-foreground hover:bg-accent"
@@ -122,7 +122,7 @@ export function OwedView({
                 <button
                   type="button"
                   onClick={() => onSettleAll(p.name, alone)}
-                  className="min-h-11 rounded-full bg-primary px-4 text-xs font-medium text-primary-foreground transition-colors hover:opacity-90"
+                  className="min-h-11 rounded-sm bg-primary px-4 text-xs font-medium text-primary-foreground transition-colors hover:opacity-90"
                 >
                   Settle all {alone.length} with {p.name}
                 </button>

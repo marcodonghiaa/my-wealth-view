@@ -6,7 +6,7 @@ import { ALWAYS_SHOWN, CATEGORIES, categoryColor } from "@/lib/categories";
 import { CATEGORIES_KEY, useCategories } from "@/lib/use-categories";
 
 const BUTTON =
-  "min-h-11 shrink-0 rounded-full px-3 text-sm font-medium text-muted-foreground hover:bg-muted disabled:opacity-50";
+  "min-h-11 shrink-0 rounded-sm px-3 text-sm font-medium text-muted-foreground hover:bg-muted disabled:opacity-50";
 
 // Your categories: add your own, hide built-in ones you don't use. Pickers everywhere and the AI
 // categorizer use the result. A hidden or deleted category stays on the transactions that have it.
@@ -74,12 +74,12 @@ export function CategoriesSection() {
               value={name}
               maxLength={40}
               onChange={(e) => setName(e.target.value)}
-              className="h-11 min-w-0 flex-1 rounded-full border bg-background px-4 text-base focus:ring-2 focus:ring-ring focus:outline-none"
+              className="h-11 min-w-0 flex-1 rounded-sm border bg-background px-4 text-base focus:ring-2 focus:ring-ring focus:outline-none"
             />
             <button
               type="submit"
               disabled={busy}
-              className="min-h-11 rounded-full bg-primary px-4 text-sm font-medium text-primary-foreground disabled:opacity-50"
+              className="min-h-11 rounded-sm bg-primary px-4 text-sm font-medium text-primary-foreground disabled:opacity-50"
             >
               Add
             </button>

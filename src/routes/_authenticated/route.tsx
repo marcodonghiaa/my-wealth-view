@@ -104,12 +104,12 @@ const SIDEBAR_LINK =
 const SIDEBAR_LINK_ACTIVE =
   "flex items-center gap-3 border-l-2 border-ember px-3 py-1.5 text-sm font-medium text-foreground";
 
-// Mobile tab bar: icon + mono label; the active tab carries a 2px Ember rule on top.
+// Mobile tab bar: icon + sans label; the active tab carries a 2px Ember rule on top.
 const TAB_LINK =
   "flex flex-col items-center justify-center gap-0.5 border-t-2 border-transparent text-muted-foreground transition-opacity active:opacity-60";
 const TAB_LINK_ACTIVE =
   "flex flex-col items-center justify-center gap-0.5 border-t-2 border-ember text-foreground transition-opacity active:opacity-60";
-const TAB_LABEL = "font-figure text-[0.6875rem] uppercase tracking-wide";
+const TAB_LABEL = "text-[0.6875rem] font-medium";
 
 function AuthenticatedLayout() {
   const { user } = Route.useRouteContext();

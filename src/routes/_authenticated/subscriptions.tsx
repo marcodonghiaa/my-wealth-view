@@ -297,7 +297,7 @@ function DismissedRow({ stream, onRestore }: { stream: Stream; onRestore: () => 
           type="button"
           onClick={onRestore}
           aria-label={`Restore ${name}`}
-          className="inline-flex min-h-11 items-center rounded-full border border-border px-4 text-sm font-medium text-foreground/80 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+          className="inline-flex min-h-11 items-center rounded-sm border border-border px-4 text-sm font-medium text-foreground/80 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
         >
           Restore
         </button>
@@ -348,7 +348,7 @@ function ReviewRow({
           type="button"
           onClick={onConfirm}
           aria-label={`Confirm ${name}`}
-          className="inline-flex min-h-11 items-center rounded-full bg-primary px-4 text-sm font-medium text-primary-foreground hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+          className="inline-flex min-h-11 items-center rounded-sm bg-primary px-4 text-sm font-medium text-primary-foreground hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
         >
           Confirm
         </button>
@@ -356,7 +356,7 @@ function ReviewRow({
           type="button"
           onClick={onDismiss}
           aria-label={`${name} is not a subscription`}
-          className="inline-flex min-h-11 items-center rounded-full border border-border px-4 text-sm font-medium text-foreground/80 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+          className="inline-flex min-h-11 items-center rounded-sm border border-border px-4 text-sm font-medium text-foreground/80 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
         >
           Not a subscription
         </button>
@@ -412,7 +412,7 @@ function SubscriptionCard({
           type="button"
           onClick={onDismiss}
           aria-label={`Remove ${name}`}
-          className="-my-2 -mr-3 inline-flex size-11 items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-negative focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+          className="-my-2 -mr-3 inline-flex size-11 items-center justify-center rounded-sm text-muted-foreground transition-colors hover:text-negative focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
         >
           <Trash2 className="size-4" />
         </button>
@@ -479,7 +479,7 @@ function FrequencyPicker({
                 : `${label} — auto-detected`
               : "Not enough history to detect — set the billing frequency"
           }
-          className={`inline-flex min-h-11 w-full items-center justify-between gap-1 rounded-full px-3 py-0.5 text-xs font-medium whitespace-nowrap transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+          className={`inline-flex min-h-11 w-full items-center justify-between gap-1 rounded-sm px-3 py-0.5 text-xs font-medium whitespace-nowrap transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
             frequency
               ? "border border-border text-foreground/80 hover:border-primary/50 hover:text-foreground"
               : "border border-warning/60 bg-warning/10 text-warning hover:bg-warning/20"

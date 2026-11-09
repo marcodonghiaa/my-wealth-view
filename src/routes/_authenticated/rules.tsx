@@ -325,7 +325,7 @@ function RulesPage() {
               <button
                 type="submit"
                 disabled={addRule.isPending}
-                className="inline-flex min-h-11 items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+                className="inline-flex min-h-11 items-center gap-2 rounded-sm bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
               >
                 {addRule.isPending ? (
                   <Loader2 className="size-4 animate-spin" />
@@ -371,12 +371,12 @@ function RulesPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   {rule.set_category && (
-                    <span className="rounded-full bg-primary/15 px-2.5 py-0.5 text-xs font-medium text-primary">
+                    <span className="rounded-sm bg-primary/15 px-2.5 py-0.5 text-xs font-medium text-primary">
                       {rule.set_category}
                     </span>
                   )}
                   {rule.set_transaction_type && (
-                    <span className="rounded-full border px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
+                    <span className="rounded-sm border px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
                       {rule.set_transaction_type}
                     </span>
                   )}
@@ -385,7 +385,7 @@ function RulesPage() {
                     onClick={() => deleteRule.mutate(rule.id)}
                     disabled={deleteRule.isPending}
                     aria-label={`Delete rule for ${rule.match_text}`}
-                    className="-m-2 inline-flex size-11 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
+                    className="-m-2 inline-flex size-11 items-center justify-center rounded-sm text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
                   >
                     <Trash2 className="size-4" />
                   </button>

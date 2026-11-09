@@ -35,7 +35,7 @@ function HealthRowItem({ row, onPushed }: { row: HealthRow; onPushed: () => void
           href={row.fix.href}
           target="_blank"
           rel="noopener noreferrer"
-          className="min-h-11 content-center rounded-full px-3 text-sm font-medium text-primary hover:bg-primary/10"
+          className="min-h-11 content-center rounded-sm px-3 text-sm font-medium text-primary hover:bg-primary/10"
         >
           {row.fix.label}
           <span className="sr-only"> (opens in a new tab)</span>
@@ -44,7 +44,7 @@ function HealthRowItem({ row, onPushed }: { row: HealthRow; onPushed: () => void
       {row.fix && "to" in row.fix && (
         <Link
           to={row.fix.to}
-          className="min-h-11 content-center rounded-full px-3 text-sm font-medium text-primary hover:bg-primary/10"
+          className="min-h-11 content-center rounded-sm px-3 text-sm font-medium text-primary hover:bg-primary/10"
         >
           {row.fix.label}
         </Link>

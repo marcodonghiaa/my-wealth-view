@@ -397,14 +397,14 @@ function TransactionsPage() {
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search"
             aria-label="Search by merchant"
-            className="h-11 w-full rounded-full bg-card pr-4 pl-10 text-base text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-ring focus:outline-none"
+            className="h-11 w-full rounded-sm bg-card pr-4 pl-10 text-base text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-ring focus:outline-none"
           />
         </div>
         <select
           value={category}
           onChange={(e) => setCategory(e.target.value)}
           aria-label="Filter by category"
-          className="h-11 rounded-full bg-card px-4 text-base text-foreground focus:ring-2 focus:ring-ring focus:outline-none"
+          className="h-11 rounded-sm bg-card px-4 text-base text-foreground focus:ring-2 focus:ring-ring focus:outline-none"
         >
           <option value="all">All categories</option>
           {categories.hasUncategorized && <option value={UNCATEGORIZED}>Uncategorized</option>}
@@ -419,7 +419,7 @@ function TransactionsPage() {
             value={bank}
             onChange={(e) => setBank(e.target.value)}
             aria-label="Filter by bank"
-            className="h-11 rounded-full bg-card px-4 text-base text-foreground focus:ring-2 focus:ring-ring focus:outline-none"
+            className="h-11 rounded-sm bg-card px-4 text-base text-foreground focus:ring-2 focus:ring-ring focus:outline-none"
           >
             <option value="all">All banks</option>
             {banks.map((b) => (
@@ -436,7 +436,7 @@ function TransactionsPage() {
           max={formatISODate(new Date(month.getFullYear(), month.getMonth() + 1, 0))}
           onChange={(e) => setDay(e.target.value)}
           aria-label="Filter by day"
-          className="h-11 min-w-0 rounded-full bg-card px-4 text-base text-foreground focus:ring-2 focus:ring-ring focus:outline-none"
+          className="h-11 min-w-0 rounded-sm bg-card px-4 text-base text-foreground focus:ring-2 focus:ring-ring focus:outline-none"
         />
       </div>
 
@@ -464,7 +464,7 @@ function TransactionsPage() {
               })
             }
             disabled={deleteTxs.isPending}
-            className="inline-flex min-h-11 items-center gap-1.5 rounded-full px-3 text-sm font-medium text-negative transition-colors hover:bg-negative/10 disabled:opacity-50"
+            className="inline-flex min-h-11 items-center gap-1.5 rounded-sm px-3 text-sm font-medium text-negative transition-colors hover:bg-negative/10 disabled:opacity-50"
           >
             <Trash2 className="size-4" />
             Delete
@@ -560,7 +560,7 @@ function TransactionsPage() {
         <button
           type="button"
           onClick={() => setShowTransfers((v) => !v)}
-          className="mt-4 h-9 rounded-full bg-card px-4 text-xs font-medium text-foreground transition-colors hover:bg-accent"
+          className="mt-4 h-9 rounded-sm bg-card px-4 text-xs font-medium text-foreground transition-colors hover:bg-accent"
         >
           {showTransfers ? "Hide" : "Show"} {transfers.length} transfer
           {transfers.length === 1 ? "" : "s"}

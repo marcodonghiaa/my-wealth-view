@@ -30,7 +30,7 @@ export function LastImportRow({
         type="button"
         disabled={pending}
         onClick={() => (asking ? onUndo() : setAsking(true))}
-        className={`inline-flex min-h-11 items-center gap-1.5 rounded-full px-3 font-medium transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:opacity-50 ${
+        className={`inline-flex min-h-11 items-center gap-1.5 rounded-sm px-3 font-medium transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:opacity-50 ${
           asking ? "bg-negative/15 text-negative" : "text-primary hover:bg-foreground/5"
         }`}
       >

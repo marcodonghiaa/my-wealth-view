@@ -40,7 +40,7 @@ const NO_COLUMNS: StatementColumns = {
 };
 
 const field =
-  "h-11 w-full min-w-0 rounded-full border bg-background px-4 text-base focus:ring-2 focus:ring-ring focus:outline-none";
+  "h-11 w-full min-w-0 rounded-sm border bg-background px-4 text-base focus:ring-2 focus:ring-ring focus:outline-none";
 
 // The bank's name from a file like "Fineco_movimenti_2026.csv", as the default source.
 const sourceFromFile = (name: string) => /^[A-Za-z]+/.exec(name)?.[0] ?? "";
@@ -168,7 +168,7 @@ export function ImportStatement() {
     >
       <DialogTrigger
         aria-label="Import statement"
-        className="inline-flex size-11 shrink-0 items-center justify-center rounded-full bg-card text-foreground hover:bg-muted"
+        className="inline-flex size-11 shrink-0 items-center justify-center rounded-sm bg-card text-foreground hover:bg-muted"
       >
         <FileUp className="size-5" />
       </DialogTrigger>
@@ -190,7 +190,7 @@ export function ImportStatement() {
               const file = e.target.files?.[0];
               if (file) void handleFile(file);
             }}
-            className="block w-full text-sm file:mr-3 file:min-h-11 file:rounded-full file:border-0 file:bg-muted file:px-4 file:text-sm file:font-medium"
+            className="block w-full text-sm file:mr-3 file:min-h-11 file:rounded-sm file:border-0 file:bg-muted file:px-4 file:text-sm file:font-medium"
           />
 
           {text && headers.length > 0 && (
@@ -281,7 +281,7 @@ export function ImportStatement() {
             type="button"
             onClick={() => void handleImport()}
             disabled={!fresh || fresh.length === 0 || importing}
-            className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-primary px-4 text-sm font-medium text-primary-foreground disabled:opacity-50"
+            className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-sm bg-primary px-4 text-sm font-medium text-primary-foreground disabled:opacity-50"
           >
             {importing && <Loader2 className="size-4 animate-spin" />}
             {importing

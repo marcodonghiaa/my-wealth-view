@@ -34,14 +34,14 @@ export function WorthItPrompt({
       <button
         type="button"
         onClick={() => onAnswer("yes")}
-        className="min-h-11 rounded-md px-2 py-1 font-medium text-positive transition-colors hover:bg-positive/10"
+        className="min-h-11 rounded-md px-2 py-1 font-medium text-foreground transition-colors hover:bg-accent"
       >
         Yes
       </button>
       <button
         type="button"
         onClick={() => onAnswer("no")}
-        className="min-h-11 rounded-md px-2 py-1 font-medium text-negative transition-colors hover:bg-negative/10"
+        className="min-h-11 rounded-md px-2 py-1 font-medium text-foreground transition-colors hover:bg-accent"
       >
         No
       </button>
@@ -83,7 +83,7 @@ export function WorthItSpotlight({
                 onAnswer(tx, "no");
                 onClose();
               }}
-              className="min-h-11 flex-1 rounded-full bg-negative/10 text-sm font-semibold text-negative transition-colors hover:bg-negative/20"
+              className="min-h-11 flex-1 rounded-sm bg-muted text-sm font-medium text-foreground transition-colors hover:bg-accent"
             >
               No
             </button>
@@ -93,7 +93,7 @@ export function WorthItSpotlight({
                 onAnswer(tx, "yes");
                 onClose();
               }}
-              className="min-h-11 flex-1 rounded-full border border-positive/30 bg-positive/10 text-sm font-semibold text-positive transition-colors hover:bg-positive/20"
+              className="min-h-11 flex-1 rounded-sm bg-primary text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
             >
               Yes
             </button>
