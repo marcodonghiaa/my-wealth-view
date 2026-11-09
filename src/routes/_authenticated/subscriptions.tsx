@@ -1,16 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { Check, ChevronDown, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import type { Tables } from "@/integrations/supabase/types";
-import { effectiveCadence, groupStreams, monthlyEur, romeToday } from "@/lib/recurring";
-import { RECURRING_KEY, useRecurringStreams } from "@/lib/use-recurring-streams";
+import { estimatedMonthlyEur, splitSubscriptions } from "@/lib/subscriptions";
 import { formatBookingDateShort, formatMoney } from "@/lib/transactions";
 import { CategoryAvatar } from "@/components/category-avatar";
-import { RevealDialog } from "@/components/subscriptions/reveal-dialog";
 
 export const Route = createFileRoute("/_authenticated/subscriptions")({
   head: () => ({
@@ -32,31 +29,36 @@ export const Route = createFileRoute("/_authenticated/subscriptions")({
   component: SubscriptionsPage,
 });
 
-type Stream = Tables<"recurring_streams">;
 type IntervalUnit = "days" | "weeks" | "months" | "years";
 
-const MUTATION_KEY = ["stream_action"];
+interface SubscriptionRow {
+  creditor_name: string | null;
+  category: string | null;
+  currency: string | null;
+  amount: number | null;
+  signed_amount_eur: number | null;
+  monthly_equivalent_eur: number | null;
+  last_charged: string | null;
+  charge_count: number | null;
+  billing_frequency: string | null;
+  billing_frequency_is_manual: boolean | null;
+  custom_interval_value: number | null;
+  custom_interval_unit: IntervalUnit | null;
+}
+
 const BILLING_FREQUENCIES = ["Weekly", "Monthly", "Quarterly", "Yearly"];
 const INTERVAL_UNITS: Array<IntervalUnit> = ["days", "weeks", "months", "years"];
 
-interface StreamAction {
-  id: string;
-  action: "confirm" | "dismiss" | "undismiss" | "set_cadence";
-  args?: { cadence?: string; custom_value?: number; custom_unit?: IntervalUnit };
-}
-
-// What stream_action does server-side, applied to the cached row for an instant UI update.
-function applyAction(s: Stream, { action, args }: StreamAction): Stream {
-  if (action === "dismiss") return { ...s, user_status: "dismissed" };
-  if (action === "undismiss") return { ...s, user_status: null };
-  if (action === "confirm") return { ...s, user_status: "confirmed" };
-  return {
-    ...s,
-    user_status: "confirmed",
-    user_cadence: args?.cadence ?? "custom",
-    custom_interval_value: args?.custom_value ?? null,
-    custom_interval_unit: args?.custom_unit ?? null,
-  };
+async function fetchSubscriptions(): Promise<Array<SubscriptionRow>> {
+  const { data, error } = await supabase
+    .from("v_subscriptions")
+    .select(
+      "creditor_name,category,currency,amount,signed_amount_eur,monthly_equivalent_eur,last_charged,charge_count,billing_frequency,billing_frequency_is_manual,custom_interval_value,custom_interval_unit",
+    )
+    .neq("amount", 0)
+    .order("monthly_equivalent_eur", { ascending: true });
+  if (error) throw error;
+  return (data ?? []) as Array<SubscriptionRow>;
 }
 
 function customIntervalLabel(value: number, unit: IntervalUnit): string {
@@ -64,91 +66,158 @@ function customIntervalLabel(value: number, unit: IntervalUnit): string {
   return `Every ${value} ${unitLabel}`;
 }
 
+function signedNativeAmount(sub: SubscriptionRow): number | null {
+  if (sub.amount == null || sub.signed_amount_eur == null) return null;
+  const sign = sub.signed_amount_eur < 0 ? -1 : 1;
+  return sign * Math.abs(sub.amount);
+}
+
 function SubscriptionsPage() {
   const queryClient = useQueryClient();
-  const query = useRecurringStreams();
+  const query = useQuery({
+    queryKey: ["subscriptions"],
+    queryFn: fetchSubscriptions,
+  });
 
-  const actionMutation = useMutation({
-    mutationKey: MUTATION_KEY,
-    mutationFn: async ({ id, action, args }: StreamAction) => {
-      const { error } = await supabase.rpc("stream_action", {
-        p_stream: id,
-        p_action: action,
-        p_args: args ?? {},
-      });
+  type OverrideInput =
+    | { creditorName: string; frequency: string; custom?: undefined }
+    | {
+        creditorName: string;
+        frequency?: undefined;
+        custom: { value: number; unit: IntervalUnit };
+      };
+
+  const frequencyMutation = useMutation({
+    mutationFn: async (vars: OverrideInput) => {
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+      if (userError || !user) throw userError ?? new Error("Not signed in");
+      const { error } = await supabase.from("subscription_billing_overrides").upsert(
+        {
+          user_id: user.id,
+          creditor_name: vars.creditorName,
+          billing_frequency: vars.custom ? null : vars.frequency,
+          custom_interval_value: vars.custom?.value ?? null,
+          custom_interval_unit: vars.custom?.unit ?? null,
+        },
+        { onConflict: "user_id,creditor_name" },
+      );
       if (error) throw error;
     },
     onMutate: async (vars) => {
-      await queryClient.cancelQueries({ queryKey: RECURRING_KEY });
-      const previous = queryClient.getQueryData<Array<Stream>>(RECURRING_KEY);
-      queryClient.setQueryData<Array<Stream>>(RECURRING_KEY, (old) =>
-        old?.map((s) => (s.id === vars.id ? applyAction(s, vars) : s)),
+      await queryClient.cancelQueries({ queryKey: ["subscriptions"] });
+      const previous = queryClient.getQueryData<Array<SubscriptionRow>>(["subscriptions"]);
+      queryClient.setQueryData<Array<SubscriptionRow>>(["subscriptions"], (old) =>
+        old?.map((sub) =>
+          sub.creditor_name === vars.creditorName
+            ? {
+                ...sub,
+                billing_frequency: vars.custom ? "Custom" : vars.frequency,
+                billing_frequency_is_manual: true,
+                custom_interval_value: vars.custom?.value ?? null,
+                custom_interval_unit: vars.custom?.unit ?? null,
+              }
+            : sub,
+        ),
       );
       return { previous };
     },
     onError: (error, _vars, context) => {
-      if (context?.previous) queryClient.setQueryData(RECURRING_KEY, context.previous);
-      toast.error("Couldn't update subscription", { description: error.message });
-    },
-    onSuccess: (_data, vars, context) => {
-      if (vars.action === "set_cadence") toast.success("Billing frequency saved");
-      if (vars.action !== "dismiss") return;
-      const name = context.previous?.find((s) => s.id === vars.id)?.display_name ?? "subscription";
-      toast.success(`Removed ${name}`, {
-        action: {
-          label: "Undo",
-          onClick: () => actionMutation.mutate({ id: vars.id, action: "undismiss" }),
-        },
+      if (context?.previous) {
+        queryClient.setQueryData(["subscriptions"], context.previous);
+      }
+      toast.error("Couldn't save billing frequency", {
+        description: error.message,
       });
     },
+    onSuccess: (_data, vars) => {
+      toast.success(
+        `Billing frequency set to ${
+          vars.custom ? customIntervalLabel(vars.custom.value, vars.custom.unit) : vars.frequency
+        }`,
+      );
+    },
     onSettled: () => {
-      // Only the last in-flight action refetches, so a slow earlier one can't overwrite a newer optimistic state.
-      if (queryClient.isMutating({ mutationKey: MUTATION_KEY }) !== 1) return;
-      void queryClient.invalidateQueries({ queryKey: RECURRING_KEY });
+      void queryClient.invalidateQueries({ queryKey: ["subscriptions"] });
     },
   });
 
-  const { toReview, active, stopped } = useMemo(() => {
-    const g = groupStreams(query.data ?? [], romeToday());
-    const byCost = (a: Stream, b: Stream) =>
-      Math.abs(monthlyEur(b) ?? 0) - Math.abs(monthlyEur(a) ?? 0);
+  // Hides a merchant from this page without touching its transactions.
+  const dismissMutation = useMutation({
+    mutationFn: async ({
+      creditorName,
+      dismissed,
+    }: {
+      creditorName: string;
+      dismissed: boolean;
+    }) => {
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+      if (userError || !user) throw userError ?? new Error("Not signed in");
+      const { error } = await supabase
+        .from("subscription_billing_overrides")
+        .upsert(
+          { user_id: user.id, creditor_name: creditorName, dismissed },
+          { onConflict: "user_id,creditor_name" },
+        );
+      if (error) throw error;
+    },
+    onSuccess: (_data, vars) => {
+      void queryClient.invalidateQueries({ queryKey: ["subscriptions"] });
+      if (!vars.dismissed) return;
+      toast.success(`Removed ${vars.creditorName}`, {
+        action: {
+          label: "Undo",
+          onClick: () =>
+            dismissMutation.mutate({ creditorName: vars.creditorName, dismissed: false }),
+        },
+      });
+    },
+    onError: (error) => {
+      toast.error("Couldn't update subscription", { description: error.message });
+    },
+  });
+
+  const subscriptions = useMemo(() => query.data ?? [], [query.data]);
+
+  const { recurring, stopped, oneOff } = useMemo(() => {
+    const byCost = (a: SubscriptionRow, b: SubscriptionRow) =>
+      Math.abs(b.monthly_equivalent_eur ?? 0) - Math.abs(a.monthly_equivalent_eur ?? 0);
+    const split = splitSubscriptions(subscriptions);
     return {
-      toReview: g.toReview.sort(byCost),
-      active: g.active.sort(byCost),
-      stopped: g.stopped.sort(byCost),
+      recurring: split.recurring.sort(byCost),
+      stopped: split.stopped.sort(byCost),
+      oneOff: split.oneOff.sort(byCost),
     };
-  }, [query.data]);
+  }, [subscriptions]);
 
-  const monthlyTotal = useMemo(
-    () => active.reduce((sum, s) => sum + Math.abs(monthlyEur(s) ?? 0), 0),
-    [active],
-  );
+  const monthlyTotal = useMemo(() => estimatedMonthlyEur(recurring), [recurring]);
 
-  const renderCard = (s: Stream) => (
+  const renderCard = (sub: SubscriptionRow) => (
     <SubscriptionCard
-      key={s.id}
-      sub={s}
-      onDismiss={() => actionMutation.mutate({ id: s.id, action: "dismiss" })}
-      onSelectFrequency={(frequency) =>
-        actionMutation.mutate({
-          id: s.id,
-          action: "set_cadence",
-          args: { cadence: frequency.toLowerCase() },
-        })
-      }
-      onSelectCustom={(value, unit) =>
-        actionMutation.mutate({
-          id: s.id,
-          action: "set_cadence",
-          args: { custom_value: value, custom_unit: unit },
-        })
-      }
+      key={sub.creditor_name}
+      sub={sub}
+      onDismiss={() => {
+        if (!sub.creditor_name) return;
+        dismissMutation.mutate({ creditorName: sub.creditor_name, dismissed: true });
+      }}
+      onSelectFrequency={(frequency) => {
+        if (!sub.creditor_name) return;
+        frequencyMutation.mutate({ creditorName: sub.creditor_name, frequency });
+      }}
+      onSelectCustom={(value, unit) => {
+        if (!sub.creditor_name) return;
+        frequencyMutation.mutate({ creditorName: sub.creditor_name, custom: { value, unit } });
+      }}
     />
   );
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-8 md:py-12">
-      <RevealDialog />
       <header className="mb-3">
         <h1 className="text-[0.9375rem] font-medium text-muted-foreground">Subscriptions</h1>
       </header>
@@ -177,23 +246,8 @@ function SubscriptionsPage() {
             </p>
           )}
         </div>
+        <p className="mt-3 text-sm text-muted-foreground">One-offs excluded.</p>
       </section>
-
-      {toReview.length > 0 && (
-        <section aria-label="To review" className="mb-8">
-          <h2 className="ios-section-title">To review ({toReview.length})</h2>
-          <ul className="divide-y overflow-hidden rounded-2xl bg-card">
-            {toReview.map((s) => (
-              <ReviewRow
-                key={s.id}
-                stream={s}
-                onConfirm={() => actionMutation.mutate({ id: s.id, action: "confirm" })}
-                onDismiss={() => actionMutation.mutate({ id: s.id, action: "dismiss" })}
-              />
-            ))}
-          </ul>
-        </section>
-      )}
 
       {/* Recurring subscriptions: one grouped list */}
       {query.isPending ? (
@@ -209,14 +263,16 @@ function SubscriptionsPage() {
           ))}
         </ul>
       ) : (
-        active.length > 0 && (
-          <ul className="divide-y overflow-hidden rounded-2xl bg-card">{active.map(renderCard)}</ul>
+        recurring.length > 0 && (
+          <ul className="divide-y overflow-hidden rounded-2xl bg-card">
+            {recurring.map(renderCard)}
+          </ul>
         )
       )}
 
-      {!query.isPending && active.length === 0 && (
+      {!query.isPending && recurring.length === 0 && (
         <div className="mt-8 rounded-2xl border border-dashed bg-card/50 p-12 text-center text-sm text-muted-foreground">
-          No subscription charges found yet.
+          {oneOff.length === 0 ? "No subscription charges found yet." : "No recurring charges yet."}
         </div>
       )}
 
@@ -234,66 +290,20 @@ function SubscriptionsPage() {
           </ul>
         </details>
       )}
-    </div>
-  );
-}
 
-function MonthlyAmount({ stream }: { stream: Stream }) {
-  const monthly = monthlyEur(stream);
-  return (
-    <div className="shrink-0 text-right font-figure text-[0.9375rem] font-semibold">
-      {monthly == null ? (
-        <span className="text-muted-foreground">—</span>
-      ) : (
-        <span className="text-foreground">
-          {formatMoney(Math.abs(monthly), "EUR")}
-          <span className="text-[0.8125rem] font-normal text-muted-foreground"> /mo</span>
-        </span>
+      {oneOff.length > 0 && (
+        <details className="group mt-8">
+          <summary className="ios-section-title flex min-h-11 cursor-pointer list-none items-center gap-2">
+            <ChevronDown className="size-4 transition-transform group-open:rotate-180" />
+            One-off charges ({oneOff.length})
+          </summary>
+          <p className="mb-3 px-4 text-[0.8125rem] text-muted-foreground">
+            Not counted until you set a frequency.
+          </p>
+          <ul className="divide-y overflow-hidden rounded-2xl bg-card">{oneOff.map(renderCard)}</ul>
+        </details>
       )}
     </div>
-  );
-}
-
-function ReviewRow({
-  stream,
-  onConfirm,
-  onDismiss,
-}: {
-  stream: Stream;
-  onConfirm: () => void;
-  onDismiss: () => void;
-}) {
-  const name = stream.display_name ?? "—";
-  const details = [effectiveCadence(stream), `${stream.charge_count ?? 0} charges`].filter(Boolean);
-  return (
-    <li className="px-4 py-3">
-      <div className="flex items-center gap-3">
-        <CategoryAvatar category={stream.category} />
-        <div className="min-w-0 flex-1">
-          <h3 className="truncate text-[0.9375rem] font-medium text-foreground">{name}</h3>
-          <p className="truncate text-[0.8125rem] text-muted-foreground">{details.join(" · ")}</p>
-        </div>
-        <MonthlyAmount stream={stream} />
-      </div>
-      <div className="mt-1 flex gap-2 pl-[3.25rem]">
-        <button
-          type="button"
-          onClick={onConfirm}
-          aria-label={`Confirm ${name}`}
-          className="inline-flex min-h-11 items-center rounded-full bg-primary px-4 text-sm font-medium text-primary-foreground hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-        >
-          Confirm
-        </button>
-        <button
-          type="button"
-          onClick={onDismiss}
-          aria-label={`${name} is not a subscription`}
-          className="inline-flex min-h-11 items-center rounded-full border border-border px-4 text-sm font-medium text-foreground/80 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-        >
-          Not a subscription
-        </button>
-      </div>
-    </li>
   );
 }
 
@@ -303,19 +313,20 @@ function SubscriptionCard({
   onSelectFrequency,
   onSelectCustom,
 }: {
-  sub: Stream;
+  sub: SubscriptionRow;
   onDismiss: () => void;
   onSelectFrequency: (frequency: string) => void;
   onSelectCustom: (value: number, unit: IntervalUnit) => void;
 }) {
-  const name = sub.display_name ?? "—";
+  const native = signedNativeAmount(sub);
+  const currency = sub.currency ?? "EUR";
+  const monthly = sub.monthly_equivalent_eur;
+  const name = sub.creditor_name ?? "—";
   // With the year when it isn't this year, so a charge from last year doesn't read as recent.
   const lastCharged = sub.last_charged ? formatBookingDateShort(sub.last_charged) : null;
   const details = [
     sub.category,
-    sub.typical_amount != null && sub.currency !== "EUR"
-      ? formatMoney(Math.abs(sub.typical_amount), sub.currency)
-      : null,
+    native != null && currency !== "EUR" ? formatMoney(Math.abs(native), currency) : null,
   ].filter(Boolean);
 
   return (
@@ -326,14 +337,24 @@ function SubscriptionCard({
           <h2 className="truncate text-[0.9375rem] font-medium text-foreground">{name}</h2>
           <p className="truncate text-[0.8125rem] text-muted-foreground">{details.join(" · ")}</p>
         </div>
-        <MonthlyAmount stream={sub} />
+        <div className="shrink-0 text-right font-figure text-[0.9375rem] font-semibold">
+          {monthly == null ? (
+            <span className="text-muted-foreground">—</span>
+          ) : (
+            <span className={monthly > 0 ? "text-positive" : "text-foreground"}>
+              {monthly > 0 ? "+" : ""}
+              {formatMoney(Math.abs(monthly), "EUR")}
+              <span className="text-[0.8125rem] font-normal text-muted-foreground"> /mo</span>
+            </span>
+          )}
+        </div>
       </div>
       <div className="mt-1 grid grid-cols-[7rem_minmax(0,1fr)_auto] items-center gap-3 pl-[3.25rem]">
         <FrequencyPicker
-          frequency={effectiveCadence(sub)}
-          isManual={sub.user_cadence != null}
+          frequency={sub.billing_frequency}
+          isManual={sub.billing_frequency_is_manual === true}
           customValue={sub.custom_interval_value}
-          customUnit={sub.custom_interval_unit as IntervalUnit | null}
+          customUnit={sub.custom_interval_unit}
           onSelect={onSelectFrequency}
           onSelectCustom={onSelectCustom}
         />
@@ -386,8 +407,8 @@ function FrequencyPicker({
   }
 
   function submitCustom() {
-    const value = Number(draftValue);
-    if (!Number.isInteger(value) || value < 1 || value > 999) return;
+    const value = parseInt(draftValue, 10);
+    if (!Number.isFinite(value) || value <= 0) return;
     onSelectCustom(value, draftUnit);
     setCustomOpen(false);
     setOpen(false);
@@ -433,9 +454,6 @@ function FrequencyPicker({
               <input
                 type="number"
                 min={1}
-                max={999}
-                step={1}
-                aria-label="Interval"
                 value={draftValue}
                 onChange={(e) => setDraftValue(e.target.value)}
                 className="h-8 w-14 rounded-md border bg-background px-2 text-base text-foreground focus:ring-2 focus:ring-ring focus:outline-none"
@@ -443,7 +461,6 @@ function FrequencyPicker({
               />
               <select
                 value={draftUnit}
-                aria-label="Unit"
                 onChange={(e) => setDraftUnit(e.target.value as IntervalUnit)}
                 className="h-8 flex-1 rounded-md border bg-background px-1.5 text-base text-foreground focus:ring-2 focus:ring-ring focus:outline-none"
               >
@@ -458,14 +475,14 @@ function FrequencyPicker({
               <button
                 type="button"
                 onClick={() => setCustomOpen(false)}
-                className="min-h-11 rounded-md px-3 py-1 text-xs text-muted-foreground hover:bg-accent"
+                className="rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-accent"
               >
                 Back
               </button>
               <button
                 type="button"
                 onClick={submitCustom}
-                className="min-h-11 rounded-md bg-primary px-3 py-1 text-xs font-medium text-primary-foreground hover:opacity-90"
+                className="rounded-md bg-primary px-2.5 py-1 text-xs font-medium text-primary-foreground hover:opacity-90"
               >
                 Save
               </button>

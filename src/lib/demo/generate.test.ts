@@ -1,4 +1,3 @@
-import { groupStreams } from "@/lib/recurring";
 import { describe, expect, it } from "vitest";
 import { formatISODate } from "@/lib/date";
 import { DEMO_EXEMPT_TABLES, DEMO_USER_ID, generateDemoData } from "./generate";
@@ -27,12 +26,6 @@ describe("generateDemoData: coverage", () => {
   it("covers every transaction flow the screens filter on", () => {
     const flows = new Set(db.transactions.map((t) => t.flow_type));
     for (const f of ["spend", "income", "refunded", "transfer"]) expect(flows).toContain(f);
-  });
-
-  it("has streams in both the active list and the To review queue", () => {
-    const g = groupStreams(db.recurring_streams, NOON);
-    expect(g.active.length).toBeGreaterThan(0);
-    expect(g.toReview.length).toBe(2);
   });
 
   it("has recurring charges, split bills and worth-it answers", () => {

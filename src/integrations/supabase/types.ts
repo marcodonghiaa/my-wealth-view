@@ -653,87 +653,6 @@ export type Database = {
         Update: { user_id?: string; name?: string; hidden?: boolean; created_at?: string };
         Relationships: [];
       };
-      recurring_streams: {
-        Row: {
-          account_uid: string | null;
-          cadence: string | null;
-          category: string | null;
-          charge_count: number | null;
-          currency: string;
-          custom_interval_unit: string | null;
-          custom_interval_value: number | null;
-          detected_at: string | null;
-          detected_status: string | null;
-          display_name: string | null;
-          first_charged: string | null;
-          id: string;
-          is_direct_debit: boolean | null;
-          last_charged: string | null;
-          merchant_key: string;
-          next_expected: string | null;
-          source: string;
-          stream_key: string;
-          typical_amount: number | null;
-          typical_amount_eur: number | null;
-          updated_at: string | null;
-          user_cadence: string | null;
-          user_id: string;
-          user_status: string | null;
-        };
-        Insert: {
-          account_uid?: string | null;
-          cadence?: string | null;
-          category?: string | null;
-          charge_count?: number | null;
-          currency: string;
-          custom_interval_unit?: string | null;
-          custom_interval_value?: number | null;
-          detected_at?: string | null;
-          detected_status?: string | null;
-          display_name?: string | null;
-          first_charged?: string | null;
-          id?: string;
-          is_direct_debit?: boolean | null;
-          last_charged?: string | null;
-          merchant_key: string;
-          next_expected?: string | null;
-          source?: string;
-          stream_key: string;
-          typical_amount?: number | null;
-          typical_amount_eur?: number | null;
-          updated_at?: string | null;
-          user_cadence?: string | null;
-          user_id: string;
-          user_status?: string | null;
-        };
-        Update: {
-          account_uid?: string | null;
-          cadence?: string | null;
-          category?: string | null;
-          charge_count?: number | null;
-          currency?: string;
-          custom_interval_unit?: string | null;
-          custom_interval_value?: number | null;
-          detected_at?: string | null;
-          detected_status?: string | null;
-          display_name?: string | null;
-          first_charged?: string | null;
-          id?: string;
-          is_direct_debit?: boolean | null;
-          last_charged?: string | null;
-          merchant_key?: string;
-          next_expected?: string | null;
-          source?: string;
-          stream_key?: string;
-          typical_amount?: number | null;
-          typical_amount_eur?: number | null;
-          updated_at?: string | null;
-          user_cadence?: string | null;
-          user_id?: string;
-          user_status?: string | null;
-        };
-        Relationships: [];
-      };
       subscription_billing_overrides: {
         Row: {
           billing_frequency: string | null;
@@ -1132,10 +1051,6 @@ export type Database = {
       save_splitwise_balances: {
         Args: { p_balances: Json; p_group: string };
         Returns: Json;
-      };
-      stream_action: {
-        Args: { p_stream: string; p_action: string; p_args?: Json };
-        Returns: undefined;
       };
       undo_splitwise_import: {
         Args: { p_batch: string };
