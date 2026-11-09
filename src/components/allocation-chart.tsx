@@ -86,7 +86,7 @@ export function AllocationChart({
           </ResponsiveContainer>
         </div>
 
-        <ul className="w-full flex-1 divide-y">
+        <ul className="w-full flex-1 divide-y divide-hairline">
           {slices.map(({ key, label, color, icon: Icon, value }) => (
             <li key={key} className="flex min-h-16 items-center gap-3 py-2.5">
               <span
@@ -100,12 +100,12 @@ export function AllocationChart({
                 <Icon className="size-[1.125rem]" strokeWidth={2} />
               </span>
               <div className="min-w-0 flex-1">
-                <p className="text-[0.9375rem] font-medium text-foreground">{label}</p>
+                <p className="text-sm font-medium text-foreground">{label}</p>
                 <p className="font-figure text-xs text-muted-foreground">
-                  {((value / gross) * 100).toFixed(1)}% of total
+                  {((value / gross) * 100).toFixed(1)}%
                 </p>
               </div>
-              <p className="font-figure text-[0.9375rem] font-semibold text-foreground">
+              <p className="font-figure text-sm text-foreground">
                 {format(value)}
               </p>
             </li>
