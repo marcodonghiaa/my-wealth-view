@@ -1,15 +1,28 @@
 import { render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 let accountsResult: { data: unknown; error: unknown } = { data: [], error: null };
+let aiCounts: { ai: number; none: number } | null = null;
 let support: "ok" | "install" | "unsupported" = "unsupported";
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
     from: (table: string) => {
-      const q: Record<string, unknown> = { select: () => q };
-      q["then"] = (resolve: (v: unknown) => void) =>
-        resolve(table === "v_bank_accounts_latest" ? accountsResult : { data: null, error: {} });
+      let filter = "";
+      const q: Record<string, unknown> = {
+        select: () => q,
+        gte: () => q,
+        lt: () => q,
+        eq: () => ((filter = "ai"), q),
+        is: (col: string) => (col === "category" && (filter = "none"), q),
+      };
+      q["then"] = (resolve: (v: unknown) => void) => {
+        if (table === "v_bank_accounts_latest") return resolve(accountsResult);
+        if (table === "transactions" && aiCounts) {
+          return resolve({ count: filter === "ai" ? aiCounts.ai : aiCounts.none, error: null });
+        }
+        return resolve({ data: null, count: null, error: {} });
+      };
       return q;
     },
   },
@@ -49,6 +62,31 @@ describe("HealthSection", () => {
   beforeEach(() => {
     accountsResult = { data: [], error: null };
     support = "unsupported";
+    aiCounts = null;
+  });
+  afterEach(() => vi.unstubAllEnvs());
+
+  // protects=a skipped Gemini key is visible in the app; fails_when=the row or its link is lost
+  it("says AI categories are stuck and links to the project's secrets", async () => {
+    vi.stubEnv("VITE_SUPABASE_URL", "https://abcdefghijklmnopqrst.supabase.co");
+    aiCounts = { ai: 0, none: 7 };
+    renderWith(<HealthSection />);
+    expect(await screen.findByText("AI categories")).toBeInTheDocument();
+    expect(screen.getByText(/7 transactions still have no category/)).toBeInTheDocument();
+    const link = screen.getByRole("link", { name: /Open Supabase secrets/ });
+    expect(link).toHaveAttribute(
+      "href",
+      "https://supabase.com/dashboard/project/abcdefghijklmnopqrst/functions/secrets",
+    );
+    expect(link).toHaveAttribute("target", "_blank");
+  });
+
+  it("shows AI categories as healthy once Gemini sorted something", async () => {
+    aiCounts = { ai: 3, none: 0 };
+    renderWith(<HealthSection />);
+    expect(
+      await screen.findByText("Gemini sorted 3 transactions in the last 30 days."),
+    ).toBeInTheDocument();
   });
 
   // protects=Health output is unchanged by the move; fails_when=sync rows or the count are lost
