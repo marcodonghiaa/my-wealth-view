@@ -10,7 +10,7 @@ export function MadeWith({ className = "" }: { className?: string }) {
       href={REPO_URL}
       target="_blank"
       rel="noopener noreferrer"
-      className={`inline-flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground ${className}`}
+      className={`inline-flex items-center gap-1.5 font-figure text-[0.6875rem] uppercase tracking-wide text-muted-foreground transition-colors hover:text-foreground ${className}`}
     >
       Made with Alopex
       <Heart aria-hidden className="size-3 fill-current" />

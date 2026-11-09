@@ -1,10 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { CATEGORIES, categoriesFor, categoryColor } from "./categories";
+import { CATEGORIES, categoriesFor, categoryCode, categoryColor, categoryTone } from "./categories";
 
 describe("categoryColor", () => {
-  it("gives every category its own colour", () => {
-    const colors = CATEGORIES.map((c) => categoryColor(c));
-    expect(new Set(colors).size).toBe(CATEGORIES.length);
+  it("ranks built-ins by their defined order, darkest first", () => {
+    expect(categoryColor("Shopping")).toBe("var(--color-chart-1)");
+    expect(categoryColor("Entertainment")).toBe("var(--color-chart-2)");
+    expect(categoryColor("Services")).toBe("var(--color-chart-5)");
+    expect(categoryColor("Others")).toBe("var(--color-chart-5)");
+  });
+
+  it("only ever returns a chart tone for a category", () => {
+    for (const c of CATEGORIES) expect(categoryColor(c)).toMatch(/^var\(--color-chart-[1-5]\)$/);
   });
 
   it("falls back to the muted token for missing categories", () => {
@@ -32,8 +38,51 @@ describe("categoriesFor", () => {
 });
 
 describe("categoryColor for your own categories", () => {
-  it("gives a custom category a real colour, the same every time", () => {
-    expect(categoryColor("Gym")).toMatch(/^#[0-9a-f]{6}$/);
+  it("gives a custom category a chart tone, the same every time", () => {
+    expect(categoryColor("Gym")).toMatch(/^var\(--color-chart-[1-5]\)$/);
     expect(categoryColor("Gym")).toBe(categoryColor("Gym"));
+  });
+});
+
+describe("categoryTone", () => {
+  it("maps rank 0 to the darkest tone and clamps ranks past 4 to the lightest", () => {
+    expect(categoryTone(0)).toBe("var(--color-chart-1)");
+    expect(categoryTone(3)).toBe("var(--color-chart-4)");
+    expect(categoryTone(4)).toBe("var(--color-chart-5)");
+    expect(categoryTone(12)).toBe("var(--color-chart-5)");
+    expect(categoryTone(-1)).toBe("var(--color-chart-1)");
+  });
+});
+
+describe("categoryCode", () => {
+  it("gives each built-in its two-letter code", () => {
+    const expected: Record<string, string> = {
+      Housing: "HO",
+      Shopping: "SH",
+      Health: "HE",
+      "Dine Out": "DO",
+      Groceries: "GR",
+      Transports: "TR",
+      Entertainment: "EN",
+      Experiences: "EX",
+      Services: "SE",
+      Income: "IN",
+      Transfer: "TF",
+      Taxes: "TX",
+      Others: "OT",
+    };
+    for (const [c, code] of Object.entries(expected)) expect(categoryCode(c)).toBe(code);
+  });
+
+  it("is -- when there is no category", () => {
+    expect(categoryCode(null)).toBe("--");
+    expect(categoryCode(undefined)).toBe("--");
+    expect(categoryCode("Uncategorized")).toBe("--");
+  });
+
+  it("derives a code for your own categories", () => {
+    expect(categoryCode("Gym")).toBe("GY");
+    expect(categoryCode("Pet Care")).toBe("PC");
+    expect(categoryCode("x")).toBe("X-");
   });
 });

@@ -12,7 +12,8 @@ interface SegmentedControlProps<T extends string> {
   onChange: (value: T) => void;
 }
 
-// Same-surface choice as a row of pills: one filled thumb slides under the selected option.
+// Same-surface choice: a hairline-bordered group of mono labels, divided by 1px rules; one
+// sharp ink block slides under the selected option.
 export function SegmentedControl<T extends string>({
   label,
   options,
@@ -42,14 +43,14 @@ export function SegmentedControl<T extends string>({
       role="radiogroup"
       aria-label={label}
       onKeyDown={onKeyDown}
-      className="relative grid rounded-full bg-muted p-1"
+      className="relative grid rounded-md border border-rule bg-card p-0.5"
       style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}
     >
       <div
         aria-hidden
-        className="absolute inset-y-1 left-1 rounded-full bg-primary transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] motion-reduce:transition-none"
+        className="absolute inset-y-0.5 left-0.5 rounded-[3px] bg-foreground transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] motion-reduce:transition-none"
         style={{
-          width: `calc((100% - 0.5rem) / ${options.length})`,
+          width: `calc((100% - 0.25rem) / ${options.length})`,
           transform: `translateX(${index * 100}%)`,
         }}
       />
@@ -63,8 +64,10 @@ export function SegmentedControl<T extends string>({
             aria-checked={selected}
             tabIndex={selected ? 0 : -1}
             onClick={() => onChange(option.value)}
-            className={`relative z-10 min-h-9 rounded-full px-4 text-[0.8125rem] font-medium transition-colors ${
-              selected ? "text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+            className={`relative z-10 min-h-8 rounded-[3px] border-l border-rule px-3 font-figure text-xs uppercase tracking-wide transition-colors first-of-type:border-l-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+              selected
+                ? "border-l-transparent text-background"
+                : "text-muted-foreground hover:text-foreground"
             }`}
           >
             {option.label}

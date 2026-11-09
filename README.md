@@ -21,10 +21,10 @@ This is the frontend. The data pipeline (bank sync, FX rates, AI categorization,
 ## Look and feel
 
 Number-first design in the spirit of Trade Republic and Revolut:
-- Each screen opens on one exact figure, set in Geist with tabular numbers.
+- Each screen opens on one exact figure, set in Fragment Mono; words are Instrument Sans.
 - Scrub the net-worth chart to read any past day.
-- Lists use rounded pills and hairline rows.
-- Brand ink is the only control colour (white in dark mode).
+- Snow ground, hairline rows, 4px and 8px corners, no pills.
+- Cold ink is the only control colour (white in dark mode); Ember, the fox's fur, is the one accent.
 - Phones get a bottom tab bar.
 - Light and dark themes follow the system setting (no toggle). Account numbers are masked until tapped, charts carry text alternatives, and translucency falls back to solid when the OS asks for reduced transparency.
 

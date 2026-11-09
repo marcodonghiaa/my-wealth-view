@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { EmptyState } from "@/components/empty-state";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { Check, ChevronDown, Pencil, Trash2 } from "lucide-react";
@@ -229,9 +230,11 @@ function SubscriptionsPage() {
       )}
 
       {!query.isPending && active.length === 0 && (
-        <div className="mt-8 rounded-2xl border border-dashed bg-card/50 p-12 text-center text-sm text-muted-foreground">
-          No subscription charges found yet.
-        </div>
+        <EmptyState
+          className="mt-8 rounded-lg bg-card"
+          title="No subscription charges found yet."
+          hint="Recurring charges show up here once a few months of transactions are in."
+        />
       )}
 
       {stopped.length > 0 && (
