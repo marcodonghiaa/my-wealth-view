@@ -9,12 +9,16 @@ vi.mock("./splitwise-review", () => ({
     onBack,
   }: {
     group: string;
-    onImported?: () => void;
+    onImported?: (done: unknown) => void;
     onBack: () => void;
   }) => (
     <p>
       review of {group}
-      <button onClick={onImported}>finish import</button>
+      <button
+        onClick={() => onImported?.({ batchId: "b1", group, shares: 2, balancesError: null })}
+      >
+        finish import
+      </button>
       <button onClick={onBack}>back</button>
     </p>
   ),
@@ -157,9 +161,36 @@ describe("SplitwisePanel", () => {
     render(<SplitwisePanel onClose={() => undefined} />);
     upload(CSV);
     fireEvent.change(await screen.findByLabelText(/Which one are you/), { target: { value: "0" } });
-    expect(await screen.findByText(/1 paid by others, your share 15\.00 USD/)).toBeTruthy();
-    expect(screen.getByText(/1 paid by you/)).toBeTruthy();
-    expect(screen.getByText(/You paid back 5\.00 USD/)).toBeTruthy();
+    const summary = await screen.findByRole("heading", { name: "In this file" });
+    const text = summary.parentElement?.textContent ?? "";
+    expect(text).toMatch(/Paid by others · 1your share 15\.00 USD/);
+    expect(text).toMatch(/Paid by you · 1your share 10\.00 USD of 20\.00 USD/);
+    expect(text).toMatch(/Settle-upspaid 5\.00 USD/);
+  });
+
+  // protects=the next step is only offered when it can work; fails_when=Continue shows before
+  // the user said who they are
+  it("shows Continue only once the file, group and person are set", async () => {
+    answer.data = groups("berkeley");
+    render(<SplitwisePanel onClose={() => undefined} />);
+    expect(screen.queryByRole("button", { name: "Continue" })).toBeNull();
+    upload(CSV);
+    await screen.findByLabelText(/^Group$/);
+    expect(screen.queryByRole("button", { name: "Continue" })).toBeNull();
+    fireEvent.change(screen.getByLabelText(/Which one are you/), { target: { value: "0" } });
+    expect(await screen.findByRole("button", { name: "Continue" })).toBeTruthy();
+  });
+
+  it("reads a file dropped on the picker and offers to change it", async () => {
+    render(<SplitwisePanel onClose={() => undefined} />);
+    expect(screen.getByText("How to get the file")).toBeTruthy();
+    fireEvent.drop(screen.getByText("Choose CSV file"), {
+      dataTransfer: { files: [new File([CSV], "trip.csv", { type: "text/csv" })] },
+    });
+    expect(await screen.findByText("trip.csv")).toBeTruthy();
+    expect(screen.getByText(/3 rows · USD/)).toBeTruthy();
+    expect(screen.getByText("Change")).toBeTruthy();
+    expect(screen.queryByText("How to get the file")).toBeNull();
   });
 
   it("tells apart two members with the same name", async () => {
@@ -208,8 +239,9 @@ describe("SplitwisePanel", () => {
   });
 
   // protects=the checks see a group just created; fails_when=its case variant passes as new
-  it("treats a group just imported as existing, keeping the review open", async () => {
-    render(<SplitwisePanel onClose={() => undefined} />);
+  it("treats a group just imported as existing, and tells the page it is done", async () => {
+    const onDone = vi.fn();
+    render(<SplitwisePanel onClose={() => undefined} onDone={onDone} />);
     upload(CSV);
     fireEvent.change(await screen.findByLabelText(/Which one are you/), { target: { value: "0" } });
     const input = await screen.findByLabelText(/New group name/);
@@ -218,6 +250,12 @@ describe("SplitwisePanel", () => {
     await proceed();
     answer.data = groups("trip");
     fireEvent.click(await screen.findByRole("button", { name: "finish import" }));
+    expect(onDone).toHaveBeenCalledWith({
+      batchId: "b1",
+      group: "trip",
+      shares: 2,
+      balancesError: null,
+    });
     expect(screen.getByText(/review of trip/)).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "back" }));
     expect(((await screen.findByLabelText(/^Group$/)) as HTMLSelectElement).value).toBe("trip");

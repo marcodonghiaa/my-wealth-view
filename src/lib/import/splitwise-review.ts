@@ -13,6 +13,7 @@ export interface BankRowFromDb {
   personal_amount: number | null;
   flow_type: string | null;
   deleted_at: string | null;
+  creditor_name?: string | null;
 }
 
 export interface FxRow {
@@ -37,6 +38,7 @@ export function toBankTx(r: BankRowFromDb): BankTx | null {
     direction,
     personalAmountCents: r.personal_amount === null ? null : cents(r.personal_amount),
     flowType: r.flow_type,
+    name: r.creditor_name ?? null,
   };
 }
 
