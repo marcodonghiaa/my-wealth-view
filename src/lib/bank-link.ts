@@ -25,17 +25,13 @@ export function linkedMessage(params: URLSearchParams): string | null {
   return `${linked} account${linked === "1" ? "" : "s"} connected`;
 }
 
-// The bank's redirect hands the dashboard the one-time code (?bank_code=&bank_state=); the
+// The bank's redirect hands the dashboard the one-time code (#bank_code=&bank_state=, in the
+// fragment so it never reaches the dashboard host's logs; older backends used the query); the
 // signed-in dashboard finishes the link with complete-bank-consent. Null when not both are there.
 export function pendingLink(params: URLSearchParams): { code: string; state: string } | null {
   const code = params.get("bank_code");
   const state = params.get("bank_state");
   return code && state ? { code, state } : null;
-}
-
-// What complete-bank-consent replied, as the same params the toast reads.
-export function linkedParams(reply: Record<string, string> | null): URLSearchParams {
-  return new URLSearchParams(reply ?? {});
 }
 
 // Every message bank-consent-callback (?bank_link_error) or complete-bank-consent can send. The

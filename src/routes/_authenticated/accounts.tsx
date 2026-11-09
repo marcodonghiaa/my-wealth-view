@@ -11,7 +11,6 @@ import {
   COUNTRIES,
   linkErrorMessage,
   linkedMessage,
-  linkedParams,
   pendingLink,
   renewTarget,
 } from "@/lib/bank-link";
@@ -138,11 +137,17 @@ function AccountsPage() {
       if (linked) {
         toast.success(linked);
         void queryClient.invalidateQueries({ queryKey: ["bank-accounts-latest"] });
+        // A new account's balance comes from its first sync, which runs a few seconds behind.
+        setTimeout(
+          () => void queryClient.invalidateQueries({ queryKey: ["bank-accounts-latest"] }),
+          20_000,
+        );
       } else if (error) {
         toast.error("Couldn't connect bank", { description: error });
       }
     };
-    const pending = pendingLink(params);
+    const pending =
+      pendingLink(new URLSearchParams(window.location.hash.slice(1))) ?? pendingLink(params);
     if (pending) {
       // Off the address bar before the call: a reload must not spend the code twice.
       window.history.replaceState(null, "", window.location.pathname);
@@ -157,7 +162,7 @@ function AccountsPage() {
               "Couldn't link the bank, please try again",
             );
             showResult(new URLSearchParams({ bank_link_error: message }));
-          } else showResult(linkedParams(data));
+          } else showResult(new URLSearchParams(data ?? {}));
         });
       return;
     }

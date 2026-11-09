@@ -159,6 +159,18 @@ describe("bank redirect with a one-time code", () => {
     expect(window.location.search).toBe("");
   });
 
+  it("reads the code from the fragment, where the bank redirect now puts it", async () => {
+    window.history.replaceState(null, "", `/accounts#bank_code=f&bank_state=${state}`);
+    invoke.mockResolvedValue({
+      data: { bank_linked: "1", bank: "N26", currencies: "EUR" },
+      error: null,
+    });
+    renderPage();
+    await waitFor(() => expect(toast.success).toHaveBeenCalled());
+    expect(invoke).toHaveBeenCalledWith("complete-bank-consent", { body: { code: "f", state } });
+    expect(window.location.hash).toBe("");
+  });
+
   it("shows the error when the link can't be finished", async () => {
     invoke.mockResolvedValue({ data: null, error: new Error("boom") });
     renderPage();

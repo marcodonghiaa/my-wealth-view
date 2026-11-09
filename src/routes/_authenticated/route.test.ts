@@ -7,7 +7,12 @@ vi.mock("@/integrations/supabase/client", () => ({
 
 import { Route } from "./route";
 
-const beforeLoad = (location = { pathname: "/", searchStr: "" }) =>
+const beforeLoad = (
+  location: { pathname: string; searchStr: string; hash?: string } = {
+    pathname: "/",
+    searchStr: "",
+  },
+) =>
   (Route.options.beforeLoad as (args: { location: typeof location }) => Promise<unknown>)({
     location,
   });
@@ -39,6 +44,14 @@ describe("authenticated layout guard", () => {
     const location = { pathname: "/accounts", searchStr: "?bank_code=x&bank_state=y" };
     await expect(beforeLoad(location)).rejects.toMatchObject({
       options: { to: "/auth", search: { next: "/accounts?bank_code=x&bank_state=y" } },
+    });
+  });
+
+  it("keeps the fragment too: the code travels there, never to the server", async () => {
+    getSession.mockResolvedValue({ data: { session: null }, error: null });
+    const location = { pathname: "/accounts", searchStr: "", hash: "bank_code=x&bank_state=y" };
+    await expect(beforeLoad(location)).rejects.toMatchObject({
+      options: { to: "/auth", search: { next: "/accounts#bank_code=x&bank_state=y" } },
     });
   });
 
