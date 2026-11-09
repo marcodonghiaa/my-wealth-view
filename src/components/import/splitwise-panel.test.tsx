@@ -170,13 +170,16 @@ describe("SplitwisePanel", () => {
 
   // protects=the next step is only offered when it can work; fails_when=Continue shows before
   // the user said who they are
-  it("shows Continue only once the file, group and person are set", async () => {
+  it("says what is missing until the file, group and person are set", async () => {
     answer.data = groups("berkeley");
     render(<SplitwisePanel onClose={() => undefined} />);
     expect(screen.queryByRole("button", { name: "Continue" })).toBeNull();
     upload(CSV);
     await screen.findByLabelText(/^Group$/);
-    expect(screen.queryByRole("button", { name: "Continue" })).toBeNull();
+    const button = screen.getByRole("button", {
+      name: "Choose who you are to continue",
+    }) as HTMLButtonElement;
+    expect(button.disabled).toBe(true);
     fireEvent.change(screen.getByLabelText(/Which one are you/), { target: { value: "0" } });
     expect(await screen.findByRole("button", { name: "Continue" })).toBeTruthy();
   });

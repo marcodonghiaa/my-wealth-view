@@ -201,11 +201,15 @@ export interface ManualSplit {
  * the truth and Splitwise only says how much comes back. Null when a rate is missing.
  */
 export function manualSplit(r: ClassifiedRow, tx: BankTx, rate: RateToEur): ManualSplit | null {
-  const rowRate = rate(r.currency, r.date);
-  const txRate = rate(tx.currency, tx.bookingDate);
-  if (rowRate === null || txRate === null || txRate === 0) return null;
   const owedInRow = Math.max(0, Math.abs(r.costCents) - (r.shareCents ?? 0));
-  const othersOweCents = Math.round((owedInRow * rowRate) / txRate);
+  let othersOweCents = owedInRow;
+  // Same currency: no conversion, so rates on two different days cannot make the amount drift.
+  if (r.currency !== tx.currency) {
+    const rowRate = rate(r.currency, r.date);
+    const txRate = rate(tx.currency, tx.bookingDate);
+    if (rowRate === null || txRate === null || txRate === 0) return null;
+    othersOweCents = Math.round((owedInRow * rowRate) / txRate);
+  }
   return {
     othersOweCents,
     personalAmountCents: Math.max(0, tx.amountCents - othersOweCents),

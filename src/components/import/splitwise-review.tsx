@@ -54,9 +54,7 @@ async function load(rows: Array<ClassifiedRow>, group: string): Promise<Loaded> 
   const dates = rows.map((r) => r.date).sort();
   const first = dates[0] ?? "";
   const last = dates[dates.length - 1] ?? "";
-  const currencies = [...new Set(rows.map((r) => r.currency))].filter((c) => c !== "EUR");
-
-  const [bank, fx, stored, rules] = await Promise.all([
+  const [bank, stored, rules] = await Promise.all([
     supabase
       .from("transactions")
       .select(
@@ -65,15 +63,6 @@ async function load(rows: Array<ClassifiedRow>, group: string): Promise<Loaded> 
       .gte("booking_date", addDays(first, -DAYS_BEFORE))
       .lte("booking_date", addDays(last, DAYS_AFTER))
       .limit(PAGE_LIMIT),
-    currencies.length === 0
-      ? Promise.resolve({ data: [] as Array<FxRow>, error: null })
-      : supabase
-          .from("fx_rates")
-          .select("currency, date, rate_to_eur")
-          .in("currency", currencies)
-          .gte("date", addDays(first, -FX_DAYS_BEFORE))
-          .lte("date", last)
-          .limit(PAGE_LIMIT),
     supabase
       .from("splitwise_expenses")
       .select(
@@ -86,6 +75,21 @@ async function load(rows: Array<ClassifiedRow>, group: string): Promise<Loaded> 
       .select("match_text, set_category, priority")
       .order("priority", { ascending: true }),
   ]);
+
+  // Rates for the file's currencies and the bank's: a payment picked by hand may be in another one.
+  const currencies = [
+    ...new Set([...rows.map((r) => r.currency), ...(bank.data ?? []).map((t) => t.currency)]),
+  ].filter((c) => c !== "EUR");
+  const fx =
+    currencies.length === 0
+      ? { data: [] as Array<FxRow>, error: null }
+      : await supabase
+          .from("fx_rates")
+          .select("currency, date, rate_to_eur")
+          .in("currency", currencies)
+          .gte("date", addDays(first, -FX_DAYS_BEFORE))
+          .lte("date", addDays(last, DAYS_AFTER))
+          .limit(PAGE_LIMIT);
 
   const failed = bank.error ?? fx.error ?? stored.error ?? rules.error;
   if (failed) throw new Error(failed.message);
@@ -208,10 +212,14 @@ export function SplitwiseReview({
   );
   const uncategorised = [...categoryOf.values()].filter((c) => c === null).length;
 
-  const confirmed = useMemo(
-    () => [...matches.filter((m) => ticked.has(m.row)), ...manual.values()],
-    [matches, ticked, manual],
-  );
+  // A row can leave the import after corrections move the checkpoint; its hand-picked link goes too.
+  const confirmed = useMemo(() => {
+    const inImport = new Set(split.rows.map((r) => r.row));
+    return [
+      ...matches.filter((m) => ticked.has(m.row)),
+      ...[...manual.values()].filter((m) => inImport.has(m.row)),
+    ];
+  }, [split, matches, ticked, manual]);
   const plan = useMemo(
     () =>
       loaded
@@ -290,7 +298,9 @@ export function SplitwiseReview({
   const unmatched = split.rows.filter(
     (r) => r.kind === "paid_by_me" && isShareRow(r) && !linkedRows.has(r.row),
   );
-  const nothingToWrite = plan?.shares.length === 0 && plan.links.length === 0;
+  const undecided = unmatched.filter((r) => !unmatchedChoices.has(r.row)).length;
+  // An expense still waiting for a decision is something to write, not "nothing new".
+  const nothingToWrite = undecided === 0 && plan?.shares.length === 0 && plan.links.length === 0;
 
   const header = (
     <div className="flex min-h-11 items-center gap-3 pr-10">
@@ -327,11 +337,17 @@ export function SplitwiseReview({
   const needsYou = split.rows.filter(
     (r) => r.kind === "paid_by_me" && isShareRow(r) && !suggested.has(r.row),
   );
-  const undecided = unmatched.filter((r) => !unmatchedChoices.has(r.row)).length;
   const total = sharesTotal(plan.shares);
-  // Payments another row of this import already uses cannot be picked again.
+  // Payments another row uses, or that the matcher suggested (on or off), cannot be picked: a
+  // suggestion switched on later would otherwise land on the same payment twice.
   const takenExcept = (row: number) =>
-    new Set(confirmed.filter((m) => m.row !== row).map((m) => txKey(m)));
+    new Set([
+      ...matches.map((m) => txKey(m)),
+      ...confirmed.filter((m) => m.row !== row).map((m) => txKey(m)),
+    ]);
+  // After the sheet or a choice closes, focus goes back to that expense, not to the page top.
+  const focusRow = (row: number) =>
+    requestAnimationFrame(() => document.getElementById(`sw-row-${row}`)?.focus());
 
   const decide = (row: number, counted: boolean | null) => {
     const choices = new Map(unmatchedChoices);
@@ -352,7 +368,7 @@ export function SplitwiseReview({
     const choice = unmatchedChoices.get(r.row);
     const status =
       link && tx
-        ? `Linked to ${tx.name?.trim() || "a payment"} on ${shortDate(tx.bookingDate)} · your part ${amount(link.personalAmountCents ?? 0, tx.currency)}`
+        ? `Linked to ${tx.name?.trim() || "a payment"} on ${shortDate(tx.bookingDate)} · counts ${amount(link.personalAmountCents ?? 0, tx.currency)}`
         : choice === true
           ? "Paid outside your bank: your share counts"
           : choice === false
@@ -367,8 +383,12 @@ export function SplitwiseReview({
           <button
             type="button"
             className={LINK}
+            id={`sw-row-${r.row}`}
             aria-label={`Change what to do with ${r.description.trim()}`}
-            onClick={() => decide(r.row, null)}
+            onClick={() => {
+              decide(r.row, null);
+              focusRow(r.row);
+            }}
           >
             Change
           </button>
@@ -378,15 +398,34 @@ export function SplitwiseReview({
       <div
         role="group"
         aria-label={`What to do with ${r.description.trim()}`}
-        className="grid grid-cols-3 gap-2 px-4 py-3"
+        className="grid grid-cols-3 gap-2 px-4 py-3 [&>button]:px-2 [&>button]:text-sm [&>button]:whitespace-nowrap"
       >
-        <button type="button" className={PRIMARY} onClick={() => setFinding(r)}>
+        <button
+          type="button"
+          id={`sw-row-${r.row}`}
+          className={PRIMARY}
+          onClick={() => setFinding(r)}
+        >
           Find in bank
         </button>
-        <button type="button" className={TINTED} onClick={() => decide(r.row, true)}>
+        <button
+          type="button"
+          className={TINTED}
+          onClick={() => {
+            decide(r.row, true);
+            focusRow(r.row);
+          }}
+        >
           Paid in cash
         </button>
-        <button type="button" className={TINTED} onClick={() => decide(r.row, false)}>
+        <button
+          type="button"
+          className={TINTED}
+          onClick={() => {
+            decide(r.row, false);
+            focusRow(r.row);
+          }}
+        >
           Skip
         </button>
       </div>
@@ -457,7 +496,11 @@ export function SplitwiseReview({
                   You paid this, but it isn't in your bank yet
                 </p>
               )}
-              {expenseLine(r, `your share ${amount(r.shareCents ?? 0, r.currency)}`)}
+              {expenseLine(
+                r,
+                // Once linked, the bank decides what counts; Splitwise's share is only a hint.
+                manual.has(r.row) ? "" : `your share ${amount(r.shareCents ?? 0, r.currency)}`,
+              )}
               {actions(r)}
             </div>
           ))}
@@ -467,7 +510,11 @@ export function SplitwiseReview({
       {matches.length > 0 && (
         <Group
           label="Found in your bank"
-          footer="Unsure ones start off. Switch on the ones that are right."
+          footer={
+            matches.some((m) => m.confidence === "ambiguous")
+              ? "Unsure ones start off. Switch on the ones that are right."
+              : undefined
+          }
         >
           {matches.map((m) => {
             const row = byRow.get(m.row);
@@ -623,7 +670,10 @@ export function SplitwiseReview({
         bank={loaded.bank}
         taken={finding ? takenExcept(finding.row) : new Set()}
         rate={rate}
-        onClose={() => setFinding(null)}
+        onClose={() => {
+          if (finding) focusRow(finding.row);
+          setFinding(null);
+        }}
         onPick={(tx) => {
           if (!finding) return;
           const split = manualSplit(finding, tx, rate);
@@ -634,6 +684,7 @@ export function SplitwiseReview({
           // A picked payment replaces a doubtful suggestion for the same row.
           setChoices(new Map(manualTicks).set(finding.row, false));
           setManual(new Map(manual).set(finding.row, manualMatch(finding, tx, split)));
+          focusRow(finding.row);
           setFinding(null);
         }}
       />

@@ -43,7 +43,9 @@ export function FindInBank({
     <Sheet open={row !== null} onOpenChange={(open) => open || onClose()}>
       <SheetContent
         side="bottom"
-        className="mx-auto max-h-[90dvh] max-w-lg overflow-y-auto rounded-t-3xl border-0 bg-card px-5 pt-3 pb-8"
+        // Focus is handed back to the expense by the review, which knows which one it was.
+        onCloseAutoFocus={(e) => e.preventDefault()}
+        className="mx-auto max-h-[90dvh] max-w-lg overflow-y-auto rounded-t-3xl border-0 bg-background px-5 pt-3 pb-8"
       >
         <div aria-hidden className="mx-auto mb-4 h-1.5 w-9 rounded-full bg-foreground/20" />
         <SheetTitle className="text-xl font-semibold tracking-tight">
@@ -61,20 +63,24 @@ export function FindInBank({
             </p>
           ) : (
             <Group>
-              <div role="radiogroup" aria-label="Bank payments" className="divide-y divide-border">
+              <fieldset className="divide-y divide-border">
+                <legend className="sr-only">Bank payments</legend>
                 {options.map((t) => {
                   const selected = key(t) === chosen;
                   return (
-                    <button
+                    <label
                       key={key(t)}
-                      type="button"
-                      role="radio"
-                      aria-checked={selected}
-                      onClick={() => setChosen(key(t))}
-                      className={`flex min-h-14 w-full items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-foreground/5 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-inset ${
+                      className={`flex min-h-14 w-full cursor-pointer items-center gap-3 px-4 py-2.5 transition-colors hover:bg-foreground/5 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring has-[:focus-visible]:ring-inset ${
                         selected ? "bg-primary/10" : ""
                       }`}
                     >
+                      <input
+                        type="radio"
+                        name="bank-payment"
+                        className="sr-only"
+                        checked={selected}
+                        onChange={() => setChosen(key(t))}
+                      />
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-[0.9375rem] font-medium">
                           {t.name?.trim() || "Card payment"}
@@ -88,17 +94,19 @@ export function FindInBank({
                       </span>
                       <span
                         aria-hidden
-                        className={`size-5 shrink-0 rounded-full border-2 ${
+                        className={`size-5 shrink-0 rounded-full border-2 transition-all ${
                           selected ? "border-[6px] border-primary" : "border-foreground/25"
                         }`}
                       />
-                    </button>
+                    </label>
                   );
                 })}
-              </div>
+              </fieldset>
             </Group>
           )}
-
+        </div>
+        {/* Kept in view while the list scrolls: the choice and its result sit next to the button. */}
+        <div className="sticky -bottom-8 -mx-5 mt-4 space-y-3 bg-background px-5 pt-3 pb-8">
           {tx && !split && (
             <p role="alert" className="px-4 text-sm text-negative">
               No exchange rate for this payment yet, so your part cannot be worked out.

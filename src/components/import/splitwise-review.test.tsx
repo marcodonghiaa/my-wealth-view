@@ -408,6 +408,27 @@ describe("SplitwiseReview", () => {
   const TAXI = share("2026-08-17|Taxi|2000|USD|1000#1", "Taxi", 10);
   const DINNER = share("2026-08-16|Dinner|3000|USD|-1500#1", "Dinner", 15);
 
+  // protects=an expense waiting for a decision is never hidden behind "Nothing new";
+  // fails_when=the only new row is one I paid with no bank match and the Import button disappears
+  it("asks about a new expense I paid even when it is the only new one", async () => {
+    tables.splitwise_expenses = { data: [DINNER], error: null };
+    tables.transactions = { data: [], error: null };
+    show();
+    expect(
+      await screen.findByRole("button", { name: "Decide on 1 expense to continue" }),
+    ).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: "Nothing new" })).toBeNull();
+  });
+
+  // protects=one payment is never linked to two rows; fails_when=a suggested payment (even
+  // switched off) can also be picked by hand for the same or another expense
+  it("does not offer a suggested payment in Find in bank", async () => {
+    show();
+    fireEvent.click(await screen.findByRole("switch", { name: /Taxi/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Find in bank" }));
+    expect(await screen.findByText(/No payments out of your accounts/)).toBeTruthy();
+  });
+
   // protects=stored rows get no new bank suggestion; fails_when=an imported expense is matched
   // again to another bank transaction
   it("does not propose a new match for an expense already stored", async () => {

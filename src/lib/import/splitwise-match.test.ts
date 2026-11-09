@@ -215,6 +215,16 @@ describe("manualSplit", () => {
     expect(manualSplit({ ...uber!, currency: "GBP" }, tx(), rate)).toBeNull();
   });
 
+  it("does not convert when the expense and the payment share a currency", () => {
+    // A rate that moves by day would make 69 USD drift if it were converted twice.
+    const drifting = (c: string, d: string) =>
+      c === "USD" ? (d === "2026-08-16" ? 0.9 : 0.91) : 1;
+    const split = manualSplit(uber!, tx({ currency: "USD", amountCents: 9900 }), drifting);
+    expect(split).toEqual({ othersOweCents: 6900, personalAmountCents: 3000 });
+    // Even with no rate at all.
+    expect(manualSplit(uber!, tx({ currency: "USD" }), () => null)?.othersOweCents).toBe(6900);
+  });
+
   it("builds the link the plan writes", () => {
     const t = tx({ amountCents: 8000 });
     const split = manualSplit(uber!, t, rate)!;

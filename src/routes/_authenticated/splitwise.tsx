@@ -65,9 +65,13 @@ function SplitwisePage() {
 
   const undo = useMutation({
     mutationFn: (batchId: string) => undoSplitwiseImport(supabase as unknown as RpcClient, batchId),
-    onSuccess: ({ shares }) => {
-      if (userId) clearLastImport(browserStorage(), userId, "splitwise");
-      setLast(null);
+    onSuccess: ({ shares }, batchId) => {
+      // Only forget the stored import when it is the one undone; a newer one keeps its Undo.
+      setLast((current) => {
+        if (current?.batchId !== batchId) return current;
+        if (userId) clearLastImport(browserStorage(), userId, "splitwise");
+        return null;
+      });
       toast.success(
         shares === 1
           ? "Import undone: 1 expense removed"
@@ -78,6 +82,9 @@ function SplitwisePage() {
     },
     onError: (err) => toast.error(`Undo failed: ${err.message}`),
   });
+  const undoBatch = (batchId: string) => {
+    if (!undo.isPending) undo.mutate(batchId);
+  };
 
   const onImported = (done: ImportDone) => {
     const entry = { batchId: done.batchId, count: done.shares };
@@ -87,7 +94,7 @@ function SplitwisePage() {
     const n = done.shares === 1 ? "1 expense" : `${done.shares} expenses`;
     toast.success(`${n} imported into ${done.group}`, {
       duration: 10_000,
-      action: { label: "Undo", onClick: () => undo.mutate(done.batchId) },
+      action: { label: "Undo", onClick: () => undoBatch(done.batchId) },
     });
     if (done.balancesError) {
       toast.error(
@@ -195,7 +202,7 @@ function SplitwisePage() {
         <LastImportRow
           count={last.count}
           pending={undo.isPending}
-          onUndo={() => undo.mutate(last.batchId)}
+          onUndo={() => undoBatch(last.batchId)}
         />
       )}
 

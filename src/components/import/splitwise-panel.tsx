@@ -220,7 +220,7 @@ export function SplitwisePanel({
             setDragging(false);
             void onFile(e.dataTransfer.files[0]);
           }}
-          className={`flex cursor-pointer flex-col items-center rounded-3xl bg-card px-6 py-10 text-center transition-colors focus-within:ring-2 focus-within:ring-ring hover:bg-card/80 ${
+          className={`flex cursor-pointer flex-col items-center rounded-3xl bg-card px-6 py-10 text-center transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring hover:bg-card/80 ${
             dragging ? "ring-2 ring-primary" : ""
           }`}
         >
@@ -391,9 +391,18 @@ export function SplitwisePanel({
         </Group>
       )}
 
-      {ready && (
-        <button type="button" className={CTA} onClick={() => setStep("review")}>
-          Continue
+      {loaded && !blocked && (
+        // Once there is a file, the button says what is still missing instead of just greying out.
+        <button type="button" className={CTA} disabled={!ready} onClick={() => setStep("review")}>
+          {ready
+            ? "Continue"
+            : group.trim() === ""
+              ? isNew
+                ? "Name the group to continue"
+                : "Choose a group to continue"
+              : me === null
+                ? "Choose who you are to continue"
+                : "Continue"}
         </button>
       )}
     </div>
