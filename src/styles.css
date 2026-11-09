@@ -115,6 +115,11 @@
   --chart-3: oklch(0.54 0.05 240);
   --chart-4: oklch(0.66 0.05 240);
   --chart-5: oklch(0.78 0.04 240);
+  /* Breakdown donut keeps its own hues (Marco's pick, pre-rebrand) */
+  --alloc-cash: oklch(0.55 0.07 200);
+  --alloc-stocks: oklch(0.55 0.15 250);
+  --alloc-crypto: oklch(0.74 0.14 75);
+  --alloc-bonds: oklch(0.55 0.17 310);
   --sidebar: oklch(0.985 0.003 230);
   --sidebar-foreground: oklch(0.17 0.012 240);
   --sidebar-primary: oklch(0.17 0.012 240);
@@ -161,6 +166,10 @@
     --chart-3: oklch(0.68 0.05 240);
     --chart-4: oklch(0.56 0.05 240);
     --chart-5: oklch(0.44 0.04 240);
+    --alloc-cash: oklch(0.75 0.07 200);
+    --alloc-stocks: oklch(0.7 0.14 250);
+    --alloc-crypto: oklch(0.82 0.14 75);
+    --alloc-bonds: oklch(0.7 0.16 310);
     --sidebar: oklch(0.15 0.008 240);
     --sidebar-foreground: oklch(0.95 0.006 230);
     --sidebar-primary: oklch(0.95 0.006 230);
