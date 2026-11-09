@@ -68,3 +68,19 @@ describe("nav badge", () => {
     expect(screen.getByRole("button", { name: "More" })).toBeTruthy();
   });
 });
+
+describe("sidebar icons", () => {
+  it("puts a line icon beside every sidebar entry, Settings and Sign out included", () => {
+    rows.current = [];
+    renderLayout();
+    const aside = document.querySelector("aside")!;
+    for (const label of ["Net Worth", "Accounts", "Crypto", "Settings"]) {
+      const link = [...aside.querySelectorAll("a")].find((a) => a.textContent?.includes(label))!;
+      expect(link.querySelector("svg")).not.toBeNull();
+    }
+    const signOut = [...aside.querySelectorAll("button")].find((b) =>
+      b.textContent?.includes("Sign out"),
+    )!;
+    expect(signOut.querySelector("svg")).not.toBeNull();
+  });
+});

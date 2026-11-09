@@ -98,12 +98,12 @@ const TAB_BAR_ITEMS: Array<{ label: string; icon: LucideIcon; to: string }> = [
   { label: "Portfolio", icon: Briefcase, to: "/portfolio" },
 ];
 
-// Desktop sidebar: text-only rows; the active one carries a 2px Ember rule on the left.
-// Both states keep the same border width so text never shifts.
+// Desktop sidebar (DESIGN.md "Navigation"): 18px line icon + label, 4px corners; hover and
+// active take the sidebar accent fill, active adds weight 500.
 const SIDEBAR_LINK =
-  "flex items-center gap-3 border-l-2 border-transparent px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground";
+  "flex items-center gap-3 rounded-sm px-3 py-2 text-[0.9375rem] text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-foreground";
 const SIDEBAR_LINK_ACTIVE =
-  "flex items-center gap-3 border-l-2 border-ember px-3 py-1.5 text-sm font-medium text-foreground";
+  "flex items-center gap-3 rounded-sm px-3 py-2 text-[0.9375rem] font-medium bg-sidebar-accent text-foreground";
 
 // Mobile tab bar: icon + sans label; the active tab carries a 2px Ember rule on top.
 const TAB_LINK =
@@ -171,6 +171,7 @@ function AuthenticatedLayout() {
                     className={SIDEBAR_LINK}
                     activeProps={{ className: SIDEBAR_LINK_ACTIVE }}
                   >
+                    <item.icon className="size-[1.125rem] shrink-0" />
                     {item.label}
                     <NavBadge count={badges[item.label]} />
                   </Link>
@@ -187,6 +188,7 @@ function AuthenticatedLayout() {
             className={SIDEBAR_LINK}
             activeProps={{ className: SIDEBAR_LINK_ACTIVE }}
           >
+            <Settings className="size-[1.125rem] shrink-0" />
             Settings
           </Link>
           <button
@@ -195,6 +197,7 @@ function AuthenticatedLayout() {
             disabled={signingOut}
             className={`${SIDEBAR_LINK} w-full disabled:opacity-50`}
           >
+            <LogOut className="size-[1.125rem] shrink-0" />
             {signingOut ? "Signing out…" : "Sign out"}
           </button>
           <MadeWith className="mt-2 px-3" />
