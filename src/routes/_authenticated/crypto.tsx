@@ -10,6 +10,9 @@ import { SoldHoldings } from "@/components/holdings/sold-holdings";
 import { EditHolding } from "@/components/holdings/edit-holding";
 import { HeadlineFigure } from "@/components/headline-figure";
 import { ShareBar } from "@/components/share-bar";
+import { Alert } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
+import { GroupedList } from "@/components/ui/grouped-list";
 import { ValueHistoryChart } from "@/components/value-history";
 import { useValueHistory } from "@/lib/use-value-history";
 import { usePerformance } from "@/lib/use-performance";
@@ -157,28 +160,18 @@ function CryptoPage() {
       </header>
 
       {query.isError && (
-        <div
-          role="alert"
-          className="mb-6 rounded-2xl bg-negative/10 px-4 py-3 text-sm text-negative"
-        >
-          Couldn't load crypto data: {query.error.message}
-        </div>
+        <Alert className="mb-6">Couldn't load crypto data: {query.error.message}</Alert>
       )}
 
       {history.error && (
-        <div
-          role="alert"
-          className="mb-6 rounded-2xl bg-negative/10 px-4 py-3 text-sm text-negative"
-        >
-          Couldn't load your crypto history: {history.error.message}
-        </div>
+        <Alert className="mb-6">Couldn't load your crypto history: {history.error.message}</Alert>
       )}
 
       {/* Headline: total value and its change over the chart range */}
       <section aria-label="Total crypto value" className="mb-6">
         <div className="min-h-16" aria-live="polite">
           {query.isPending ? (
-            <div className="h-16 w-72 animate-pulse rounded-2xl bg-muted" />
+            <Skeleton className="h-16 w-72" />
           ) : (
             <HeadlineFigure value={history.shownEur} currency="EUR" />
           )}
@@ -208,17 +201,17 @@ function CryptoPage() {
 
       {query.isPending ? (
         <>
-          <div className="mb-6 h-80 animate-pulse rounded-2xl bg-muted/50" />
-          <div className="h-64 animate-pulse rounded-2xl bg-muted/50" />
+          <Skeleton className="mb-6 h-80" />
+          <Skeleton className="h-64" />
         </>
       ) : assets.length === 0 ? (
-        <div className="flex h-48 items-center justify-center rounded-2xl bg-card text-sm text-muted-foreground">
+        <div className="flex h-48 items-center justify-center rounded-lg bg-card text-sm text-muted-foreground">
           No coins yet. Search for your first one below.
         </div>
       ) : (
         <>
           {/* Desktop table */}
-          <section className="hidden overflow-hidden rounded-2xl bg-card md:block">
+          <section className="hidden overflow-hidden rounded-lg bg-card md:block">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="border-b text-left text-xs font-medium text-muted-foreground">
@@ -259,7 +252,7 @@ function CryptoPage() {
                               {asset.bySource.map((s) => (
                                 <span
                                   key={s.source}
-                                  className="inline-flex items-center rounded-sm border px-2 py-0.5 text-xs text-muted-foreground"
+                                  className="inline-flex items-center rounded-sm bg-muted px-2 py-0.5 text-xs text-muted-foreground"
                                 >
                                   {s.source}: {formatAmount(s.amount)}
                                 </span>
@@ -278,7 +271,7 @@ function CryptoPage() {
                             quantity={asset.amount}
                           />
                         </td>
-                        <td className="px-4 py-3 text-right font-figure font-medium text-foreground sm:px-5">
+                        <td className="px-4 py-3 text-right font-figure text-foreground sm:px-5">
                           {formatEur(asset.valueEur)}
                         </td>
                         <td className="px-4 py-3 text-right font-figure text-foreground sm:px-5">
@@ -296,7 +289,7 @@ function CryptoPage() {
           </section>
 
           {/* Mobile cards */}
-          <section className="divide-y overflow-hidden rounded-2xl bg-card md:hidden">
+          <GroupedList className="md:hidden">
             {assets.map((asset, i) => {
               const percent = totalEur > 0 ? (asset.valueEur / totalEur) * 100 : 0;
               return (
@@ -317,7 +310,7 @@ function CryptoPage() {
                       {asset.bySource.map((s) => (
                         <span
                           key={s.source}
-                          className="inline-flex items-center rounded-sm border px-2 py-0.5 text-xs text-muted-foreground"
+                          className="inline-flex items-center rounded-sm bg-muted px-2 py-0.5 text-xs text-muted-foreground"
                         >
                           {s.source}: {formatAmount(s.amount)}
                         </span>
@@ -349,9 +342,7 @@ function CryptoPage() {
                     </div>
                     <div>
                       <div className="text-xs text-muted-foreground">Value</div>
-                      <div className="font-figure font-medium text-foreground">
-                        {formatEur(asset.valueEur)}
-                      </div>
+                      <div className="font-figure text-foreground">{formatEur(asset.valueEur)}</div>
                     </div>
                     <div>
                       <div className="text-xs text-muted-foreground">% of total</div>
@@ -361,7 +352,7 @@ function CryptoPage() {
                 </div>
               );
             })}
-          </section>
+          </GroupedList>
         </>
       )}
 

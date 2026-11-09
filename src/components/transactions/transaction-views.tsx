@@ -1,6 +1,8 @@
 import { useState, type ReactNode } from "react";
 import { ChevronRight, Users } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Button } from "@/components/ui/button";
+import { GroupedList } from "@/components/ui/grouped-list";
 import { useIsMobile } from "@/lib/use-is-mobile";
 import { AccountBadge } from "@/components/bank-badge";
 import { RefundedBadge } from "@/components/refunded-badge";
@@ -55,7 +57,7 @@ function AmountText({ tx }: { tx: TransactionRow }) {
   return (
     <div className="shrink-0 text-right">
       <div
-        className={`font-figure text-[0.9375rem] font-semibold whitespace-nowrap ${
+        className={`font-figure text-[0.9375rem] whitespace-nowrap ${
           positive ? "text-positive" : "text-foreground"
         }`}
       >
@@ -96,7 +98,7 @@ function TransactionEditSheet({
         side={isMobile ? "bottom" : "right"}
         aria-describedby={undefined}
         onOpenAutoFocus={(e) => e.preventDefault()}
-        className="max-h-[88dvh] gap-0 overflow-y-auto rounded-t-3xl border-0 bg-background p-0 pb-[env(safe-area-inset-bottom)] md:max-h-none md:rounded-none md:border-l [&>button]:size-11"
+        className="max-h-[88dvh] gap-0 overflow-y-auto rounded-t-xl border-0 bg-background p-0 pb-[env(safe-area-inset-bottom)] md:max-h-none md:rounded-none md:border-l [&>button]:size-11"
       >
         <div
           aria-hidden
@@ -112,7 +114,7 @@ function TransactionEditSheet({
           </div>
         </SheetHeader>
         <div className="space-y-4 px-4 pb-4">
-          <div className="divide-y overflow-hidden rounded-2xl bg-card">
+          <GroupedList>
             <Field label="Name">
               <NameEditor name={tx.creditor_name} onSave={p.onRename} saving={p.savingRename} />
             </Field>
@@ -144,9 +146,9 @@ function TransactionEditSheet({
                 </Field>
               </>
             )}
-          </div>
+          </GroupedList>
           {!share && (
-            <div className="divide-y overflow-hidden rounded-2xl bg-card">
+            <GroupedList>
               {(tx.worth_it != null || isWorthItEligible(tx)) && (
                 <Field label="Worth it">
                   <WorthItPrompt tx={tx} onAnswer={p.onAnswerWorthIt} />
@@ -161,7 +163,7 @@ function TransactionEditSheet({
                   className="size-5 rounded border-border accent-primary"
                 />
               </label>
-            </div>
+            </GroupedList>
           )}
           <RefundedBadge flowType={tx.flow_type} />
         </div>
@@ -238,14 +240,14 @@ export function TransactionRowView(props: TransactionViewProps) {
       <td className="w-12 px-2 py-3 text-right">
         {!share && (
           <>
-            <button
-              type="button"
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={() => setOpen(true)}
               aria-label={`Edit ${tx.creditor_name ?? "transaction"}`}
-              className="inline-flex size-11 items-center justify-center rounded-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
             >
               <ChevronRight className="size-4" />
-            </button>
+            </Button>
             <TransactionEditSheet {...props} open={open} onOpenChange={setOpen} />
           </>
         )}

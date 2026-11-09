@@ -5,6 +5,8 @@ import { toast } from "sonner";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { supabase } from "@/integrations/supabase/client";
 import { parseQuantity } from "@/lib/holdings";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/field";
 
 export type HoldingTarget =
   { kind: "stock"; isin: string } | { kind: "crypto"; symbol: string; source: string };
@@ -123,11 +125,10 @@ export function EditHolding({
         }
       }}
     >
-      <PopoverTrigger
-        aria-label={`Edit ${name}`}
-        className="inline-flex size-11 items-center justify-center rounded-sm text-muted-foreground hover:bg-muted hover:text-foreground"
-      >
-        <Pencil className="size-4" />
+      <PopoverTrigger asChild>
+        <Button variant="ghost" size="icon" aria-label={`Edit ${name}`}>
+          <Pencil />
+        </Button>
       </PopoverTrigger>
       <PopoverContent align="end" className="space-y-3">
         <form onSubmit={handleSave} className="space-y-3">
@@ -135,31 +136,27 @@ export function EditHolding({
             How many you hold now
           </label>
           <div className="flex gap-2">
-            <input
+            <Input
               id={`qty-${name}`}
               inputMode="decimal"
               value={value}
               onChange={(e) => setValue(e.target.value)}
-              className="min-w-0 flex-1 rounded-sm border bg-background px-3 py-2 text-base focus:ring-2 focus:ring-ring focus:outline-none"
+              className="flex-1"
             />
-            <button
-              type="submit"
-              disabled={save.isPending}
-              className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground disabled:opacity-50"
-            >
+            <Button type="submit" disabled={save.isPending}>
               {save.isPending && <Loader2 className="size-4 animate-spin" />}
               Save
-            </button>
+            </Button>
           </div>
         </form>
-        <button
-          type="button"
+        <Button
+          variant="destructive"
           onClick={() => save.mutate(0)}
           disabled={save.isPending}
-          className="min-h-11 w-full rounded-lg border px-3 text-sm font-medium text-negative hover:bg-negative/10 disabled:opacity-50"
+          className="w-full"
         >
           Mark as sold
-        </button>
+        </Button>
         {confirmDelete ? (
           <div className="space-y-2 rounded-lg bg-negative/10 p-3">
             <p className="text-xs text-foreground">
@@ -167,32 +164,23 @@ export function EditHolding({
               it? Use Mark as sold instead.
             </p>
             <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => setConfirmDelete(false)}
-                className="min-h-11 flex-1 rounded-lg border px-3 text-sm font-medium"
-              >
+              <Button variant="quiet" onClick={() => setConfirmDelete(false)} className="flex-1">
                 Cancel
-              </button>
-              <button
-                type="button"
+              </Button>
+              <Button
                 onClick={() => remove.mutate()}
                 disabled={remove.isPending}
-                className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-lg bg-negative px-3 text-sm font-medium text-white disabled:opacity-50"
+                className="flex-1 bg-negative text-white"
               >
                 {remove.isPending && <Loader2 className="size-4 animate-spin" />}
                 Delete for good
-              </button>
+              </Button>
             </div>
           </div>
         ) : (
-          <button
-            type="button"
-            onClick={() => setConfirmDelete(true)}
-            className="min-h-11 w-full rounded-lg px-3 text-sm text-muted-foreground hover:bg-muted"
-          >
+          <Button variant="ghost" onClick={() => setConfirmDelete(true)} className="w-full">
             Delete
-          </button>
+          </Button>
         )}
         {error && (
           <p role="alert" className="text-sm text-negative">

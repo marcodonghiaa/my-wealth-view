@@ -3,9 +3,11 @@ import { useQueryClient } from "@tanstack/react-query";
 import { PushSubscribeButton } from "@/components/push-subscribe";
 import { attentionCount, type HealthRow, type HealthState } from "@/lib/health";
 import { useHealth } from "./use-health";
+import { Alert } from "@/components/ui/alert";
+import { GroupedList } from "@/components/ui/grouped-list";
 
 const DOT: Record<HealthState, string> = {
-  ok: "bg-positive",
+  ok: "bg-muted-foreground",
   warn: "bg-warning",
   bad: "bg-negative",
 };
@@ -56,15 +58,17 @@ function HealthRowItem({ row, onPushed }: { row: HealthRow; onPushed: () => void
 function RowList({ rows }: { rows: Array<HealthRow> }) {
   const queryClient = useQueryClient();
   return (
-    <ul className="divide-y rounded-2xl border bg-card px-5 card-ring">
-      {rows.map((row) => (
-        <HealthRowItem
-          key={row.id}
-          row={row}
-          onPushed={() => void queryClient.invalidateQueries({ queryKey: ["push-subscribed"] })}
-        />
-      ))}
-    </ul>
+    <GroupedList className="px-5">
+      <ul className="divide-y divide-hairline">
+        {rows.map((row) => (
+          <HealthRowItem
+            key={row.id}
+            row={row}
+            onPushed={() => void queryClient.invalidateQueries({ queryKey: ["push-subscribed"] })}
+          />
+        ))}
+      </ul>
+    </GroupedList>
   );
 }
 
@@ -91,12 +95,7 @@ export function HealthSection() {
       </p>
 
       {accounts.isError && (
-        <div
-          role="alert"
-          className="mb-4 rounded-2xl bg-negative/10 px-4 py-3 text-sm text-negative"
-        >
-          Couldn't load your accounts: {accounts.error.message}
-        </div>
+        <Alert className="mb-4">Couldn't load your accounts: {accounts.error.message}</Alert>
       )}
 
       {rows.length > 0 && <RowList rows={rows} />}

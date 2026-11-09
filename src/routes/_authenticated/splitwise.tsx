@@ -22,6 +22,10 @@ import { LastImportRow } from "@/components/splitwise/last-import-row";
 import { useSettleSplitMutation } from "@/components/transactions/mutations";
 import { toast } from "sonner";
 import { fetchSplits, money, peopleFrom, type SplitRow } from "@/lib/splits";
+import { Alert } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { GroupedList, SectionTitle } from "@/components/ui/grouped-list";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export const Route = createFileRoute("/_authenticated/splitwise")({
   head: () => ({
@@ -136,7 +140,7 @@ function SplitwisePage() {
   };
 
   const loading = (label: string) => (
-    <div role="status" aria-label={label} className="h-24 animate-pulse rounded-2xl bg-muted" />
+    <Skeleton role="status" aria-label={label} aria-hidden={false} className="h-24" />
   );
 
   return (
@@ -148,36 +152,32 @@ function SplitwisePage() {
             And who you owe, from bills you split and your Splitwise groups.
           </p>
         </div>
-        <button
-          type="button"
-          className="inline-flex min-h-11 items-center rounded-sm bg-card px-4 text-sm font-medium transition-colors hover:bg-accent"
-          onClick={() => setImporting(true)}
-        >
+        <Button variant="quiet" onClick={() => setImporting(true)}>
           Import from Splitwise
-        </button>
+        </Button>
       </header>
 
-      <dl className="divide-y overflow-hidden rounded-2xl bg-card">
-        <div className="flex items-baseline justify-between gap-3 px-4 py-3 sm:px-5">
-          <dt className="text-[0.9375rem]">Owed to you</dt>
-          <dd className="font-figure text-xl font-semibold">{money(totals.owedToYou, "EUR")}</dd>
-        </div>
-        <div className="flex items-baseline justify-between gap-3 px-4 py-3 sm:px-5">
-          <dt className="text-[0.9375rem]">You owe</dt>
-          <dd className="font-figure text-xl font-semibold">{money(totals.youOwe, "EUR")}</dd>
-        </div>
-      </dl>
+      <GroupedList>
+        <dl className="divide-y divide-hairline">
+          <div className="flex items-baseline justify-between gap-3 px-4 py-3 sm:px-5">
+            <dt className="text-[0.9375rem]">Owed to you</dt>
+            <dd className="font-figure text-xl">{money(totals.owedToYou, "EUR")}</dd>
+          </div>
+          <div className="flex items-baseline justify-between gap-3 px-4 py-3 sm:px-5">
+            <dt className="text-[0.9375rem]">You owe</dt>
+            <dd className="font-figure text-xl">{money(totals.youOwe, "EUR")}</dd>
+          </div>
+        </dl>
+      </GroupedList>
       {totals.missingRate && (
         <p className="mt-2 px-1 text-xs text-muted-foreground">
           Some Splitwise amounts are left out: no exchange rate for their currency yet.
         </p>
       )}
 
-      <h2 className="ios-section-title mt-8">Split bills · from your transactions</h2>
+      <SectionTitle className="mt-8">Split bills · from your transactions</SectionTitle>
       {splits.isError ? (
-        <div role="alert" className="rounded-2xl bg-negative/10 px-4 py-3 text-sm text-negative">
-          Couldn't load your splits: {splits.error.message}
-        </div>
+        <Alert>Couldn't load your splits: {splits.error.message}</Alert>
       ) : splits.isPending ? (
         loading("Loading split bills")
       ) : (
@@ -188,11 +188,9 @@ function SplitwisePage() {
         />
       )}
 
-      <h2 className="ios-section-title mt-8">Splitwise groups · from your last import</h2>
+      <SectionTitle className="mt-8">Splitwise groups · from your last import</SectionTitle>
       {balances.isError ? (
-        <div role="alert" className="rounded-2xl bg-negative/10 px-4 py-3 text-sm text-negative">
-          Couldn't load Splitwise balances: {balances.error.message}
-        </div>
+        <Alert>Couldn't load Splitwise balances: {balances.error.message}</Alert>
       ) : balances.isPending ? (
         loading("Loading Splitwise groups")
       ) : (

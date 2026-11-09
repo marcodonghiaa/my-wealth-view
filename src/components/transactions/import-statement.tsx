@@ -1,3 +1,6 @@
+import { Button, buttonVariants } from "@/components/ui/button";
+import { fieldClass } from "@/components/ui/field";
+import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { FileUp, Loader2 } from "lucide-react";
@@ -39,8 +42,7 @@ const NO_COLUMNS: StatementColumns = {
   out: null,
 };
 
-const field =
-  "h-11 w-full min-w-0 rounded-sm border bg-background px-4 text-base focus:ring-2 focus:ring-ring focus:outline-none";
+const field = fieldClass();
 
 // The bank's name from a file like "Fineco_movimenti_2026.csv", as the default source.
 const sourceFromFile = (name: string) => /^[A-Za-z]+/.exec(name)?.[0] ?? "";
@@ -168,7 +170,7 @@ export function ImportStatement() {
     >
       <DialogTrigger
         aria-label="Import statement"
-        className="inline-flex size-11 shrink-0 items-center justify-center rounded-sm bg-card text-foreground hover:bg-muted"
+        className={cn(buttonVariants({ variant: "quiet", size: "icon" }), "[&_svg]:size-5")}
       >
         <FileUp className="size-5" />
       </DialogTrigger>
@@ -194,7 +196,7 @@ export function ImportStatement() {
           />
 
           {text && headers.length > 0 && (
-            <details open={!statement} className="rounded-2xl bg-card p-3 text-sm">
+            <details open={!statement} className="rounded-lg bg-card p-3 text-sm">
               <summary className="cursor-pointer text-muted-foreground">Columns</summary>
               <div className="mt-2 grid gap-2 sm:grid-cols-2">
                 {FIELD_LABELS.map(([key, label]) => (
@@ -232,7 +234,7 @@ export function ImportStatement() {
                 .
               </p>
               {fresh.length > 0 && (
-                <ul className="divide-y overflow-hidden rounded-2xl bg-card text-sm">
+                <ul className="divide-y overflow-hidden rounded-lg bg-card text-sm">
                   {fresh.slice(0, 5).map((r, i) => (
                     <li key={i} className="flex items-center justify-between gap-3 px-3 py-2">
                       <span className="min-w-0 truncate">
@@ -277,17 +279,16 @@ export function ImportStatement() {
             </p>
           )}
 
-          <button
-            type="button"
+          <Button
             onClick={() => void handleImport()}
             disabled={!fresh || fresh.length === 0 || importing}
-            className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-sm bg-primary px-4 text-sm font-medium text-primary-foreground disabled:opacity-50"
+            className="w-full"
           >
             {importing && <Loader2 className="size-4 animate-spin" />}
             {importing
               ? `Importing ${progress} of ${fresh?.length ?? 0}`
               : `Import${fresh && fresh.length > 0 ? ` ${fresh.length}` : ""}`}
-          </button>
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

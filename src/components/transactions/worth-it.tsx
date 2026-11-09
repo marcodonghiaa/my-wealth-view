@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/button";
 import { ThumbsDown, ThumbsUp } from "lucide-react";
 import {
   Dialog,
@@ -34,14 +35,14 @@ export function WorthItPrompt({
       <button
         type="button"
         onClick={() => onAnswer("yes")}
-        className="min-h-11 rounded-md px-2 py-1 font-medium text-foreground transition-colors hover:bg-accent"
+        className="min-h-11 rounded-sm px-2 py-1 font-medium text-foreground transition-colors hover:bg-accent"
       >
         Yes
       </button>
       <button
         type="button"
         onClick={() => onAnswer("no")}
-        className="min-h-11 rounded-md px-2 py-1 font-medium text-foreground transition-colors hover:bg-accent"
+        className="min-h-11 rounded-sm px-2 py-1 font-medium text-foreground transition-colors hover:bg-accent"
       >
         No
       </button>
@@ -73,30 +74,29 @@ export function WorthItSpotlight({
               {tx.creditor_name ?? "A purchase"} · {tx.category}
             </DialogDescription>
           </DialogHeader>
-          <p className="font-figure py-4 text-4xl font-semibold text-foreground">
+          <p className="font-figure py-4 text-4xl text-foreground">
             {formatMoney(Math.abs(tx.amount ?? 0), tx.currency ?? "EUR")}
           </p>
           <div className="flex gap-3">
-            <button
-              type="button"
+            <Button
+              variant="quiet"
               onClick={() => {
                 onAnswer(tx, "no");
                 onClose();
               }}
-              className="min-h-11 flex-1 rounded-sm bg-muted text-sm font-medium text-foreground transition-colors hover:bg-accent"
+              className="flex-1 bg-muted"
             >
               No
-            </button>
-            <button
-              type="button"
+            </Button>
+            <Button
               onClick={() => {
                 onAnswer(tx, "yes");
                 onClose();
               }}
-              className="min-h-11 flex-1 rounded-sm bg-primary text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
+              className="flex-1"
             >
               Yes
-            </button>
+            </Button>
           </div>
         </DialogContent>
       )}

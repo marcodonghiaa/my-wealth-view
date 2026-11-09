@@ -10,6 +10,9 @@ import { monthNetWorth, withHistory } from "@/lib/net-worth";
 import { fetchHistory, fetchNetWorth, fetchReconstructed } from "@/lib/net-worth-queries";
 import { TONE_TEXT, toneOf, type Tone } from "@/lib/tone";
 import { MonthSwitcher } from "@/components/month-switcher";
+import { Alert } from "@/components/ui/alert";
+import { GroupedList, SectionTitle } from "@/components/ui/grouped-list";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export const Route = createFileRoute("/_authenticated/reports")({
   head: () => ({
@@ -229,14 +232,7 @@ function ReportsPage() {
         <h1 className="ios-large-title">Monthly Report</h1>
       </header>
 
-      {loadError && (
-        <div
-          role="alert"
-          className="mb-6 rounded-2xl bg-negative/10 px-4 py-3 text-sm text-negative"
-        >
-          Some figures didn't load: {loadError.message}
-        </div>
-      )}
+      {loadError && <Alert className="mb-6">Some figures didn't load: {loadError.message}</Alert>}
 
       <MonthSwitcher
         className="mb-6"
@@ -246,116 +242,118 @@ function ReportsPage() {
         canGoNext={canGoNext}
       />
 
-      <ul className="divide-y overflow-hidden rounded-2xl bg-card">
-        <HeadlineCard
-          icon={
-            netWorthDelta?.delta && netWorthDelta.delta.total < 0 ? (
-              <TrendingDown className="size-4" />
-            ) : (
-              <TrendingUp className="size-4" />
-            )
-          }
-          label="Net worth"
-          sublabel={netWorthDelta?.delta ? "change this month" : undefined}
-          pending={liveQuery.isPending || historyQuery.isPending || rebuiltQuery.isPending}
-          value={
-            netWorthDelta?.delta
-              ? formatSigned(netWorthDelta.delta.total)
-              : netWorthDelta?.end
-                ? formatEur(netWorthDelta.end.total_eur ?? 0)
-                : "—"
-          }
-          tone={netWorthDelta?.delta ? toneOf(netWorthDelta.delta.total) : "neutral"}
-        />
-        <HeadlineCard
-          icon={<ArrowLeftRight className="size-4" />}
-          label="Income vs expenses"
-          sublabel="net"
-          pending={incomeExpensesQuery.isPending}
-          // No row: nothing was recorded that month (or only imported totals), not a net of zero.
-          value={incomeExpensesQuery.data ? formatSigned(net) : "—"}
-          tone={incomeExpensesQuery.data ? toneOf(net) : "neutral"}
-        />
-        <HeadlineCard
-          icon={<ThumbsDown className="size-4" />}
-          label="Not worth it"
-          sublabel={
-            worthItQuery.data
-              ? `${worthItQuery.data.no} of ${worthItQuery.data.yes + worthItQuery.data.no}`
-              : undefined
-          }
-          pending={worthItQuery.isPending}
-          value={formatEur(worthItQuery.data?.notWorthItTotal ?? 0)}
-          tone="neutral"
-        />
-      </ul>
+      <GroupedList>
+        <ul className="divide-y divide-hairline">
+          <HeadlineCard
+            icon={
+              netWorthDelta?.delta && netWorthDelta.delta.total < 0 ? (
+                <TrendingDown className="size-4" />
+              ) : (
+                <TrendingUp className="size-4" />
+              )
+            }
+            label="Net worth"
+            sublabel={netWorthDelta?.delta ? "change this month" : undefined}
+            pending={liveQuery.isPending || historyQuery.isPending || rebuiltQuery.isPending}
+            value={
+              netWorthDelta?.delta
+                ? formatSigned(netWorthDelta.delta.total)
+                : netWorthDelta?.end
+                  ? formatEur(netWorthDelta.end.total_eur ?? 0)
+                  : "—"
+            }
+            tone={netWorthDelta?.delta ? toneOf(netWorthDelta.delta.total) : "neutral"}
+          />
+          <HeadlineCard
+            icon={<ArrowLeftRight className="size-4" />}
+            label="Income vs expenses"
+            sublabel="net"
+            pending={incomeExpensesQuery.isPending}
+            // No row: nothing was recorded that month (or only imported totals), not a net of zero.
+            value={incomeExpensesQuery.data ? formatSigned(net) : "—"}
+            tone={incomeExpensesQuery.data ? toneOf(net) : "neutral"}
+          />
+          <HeadlineCard
+            icon={<ThumbsDown className="size-4" />}
+            label="Not worth it"
+            sublabel={
+              worthItQuery.data
+                ? `${worthItQuery.data.no} of ${worthItQuery.data.yes + worthItQuery.data.no}`
+                : undefined
+            }
+            pending={worthItQuery.isPending}
+            value={formatEur(worthItQuery.data?.notWorthItTotal ?? 0)}
+            tone="neutral"
+          />
+        </ul>
+      </GroupedList>
 
       {netWorthDelta?.delta && (
-        <section className="mt-6 overflow-hidden rounded-2xl bg-card">
-          <div className="border-b px-4 py-3 sm:px-5">
-            <h2 className="text-sm font-semibold text-foreground">Net worth by source</h2>
-          </div>
-          <ul className="divide-y">
-            <li className="flex items-center justify-between px-4 py-3 text-sm sm:px-5">
-              <span className="text-foreground">Bank accounts</span>
-              <span className="font-figure text-foreground">
-                {formatSigned(netWorthDelta.delta.bank)}
-              </span>
-            </li>
-            <li className="flex items-center justify-between px-4 py-3 text-sm sm:px-5">
-              <span className="text-foreground">Portfolio</span>
-              <span className="font-figure text-foreground">
-                {formatSigned(netWorthDelta.delta.portfolio)}
-              </span>
-            </li>
-            <li className="flex items-center justify-between px-4 py-3 text-sm sm:px-5">
-              <span className="text-foreground">Crypto</span>
-              <span className="font-figure text-foreground">
-                {formatSigned(netWorthDelta.delta.crypto)}
-              </span>
-            </li>
-          </ul>
+        <section className="mt-6">
+          <SectionTitle>Net worth by source</SectionTitle>
+          <GroupedList>
+            <ul className="divide-y divide-hairline">
+              <li className="flex items-center justify-between px-4 py-3 text-sm sm:px-5">
+                <span className="text-foreground">Bank accounts</span>
+                <span className="font-figure text-foreground">
+                  {formatSigned(netWorthDelta.delta.bank)}
+                </span>
+              </li>
+              <li className="flex items-center justify-between px-4 py-3 text-sm sm:px-5">
+                <span className="text-foreground">Portfolio</span>
+                <span className="font-figure text-foreground">
+                  {formatSigned(netWorthDelta.delta.portfolio)}
+                </span>
+              </li>
+              <li className="flex items-center justify-between px-4 py-3 text-sm sm:px-5">
+                <span className="text-foreground">Crypto</span>
+                <span className="font-figure text-foreground">
+                  {formatSigned(netWorthDelta.delta.crypto)}
+                </span>
+              </li>
+            </ul>
+          </GroupedList>
         </section>
       )}
 
-      <section className="mt-6 overflow-hidden rounded-2xl bg-card">
-        <div className="border-b px-4 py-3 sm:px-5">
-          <h2 className="text-sm font-semibold text-foreground">Top spending categories</h2>
-          {biggestMover && (
-            <p className="mt-0.5 text-xs text-muted-foreground">
-              Biggest jump: {biggestMover.category} (+{formatEur(biggestMover.delta)} vs last month)
-            </p>
-          )}
-        </div>
-        {topCategories.length === 0 ? (
-          <div className="px-4 py-6 text-center text-sm text-muted-foreground sm:px-5">
-            No spending recorded for {monthLabel}.
-          </div>
-        ) : (
-          <ul className="divide-y">
-            {topCategories.map((row) => (
-              <li
-                key={row.category}
-                className="flex items-center justify-between px-4 py-3 text-sm sm:px-5"
-              >
-                <span className="font-medium text-foreground">{row.category}</span>
-                <span className="font-figure text-foreground">{formatEur(row.spend_eur)}</span>
-              </li>
-            ))}
-          </ul>
+      <section className="mt-6">
+        <SectionTitle>Top spending categories</SectionTitle>
+        {biggestMover && (
+          <p className="px-4 pb-1.5 text-xs text-muted-foreground">
+            Biggest jump: {biggestMover.category} (+{formatEur(biggestMover.delta)} vs last month)
+          </p>
         )}
+        <GroupedList>
+          {topCategories.length === 0 ? (
+            <div className="px-4 py-6 text-center text-sm text-muted-foreground sm:px-5">
+              No spending recorded for {monthLabel}.
+            </div>
+          ) : (
+            <ul className="divide-y divide-hairline">
+              {topCategories.map((row) => (
+                <li
+                  key={row.category}
+                  className="flex items-center justify-between px-4 py-3 text-sm sm:px-5"
+                >
+                  <span className="font-medium text-foreground">{row.category}</span>
+                  <span className="font-figure text-foreground">{formatEur(row.spend_eur)}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </GroupedList>
       </section>
 
-      <section className="mt-6 overflow-hidden rounded-2xl bg-card">
-        <div className="flex items-center justify-between px-4 py-3 sm:px-5">
+      <section className="mt-6">
+        <GroupedList className="flex items-center justify-between px-4 py-3 sm:px-5">
           <div>
-            <h2 className="text-sm font-semibold text-foreground">Subscriptions</h2>
+            <h2 className="text-[0.9375rem] font-medium text-foreground">Subscriptions</h2>
             <p className="mt-0.5 text-xs text-muted-foreground">Current, per month</p>
           </div>
-          <span className="font-figure text-sm font-semibold text-foreground">
+          <span className="font-figure text-sm text-foreground">
             {subscriptionsQuery.isPending ? "…" : formatEur(subscriptionsQuery.data ?? 0)}
           </span>
-        </div>
+        </GroupedList>
       </section>
     </div>
   );
@@ -389,10 +387,10 @@ function HeadlineCard({
         {sublabel && <p className="text-xs text-muted-foreground">{sublabel}</p>}
       </div>
       {pending ? (
-        <div className="h-6 w-24 animate-pulse rounded-sm bg-muted" />
+        <Skeleton className="h-6 w-24" />
       ) : (
         <p
-          className={`font-figure text-lg font-semibold tracking-[-0.02em] ${
+          className={`font-figure text-lg tracking-[-0.02em] ${
             tone === "neutral" ? "text-foreground" : TONE_TEXT[tone]
           }`}
         >

@@ -3,6 +3,7 @@ import { useId, useState } from "react";
 import type { GroupSummary } from "@/lib/import/splitwise-balances";
 import { money } from "@/lib/splits";
 import { Initial } from "./owed-view";
+import { GroupedList } from "@/components/ui/grouped-list";
 
 const day = (iso: string) =>
   new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
@@ -20,19 +21,19 @@ function GroupCard({ g, defaultOpen }: { g: GroupSummary; defaultOpen: boolean }
     <>
       <span
         aria-hidden
-        className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"
+        className="inline-flex size-10 shrink-0 items-center justify-center rounded-full bg-muted text-foreground"
       >
         <Users className="size-[18px]" />
       </span>
       <span className="min-w-0 flex-1 text-left">
-        <span className="block truncate text-[0.9375rem] font-semibold">{g.group}</span>
+        <span className="block truncate text-[0.9375rem] font-medium">{g.group}</span>
         <span className="block truncate text-[0.8125rem] font-normal text-muted-foreground">
           {meta}
         </span>
       </span>
       {g.myBalance !== 0 && (
         <span className="shrink-0 text-right">
-          <span className="block font-figure text-[0.9375rem] font-semibold">
+          <span className="block font-figure text-[0.9375rem]">
             {money(Math.abs(g.myBalance), g.currency)}
           </span>
           <span className="block text-xs font-normal text-muted-foreground">
@@ -44,7 +45,7 @@ function GroupCard({ g, defaultOpen }: { g: GroupSummary; defaultOpen: boolean }
   );
 
   return (
-    <section className="overflow-hidden rounded-2xl bg-card">
+    <GroupedList>
       <h3>
         {square ? (
           <div className="flex min-h-16 items-center gap-3 px-4 py-3 sm:px-5">{header}</div>
@@ -65,7 +66,7 @@ function GroupCard({ g, defaultOpen }: { g: GroupSummary; defaultOpen: boolean }
         )}
       </h3>
       {!square && open && (
-        <ul id={id} className="divide-y border-t bg-muted/30">
+        <ul id={id} className="divide-y divide-hairline bg-muted/30">
           {g.people.map((p) => (
             <li key={p.person} className="flex items-center gap-3 px-4 py-2.5 sm:px-5">
               <Initial name={p.person} size="size-8" />
@@ -75,14 +76,14 @@ function GroupCard({ g, defaultOpen }: { g: GroupSummary; defaultOpen: boolean }
                   {p.owesYou ? "owes you" : "you owe"}
                 </span>
               </span>
-              <span className="shrink-0 font-figure text-sm font-semibold">
+              <span className="shrink-0 font-figure text-sm">
                 {money(Math.abs(p.balance), g.currency)}
               </span>
             </li>
           ))}
         </ul>
       )}
-    </section>
+    </GroupedList>
   );
 }
 
@@ -90,7 +91,7 @@ function GroupCard({ g, defaultOpen }: { g: GroupSummary; defaultOpen: boolean }
 export function BalancesView({ groups }: { groups: Array<GroupSummary> }) {
   if (groups.length === 0) {
     return (
-      <p className="rounded-2xl bg-card px-4 py-6 text-center text-sm text-muted-foreground">
+      <p className="rounded-lg bg-card px-4 py-6 text-center text-sm text-muted-foreground">
         Import a Splitwise export to see your group balances.
       </p>
     );

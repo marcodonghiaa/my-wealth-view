@@ -9,6 +9,9 @@ import { MonthSwitcher } from "@/components/month-switcher";
 import { HeadlineFigure } from "@/components/headline-figure";
 import { CategoryPicker } from "@/components/transactions/pickers";
 import { useIncomeCategoryMutation } from "@/components/transactions/mutations";
+import { Alert } from "@/components/ui/alert";
+import { GroupedList } from "@/components/ui/grouped-list";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export const Route = createFileRoute("/_authenticated/income")({
   head: () => ({
@@ -81,12 +84,7 @@ function IncomePage() {
       </header>
 
       {incomeQuery.isError && (
-        <div
-          role="alert"
-          className="mb-6 rounded-2xl bg-negative/10 px-4 py-3 text-sm text-negative"
-        >
-          Couldn't load income: {incomeQuery.error.message}
-        </div>
+        <Alert className="mb-6">Couldn't load income: {incomeQuery.error.message}</Alert>
       )}
 
       <MonthSwitcher
@@ -108,11 +106,11 @@ function IncomePage() {
         </div>
       </section>
 
-      <section className="overflow-hidden rounded-2xl bg-card">
+      <GroupedList>
         {incomeQuery.isPending ? (
           <div className="space-y-3 p-4">
             {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="h-14 animate-pulse rounded-xl bg-muted" />
+              <Skeleton key={i} className="h-14" />
             ))}
           </div>
         ) : incomeQuery.isError ? null : rows.length === 0 ? (
@@ -120,7 +118,7 @@ function IncomePage() {
             No income recorded for {monthLabel}.
           </div>
         ) : (
-          <ul className="divide-y">
+          <ul className="divide-y divide-hairline">
             {rows.map((r) => (
               <li
                 key={`${r.account_uid}:${r.entry_reference}`}
@@ -146,7 +144,7 @@ function IncomePage() {
                     />
                   </div>
                 </div>
-                <span className="inline-flex shrink-0 items-center gap-1 font-figure font-medium text-positive">
+                <span className="inline-flex shrink-0 items-center gap-1 font-figure text-foreground">
                   <ArrowDownLeft className="size-3.5" />
                   {formatMoney(Math.abs(r.amount ?? 0), r.currency ?? "EUR")}
                 </span>
@@ -154,7 +152,7 @@ function IncomePage() {
             ))}
           </ul>
         )}
-      </section>
+      </GroupedList>
     </div>
   );
 }

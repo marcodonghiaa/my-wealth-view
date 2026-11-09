@@ -65,9 +65,7 @@ export function SegmentedControl<T extends string>({
             tabIndex={selected ? 0 : -1}
             onClick={() => onChange(option.value)}
             className={`relative z-10 min-h-9 rounded-[3px] px-3 text-[0.8125rem] font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${
-              selected
-                ? "text-primary-foreground"
-                : "text-muted-foreground hover:text-foreground"
+              selected ? "text-primary-foreground" : "text-muted-foreground hover:text-foreground"
             }`}
           >
             {option.label}

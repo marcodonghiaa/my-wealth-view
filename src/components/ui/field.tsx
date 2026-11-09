@@ -12,11 +12,12 @@ export function fieldClass(onGround = false) {
 
 type FieldProps = { onGround?: boolean };
 
-export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement> & FieldProps>(
-  function Input({ className, onGround, ...props }, ref) {
-    return <input ref={ref} className={cn(fieldClass(onGround), className)} {...props} />;
-  },
-);
+export const Input = forwardRef<
+  HTMLInputElement,
+  InputHTMLAttributes<HTMLInputElement> & FieldProps
+>(function Input({ className, onGround, ...props }, ref) {
+  return <input ref={ref} className={cn(fieldClass(onGround), className)} {...props} />;
+});
 
 export const Select = forwardRef<
   HTMLSelectElement,

@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/button";
 import {
   formatBookingDateShort,
   formatMoney,
@@ -19,7 +20,7 @@ export function TransfersSection({
   onRestore: (tx: TransactionRow) => void;
 }) {
   return (
-    <section className="mt-6 overflow-hidden rounded-2xl bg-card">
+    <section className="mt-6 overflow-hidden rounded-lg bg-card">
       <div className="px-4 py-3 sm:px-5">
         <h2 className="text-sm font-semibold text-foreground">Transfers</h2>
         <p className="mt-0.5 text-xs text-muted-foreground">Not counted.</p>
@@ -40,14 +41,15 @@ export function TransfersSection({
               <span className="font-figure text-sm whitespace-nowrap text-foreground">
                 {native == null ? "—" : formatMoney(native, tx.currency ?? "EUR")}
               </span>
-              <button
-                type="button"
+              <Button
+                variant="quiet"
+                size="sm"
                 disabled={savingId === txId(tx)}
                 onClick={() => onRestore(tx)}
-                className="h-9 shrink-0 rounded-sm bg-muted px-3 text-xs font-medium text-foreground transition-colors hover:bg-accent disabled:opacity-50"
+                className="bg-muted"
               >
                 Count as {restoredFlow(tx)}
-              </button>
+              </Button>
             </li>
           );
         })}

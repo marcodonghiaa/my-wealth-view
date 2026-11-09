@@ -4,6 +4,7 @@ import { demoStarts, isDemoMode } from "@/lib/demo/mode";
 import { groupStreams, monthlyEur, monthlyTotal, romeToday } from "@/lib/recurring";
 import { formatMoney } from "@/lib/transactions";
 import { useRecurringStreams } from "@/lib/use-recurring-streams";
+import { Button } from "@/components/ui/button";
 
 const SEEN_KEY = "mf.subscriptionsReveal.seen";
 // Covers the demo (shown on every start, never persisted) and blocked storage (once per page load).
@@ -77,10 +78,7 @@ export function RevealDialog() {
         <p className="figure-display">
           {total.known === 0 ? "—" : `~${formatMoney(total.sum, "EUR")}`}
           {total.known > 0 && (
-            <span className="text-[0.4em] font-medium tracking-normal text-muted-foreground">
-              {" "}
-              /month
-            </span>
+            <span className="text-[0.4em] tracking-normal text-muted-foreground"> /month</span>
           )}
         </p>
         <ul className="divide-y">
@@ -96,15 +94,11 @@ export function RevealDialog() {
         {toReview.length > 0 && (
           <p className="text-sm text-muted-foreground">and {toReview.length} to review</p>
         )}
-        <button
-          type="button"
-          onClick={toReview.length > 0 ? review : () => setOpen(false)}
-          className="inline-flex min-h-11 items-center justify-center rounded-sm bg-primary px-4 text-sm font-medium text-primary-foreground hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-        >
+        <Button onClick={toReview.length > 0 ? review : () => setOpen(false)}>
           {toReview.length > 0
             ? `Review ${toReview.length} suggestion${toReview.length === 1 ? "" : "s"}`
             : "Got it"}
-        </button>
+        </Button>
       </DialogContent>
     </Dialog>
   );

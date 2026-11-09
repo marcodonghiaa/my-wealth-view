@@ -19,6 +19,8 @@ import {
 } from "@/lib/net-worth";
 import { fetchHistory, fetchNetWorth, fetchReconstructed } from "@/lib/net-worth-queries";
 import { TONE_TEXT, toneOf } from "@/lib/tone";
+import { Alert } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
 
 type FxRate = { date: string; currency: string; rate_to_eur: number };
 
@@ -160,28 +162,18 @@ function NetWorthPage() {
       )}
 
       {netWorthQuery.isError && (
-        <div
-          role="alert"
-          className="mb-6 rounded-2xl bg-negative/10 px-4 py-3 text-sm text-negative"
-        >
+        <Alert className="mb-6">
           Couldn't load your net worth data: {netWorthQuery.error.message}
-        </div>
+        </Alert>
       )}
 
-      {extraError && (
-        <div
-          role="alert"
-          className="mb-6 rounded-2xl bg-negative/10 px-4 py-3 text-sm text-negative"
-        >
-          Some data didn't load: {extraError.message}
-        </div>
-      )}
+      {extraError && <Alert className="mb-6">Some data didn't load: {extraError.message}</Alert>}
 
       {/* Headline: the number is the screen */}
       <section aria-label="Net worth today" className="mb-6">
         <div className="min-h-16">
           {netWorthQuery.isPending || (currency !== "EUR" && fxQuery.isPending) ? (
-            <div className="h-16 w-72 animate-pulse rounded-2xl bg-muted" />
+            <Skeleton className="h-16 w-72" />
           ) : latest == null ? (
             <p className="text-sm text-muted-foreground">
               No balances yet: connect a bank or add an investment.
@@ -197,9 +189,7 @@ function NetWorthPage() {
 
         {rangeDeltaEur != null && rangeChange != null && rateToEur != null && (
           <p className="mt-3 flex flex-wrap items-baseline gap-x-2 text-[0.9375rem]">
-            <span
-              className={`font-figure font-medium ${TONE_TEXT[toneOf(rangeChange, NOISE_BAND)]}`}
-            >
+            <span className={`font-figure ${TONE_TEXT[toneOf(rangeChange, NOISE_BAND)]}`}>
               {rangeDeltaEur >= 0 ? "+" : "−"}
               {formatMoney(Math.abs(rangeDeltaEur) / rateToEur, currency)} (
               {formatPercent(rangeChange)})
@@ -217,9 +207,7 @@ function NetWorthPage() {
           {dayChange != null && (
             <p className="mt-2 flex items-baseline gap-1.5 text-sm">
               <span className="text-muted-foreground">Today</span>
-              <span
-                className={`font-figure font-medium ${TONE_TEXT[toneOf(dayChange, NOISE_BAND)]}`}
-              >
+              <span className={`font-figure ${TONE_TEXT[toneOf(dayChange, NOISE_BAND)]}`}>
                 {formatPercent(dayChange)}
               </span>
             </p>
@@ -254,7 +242,7 @@ function NetWorthPage() {
           }
         >
           {netWorthQuery.isPending ? (
-            <div className="h-full w-full animate-pulse rounded-2xl bg-muted/60" />
+            <Skeleton className="h-full w-full" />
           ) : chartData.length === 0 ? (
             <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
               No data to chart yet.

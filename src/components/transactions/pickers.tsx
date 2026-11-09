@@ -65,7 +65,7 @@ export function CategoryPicker({
                 setOpen(false);
                 if (c !== tx.category) onSelect(c);
               }}
-              className={`block min-h-11 w-full rounded-md px-2.5 py-1.5 text-left text-sm transition-colors hover:bg-accent ${
+              className={`block min-h-11 w-full rounded-sm px-2.5 py-1.5 text-left text-sm transition-colors hover:bg-accent ${
                 c === tx.category ? "font-medium text-primary" : "text-foreground"
               }`}
             >
@@ -109,7 +109,7 @@ export function BulkCategoryPicker({
                 setOpen(false);
                 onSelect(c);
               }}
-              className="block min-h-11 w-full rounded-md px-2.5 py-1.5 text-left text-sm text-foreground transition-colors hover:bg-accent"
+              className="block min-h-11 w-full rounded-sm px-2.5 py-1.5 text-left text-sm text-foreground transition-colors hover:bg-accent"
             >
               {c}
             </button>
@@ -161,7 +161,7 @@ export function TypePicker({
                 setOpen(false);
                 if (t !== tx.transaction_type) onSelect(t);
               }}
-              className={`block min-h-11 w-full rounded-md px-2.5 py-1.5 text-left text-sm transition-colors hover:bg-accent ${
+              className={`block min-h-11 w-full rounded-sm px-2.5 py-1.5 text-left text-sm transition-colors hover:bg-accent ${
                 t === tx.transaction_type ? "font-medium text-primary" : "text-foreground"
               }`}
             >

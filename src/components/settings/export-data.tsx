@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { formatISODate } from "@/lib/date";
 import { buildZip, exportFileName } from "@/lib/export/build-zip";
 import { ExportError, fetchAllTables } from "@/lib/export/fetch-all";
+import { Button } from "@/components/ui/button";
 
 // A blob link click is the one download that iPhone Safari and desktop browsers all honor.
 function saveZip(bytes: Uint8Array, name: string) {
@@ -56,7 +57,7 @@ export function ExportData() {
       <h2 id="data-heading" className="mb-4 text-[0.9375rem] font-medium text-muted-foreground">
         Your data
       </h2>
-      <div className="max-w-sm space-y-4 rounded-2xl border bg-card p-5">
+      <div className="max-w-sm space-y-4 rounded-lg bg-card p-5">
         <div>
           <h3 className="text-[0.9375rem] font-medium text-foreground">Download my data</h3>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -76,19 +77,14 @@ export function ExportData() {
           </p>
         )}
         {done && !pending && (
-          <p role="status" className="text-sm text-positive">
+          <p role="status" className="text-sm text-foreground">
             Downloaded.
           </p>
         )}
-        <button
-          type="button"
-          onClick={handleExport}
-          disabled={pending}
-          className="flex min-h-11 w-full items-center justify-center gap-2 rounded-sm bg-primary px-4 text-sm font-semibold text-primary-foreground transition-colors hover:brightness-110 disabled:opacity-50"
-        >
+        <Button onClick={handleExport} disabled={pending} className="w-full">
           {pending ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
           Download my data
-        </button>
+        </Button>
       </div>
     </section>
   );

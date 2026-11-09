@@ -21,6 +21,7 @@ import { loadDemoClient, supabase } from "@/integrations/supabase/client";
 import { isDemoMode } from "@/lib/demo/mode";
 import { registerDashboardOrigin } from "@/lib/register-origin";
 import { MadeWith } from "@/components/made-with";
+import { GroupedList } from "@/components/ui/grouped-list";
 import { BrandMark } from "@/components/brand-mark";
 import { TrustNote } from "@/components/trust-note";
 import { DemoBadge } from "@/components/demo-badge";
@@ -248,7 +249,7 @@ function AuthenticatedLayout() {
         <SheetContent
           side="bottom"
           onOpenAutoFocus={(e) => e.preventDefault()}
-          className="max-h-[88dvh] gap-0 overflow-y-auto rounded-t-3xl border-0 bg-background p-0 pb-[env(safe-area-inset-bottom)] [&>button]:size-11"
+          className="max-h-[88dvh] gap-0 overflow-y-auto rounded-t-xl border-0 bg-background p-0 pb-[env(safe-area-inset-bottom)] [&>button]:size-11"
         >
           <div aria-hidden className="mx-auto mt-2 h-1 w-9 rounded-md bg-muted-foreground/40" />
           <SheetHeader className="px-5 pt-3 pb-2 text-left">
@@ -259,7 +260,7 @@ function AuthenticatedLayout() {
             {NAV_GROUPS.map((group) => (
               <div key={group.label}>
                 <div className="ios-section-title">{group.label}</div>
-                <div className="divide-y overflow-hidden rounded-2xl bg-card">
+                <GroupedList>
                   {group.items.map((item) => (
                     <Link
                       key={item.label}
@@ -277,13 +278,13 @@ function AuthenticatedLayout() {
                       <NavBadge count={badges[item.label]} />
                     </Link>
                   ))}
-                </div>
+                </GroupedList>
               </div>
             ))}
 
             <div>
               <div className="ios-section-title">Account</div>
-              <div className="divide-y overflow-hidden rounded-2xl bg-card">
+              <GroupedList>
                 <div className="truncate px-4 py-3 text-sm text-muted-foreground">{user.email}</div>
                 <Link
                   to="/settings"
@@ -306,7 +307,7 @@ function AuthenticatedLayout() {
                   <LogOut className="size-5" />
                   {signingOut ? "Signing out…" : "Sign out"}
                 </button>
-              </div>
+              </GroupedList>
               <MadeWith className="min-h-11 px-4" />
             </div>
           </nav>

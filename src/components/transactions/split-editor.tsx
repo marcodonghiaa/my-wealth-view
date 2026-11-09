@@ -1,3 +1,5 @@
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/field";
 import { useState } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { formatAmountPlain, formatMoney, type TransactionRow } from "@/lib/transactions";
@@ -99,7 +101,7 @@ export function SplitEditor({
           >
             Your share ({tx.currency ?? "EUR"}, full amount {formatAmountPlain(fullAmount)})
           </label>
-          <input
+          <Input
             id="split-your-share-full-amount"
             type="number"
             inputMode="decimal"
@@ -108,7 +110,6 @@ export function SplitEditor({
             max={fullAmount}
             value={shareInput}
             onChange={(e) => setShareInput(e.target.value)}
-            className="h-11 w-full rounded-lg border bg-background px-3 text-base text-foreground focus:ring-2 focus:ring-ring focus:outline-none"
           />
           <div className="mt-1.5 flex gap-1.5" role="group" aria-label="Quick split">
             {QUICK_SPLITS.map((n) => (
@@ -149,7 +150,7 @@ export function SplitEditor({
                 + New
               </button>
             ) : (
-              <input
+              <Input
                 autoFocus
                 type="text"
                 aria-label="New contact name"
@@ -163,26 +164,25 @@ export function SplitEditor({
                     addNew();
                   }
                 }}
-                className="h-9 w-32 rounded-sm border bg-background px-3 text-sm text-foreground focus:ring-2 focus:ring-ring focus:outline-none"
+                className="h-9 w-32 text-sm md:text-sm"
               />
             )}
           </div>
         </div>
         <div className="flex gap-2 pt-1">
           {isSplit && (
-            <button
-              type="button"
+            <Button
+              variant="ghost"
               onClick={() => {
                 setOpen(false);
                 onSave(null, null);
               }}
-              className="min-h-11 flex-1 rounded-sm border px-3 text-sm text-muted-foreground transition-colors hover:bg-accent"
+              className="flex-1 px-3"
             >
               Clear
-            </button>
+            </Button>
           )}
-          <button
-            type="button"
+          <Button
             onClick={() => {
               const parsed = Number(shareInput);
               if (
@@ -200,10 +200,10 @@ export function SplitEditor({
                 parsed === fullAmount ? null : joinNames(people),
               );
             }}
-            className="min-h-11 flex-1 rounded-sm bg-primary px-3 text-sm font-medium text-primary-foreground transition-colors hover:opacity-90"
+            className="flex-1 px-3"
           >
             Save
-          </button>
+          </Button>
         </div>
       </PopoverContent>
     </Popover>
