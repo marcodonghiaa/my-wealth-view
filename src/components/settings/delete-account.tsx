@@ -39,8 +39,9 @@ export function DeleteAccount() {
         </h3>
         <p className="mt-1 text-sm text-muted-foreground">
           Deletes your login and everything stored for it on this instance: accounts, transactions,
-          holdings, rules. Your banks are disconnected too. This can't be undone. Export your data
-          first if you want a copy.
+          holdings, rules. Banks you linked recently are disconnected too; for older links, revoke
+          access in your bank's app. This can't be undone. Export your data first if you want a
+          copy.
         </p>
       </div>
       <div className="space-y-1.5">

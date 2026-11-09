@@ -14,8 +14,8 @@ export const COUNTRIES: Array<{ code: string; name: string }> = [
   { code: "IE", name: "Ireland" },
 ];
 
-// Toast text after the bank-consent-callback redirect: "Revolut: EUR, GBP, USD" when the
-// callback names the bank and currencies, else the account count (older callback).
+// Toast text after the bank-consent-callback redirect or the complete-bank-consent reply:
+// "Revolut: EUR, GBP, USD" when it names the bank and currencies, else the account count.
 export function linkedMessage(params: URLSearchParams): string | null {
   const linked = params.get("bank_linked");
   if (!linked) return null;
@@ -38,8 +38,8 @@ export function linkedParams(reply: Record<string, string> | null): URLSearchPar
   return new URLSearchParams(reply ?? {});
 }
 
-// Every message bank-consent-callback can send in ?bank_link_error. The URL can be crafted, so
-// anything else shows a fixed message instead of the link's own text.
+// Every message bank-consent-callback (?bank_link_error) or complete-bank-consent can send. The
+// URL can be crafted, so anything else shows a fixed message instead of the link's own text.
 const LINK_ERRORS = new Set([
   "Couldn't link the bank, please try again",
   "The bank did not approve the connection",
