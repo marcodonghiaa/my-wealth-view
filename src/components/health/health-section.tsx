@@ -30,6 +30,17 @@ function HealthRowItem({ row, onPushed }: { row: HealthRow; onPushed: () => void
         </div>
       </div>
       {row.fix && "push" in row.fix && <PushSubscribeButton onSubscribed={onPushed} />}
+      {row.fix && "href" in row.fix && (
+        <a
+          href={row.fix.href}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="min-h-11 content-center rounded-full px-3 text-sm font-medium text-primary hover:bg-primary/10"
+        >
+          {row.fix.label}
+          <span className="sr-only"> (opens in a new tab)</span>
+        </a>
+      )}
       {row.fix && "to" in row.fix && (
         <Link
           to={row.fix.to}

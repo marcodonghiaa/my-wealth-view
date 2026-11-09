@@ -9,7 +9,7 @@ export interface HealthRow {
   state: HealthState;
   detail: string;
   // The one fix: a page to open, or a built-in control for the row.
-  fix?: { label: string; to: "/accounts" } | { push: true };
+  fix?: { label: string; to: "/accounts" } | { label: string; href: string } | { push: true };
 }
 
 export interface HealthAccount {
@@ -139,6 +139,45 @@ export function originRow(registered: number | null): HealthRow | null {
         detail:
           "No address registered yet. Sign in from the dashboard's own address to register it.",
       };
+}
+
+// The Edge Function secrets page of this dashboard's own Supabase project ("https://<ref>.supabase.co").
+export function supabaseSecretsUrl(projectUrl: string | undefined): string | null {
+  const ref = projectUrl?.match(/^https:\/\/([a-z0-9]+)\.supabase\.co\/?$/)?.[1];
+  return ref ? `https://supabase.com/dashboard/project/${ref}/functions/secrets` : null;
+}
+
+/**
+ * Whether AI categorization works, read from what it did: the key itself never reaches the
+ * browser. Last 30 days: rows sorted by AI, and rows still without a category a day after they
+ * arrived (each sync run clears them while the key works, so these mean no key, a revoked one or
+ * a spent quota). Null when there is nothing to judge or the counts couldn't be read.
+ */
+export function aiRow(
+  counts: { ai: number; stuck: number } | null,
+  secretsUrl: string | null,
+): HealthRow | null {
+  if (!counts || (counts.ai === 0 && counts.stuck === 0)) return null;
+  const title = "AI categories";
+  const plural = (n: number) => `${n} transaction${n === 1 ? "" : "s"}`;
+  if (counts.stuck === 0) {
+    return {
+      id: "ai",
+      title,
+      state: "ok",
+      detail: `Gemini sorted ${plural(counts.ai)} in the last 30 days.`,
+    };
+  }
+  return {
+    id: "ai",
+    title,
+    state: "warn",
+    detail:
+      `${plural(counts.stuck)} still ${counts.stuck === 1 ? "has" : "have"} no category a day after syncing. ` +
+      "Add or check GEMINI_API_KEY: in Supabase secrets, or in .env / GitHub secrets if you installed " +
+      "with setup.sh. Descriptions go to Google; its free tier may train on them.",
+    ...(secretsUrl && { fix: { label: "Open Supabase secrets", href: secretsUrl } }),
+  };
 }
 
 export const attentionCount = (rows: Array<HealthRow>) =>

@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
   accessRows,
+  aiRow,
   attentionCount,
   bySeverity,
   originRow,
   pushRow,
+  supabaseSecretsUrl,
   syncAgeHours,
   syncRows,
   syncState,
@@ -125,5 +127,49 @@ describe("severity", () => {
     ] as const;
     expect([...rows].sort(bySeverity).map((r) => r.id)).toEqual(["b", "c", "a"]);
     expect(attentionCount([...rows])).toBe(2);
+  });
+});
+
+describe("supabaseSecretsUrl", () => {
+  it("links to the project's Edge Function secrets", () => {
+    expect(supabaseSecretsUrl("https://abcdefghijklmnopqrst.supabase.co")).toBe(
+      "https://supabase.com/dashboard/project/abcdefghijklmnopqrst/functions/secrets",
+    );
+  });
+  it.each([undefined, "", "https://not-configured.invalid", "https://evil.com/x.supabase.co"])(
+    "is null for %s",
+    (url) => expect(supabaseSecretsUrl(url)).toBeNull(),
+  );
+});
+
+describe("aiRow", () => {
+  const url = "https://supabase.com/dashboard/project/x/functions/secrets";
+
+  it("is skipped when there is nothing to judge or the counts are unknown", () => {
+    expect(aiRow(null, url)).toBeNull();
+    expect(aiRow({ ai: 0, stuck: 0 }, url)).toBeNull();
+  });
+
+  it("is healthy while Gemini sorts and nothing is left behind", () => {
+    const row = aiRow({ ai: 1, stuck: 0 }, url)!;
+    expect(row.state).toBe("ok");
+    expect(row.detail).toBe("Gemini sorted 1 transaction in the last 30 days.");
+    expect(row.fix).toBeUndefined();
+  });
+
+  it("warns when rows stay uncategorized, even if Gemini worked earlier (revoked key, quota)", () => {
+    const row = aiRow({ ai: 40, stuck: 12 }, url)!;
+    expect(row.state).toBe("warn");
+    expect(row.detail).toMatch(/^12 transactions still have no category a day after syncing\./);
+    expect(row.detail).toMatch(/GEMINI_API_KEY/);
+    expect(row.detail).toMatch(/setup\.sh/);
+    expect(row.detail).toMatch(/free tier may train on them/);
+    expect(row.fix).toEqual({ label: "Open Supabase secrets", href: url });
+  });
+
+  it("uses the singular for one row and has no link when the project address is unknown", () => {
+    const row = aiRow({ ai: 0, stuck: 1 }, null)!;
+    expect(row.detail).toMatch(/^1 transaction still has no category/);
+    expect(row.fix).toBeUndefined();
   });
 });
