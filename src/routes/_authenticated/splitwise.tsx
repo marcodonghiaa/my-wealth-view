@@ -213,7 +213,7 @@ function SplitwisePage() {
             <DialogDescription className="sr-only">
               Your share of each expense counts as spending, and everyone's balance is saved.
             </DialogDescription>
-            <SplitwisePanel onClose={() => setImporting(false)} onDone={onImported} />
+            <SplitwisePanel onDone={onImported} />
           </div>
         </DialogContent>
       </Dialog>

@@ -40,10 +40,8 @@ interface Loaded {
 }
 
 export function SplitwisePanel({
-  onClose,
   onDone,
 }: {
-  onClose: () => void;
   /** After a successful import: the page closes the flow and offers Undo. */
   onDone?: (done: ImportDone) => void;
 }) {
@@ -148,7 +146,6 @@ export function SplitwisePanel({
           onDone?.(done);
         }}
         onBack={() => setStep("file")}
-        onClose={onClose}
       />
     );
   }

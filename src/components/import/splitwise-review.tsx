@@ -132,8 +132,6 @@ export function SplitwiseReview({
   balances?: FileBalances | null;
   onImported?: (done: ImportDone) => void;
   onBack: () => void;
-  /** Kept for callers; the flow now ends on the page, not on a screen here. */
-  onClose?: () => void;
 }) {
   const [loaded, setLoaded] = useState<Loaded | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);

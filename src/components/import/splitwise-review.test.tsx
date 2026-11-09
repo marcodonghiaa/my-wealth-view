@@ -54,18 +54,11 @@ const CSV = [
 const rows = classifyRows(parseSplitwiseCsv(CSV), 0);
 
 const onBack = vi.fn();
-const onClose = vi.fn();
 const onImported = vi.fn();
 const show = () =>
   render(
     <QueryClientProvider client={new QueryClient()}>
-      <SplitwiseReview
-        rows={rows}
-        group="berkeley"
-        onBack={onBack}
-        onClose={onClose}
-        onImported={onImported}
-      />
+      <SplitwiseReview rows={rows} group="berkeley" onBack={onBack} onImported={onImported} />
     </QueryClientProvider>,
   );
 
@@ -105,7 +98,6 @@ const showWithBalances = () =>
         group="berkeley"
         balances={balancesFromFile(parseSplitwiseCsv(CSV), 0)}
         onBack={onBack}
-        onClose={onClose}
         onImported={onImported}
       />
     </QueryClientProvider>,
@@ -279,7 +271,7 @@ describe("SplitwiseReview", () => {
     const oddRows = classifyRows(parseSplitwiseCsv(odd), 0);
     render(
       <QueryClientProvider client={new QueryClient()}>
-        <SplitwiseReview rows={oddRows} group="berkeley" onBack={onBack} onClose={onClose} />
+        <SplitwiseReview rows={oddRows} group="berkeley" onBack={onBack} />
       </QueryClientProvider>,
     );
     const select = (await screen.findByLabelText("Category for zzz qq")) as HTMLSelectElement;
@@ -393,13 +385,7 @@ describe("SplitwiseReview", () => {
     const balances = { ...balancesFromFile(parseSplitwiseCsv(CSV), 0)!, skippedRows: 2 };
     render(
       <QueryClientProvider client={new QueryClient()}>
-        <SplitwiseReview
-          rows={rows}
-          group="berkeley"
-          balances={balances}
-          onBack={onBack}
-          onClose={onClose}
-        />
+        <SplitwiseReview rows={rows} group="berkeley" balances={balances} onBack={onBack} />
       </QueryClientProvider>,
     );
     expect(await screen.findByText(/2 rows are in another currency than USD/)).toBeTruthy();

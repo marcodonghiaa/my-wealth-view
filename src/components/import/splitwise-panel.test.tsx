@@ -75,7 +75,7 @@ describe("SplitwisePanel", () => {
   // protects=the user must choose who they are before anything is summed; fails_when=a default
   // member is silently picked or the summary shows early
   it("asks who you are after the file and shows no summary until chosen", async () => {
-    render(<SplitwisePanel onClose={() => undefined} />);
+    render(<SplitwisePanel />);
     upload(CSV);
     expect(await screen.findByLabelText(/Which one are you/)).toBeTruthy();
     expect(screen.queryByText(/paid by others/i)).toBeNull();
@@ -85,7 +85,7 @@ describe("SplitwisePanel", () => {
   // name like "berkeley 2026-11-01 export (1)" bypasses the checkpoint
   it("picks the only stored group, whatever the file is called", async () => {
     answer.data = groups("berkeley");
-    render(<SplitwisePanel onClose={() => undefined} />);
+    render(<SplitwisePanel />);
     upload(CSV, "berkeley 2026-11-01 export (1).csv");
     expect(((await screen.findByLabelText(/^Group$/)) as HTMLSelectElement).value).toBe("berkeley");
     fireEvent.change(await screen.findByLabelText(/Which one are you/), { target: { value: "0" } });
@@ -95,7 +95,7 @@ describe("SplitwisePanel", () => {
 
   it("makes the user choose between several groups", async () => {
     answer.data = groups("berkeley", "trip");
-    render(<SplitwisePanel onClose={() => undefined} />);
+    render(<SplitwisePanel />);
     upload(CSV);
     const select = (await screen.findByLabelText(/^Group$/)) as HTMLSelectElement;
     expect(select.value).toBe("");
@@ -108,7 +108,7 @@ describe("SplitwisePanel", () => {
   });
 
   it("asks for a name on a first import, with nothing filled in from the file", async () => {
-    render(<SplitwisePanel onClose={() => undefined} />);
+    render(<SplitwisePanel />);
     upload(CSV);
     const input = (await screen.findByLabelText(/New group name/)) as HTMLInputElement;
     expect(input.value).toBe("");
@@ -117,7 +117,7 @@ describe("SplitwisePanel", () => {
   });
 
   const startNewGroup = async (name: string) => {
-    render(<SplitwisePanel onClose={() => undefined} />);
+    render(<SplitwisePanel />);
     upload(CSV);
     fireEvent.change(await screen.findByLabelText(/^Group$/), { target: { value: "__new__" } });
     fireEvent.change(await screen.findByLabelText(/Which one are you/), { target: { value: "0" } });
@@ -143,7 +143,7 @@ describe("SplitwisePanel", () => {
 
   it("shows a read error and no review", async () => {
     answer.error = { message: "boom" };
-    render(<SplitwisePanel onClose={() => undefined} />);
+    render(<SplitwisePanel />);
     upload(CSV);
     expect((await screen.findByRole("alert")).textContent).toBe("boom");
     expect(screen.queryByText(/review of/)).toBeNull();
@@ -151,14 +151,14 @@ describe("SplitwisePanel", () => {
 
   it("refuses when the stored rows may be cut at the page limit", async () => {
     answer.data = Array.from({ length: 1000 }, () => ({ group_name: "a", fingerprint: "x" }));
-    render(<SplitwisePanel onClose={() => undefined} />);
+    render(<SplitwisePanel />);
     upload(CSV);
     expect((await screen.findByRole("alert")).textContent).toMatch(/Too many stored/);
   });
 
   // protects=the summary numbers shown to the user; fails_when=share or totals are wrong
   it("shows the summary once a member is chosen", async () => {
-    render(<SplitwisePanel onClose={() => undefined} />);
+    render(<SplitwisePanel />);
     upload(CSV);
     fireEvent.change(await screen.findByLabelText(/Which one are you/), { target: { value: "0" } });
     const summary = await screen.findByRole("heading", { name: "In this file" });
@@ -172,7 +172,7 @@ describe("SplitwisePanel", () => {
   // the user said who they are
   it("says what is missing until the file, group and person are set", async () => {
     answer.data = groups("berkeley");
-    render(<SplitwisePanel onClose={() => undefined} />);
+    render(<SplitwisePanel />);
     expect(screen.queryByRole("button", { name: "Continue" })).toBeNull();
     upload(CSV);
     await screen.findByLabelText(/^Group$/);
@@ -185,7 +185,7 @@ describe("SplitwisePanel", () => {
   });
 
   it("reads a file dropped on the picker and offers to change it", async () => {
-    render(<SplitwisePanel onClose={() => undefined} />);
+    render(<SplitwisePanel />);
     expect(screen.getByText("How to get the file")).toBeTruthy();
     fireEvent.drop(screen.getByText("Choose CSV file"), {
       dataTransfer: { files: [new File([CSV], "trip.csv", { type: "text/csv" })] },
@@ -197,7 +197,7 @@ describe("SplitwisePanel", () => {
   });
 
   it("tells apart two members with the same name", async () => {
-    render(<SplitwisePanel onClose={() => undefined} />);
+    render(<SplitwisePanel />);
     upload(CSV.replace("Ann,Bob", "Ann,Ann"));
     const options = await screen.findAllByRole("option", { name: /Ann/ });
     expect(options.map((o) => o.textContent)).toEqual(["Ann (column 1)", "Ann (column 2)"]);
@@ -205,20 +205,20 @@ describe("SplitwisePanel", () => {
 
   // protects=a broken file never gets to the choice step; fails_when=errors are not blocking
   it("shows a blocking error for rows that do not add up", async () => {
-    render(<SplitwisePanel onClose={() => undefined} />);
+    render(<SplitwisePanel />);
     upload(CSV.replace("-15.00,15.00", "-15.00,10.00"));
     expect((await screen.findAllByRole("alert")).length).toBeGreaterThan(0);
     expect(screen.queryByLabelText(/Which one are you/)).toBeNull();
   });
 
   it("rejects a file that is not a Splitwise export", async () => {
-    render(<SplitwisePanel onClose={() => undefined} />);
+    render(<SplitwisePanel />);
     upload("hello,world\n1,2\n");
     expect((await screen.findByRole("alert")).textContent).toMatch(/Splitwise|column/i);
   });
 
   it("rejects an oversized file without reading it", async () => {
-    render(<SplitwisePanel onClose={() => undefined} />);
+    render(<SplitwisePanel />);
     const big = new File(["x"], "big.csv");
     Object.defineProperty(big, "size", { value: 3_000_000 });
     fireEvent.change(document.querySelector("input[type=file]") as HTMLInputElement, {
@@ -231,7 +231,7 @@ describe("SplitwisePanel", () => {
   // draft name instead of the finished one
   // protects=expenses and balances land in one group; fails_when=the review gets the raw text
   it("trims a new group name", async () => {
-    render(<SplitwisePanel onClose={() => undefined} />);
+    render(<SplitwisePanel />);
     upload(CSV);
     fireEvent.change(await screen.findByLabelText(/Which one are you/), { target: { value: "0" } });
     const input = await screen.findByLabelText(/New group name/);
@@ -244,7 +244,7 @@ describe("SplitwisePanel", () => {
   // protects=the checks see a group just created; fails_when=its case variant passes as new
   it("treats a group just imported as existing, and tells the page it is done", async () => {
     const onDone = vi.fn();
-    render(<SplitwisePanel onClose={() => undefined} onDone={onDone} />);
+    render(<SplitwisePanel onDone={onDone} />);
     upload(CSV);
     fireEvent.change(await screen.findByLabelText(/Which one are you/), { target: { value: "0" } });
     const input = await screen.findByLabelText(/New group name/);
@@ -265,7 +265,7 @@ describe("SplitwisePanel", () => {
   });
 
   it("passes a new group name to the review only when typing is done", async () => {
-    render(<SplitwisePanel onClose={() => undefined} />);
+    render(<SplitwisePanel />);
     upload(CSV);
     fireEvent.change(await screen.findByLabelText(/Which one are you/), { target: { value: "0" } });
     const input = await screen.findByLabelText(/New group name/);
@@ -281,7 +281,7 @@ describe("SplitwisePanel", () => {
   it("remembers who you are from the group's saved balances", async () => {
     answer.data = groups("berkeley");
     balances.data = [{ person: "Bob" }];
-    render(<SplitwisePanel onClose={() => undefined} />);
+    render(<SplitwisePanel />);
     upload(CSV);
     const select = (await screen.findByLabelText(/Which one are you/)) as HTMLSelectElement;
     await waitFor(() => expect(select.value).toBe("1"));
@@ -290,7 +290,7 @@ describe("SplitwisePanel", () => {
   it("asks who you are when the saved name is not in the file", async () => {
     answer.data = groups("berkeley");
     balances.data = [{ person: "Carol" }];
-    render(<SplitwisePanel onClose={() => undefined} />);
+    render(<SplitwisePanel />);
     upload(CSV);
     const select = (await screen.findByLabelText(/Which one are you/)) as HTMLSelectElement;
     await screen.findByLabelText(/^Group$/);
@@ -300,7 +300,7 @@ describe("SplitwisePanel", () => {
   // protects=shares are never computed for the previous group's person; fails_when=me survives
   it("forgets who you are when the group changes", async () => {
     answer.data = groups("berkeley", "trip");
-    render(<SplitwisePanel onClose={() => undefined} />);
+    render(<SplitwisePanel />);
     upload(CSV);
     const select = (await screen.findByLabelText(/Which one are you/)) as HTMLSelectElement;
     fireEvent.change(await screen.findByLabelText(/^Group$/), { target: { value: "trip" } });
