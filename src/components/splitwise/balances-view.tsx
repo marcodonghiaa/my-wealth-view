@@ -13,7 +13,9 @@ function GroupCard({ g, defaultOpen }: { g: GroupSummary; defaultOpen: boolean }
   const [open, setOpen] = useState(defaultOpen);
   const id = useId();
   const square = g.people.length === 0;
-  const meta = `${square ? "All square" : people(g.people.length)} · as of ${day(g.updatedAt)}`;
+  const meta = g.stale
+    ? "Import again to see who owes you here"
+    : `${square ? "All square" : people(g.people.length)} · as of ${day(g.updatedAt)}`;
   const header = (
     <>
       <span
@@ -94,9 +96,8 @@ export function BalancesView({ groups }: { groups: Array<GroupSummary> }) {
     );
   }
   // Groups with money still open first; a lone group opens by itself.
-  const sorted = [...groups].sort(
-    (a, b) => Number(a.people.length === 0) - Number(b.people.length === 0),
-  );
+  const done = (g: GroupSummary) => Number(g.people.length === 0 && !g.stale);
+  const sorted = [...groups].sort((a, b) => done(a) - done(b));
   return (
     <div className="space-y-3">
       {sorted.map((g) => (

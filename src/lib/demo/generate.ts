@@ -387,6 +387,7 @@ export function generateDemoData(now: Date = new Date()): DemoDb {
       person,
       updated_at: stamp(today),
       user_id,
+      basis: "pairwise",
     }));
   const splitwise_balances: DemoDb["splitwise_balances"] = [
     ...balanceRows("Casa", [

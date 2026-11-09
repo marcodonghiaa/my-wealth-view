@@ -14,6 +14,7 @@ const group: GroupSummary = {
     { person: "Matteo Mucciarella", balance: -199.48, owesYou: true },
     { person: "Filippo Casadio", balance: 52.22, owesYou: false },
   ],
+  stale: false,
 };
 const trip: GroupSummary = { ...group, group: "trip", myBalance: -10 };
 
@@ -56,6 +57,15 @@ describe("BalancesView", () => {
     expect(names[0]).toMatch(/^trip/);
     expect(names[1]).toMatch(/^flatAll square/);
     expect(screen.queryByRole("button", { name: /flat/ })).toBeNull();
+  });
+
+  // protects=old balances are not shown as per-person debts; fails_when=a stale group lists people
+  it("asks to import again a group saved before per-person amounts", () => {
+    render(<BalancesView groups={[{ ...group, people: [], stale: true }, trip]} />);
+    const names = screen.getAllByRole("heading").map((h) => h.textContent);
+    expect(names[0]).toMatch(/Import again to see who owes you here/);
+    expect(names[0]).toMatch(/US\$147\.25owed to you/);
+    expect(screen.queryByRole("button", { name: /berkeley/ })).toBeNull();
   });
 
   it("says what to do when nothing has been imported", () => {

@@ -52,7 +52,9 @@ function SplitwisePage() {
     for (const g of groups) {
       const r2e = rate(g.currency);
       if (r2e === null) missingRate = true;
-      for (const p of g.people) {
+      // Saved before per-person amounts: my net in the group is all that's known.
+      const amounts = g.stale ? [{ owesYou: g.myBalance > 0, balance: g.myBalance }] : g.people;
+      for (const p of amounts) {
         const value = Math.abs(p.balance) * (r2e ?? 0);
         if (p.owesYou) owedToYou += value;
         else youOwe += value;
