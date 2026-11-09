@@ -132,7 +132,11 @@ describe("transaction mutations are scoped to one account", () => {
     const invalidate = vi.spyOn(queryClient, "invalidateQueries");
     const { result } = renderHook(() => useSettleSplitMutation(queryClient), { wrapper });
     const tx = { account_uid: "a2", entry_reference: "r1" };
+    queryClient.setQueryData(["splits"], [{ ...tx, owed_settled: false }]);
     await act(() => result.current.mutateAsync({ tx, settled: true }));
+    expect(
+      queryClient.getQueryData<Array<{ owed_settled: boolean }>>(["splits"])?.[0],
+    ).toMatchObject({ owed_settled: true });
     expect(calls[0]?.eq).toEqual(tx);
     expect(calls[0]?.update).toMatchObject({ owed_settled: true, settled_at: expect.any(String) });
     await act(() => result.current.mutateAsync({ tx, settled: false }));

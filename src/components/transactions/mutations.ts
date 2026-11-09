@@ -1,4 +1,5 @@
 import { useMutation, type QueryClient } from "@tanstack/react-query";
+import type { SplitRow } from "@/lib/splits";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import type { TablesUpdate } from "@/integrations/supabase/types";
@@ -338,9 +339,11 @@ export function useFlowMutation(queryClient: QueryClient, monthKey: string) {
 }
 
 // Marks a split as settled (or not): it then drops out of the open total on the Splitwise page.
+// Optimistic, so the button flips at once and a quick second tap reads the new state.
 export function useSettleSplitMutation(queryClient: QueryClient) {
   type Vars = { tx: TxKey; settled: boolean };
-  return useMutation<void, Error, Vars>({
+  type Context = { previous: Array<SplitRow> | undefined };
+  return useMutation<void, Error, Vars, Context>({
     mutationFn: async ({ tx, settled }) => {
       const { error } = await forTx(
         supabase.from("transactions").update({
@@ -351,7 +354,18 @@ export function useSettleSplitMutation(queryClient: QueryClient) {
       );
       if (error) throw error;
     },
-    onError: (error) => toast.error("Couldn't save", { description: error.message }),
+    onMutate: async ({ tx, settled }) => {
+      await queryClient.cancelQueries({ queryKey: ["splits"] });
+      const previous = queryClient.getQueryData<Array<SplitRow>>(["splits"]);
+      queryClient.setQueryData<Array<SplitRow>>(["splits"], (old) =>
+        old?.map((r) => (txId(r) === txId(tx) ? { ...r, owed_settled: settled } : r)),
+      );
+      return { previous };
+    },
+    onError: (error, _vars, context) => {
+      if (context?.previous) queryClient.setQueryData(["splits"], context.previous);
+      toast.error("Couldn't save", { description: error.message });
+    },
     onSettled: () => queryClient.invalidateQueries({ queryKey: ["splits"] }),
   });
 }

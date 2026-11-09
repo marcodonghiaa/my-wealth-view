@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import type { SplitRow } from "@/lib/splits";
@@ -16,47 +16,58 @@ const row = (over: Partial<SplitRow> = {}): SplitRow => ({
   ...over,
 });
 
+const view = (rows: Array<SplitRow>, onToggle = vi.fn(), onAll = vi.fn()) =>
+  render(<OwedView rows={rows} onToggleSettled={onToggle} onSettleAll={onAll} />);
+
 describe("OwedView", () => {
-  it("says where splits come from when there are none", () => {
-    render(<OwedView rows={[]} onToggleSettled={vi.fn()} />);
-    expect(screen.getByText(/No splits yet/)).toBeTruthy();
+  it("says where split bills come from when there are none", () => {
+    view([]);
+    expect(screen.getByText(/No split bills yet/)).toBeTruthy();
   });
 
-  // protects=per-person open totals; fails_when=settled bills count or shared bills double count
-  it("shows what each person still owes, sharing bills split among several", () => {
-    render(
-      <OwedView
-        rows={[
-          row(),
-          row({ entry_reference: "r2", owed_by: "Luca M, Anna" }),
-          row({ entry_reference: "r3", owed_by: null, owed_settled: true }),
-        ]}
-        onToggleSettled={vi.fn()}
-      />,
+  // protects=per-person open totals; fails_when=shared bills double count or settled people clutter
+  it("lists who still owes, sharing bills split among several, and folds settled people", () => {
+    view([
+      row(),
+      row({ entry_reference: "r2", owed_by: "Luca M, Anna" }),
+      row({ entry_reference: "r3", owed_by: "Bea", owed_settled: true }),
+    ]);
+    const luca = screen.getByText("Luca M").closest("summary")!;
+    expect(luca).toHaveTextContent("Owes you · 2 open bills");
+    expect(luca).toHaveTextContent("€30.00");
+    expect(screen.getByText("Anna").closest("summary")).toHaveTextContent("€10.00");
+    const settled = screen.getByText("Settled (1)").closest("details")!;
+    expect(settled).not.toHaveAttribute("open");
+    expect(within(settled).getByText("Bea").closest("summary")).toHaveTextContent("All paid back");
+    expect(screen.getAllByText(/shared with 1 more/)).toHaveLength(2);
+  });
+
+  it("says when nobody owes anything any more", () => {
+    view([row({ owed_settled: true })]);
+    expect(screen.getByText("Nobody owes you from split bills.")).toBeTruthy();
+  });
+
+  it("shows money going the other way, e.g. a refund of a split bill", () => {
+    view([row({ signed_amount_eur: 100, personal_signed_amount_eur: 50 })]);
+    expect(screen.getByText("Luca M").closest("summary")).toHaveTextContent(
+      "You owe · 1 open bill",
     );
-    expect(screen.getByText("Luca M").nextSibling).toHaveTextContent("owes you €30.00");
-    expect(screen.getByText("Anna").nextSibling).toHaveTextContent("owes you €10.00");
-    expect(screen.getByText("Not assigned").nextSibling).toHaveTextContent("settled");
-    expect(screen.getAllByText(/with Luca M, Anna/)).toHaveLength(2);
   });
 
-  it("settles one bill, or every open bill of a person", async () => {
+  it("settles one bill, or every bill a person owes alone", async () => {
     const onToggle = vi.fn();
+    const onAll = vi.fn();
     const a = row({ creditor_name: null, booking_date: null });
     const b = row({ entry_reference: "r2" });
+    const shared = row({ entry_reference: "r4", owed_by: "Luca M, Anna" });
     const done = row({ entry_reference: "r3", owed_settled: true });
-    render(<OwedView rows={[a, b, done]} onToggleSettled={onToggle} />);
+    view([a, b, shared, done], onToggle, onAll);
     await userEvent.click(screen.getByText("Luca M"));
-    expect(screen.getByText("Transaction")).toBeTruthy();
-    await userEvent.click(screen.getAllByRole("button", { name: "Settle" })[0]!);
+    await userEvent.click(screen.getByRole("button", { name: /^Settle: Transaction, —/ }));
     expect(onToggle).toHaveBeenLastCalledWith(a, true);
-    await userEvent.click(screen.getByRole("button", { name: "Settled" }));
+    await userEvent.click(screen.getByRole("button", { name: /^Mark as not settled: Pizzeria/ }));
     expect(onToggle).toHaveBeenLastCalledWith(done, false);
-    onToggle.mockClear();
-    await userEvent.click(screen.getByRole("button", { name: "Settle all with Luca M" }));
-    expect(onToggle.mock.calls).toEqual([
-      [a, true],
-      [b, true],
-    ]);
+    await userEvent.click(screen.getByRole("button", { name: "Settle all 2 with Luca M" }));
+    expect(onAll).toHaveBeenCalledWith("Luca M", [a, b]);
   });
 });
