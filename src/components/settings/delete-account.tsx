@@ -10,6 +10,7 @@ const CONFIRM_WORD = "DELETE";
 export function DeleteAccount() {
   const navigate = useNavigate();
   const [confirm, setConfirm] = useState("");
+  const [password, setPassword] = useState("");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -17,7 +18,7 @@ export function DeleteAccount() {
     setError(null);
     setPending(true);
     const { error: invokeError } = await supabase.functions.invoke("delete-account", {
-      body: { confirm: CONFIRM_WORD },
+      body: { confirm: CONFIRM_WORD, password },
     });
     if (invokeError) {
       setError(await functionErrorMessage(invokeError, "Couldn't delete your account, try again."));
@@ -56,6 +57,19 @@ export function DeleteAccount() {
           className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-base text-foreground outline-none transition-colors focus:border-negative/60 focus:ring-2 focus:ring-ring"
         />
       </div>
+      <div className="space-y-1.5">
+        <label htmlFor="delete-password" className="text-xs font-medium text-muted-foreground">
+          Your password
+        </label>
+        <input
+          id="delete-password"
+          type="password"
+          autoComplete="current-password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-base text-foreground outline-none transition-colors focus:border-negative/60 focus:ring-2 focus:ring-ring"
+        />
+      </div>
       {error && (
         <p role="alert" className="text-sm text-negative">
           {error}
@@ -64,7 +78,7 @@ export function DeleteAccount() {
       <button
         type="button"
         onClick={handleDelete}
-        disabled={pending || confirm !== CONFIRM_WORD}
+        disabled={pending || confirm !== CONFIRM_WORD || !password}
         className="flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-negative/10 px-4 text-sm font-semibold text-negative transition-colors hover:bg-negative/20 disabled:opacity-50"
       >
         {pending ? <Loader2 className="size-4 animate-spin" /> : <Trash2 className="size-4" />}

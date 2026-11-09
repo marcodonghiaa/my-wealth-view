@@ -17,6 +17,8 @@ import { DeleteAccount } from "./delete-account";
 const button = () => screen.getByRole("button", { name: /Delete account/ });
 const type = (v: string) =>
   fireEvent.change(screen.getByLabelText(/Type DELETE to confirm/), { target: { value: v } });
+const typePassword = (v: string) =>
+  fireEvent.change(screen.getByLabelText(/Your password/), { target: { value: v } });
 
 // protects=an account is only deleted after typing DELETE, and a failure keeps the user signed in;
 // fails_when=the button works without the word, or an error still signs out
@@ -27,23 +29,29 @@ describe("DeleteAccount", () => {
     signOut.mockClear();
   });
 
-  it("stays disabled until DELETE is typed exactly", () => {
+  it("stays disabled until DELETE is typed exactly and a password is given", () => {
     render(<DeleteAccount />);
     expect(button()).toBeDisabled();
+    typePassword("pw");
     type("delete");
     expect(button()).toBeDisabled();
     type("DELETE");
     expect(button()).toBeEnabled();
+    typePassword("");
+    expect(button()).toBeDisabled();
   });
 
   it("deletes, signs out and goes to /auth", async () => {
     invoke.mockResolvedValue({ data: { ok: true }, error: null });
     render(<DeleteAccount />);
     type("DELETE");
+    typePassword("pw");
     fireEvent.click(button());
     expect(button()).toBeDisabled();
     await waitFor(() => expect(navigate).toHaveBeenCalledWith({ to: "/auth", replace: true }));
-    expect(invoke).toHaveBeenCalledWith("delete-account", { body: { confirm: "DELETE" } });
+    expect(invoke).toHaveBeenCalledWith("delete-account", {
+      body: { confirm: "DELETE", password: "pw" },
+    });
     expect(signOut).toHaveBeenCalledTimes(1);
   });
 
@@ -54,6 +62,7 @@ describe("DeleteAccount", () => {
     invoke.mockResolvedValue({ data: null, error: { context } });
     render(<DeleteAccount />);
     type("DELETE");
+    typePassword("pw");
     fireEvent.click(button());
     expect(await screen.findByRole("alert")).toHaveTextContent("Bank disconnect failed");
     expect(signOut).not.toHaveBeenCalled();
