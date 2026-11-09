@@ -1,7 +1,7 @@
 import { Heart } from "lucide-react";
 import { showBranding } from "@/lib/branding";
 
-const REPO_URL = "https://github.com/marcodonghiaa/my-wealth-view";
+const REPO_URL = "https://github.com/marcodonghiaa/alopex-web";
 
 export function MadeWith({ className = "" }: { className?: string }) {
   if (!showBranding()) return null;

@@ -2,7 +2,7 @@
 
 A self-hosted net worth dashboard. Bank accounts, investments and crypto in one place, converted to a single currency.
 
-**[Try the live demo →](https://myfinancess-view.vercel.app/demo)** No sign-up. The demo runs on generated fake data inside your browser and never touches a real account. The data follows today's date, so the latest transactions are always from today or yesterday.
+**[Try the live demo →](https://app.alopex.finance/demo)** No sign-up. The demo runs on generated fake data inside your browser and never touches a real account. The data follows today's date, so the latest transactions are always from today or yesterday.
 
 ![Net worth dashboard](docs/screenshots/net-worth.png)
 
@@ -16,7 +16,7 @@ A self-hosted net worth dashboard. Bank accounts, investments and crypto in one 
 - **Spending** and **Income vs Expenses**: monthly breakdowns
 - **Portfolio** and **Crypto**: holdings, allocation and live-priced value
 
-This is the frontend. The data pipeline (bank sync, FX rates, AI categorization, pricing, setup wizard) is in [myfinances](https://github.com/marcodonghiaa/myfinances). Start there to self-host.
+This is the frontend. The data pipeline (bank sync, FX rates, AI categorization, pricing, setup wizard) is in [alopex](https://github.com/marcodonghiaa/alopex). Start there to self-host.
 
 ## Look and feel
 
@@ -34,11 +34,11 @@ TanStack Start (React), TypeScript, Tailwind, shadcn/ui, Recharts, Supabase, Vit
 
 ## Self-host it
 
-Start from the backend: [myfinances → Getting started](https://github.com/marcodonghiaa/myfinances#-getting-started). Its `setup.sh` creates the Supabase project, can run the sync on GitHub Actions, and prints the three values the dashboard needs. About 30 minutes the first time, nothing to install if you use Codespaces.
+Start from the backend: [alopex → Getting started](https://github.com/marcodonghiaa/alopex#-getting-started). Its `setup.sh` creates the Supabase project, can run the sync on GitHub Actions, and prints the three values the dashboard needs. About 30 minutes the first time, nothing to install if you use Codespaces.
 
 Then put the dashboard online:
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fmarcodonghiaa%2Fmy-wealth-view&project-name=alopex&repository-name=alopex-web&env=VITE_SUPABASE_URL%2CVITE_SUPABASE_PUBLISHABLE_KEY%2CVITE_VAPID_PUBLIC_KEY&envDescription=Printed+at+the+end+of+the+backend%27s+setup.sh&envLink=https%3A%2F%2Fgithub.com%2Fmarcodonghiaa%2Fmyfinances%23-getting-started)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fmarcodonghiaa%2Falopex-web&project-name=alopex&repository-name=alopex-web&env=VITE_SUPABASE_URL%2CVITE_SUPABASE_PUBLISHABLE_KEY%2CVITE_VAPID_PUBLIC_KEY&envDescription=Printed+at+the+end+of+the+backend%27s+setup.sh&envLink=https%3A%2F%2Fgithub.com%2Fmarcodonghiaa%2Falopex%23-getting-started)
 
 Vercel copies this repo to your GitHub, asks for `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY` and `VITE_VAPID_PUBLIC_KEY` (paste the values setup printed) and gives you an HTTPS address. Open the address under **Domains** on the Vercel project page (not a per-deployment address) and sign in. On that first sign-in the dashboard tells your database its own address, so bank linking sends you back to it: there is nothing to copy back and no second `./setup.sh` run (the backend's setup waits for it and prints your link). Free on Vercel's Hobby plan; phone and push notifications work because it is HTTPS.
 
@@ -78,7 +78,7 @@ Your Vercel copy never receives upstream fixes by itself. It ships a workflow, *
 - Copies over the files upstream has, leaving alone `.env*`, `vercel.json`, `.vercel/`, anything your `.gitignore` matches and `.github/workflows/` (GitHub does not let a workflow change workflows). Files only in your copy are kept; edits you made to files upstream also has are overwritten, so keep customisations in new files.
 - First time only: Settings → Actions → General → enable **Allow GitHub Actions to create and approve pull requests**, or the run stops after pushing the branch `update-from-upstream` and you open the PR from it by hand.
 
-The backend repo ([myfinances](https://github.com/marcodonghiaa/myfinances)) is a real fork: use **Sync fork** on GitHub. Run `./setup.sh` again only when the release notes say a database change is needed.
+The backend repo ([alopex](https://github.com/marcodonghiaa/alopex)) is a real fork: use **Sync fork** on GitHub. Run `./setup.sh` again only when the release notes say a database change is needed.
 
 ## Scripts
 
@@ -86,7 +86,7 @@ The backend repo ([myfinances](https://github.com/marcodonghiaa/myfinances)) is 
 
 ## Support
 
-If Alopex is useful to you, a ⭐ on [GitHub](https://github.com/marcodonghiaa/my-wealth-view) helps others find it. The app shows a small "Made with Alopex" credit in its menu; set `VITE_HIDE_BRANDING=true` to hide it.
+If Alopex is useful to you, a ⭐ on [GitHub](https://github.com/marcodonghiaa/alopex-web) helps others find it. The app shows a small "Made with Alopex" credit in its menu; set `VITE_HIDE_BRANDING=true` to hide it.
 
 ## License
 
