@@ -1,12 +1,10 @@
 import { BrandMark } from "@/components/brand-mark";
-import { showBranding } from "@/lib/branding";
 
 const SITE_URL = "https://alopex.finance";
 
 // Quiet credit at the end of every page: the fox mark and one line in caption type,
-// muted until hovered. Self-hosters can hide it (VITE_HIDE_BRANDING).
+// muted until hovered. Always shown.
 export function MadeWith({ className = "" }: { className?: string }) {
-  if (!showBranding()) return null;
   return (
     <a
       href={SITE_URL}
