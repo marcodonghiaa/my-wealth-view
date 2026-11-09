@@ -1,6 +1,8 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { Loader2 } from "lucide-react";
+import { Check, ChevronRight, Loader2 } from "lucide-react";
+import { PRIMARY, TINTED } from "@/components/import/splitwise-ui";
+import { money, shortDate } from "@/lib/import/splitwise-format";
 import { supabase } from "@/integrations/supabase/client";
 import type { ClassifiedRow } from "@/lib/import/splitwise-classify";
 import type { RpcClient } from "@/lib/import/splitwise-commit";
@@ -14,47 +16,84 @@ import {
 } from "@/lib/import/splitwise-corrections";
 import type { RateToEur } from "@/lib/import/splitwise-match";
 
-const BUTTON =
-  "inline-flex min-h-11 items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50";
-const money = (cents: number) => (cents / 100).toFixed(2);
-
-const describeRow = (r: ClassifiedRow) =>
-  `${r.date} ${r.description} (${money(r.costCents)} ${r.currency}, your share ${money(r.shareCents ?? 0)})`;
-
-function describeStored(s: StoredShare): string {
-  const old = readFingerprint(s.fingerprint);
-  const cost = old ? `${money(old.costCents)} ${s.currency}, ` : `${s.currency}, `;
-  return `${s.booking_date} ${s.description} (${cost}your share ${s.amount.toFixed(2)})`;
-}
+const fmt = (cents: number, currency: string) => money(Math.abs(cents), currency);
 
 function Tick({
   id,
   ticked,
   onToggle,
-  label,
+  title,
+  meta,
+  amount,
   note,
 }: {
   id: string;
   ticked: Set<string>;
   onToggle: (id: string, on: boolean) => void;
-  label: string;
+  title: string;
+  meta: string;
+  amount?: string | undefined;
   note: string | undefined;
 }) {
+  const on = ticked.has(id);
   return (
     <li>
-      <label className="flex min-h-11 items-start gap-2">
+      <label
+        className={`flex min-h-14 cursor-pointer items-center gap-3 px-4 py-2.5 transition-colors hover:bg-foreground/5 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring has-[:focus-visible]:ring-inset ${
+          on ? "bg-primary/10" : ""
+        }`}
+      >
         <input
           type="checkbox"
-          className="mt-1"
-          checked={ticked.has(id)}
+          className="sr-only"
+          checked={on}
           onChange={(e) => onToggle(id, e.target.checked)}
         />
-        <span>
-          {label}
-          {note && <span className="block text-muted-foreground">{note}</span>}
+        <span
+          aria-hidden
+          className={`grid size-5 shrink-0 place-items-center rounded-full border-2 transition-colors ${
+            on ? "border-primary bg-primary text-primary-foreground" : "border-foreground/25"
+          }`}
+        >
+          {on && <Check className="size-3" strokeWidth={3} />}
         </span>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-[0.9375rem] font-medium">{title}</span>
+          <span className="block text-[0.8125rem] text-muted-foreground">{meta}</span>
+          {note && (
+            <span className="block text-[0.8125rem] text-amber-700 dark:text-amber-400">
+              {note}
+            </span>
+          )}
+        </span>
+        {amount && <span className="shrink-0 font-figure text-[0.9375rem]">{amount}</span>}
       </label>
     </li>
+  );
+}
+
+function Section({
+  id,
+  title,
+  footer,
+  children,
+}: {
+  id: string;
+  title: string;
+  footer?: string;
+  children: ReactNode;
+}) {
+  return (
+    <section aria-labelledby={id}>
+      <h3
+        id={id}
+        className="px-4 pb-2 text-[0.8125rem] font-medium tracking-wide text-muted-foreground uppercase"
+      >
+        {title}
+      </h3>
+      <ul className="divide-y divide-border overflow-hidden rounded-2xl bg-card">{children}</ul>
+      {footer && <p className="px-4 pt-2 text-[0.8125rem] text-muted-foreground">{footer}</p>}
+    </section>
   );
 }
 
@@ -79,6 +118,8 @@ export function SplitwiseCorrections({
   const [ticked, setTicked] = useState<Set<string>>(new Set());
   const [confirming, setConfirming] = useState(false);
   const [done, setDone] = useState<string | null>(null);
+  // Closed by default: these are old rows, and a long list would bury the import itself.
+  const [open, setOpen] = useState(false);
 
   const toggle = (id: string, on: boolean) => {
     const next = new Set(ticked);
@@ -109,138 +150,156 @@ export function SplitwiseCorrections({
     ) : null;
   }
 
+  const total = older.length + edited.length + removed.length;
+
   return (
-    <div className="rounded-2xl border bg-card p-5 text-sm card-ring">
-      <h2 className="mb-1 font-semibold">Changes to what you already imported</h2>
-      <p className="mb-3 text-muted-foreground">
-        These differ from your Splitwise file, inside the dates it covers. Nothing changes unless
-        you tick it. Settle-ups are not stored, so they are not compared.
-      </p>
+    <section aria-label="Changes to what you already imported" className="space-y-4">
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={() => setOpen(!open)}
+        className="flex min-h-14 w-full items-center gap-3 rounded-2xl bg-card px-4 py-2.5 text-left transition-colors hover:bg-foreground/5 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+      >
+        <span className="min-w-0 flex-1">
+          <span className="block text-[0.9375rem] font-medium">Changes to earlier imports</span>
+          <span className="block text-[0.8125rem] text-muted-foreground">
+            {total} {total === 1 ? "difference" : "differences"} with this file · optional
+          </span>
+        </span>
+        <ChevronRight
+          aria-hidden
+          className={`size-4 shrink-0 text-muted-foreground transition-transform ${open ? "rotate-90" : ""}`}
+        />
+      </button>
 
-      {older.length > 0 && (
-        <section aria-labelledby="splitwise-added-late" className="mb-3">
-          <h3 id="splitwise-added-late" className="mb-1 font-medium">
-            Added late
-          </h3>
-          <p className="mb-1 text-muted-foreground">Older than your last import, not imported.</p>
-          <ul className="space-y-1">
-            {older.map(({ row, fingerprint }) => (
-              <Tick
-                key={fingerprint}
-                id={fingerprint}
-                ticked={ticked}
-                onToggle={toggle}
-                label={describeRow(row)}
-                note={
-                  row.kind === "paid_by_me"
-                    ? "You paid this. If it is also in your bank, adding it counts it twice."
-                    : undefined
-                }
-              />
-            ))}
-          </ul>
-        </section>
-      )}
-
-      {edited.length > 0 && (
-        <section aria-labelledby="splitwise-edited" className="mb-3">
-          <h3 id="splitwise-edited" className="mb-1 font-medium">
-            Edited in Splitwise
-          </h3>
-          <ul className="space-y-1">
-            {edited.map((e) => (
-              <Tick
-                key={e.stored.id}
-                id={e.stored.id}
-                ticked={ticked}
-                onToggle={toggle}
-                label={`Was ${describeStored(e.stored)}. Now ${describeRow(e.row)}.`}
-                note={
-                  e.stored.linked_entry_reference
-                    ? "Linked to a bank transaction: its personal amount is recalculated."
-                    : undefined
-                }
-              />
-            ))}
-          </ul>
-        </section>
-      )}
-
-      {removed.length > 0 && (
-        <section aria-labelledby="splitwise-removed" className="mb-3">
-          <h3 id="splitwise-removed" className="mb-1 font-medium">
-            Removed in Splitwise
-          </h3>
-          <ul className="space-y-1">
-            {removed.map((s) => (
-              <Tick
-                key={s.id}
-                id={s.id}
-                ticked={ticked}
-                onToggle={toggle}
-                label={describeStored(s)}
-                note={
-                  s.linked_entry_reference
-                    ? "Linked to a bank transaction: it counts in full again."
-                    : undefined
-                }
-              />
-            ))}
-          </ul>
-        </section>
-      )}
-
-      {plan.problems.map((p, i) => (
-        <p key={i} role="alert" className="mt-1 text-negative">
-          {p}
-        </p>
-      ))}
-
-      {confirming ? (
-        <div className="mt-3 rounded-lg border border-amber-500/50 bg-amber-500/10 p-3">
-          <p className="mb-2">
-            This changes rows from earlier imports. Undo does not cover corrections.
+      {open && (
+        <>
+          <p className="px-4 text-[0.8125rem] text-muted-foreground">
+            Rows that differ from your Splitwise file, inside the dates it covers. Nothing changes
+            unless you tick it. Settle-ups are not stored, so they are not compared.
           </p>
-          <div className="flex flex-wrap gap-2">
+
+          {older.length > 0 && (
+            <Section
+              id="splitwise-added-late"
+              title="Added late"
+              footer="Older than your last import, not imported."
+            >
+              {older.map(({ row, fingerprint }) => (
+                <Tick
+                  key={fingerprint}
+                  id={fingerprint}
+                  ticked={ticked}
+                  onToggle={toggle}
+                  title={row.description.trim()}
+                  meta={`${shortDate(row.date)} · ${fmt(row.costCents, row.currency)} total`}
+                  amount={fmt(row.shareCents ?? 0, row.currency)}
+                  note={
+                    row.kind === "paid_by_me"
+                      ? "You paid it: may already count from your bank"
+                      : undefined
+                  }
+                />
+              ))}
+            </Section>
+          )}
+
+          {edited.length > 0 && (
+            <Section id="splitwise-edited" title="Edited in Splitwise">
+              {edited.map((e) => {
+                const old = readFingerprint(e.stored.fingerprint);
+                const was = old ? `${fmt(old.costCents, e.stored.currency)} total, ` : "";
+                return (
+                  <Tick
+                    key={e.stored.id}
+                    id={e.stored.id}
+                    ticked={ticked}
+                    onToggle={toggle}
+                    title={e.row.description.trim()}
+                    meta={`${shortDate(e.row.date)} · was ${was}share ${e.stored.amount.toFixed(2)} → now ${fmt(e.row.costCents, e.row.currency)} total, share ${fmt(e.row.shareCents ?? 0, e.row.currency)}`}
+                    note={
+                      e.stored.linked_entry_reference
+                        ? "Linked to a bank transaction: its personal amount is recalculated."
+                        : undefined
+                    }
+                  />
+                );
+              })}
+            </Section>
+          )}
+
+          {removed.length > 0 && (
+            <Section id="splitwise-removed" title="Removed in Splitwise">
+              {removed.map((s) => (
+                <Tick
+                  key={s.id}
+                  id={s.id}
+                  ticked={ticked}
+                  onToggle={toggle}
+                  title={s.description.trim()}
+                  meta={`${shortDate(s.booking_date)} · your share`}
+                  amount={`${s.amount.toFixed(2)} ${s.currency}`}
+                  note={
+                    s.linked_entry_reference
+                      ? "Linked to a bank transaction: it counts in full again."
+                      : undefined
+                  }
+                />
+              ))}
+            </Section>
+          )}
+
+          {plan.problems.map((p, i) => (
+            <p key={i} role="alert" className="px-4 text-sm text-negative">
+              {p}
+            </p>
+          ))}
+
+          {confirming ? (
+            <div className="space-y-3 rounded-2xl bg-amber-500/10 p-4 text-sm ring-1 ring-amber-500/35">
+              <p>This changes rows from earlier imports. Undo does not cover corrections.</p>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  className={PRIMARY}
+                  disabled={apply.isPending}
+                  onClick={() => apply.mutate()}
+                >
+                  {apply.isPending && <Loader2 className="size-4 animate-spin" />}
+                  Yes, apply {count} corrections
+                </button>
+                <button
+                  type="button"
+                  className={TINTED}
+                  disabled={apply.isPending}
+                  onClick={() => setConfirming(false)}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
             <button
               type="button"
-              className={BUTTON}
-              disabled={apply.isPending}
-              onClick={() => apply.mutate()}
+              className={`${TINTED} w-full`}
+              disabled={count === 0 || plan.problems.length > 0}
+              onClick={() => setConfirming(true)}
             >
-              {apply.isPending && <Loader2 className="size-4 animate-spin" />}
-              Yes, apply {count} corrections
+              Apply {count} corrections
             </button>
-            <button
-              type="button"
-              className="min-h-11 rounded-lg border px-4 py-2"
-              disabled={apply.isPending}
-              onClick={() => setConfirming(false)}
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      ) : (
-        <button
-          type="button"
-          className={BUTTON}
-          disabled={count === 0 || plan.problems.length > 0}
-          onClick={() => setConfirming(true)}
-        >
-          Apply {count} corrections
-        </button>
+          )}
+        </>
       )}
       {apply.error && (
-        <p role="alert" className="mt-2 text-negative">
+        <p role="alert" className="px-4 text-sm text-negative">
           Corrections failed: {apply.error.message}
         </p>
       )}
       {done && (
-        <p role="status" className="mt-2">
+        <p role="status" className="px-4 text-sm">
           {done}
         </p>
       )}
-    </div>
+    </section>
   );
 }

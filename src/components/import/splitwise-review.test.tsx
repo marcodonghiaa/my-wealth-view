@@ -430,9 +430,13 @@ describe("SplitwiseReview", () => {
     tables.splitwise_expenses = { data: [TAXI], error: null };
     show();
     expect(await screen.findByText(/Everything up to Aug 17 is already imported/)).toBeTruthy();
+    const toggle = screen.getByRole("button", { name: /Changes to earlier imports/ });
+    expect(toggle.getAttribute("aria-expanded")).toBe("false");
+    expect(screen.queryByRole("region", { name: /Added late/ })).toBeNull();
+    fireEvent.click(toggle);
     const older = screen.getByRole("region", { name: /Added late/ });
     expect(older.textContent).toMatch(/Older than your last import, not imported/);
-    expect(older.textContent).toMatch(/2026-08-16 Dinner/);
+    expect(older.textContent).toMatch(/Dinner.*Aug 16/);
     expect(screen.getByRole("heading", { name: "Nothing new" })).toBeTruthy();
   });
 
@@ -463,6 +467,8 @@ describe("SplitwiseReview", () => {
     const GONE = share("2026-08-16|Lunch|5000|USD|-1500#1", "Lunch", 15);
     const EDITED = share("2026-08-16|Dinner|4000|USD|-2000#1", "Dinner", 20);
     const applyButton = () => screen.findByRole("button", { name: /^Apply \d+ corrections/ });
+    const openChanges = async () =>
+      fireEvent.click(await screen.findByRole("button", { name: /Changes to earlier imports/ }));
 
     beforeEach(() => {
       rpc.mockResolvedValue({ data: { added: 1, edited: 0, removed: 0 }, error: null });
@@ -472,6 +478,7 @@ describe("SplitwiseReview", () => {
     it("starts with nothing ticked and nothing to apply", async () => {
       tables.splitwise_expenses = { data: [TAXI, GONE], error: null };
       show();
+      await openChanges();
       const box = await screen.findByRole("checkbox", { name: /Lunch/ });
       expect((box as HTMLInputElement).checked).toBe(false);
       expect((await applyButton()) as HTMLButtonElement).toHaveProperty("disabled", true);
@@ -480,9 +487,10 @@ describe("SplitwiseReview", () => {
     it("shows old and new values for an edit", async () => {
       tables.splitwise_expenses = { data: [TAXI, EDITED], error: null };
       show();
+      await openChanges();
       const section = await screen.findByRole("region", { name: /Edited in Splitwise/ });
-      expect(section.textContent).toMatch(/Was 2026-08-16 Dinner \(40.00 USD/);
-      expect(section.textContent).toMatch(/Now 2026-08-16 Dinner \(30.00 USD/);
+      expect(section.textContent).toMatch(/was 40.00 USD total/);
+      expect(section.textContent).toMatch(/now 30.00 USD total/);
     });
 
     // protects=corrections take their own confirmation, and say Undo does not cover them;
@@ -490,6 +498,7 @@ describe("SplitwiseReview", () => {
     it("asks to confirm, says Undo does not cover it, and sends only the ticked row", async () => {
       tables.splitwise_expenses = { data: [TAXI, GONE], error: null };
       show();
+      await openChanges();
       fireEvent.click(await screen.findByRole("checkbox", { name: /Lunch/ }));
       fireEvent.click(await applyButton());
       expect(rpc).not.toHaveBeenCalled();
@@ -510,6 +519,7 @@ describe("SplitwiseReview", () => {
       });
       tables.splitwise_expenses = { data: [TAXI, GONE], error: null };
       show();
+      await openChanges();
       fireEvent.click(await screen.findByRole("checkbox", { name: /Lunch/ }));
       fireEvent.click(await applyButton());
       fireEvent.click(screen.getByRole("button", { name: /Yes, apply/ }));
@@ -522,6 +532,7 @@ describe("SplitwiseReview", () => {
         error: null,
       };
       show();
+      await openChanges();
       expect(await screen.findByText(/it counts in full again/)).toBeTruthy();
     });
   });
