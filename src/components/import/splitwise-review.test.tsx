@@ -358,6 +358,22 @@ describe("SplitwiseReview", () => {
     expect(await screen.findByText("Balances updated.")).toBeTruthy();
   });
 
+  it("says when rows in another currency are left out of who owes you", async () => {
+    const balances = { ...balancesFromFile(parseSplitwiseCsv(CSV), 0)!, skippedRows: 2 };
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <SplitwiseReview
+          rows={rows}
+          group="berkeley"
+          balances={balances}
+          onBack={onBack}
+          onClose={onClose}
+        />
+      </QueryClientProvider>,
+    );
+    expect(await screen.findByText(/2 rows are in another currency than USD/)).toBeTruthy();
+  });
+
   const TAXI = share("2026-08-17|Taxi|2000|USD|1000#1", "Taxi", 10);
   const DINNER = share("2026-08-16|Dinner|3000|USD|-1500#1", "Dinner", 15);
 

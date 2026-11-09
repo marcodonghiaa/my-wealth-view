@@ -572,6 +572,7 @@ export type Database = {
       splitwise_balances: {
         Row: {
           balance: number;
+          basis: string;
           currency: string;
           group_name: string;
           is_me: boolean;
@@ -581,6 +582,7 @@ export type Database = {
         };
         Insert: {
           balance: number;
+          basis?: string;
           currency: string;
           group_name: string;
           is_me?: boolean;
@@ -590,6 +592,7 @@ export type Database = {
         };
         Update: {
           balance?: number;
+          basis?: string;
           currency?: string;
           group_name?: string;
           is_me?: boolean;

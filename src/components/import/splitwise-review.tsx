@@ -547,6 +547,14 @@ export function SplitwiseReview({
         </p>
       ))}
 
+      {balances && balances.skippedRows > 0 && (
+        <p className="text-sm text-muted-foreground">
+          {balances.skippedRows} {balances.skippedRows === 1 ? "row is" : "rows are"} in another
+          currency than {balances.currency}: who owes you leaves{" "}
+          {balances.skippedRows === 1 ? "it" : "them"} out.
+        </p>
+      )}
+
       {nothingToWrite && balances && (
         <div className="text-sm">
           <button

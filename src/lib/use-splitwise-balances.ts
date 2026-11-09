@@ -6,9 +6,9 @@ import type { BalanceRow } from "@/lib/import/splitwise-balances";
 async function fetchBalances(): Promise<Array<BalanceRow>> {
   const { data, error } = await supabase
     .from("splitwise_balances")
-    .select("group_name,person,balance,currency,is_me,updated_at");
+    .select("group_name,person,balance,currency,is_me,updated_at,basis");
   if (error) throw error;
-  return data ?? [];
+  return (data ?? []) as Array<BalanceRow>;
 }
 
 // Latest rate per currency; fx_rates holds a row per day, newest first here.
