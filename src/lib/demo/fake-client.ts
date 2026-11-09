@@ -323,6 +323,44 @@ class Store {
     this.refresh();
     return count;
   }
+  /** Mirror of the database function stream_action: an {error} where the SQL raises. */
+  streamAction(id: unknown, action: unknown, args: Row = {}): Result {
+    const row = this.db["recurring_streams"]!.find((r) => r["id"] === id);
+    if (!row) return { data: null, error: { message: "stream not found" } };
+    const bad = (message: string): Result => ({ data: null, error: { message } });
+    if (action === "confirm") row["user_status"] = "confirmed";
+    else if (action === "dismiss") row["user_status"] = "dismissed";
+    else if (action === "undismiss")
+      row["user_status"] = row["detected_status"] == null ? "confirmed" : null;
+    else if (action === "set_cadence") {
+      const cadence = args["cadence"] as string | undefined;
+      const unit = args["custom_unit"];
+      const value = args["custom_value"];
+      if (cadence) {
+        if (!["weekly", "monthly", "quarterly", "yearly"].includes(cadence))
+          return bad("invalid cadence");
+        Object.assign(row, {
+          user_cadence: cadence,
+          custom_interval_value: null,
+          custom_interval_unit: null,
+        });
+      } else {
+        if (
+          !Number.isInteger(value) ||
+          (value as number) <= 0 ||
+          !["days", "weeks", "months", "years"].includes(unit as string)
+        )
+          return bad("invalid custom interval");
+        Object.assign(row, {
+          user_cadence: "custom",
+          custom_interval_value: value,
+          custom_interval_unit: unit,
+        });
+      }
+      row["user_status"] = "confirmed";
+    } else return bad("unknown action");
+    return { data: null, error: null };
+  }
   refresh(): void {
     Object.assign(this.db, deriveViews(this.db as unknown as DemoDb, this.todayNum));
   }
@@ -616,24 +654,26 @@ export function createFakeClient(now: Date = new Date()): SupabaseClient<Databas
               ),
               error: null,
             }
-          : fn === "add_manual_transaction"
-            ? store.addManualTransaction(args)
-            : fn === "set_holding_quantity"
-              ? {
-                  data: store.setHoldingQuantity(
-                    args["p_kind"],
-                    args["p_key"],
-                    args["p_quantity"],
-                    args["p_source"],
-                  ),
-                  error: null,
-                }
-              : fn === "delete_holding"
+          : fn === "stream_action"
+            ? store.streamAction(args["p_stream"], args["p_action"], args["p_args"] as Row)
+            : fn === "add_manual_transaction"
+              ? store.addManualTransaction(args)
+              : fn === "set_holding_quantity"
                 ? {
-                    data: store.deleteHolding(args["p_kind"], args["p_key"], args["p_source"]),
+                    data: store.setHoldingQuantity(
+                      args["p_kind"],
+                      args["p_key"],
+                      args["p_quantity"],
+                      args["p_source"],
+                    ),
                     error: null,
                   }
-                : { data: null, error: DISABLED },
+                : fn === "delete_holding"
+                  ? {
+                      data: store.deleteHolding(args["p_kind"], args["p_key"], args["p_source"]),
+                      error: null,
+                    }
+                  : { data: null, error: DISABLED },
     functions: {
       invoke: async (name: string, opts?: { body?: Record<string, unknown> }) =>
         name === "add-holding"

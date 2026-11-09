@@ -24,6 +24,9 @@ import { MadeWith } from "@/components/made-with";
 import { BrandMark } from "@/components/brand-mark";
 import { TrustNote } from "@/components/trust-note";
 import { DemoBadge } from "@/components/demo-badge";
+import { NavBadge } from "@/components/nav-badge";
+import { groupStreams, romeToday } from "@/lib/recurring";
+import { useRecurringStreams } from "@/lib/use-recurring-streams";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -99,6 +102,10 @@ function AuthenticatedLayout() {
   const navigate = useNavigate();
   const [signingOut, setSigningOut] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const streams = useRecurringStreams().data;
+  const badges: Record<string, number> = {
+    Subscriptions: streams ? groupStreams(streams, romeToday()).toReview.length : 0,
+  };
 
   // Once per page load: tells the backend this address is the dashboard (setup no longer asks for it).
   useEffect(() => {
@@ -154,6 +161,7 @@ function AuthenticatedLayout() {
                   >
                     <item.icon className="size-[1.125rem]" />
                     {item.label}
+                    <NavBadge count={badges[item.label]} />
                   </Link>
                 ))}
               </div>
@@ -217,9 +225,17 @@ function AuthenticatedLayout() {
           type="button"
           onClick={() => setMenuOpen(true)}
           aria-haspopup="dialog"
+          aria-label={
+            badges["Subscriptions"] ? `More, ${badges["Subscriptions"]} to review` : "More"
+          }
           className="flex flex-col items-center justify-center gap-0.5 text-muted-foreground transition-opacity active:opacity-60"
         >
-          <MoreHorizontal className="size-6" />
+          <span className="relative">
+            <MoreHorizontal className="size-6" />
+            <span aria-hidden="true" className="absolute -top-1 left-full flex">
+              <NavBadge count={badges["Subscriptions"]} />
+            </span>
+          </span>
           <span className="text-[0.6875rem] font-medium">More</span>
         </button>
       </nav>
@@ -255,6 +271,7 @@ function AuthenticatedLayout() {
                     >
                       <item.icon className="size-5 shrink-0" />
                       {item.label}
+                      <NavBadge count={badges[item.label]} />
                     </Link>
                   ))}
                 </div>

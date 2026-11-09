@@ -459,6 +459,7 @@ export function generateDemoData(now: Date = new Date()): DemoDb {
     portfolio_snapshots,
     price_history: [],
     push_subscriptions: [],
+    recurring_streams: [],
     net_worth_reconstructed,
     splitwise_balances,
     splitwise_expenses,
@@ -495,5 +496,76 @@ export function generateDemoData(now: Date = new Date()): DemoDb {
     v_subscriptions: [],
     v_transactions_eur: [],
   };
-  return { ...db, ...deriveViews(db, todayNum) };
+  const views = deriveViews(db, todayNum);
+  return { ...db, ...views, recurring_streams: demoStreams(views.v_subscriptions, todayNum) };
+}
+
+const CADENCES = ["weekly", "monthly", "quarterly", "yearly"];
+const PERIOD_DAYS: Record<string, number> = { weekly: 7, monthly: 30, quarterly: 91, yearly: 365 };
+// Two made-up merchants the detector would only suggest, due soon so they sit in "To review".
+const DEMO_SUGGESTED = [
+  { name: "Sample Yoga Studio", category: "Health", amount: 39, ago: 20 },
+  { name: "Demo Cloud Storage", category: "Subscriptions", amount: 2.99, ago: 12 },
+];
+
+// Streams for the Subscriptions page: every demo recurring charge is active, plus two suggestions.
+function demoStreams(
+  subs: DemoDb["v_subscriptions"],
+  todayNum: number,
+): DemoDb["recurring_streams"] {
+  const rows = subs
+    .filter((s) => (s.charge_count ?? 0) >= 2 && s.last_charged)
+    .map((s) => {
+      const f = s.billing_frequency?.toLowerCase() ?? "";
+      const cadence = CADENCES.includes(f) ? f : "monthly";
+      return {
+        name: s.creditor_name ?? "Subscription",
+        category: s.category,
+        cadence,
+        amount: Math.abs(s.amount ?? 0),
+        eur: Math.abs(s.signed_amount_eur ?? s.amount ?? 0),
+        currency: s.currency ?? "EUR",
+        count: s.charge_count!,
+        last: Math.floor(Date.parse(`${s.last_charged}T00:00:00Z`) / DAY_MS),
+        status: "active",
+      };
+    });
+  for (const g of DEMO_SUGGESTED)
+    rows.push({
+      name: g.name,
+      category: g.category,
+      cadence: "monthly",
+      amount: g.amount,
+      eur: g.amount,
+      currency: "EUR",
+      count: 2,
+      last: todayNum - g.ago,
+      status: "suggested",
+    });
+  return rows.map((r, i) => ({
+    id: `00000000-0000-4000-8000-${String(i + 1).padStart(12, "0")}`,
+    user_id: DEMO_USER_ID,
+    stream_key: `${r.name.toLowerCase().replace(/\W+/g, "")}|demo|${r.currency}`,
+    merchant_key: r.name.toLowerCase().replace(/\W+/g, ""),
+    account_uid: MAIN,
+    currency: r.currency,
+    display_name: r.name,
+    category: r.category,
+    cadence: r.cadence,
+    typical_amount: r.amount,
+    typical_amount_eur: r.eur,
+    charge_count: r.count,
+    first_charged: iso(r.last - (r.count - 1) * PERIOD_DAYS[r.cadence]!),
+    last_charged: iso(r.last),
+    next_expected: iso(r.last + PERIOD_DAYS[r.cadence]!),
+    detected_status: r.status,
+    is_direct_debit: false,
+    detected_at: stamp(iso(todayNum)),
+    user_status: null,
+    user_cadence: null,
+    custom_interval_value: null,
+    custom_interval_unit: null,
+    source: "bank",
+    updated_at: null,
+  }));
 }

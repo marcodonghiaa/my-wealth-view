@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import { createFakeClient } from "./fake-client";
 import { DEMO_USER_ID } from "./generate";
+import { groupStreams } from "@/lib/recurring";
+import type { Tables } from "@/integrations/supabase/types";
 
 const NOW = new Date(2026, 9, 19, 12);
 const fresh = () => createFakeClient(NOW);
@@ -495,5 +497,66 @@ describe("fake client: set_holding_quantity", () => {
     });
     expect(res).toEqual({ data: 1, error: null });
     expect(await latest()).toBeCloseTo(before - value, 1);
+  });
+});
+
+describe("fake client: stream_action", () => {
+  const setup = async () => {
+    const c = fresh();
+    const { data } = await c.from("recurring_streams").select("*");
+    const rows = data as Array<Tables<"recurring_streams">>;
+    const toReview = groupStreams(rows, NOW).toReview[0]!;
+    return { c, toReview };
+  };
+  const act = (c: ReturnType<typeof fresh>, id: string, action: string, args = {}) =>
+    c.rpc("stream_action", { p_stream: id, p_action: action, p_args: args });
+  const grouped = async (c: ReturnType<typeof fresh>) =>
+    groupStreams(
+      ((await c.from("recurring_streams").select("*")).data ?? []) as Array<
+        Tables<"recurring_streams">
+      >,
+      NOW,
+    );
+
+  it("confirm moves a suggestion to active; dismiss and undismiss round-trip", async () => {
+    const { c, toReview } = await setup();
+    expect((await act(c, toReview.id, "confirm")).error).toBeNull();
+    expect((await grouped(c)).active.some((s) => s.id === toReview.id)).toBe(true);
+    await act(c, toReview.id, "dismiss");
+    expect((await grouped(c)).dismissed.some((s) => s.id === toReview.id)).toBe(true);
+    await act(c, toReview.id, "undismiss");
+    expect((await grouped(c)).toReview.some((s) => s.id === toReview.id)).toBe(true);
+  });
+
+  it("undismiss confirms a row that has no detected status", async () => {
+    const { c, toReview } = await setup();
+    await c.from("recurring_streams").update({ detected_status: null }).eq("id", toReview.id);
+    await act(c, toReview.id, "dismiss");
+    await act(c, toReview.id, "undismiss");
+    expect((await grouped(c)).active.some((s) => s.id === toReview.id)).toBe(true);
+  });
+
+  it("set_cadence sets a cadence or a custom interval and confirms", async () => {
+    const { c, toReview } = await setup();
+    await act(c, toReview.id, "set_cadence", { cadence: "yearly" });
+    await act(c, toReview.id, "set_cadence", { custom_value: 6, custom_unit: "weeks" });
+    const row = (await grouped(c)).active.find((s) => s.id === toReview.id)!;
+    expect([row.user_cadence, row.custom_interval_value, row.custom_interval_unit]).toEqual([
+      "custom",
+      6,
+      "weeks",
+    ]);
+  });
+
+  it("errors like the SQL raise on bad input", async () => {
+    const { c, toReview } = await setup();
+    for (const [action, args] of [
+      ["set_cadence", { cadence: "daily" }],
+      ["set_cadence", { custom_value: 0, custom_unit: "days" }],
+      ["set_cadence", { custom_value: 2, custom_unit: "decades" }],
+      ["explode", {}],
+    ] as const)
+      expect((await act(c, toReview.id, action, args)).error).not.toBeNull();
+    expect((await act(c, "nope", "confirm")).error).not.toBeNull();
   });
 });
