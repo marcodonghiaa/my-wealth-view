@@ -1,9 +1,17 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 const rows = vi.hoisted(() => ({ v_cd_holdings: [] as Array<Record<string, unknown>> }));
+const invoke = vi.hoisted(() => vi.fn());
+const toast = vi.hoisted(() => ({
+  success: vi.fn(),
+  error: vi.fn(),
+  loading: vi.fn(() => "t1"),
+  dismiss: vi.fn(),
+}));
+vi.mock("sonner", () => ({ toast }));
 vi.mock("@/integrations/supabase/client", () => {
   const query = (table: string) => {
     const q: Record<string, unknown> = {};
@@ -12,7 +20,7 @@ vi.mock("@/integrations/supabase/client", () => {
       resolve({ data: rows[table as keyof typeof rows] ?? [], error: null });
     return q;
   };
-  return { supabase: { from: query } };
+  return { supabase: { from: query, functions: { invoke } } };
 });
 vi.mock("@tanstack/react-router", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@tanstack/react-router")>()),
@@ -120,5 +128,57 @@ describe("CD card", () => {
     const remove = await screen.findByRole("button", { name: "Remove 12-month deposit" });
 
     expect(remove).toHaveClass("size-11");
+  });
+});
+
+describe("bank redirect with a one-time code", () => {
+  const state = "6f1c2a7e-0b5d-4c3e-9a8f-1d2e3f4a5b6c";
+  beforeEach(() => {
+    invoke.mockReset();
+    toast.success.mockClear();
+    toast.error.mockClear();
+    window.history.replaceState(null, "", `/accounts?bank_code=c&bank_state=${state}`);
+  });
+  afterEach(() => window.history.replaceState(null, "", "/"));
+
+  const renderPage = () =>
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <Page />
+      </QueryClientProvider>,
+    );
+
+  it("finishes the link, clears the code from the address bar and says which bank linked", async () => {
+    invoke.mockResolvedValue({
+      data: { bank_linked: "2", bank: "Revolut", currencies: "EUR,GBP" },
+      error: null,
+    });
+    renderPage();
+    await waitFor(() => expect(toast.success).toHaveBeenCalledWith("Revolut: EUR, GBP"));
+    expect(invoke).toHaveBeenCalledWith("complete-bank-consent", { body: { code: "c", state } });
+    expect(window.location.search).toBe("");
+  });
+
+  it("reads the code from the fragment, where the bank redirect now puts it", async () => {
+    window.history.replaceState(null, "", `/accounts#bank_code=f&bank_state=${state}`);
+    invoke.mockResolvedValue({
+      data: { bank_linked: "1", bank: "N26", currencies: "EUR" },
+      error: null,
+    });
+    renderPage();
+    await waitFor(() => expect(toast.success).toHaveBeenCalled());
+    expect(invoke).toHaveBeenCalledWith("complete-bank-consent", { body: { code: "f", state } });
+    expect(window.location.hash).toBe("");
+  });
+
+  it("shows the error when the link can't be finished", async () => {
+    invoke.mockResolvedValue({ data: null, error: new Error("boom") });
+    renderPage();
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith("Couldn't connect bank", {
+        description: "Couldn't link the bank, please try again",
+      }),
+    );
+    expect(toast.success).not.toHaveBeenCalled();
   });
 });

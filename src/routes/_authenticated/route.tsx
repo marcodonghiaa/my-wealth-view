@@ -30,7 +30,14 @@ import { useRecurringStreams } from "@/lib/use-recurring-streams";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
-  beforeLoad: async () => {
+  beforeLoad: async ({ location }) => {
+    // Sign-in sends the user back here, so a bank redirect (#bank_code=…) survives an expired
+    // session. The hash stays in `next`: the browser never sends it to the server.
+    const toAuth = () => {
+      const next =
+        location.pathname + location.searchStr + (location.hash ? `#${location.hash}` : "");
+      return redirect({ to: "/auth", search: next === "/" ? {} : { next } });
+    };
     // A reloaded demo tab needs the fake client (its own chunk) before anything asks for data.
     if (isDemoMode()) await loadDemoClient();
     try {
@@ -38,12 +45,12 @@ export const Route = createFileRoute("/_authenticated")({
       // on every page change. The database still enforces access, so this only picks the screen.
       const { data, error } = await supabase.auth.getSession();
       if (error || !data.session) {
-        throw redirect({ to: "/auth" });
+        throw toAuth();
       }
       return { user: data.session.user };
     } catch (err) {
       if (err instanceof Response) throw err;
-      throw redirect({ to: "/auth" });
+      throw toAuth();
     }
   },
   component: AuthenticatedLayout,

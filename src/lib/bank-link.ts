@@ -14,8 +14,8 @@ export const COUNTRIES: Array<{ code: string; name: string }> = [
   { code: "IE", name: "Ireland" },
 ];
 
-// Toast text after the bank-consent-callback redirect: "Revolut: EUR, GBP, USD" when the
-// callback names the bank and currencies, else the account count (older callback).
+// Toast text after the bank-consent-callback redirect or the complete-bank-consent reply:
+// "Revolut: EUR, GBP, USD" when it names the bank and currencies, else the account count.
 export function linkedMessage(params: URLSearchParams): string | null {
   const linked = params.get("bank_linked");
   if (!linked) return null;
@@ -25,14 +25,24 @@ export function linkedMessage(params: URLSearchParams): string | null {
   return `${linked} account${linked === "1" ? "" : "s"} connected`;
 }
 
-// Every message bank-consent-callback can send in ?bank_link_error. The URL can be crafted, so
-// anything else shows a fixed message instead of the link's own text.
+// The bank's redirect hands the dashboard the one-time code (#bank_code=&bank_state=, in the
+// fragment so it never reaches the dashboard host's logs; older backends used the query); the
+// signed-in dashboard finishes the link with complete-bank-consent. Null when not both are there.
+export function pendingLink(params: URLSearchParams): { code: string; state: string } | null {
+  const code = params.get("bank_code");
+  const state = params.get("bank_state");
+  return code && state ? { code, state } : null;
+}
+
+// Every message bank-consent-callback (?bank_link_error) or complete-bank-consent can send. The
+// URL can be crafted, so anything else shows a fixed message instead of the link's own text.
 const LINK_ERRORS = new Set([
   "Couldn't link the bank, please try again",
   "The bank did not approve the connection",
   "Missing code or state",
   "Invalid or expired consent request",
   "Consent request expired, please try again",
+  "Not signed in",
   "Enable Banking didn't share any accounts. Link this bank once on enablebanking.com → API applications → your app → Link accounts, then try again.",
 ]);
 

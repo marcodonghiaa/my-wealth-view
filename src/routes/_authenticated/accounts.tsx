@@ -7,7 +7,13 @@ import { toast } from "sonner";
 import { MaskedIban } from "@/components/masked-iban";
 import { supabase } from "@/integrations/supabase/client";
 import { assertHttpsUrl } from "@/lib/consent-url";
-import { COUNTRIES, linkErrorMessage, linkedMessage, renewTarget } from "@/lib/bank-link";
+import {
+  COUNTRIES,
+  linkErrorMessage,
+  linkedMessage,
+  pendingLink,
+  renewTarget,
+} from "@/lib/bank-link";
 import { functionErrorMessage } from "@/lib/function-error";
 import { consentAlerts, type ConsentAlert } from "@/lib/consent-expiry";
 import { asOf, formatISODate } from "@/lib/date";
@@ -120,18 +126,50 @@ function AccountsPage() {
   });
   const cdQuery = useQuery({ queryKey: ["cd-holdings"], queryFn: fetchCds });
 
-  // Landed here from the bank-consent-callback redirect after connecting a bank.
+  // Landed here from the bank-consent-callback redirect after connecting a bank. The redirect
+  // only carries the bank's one-time code: the link is finished here, signed in, so the accounts
+  // go to whoever started it and nobody else.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const linked = linkedMessage(params);
-    const error = linkErrorMessage(params);
-    if (linked) {
-      toast.success(linked);
-      void queryClient.invalidateQueries({ queryKey: ["bank-accounts-latest"] });
-    } else if (error) {
-      toast.error("Couldn't connect bank", { description: error });
+    const showResult = (result: URLSearchParams) => {
+      const linked = linkedMessage(result);
+      const error = linkErrorMessage(result);
+      if (linked) {
+        toast.success(linked);
+        void queryClient.invalidateQueries({ queryKey: ["bank-accounts-latest"] });
+        // A new account's balance comes from its first sync, which runs a few seconds behind.
+        setTimeout(
+          () => void queryClient.invalidateQueries({ queryKey: ["bank-accounts-latest"] }),
+          20_000,
+        );
+      } else if (error) {
+        toast.error("Couldn't connect bank", { description: error });
+      }
+    };
+    const pending =
+      pendingLink(new URLSearchParams(window.location.hash.slice(1))) ?? pendingLink(params);
+    if (pending) {
+      // Off the address bar before the call: a reload must not spend the code twice.
+      window.history.replaceState(null, "", window.location.pathname);
+      const toastId = toast.loading("Connecting your bank…");
+      void supabase.functions
+        .invoke<Record<string, string>>("complete-bank-consent", { body: pending })
+        .then(async ({ data, error }) => {
+          toast.dismiss(toastId);
+          if (error) {
+            const message = await functionErrorMessage(
+              error,
+              "Couldn't link the bank, please try again",
+            );
+            showResult(new URLSearchParams({ bank_link_error: message }));
+          } else showResult(new URLSearchParams(data ?? {}));
+        });
+      return;
     }
-    if (linked || error) window.history.replaceState(null, "", window.location.pathname);
+    showResult(params);
+    if (linkedMessage(params) || linkErrorMessage(params)) {
+      window.history.replaceState(null, "", window.location.pathname);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
