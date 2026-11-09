@@ -1,49 +1,110 @@
+import { ChevronDown, Users } from "lucide-react";
+import { useId, useState } from "react";
 import type { GroupSummary } from "@/lib/import/splitwise-balances";
 import { money } from "@/lib/splits";
+import { Initial } from "./owed-view";
 
 const day = (iso: string) =>
-  new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
+  new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 
-/** Per Splitwise group: who owes me and whom I owe, from my last import. */
+const people = (n: number) => `${n} ${n === 1 ? "person" : "people"}`;
+
+function GroupCard({ g, defaultOpen }: { g: GroupSummary; defaultOpen: boolean }) {
+  const [open, setOpen] = useState(defaultOpen);
+  const id = useId();
+  const square = g.people.length === 0;
+  const meta = `${square ? "All square" : people(g.people.length)} · as of ${day(g.updatedAt)}`;
+  const header = (
+    <>
+      <span
+        aria-hidden
+        className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"
+      >
+        <Users className="size-[18px]" />
+      </span>
+      <span className="min-w-0 flex-1 text-left">
+        <span className="block truncate text-[0.9375rem] font-semibold">{g.group}</span>
+        <span className="block truncate text-[0.8125rem] font-normal text-muted-foreground">
+          {meta}
+        </span>
+      </span>
+      {g.myBalance !== 0 && (
+        <span className="shrink-0 text-right">
+          <span className="block font-figure text-[0.9375rem] font-semibold">
+            {money(Math.abs(g.myBalance), g.currency)}
+          </span>
+          <span className="block text-xs font-normal text-muted-foreground">
+            {g.myBalance > 0 ? "owed to you" : "you owe"}
+          </span>
+        </span>
+      )}
+    </>
+  );
+
+  return (
+    <section className="overflow-hidden rounded-2xl bg-card">
+      <h3>
+        {square ? (
+          <div className="flex min-h-16 items-center gap-3 px-4 py-3 sm:px-5">{header}</div>
+        ) : (
+          <button
+            type="button"
+            aria-expanded={open}
+            aria-controls={id}
+            onClick={() => setOpen(!open)}
+            className="flex min-h-16 w-full items-center gap-3 px-4 py-3 hover:bg-accent/40 sm:px-5"
+          >
+            {header}
+            <ChevronDown
+              aria-hidden
+              className={`size-4 shrink-0 text-muted-foreground transition-transform ${open ? "" : "-rotate-90"}`}
+            />
+          </button>
+        )}
+      </h3>
+      {!square && open && (
+        <ul id={id} className="divide-y border-t bg-muted/30">
+          {g.people.map((p) => (
+            <li key={p.person} className="flex items-center gap-3 px-4 py-2.5 sm:px-5">
+              <Initial name={p.person} size="size-8" />
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm">{p.person}</span>
+                <span className="block text-xs text-muted-foreground">
+                  {p.owesYou ? "owes you" : "you owe"}
+                </span>
+              </span>
+              <span className="shrink-0 font-figure text-sm font-semibold">
+                {money(Math.abs(p.balance), g.currency)}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+/** One card per Splitwise group: the group's net up top, open it to see who owes whom. */
 export function BalancesView({ groups }: { groups: Array<GroupSummary> }) {
   if (groups.length === 0) {
     return (
-      <div className="flex h-24 items-center justify-center rounded-2xl bg-card px-4 text-center text-sm text-muted-foreground">
-        Import a Splitwise file to see who owes you there.
-      </div>
+      <p className="rounded-2xl bg-card px-4 py-6 text-center text-sm text-muted-foreground">
+        Import a Splitwise export to see your group balances.
+      </p>
     );
   }
+  // Groups with money still open first; a lone group opens by itself.
+  const sorted = [...groups].sort(
+    (a, b) => Number(a.people.length === 0) - Number(b.people.length === 0),
+  );
   return (
-    <div className="space-y-4">
-      {groups.map((g) => (
-        <section key={g.group} className="overflow-hidden rounded-2xl bg-card">
-          <div className="flex flex-wrap items-baseline justify-between gap-2 border-b px-4 py-3 sm:px-5">
-            <h3 className="text-sm font-semibold">{g.group}</h3>
-            <span className="text-xs text-muted-foreground">as of {day(g.updatedAt)}</span>
-          </div>
-          {g.people.length === 0 ? (
-            <p className="px-4 py-3 text-sm text-muted-foreground sm:px-5">You're all square.</p>
-          ) : (
-            <ul className="divide-y">
-              {g.people.map((p) => (
-                <li
-                  key={p.person}
-                  className="flex items-center justify-between gap-3 px-4 py-3 text-sm sm:px-5"
-                >
-                  <span className="font-medium">{p.person}</span>
-                  <span className={p.owesYou ? "text-positive" : "text-muted-foreground"}>
-                    {p.owesYou ? "owes you" : "you owe"}{" "}
-                    <span className="font-figure">{money(Math.abs(p.balance), g.currency)}</span>
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
+    <div className="space-y-3">
+      {sorted.map((g) => (
+        <GroupCard key={g.group} g={g} defaultOpen={groups.length === 1} />
       ))}
-      <p className="text-xs text-muted-foreground">
-        Worked out expense by expense, without Splitwise's "simplify debts": per person it can
-        differ from the Splitwise app, your total is the same.
+      <p className="px-1 text-xs text-muted-foreground">
+        Per person this can differ from the Splitwise app, which simplifies debts. Your total is the
+        same.
       </p>
     </div>
   );

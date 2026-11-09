@@ -13,8 +13,8 @@ import {
   fetchSplits,
   joinNames,
   NO_NAME,
-  owedByPerson,
   owedEur,
+  peopleFrom,
   parseNames,
   type SplitRow,
 } from "./splits";
@@ -57,25 +57,32 @@ describe("splits", () => {
     ).toEqual(["anna", "Luca M", "Bea"]);
   });
 
-  it("computes what the others owe, never below zero", () => {
+  it("computes what the others owe on a charge", () => {
     expect(owedEur(row())).toBe(20);
-    expect(owedEur(row({ personal_signed_amount_eur: -40 }))).toBe(0);
+    expect(owedEur(row({ personal_signed_amount_eur: -30 }))).toBe(0);
     expect(owedEur(row({ signed_amount_eur: null, personal_signed_amount_eur: null }))).toBe(0);
+  });
+
+  // protects=refunds of a split bill; fails_when=a refund adds to what people owe
+  it("counts a split refund against what they owe", () => {
+    expect(owedEur(row({ signed_amount_eur: 100, personal_signed_amount_eur: 50 }))).toBe(-50);
   });
 
   // protects=who-owes-what totals; fails_when=settled splits count or shared splits double count
   it("totals open amounts per person, sharing multi-person splits", () => {
-    expect(
-      owedByPerson([
-        row(),
-        row({ owed_by: "anna, Luca" }),
-        row({ owed_by: null }),
-        row({ owed_by: "Luca", owed_settled: true }),
-      ]),
-    ).toEqual([
-      { name: "Anna", owed: 30 },
-      { name: NO_NAME, owed: 20 },
-      { name: "Luca", owed: 10 },
+    const people = peopleFrom([
+      row(),
+      row({ owed_by: "anna, Luca" }),
+      row({ owed_by: null }),
+      row({ owed_by: "Luca", owed_settled: true }),
+      row({ owed_by: "Bea", signed_amount_eur: -20.01, personal_signed_amount_eur: -20 }),
+      row({ owed_by: "Bea", signed_amount_eur: 0.01, personal_signed_amount_eur: 0 }),
+    ]);
+    expect(people.map((p) => [p.name, p.open, p.rows.length])).toEqual([
+      ["Anna", 30, 2],
+      [NO_NAME, 20, 1],
+      ["Luca", 10, 2],
+      ["Bea", 0, 2],
     ]);
   });
 });
@@ -86,6 +93,24 @@ describe("fetching splits", () => {
     const splits = await fetchSplits();
     expect(splits.length).toBeGreaterThan(0);
     expect(splits.every((r) => owedEur(r) > 0)).toBe(true);
-    expect(owedByPerson(splits)[0]?.name).toBe("Giulia");
+    expect(peopleFrom(splits)[0]?.name).toBe("Giulia");
+  });
+
+  // protects=no double counting with Splitwise; fails_when=a charge matched to a Splitwise expense
+  // or moved to transfers still shows as a split bill
+  it("leaves out charges matched to Splitwise and transfers", async () => {
+    const { supabase } = await import("@/integrations/supabase/client");
+    const [first, second] = await fetchSplits();
+    await supabase
+      .from("transactions")
+      .update({ import_batch_id: "batch-1" })
+      .eq("entry_reference", first!.entry_reference!);
+    await supabase
+      .from("transactions")
+      .update({ flow_type: "transfer" })
+      .eq("entry_reference", second!.entry_reference!);
+    const refs = (await fetchSplits()).map((r) => r.entry_reference);
+    expect(refs).not.toContain(first!.entry_reference);
+    expect(refs).not.toContain(second!.entry_reference);
   });
 });

@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import type { TxKey } from "@/lib/transactions";
+import { txId, type TxKey } from "@/lib/transactions";
 
 export const money = (value: number, currency: string) =>
   new Intl.NumberFormat("en-IE", { style: "currency", currency }).format(value);
@@ -49,37 +49,64 @@ export interface SplitRow extends TxKey {
   personal_signed_amount_eur: number | null;
 }
 
-/** What the others owe you on a split, in euros. */
+/**
+ * What the others owe you on a split, in euros. Signed: a split refund (money in) gives back
+ * their share, so it counts against what they owe.
+ */
 export const owedEur = (r: SplitRow): number =>
-  Math.max(0, Math.abs(r.signed_amount_eur ?? 0) - Math.abs(r.personal_signed_amount_eur ?? 0));
+  (r.personal_signed_amount_eur ?? 0) - (r.signed_amount_eur ?? 0);
+
+// A charge refunded in full or moved to transfers is no longer money anyone owes.
+const SKIPPED_FLOWS = new Set(["refunded", "transfer"]);
 
 export async function fetchSplits(): Promise<Array<SplitRow>> {
-  const { data, error } = await supabase
-    .from("v_transactions_eur")
-    .select(
-      "entry_reference, account_uid, booking_date, creditor_name, owed_by, owed_settled, signed_amount_eur, personal_signed_amount_eur",
-    )
-    .gte("personal_amount", 0)
-    .order("booking_date", { ascending: false });
-  if (error) throw error;
-  return ((data ?? []) as Array<SplitRow>).filter((r) => owedEur(r) > 0);
+  const [view, imported] = await Promise.all([
+    supabase
+      .from("v_transactions_eur")
+      .select(
+        "entry_reference, account_uid, booking_date, creditor_name, owed_by, owed_settled, signed_amount_eur, personal_signed_amount_eur, flow_type",
+      )
+      .gte("personal_amount", 0)
+      .order("booking_date", { ascending: false }),
+    // A bank charge matched to a Splitwise expense gets my share as personal_amount, but who owes
+    // me the rest is already in the Splitwise balances: listing it here would count it twice.
+    supabase
+      .from("transactions")
+      .select("entry_reference, account_uid, import_batch_id")
+      .gte("personal_amount", 0),
+  ]);
+  if (view.error) throw view.error;
+  if (imported.error) throw imported.error;
+  const fromSplitwise = new Set(
+    (imported.data ?? []).filter((t) => t.import_batch_id != null).map((t) => txId(t)),
+  );
+  return ((view.data ?? []) as Array<SplitRow & { flow_type: string | null }>).filter(
+    (r) => owedEur(r) !== 0 && !SKIPPED_FLOWS.has(r.flow_type ?? "") && !fromSplitwise.has(txId(r)),
+  );
 }
 
 export const NO_NAME = "Not assigned";
 
-/** Open (not yet paid back) amount per person; a split named after several people is shared evenly. */
-export function owedByPerson(rows: Array<SplitRow>): Array<{ name: string; owed: number }> {
-  const totals = new Map<string, { name: string; owed: number }>();
+export interface SplitPerson {
+  name: string;
+  rows: Array<SplitRow>;
+  open: number;
+}
+
+/** Each person's bills, with their open share (a bill split among several counts evenly). */
+export function peopleFrom(rows: Array<SplitRow>): Array<SplitPerson> {
+  const people = new Map<string, SplitPerson>();
   for (const r of rows) {
-    if (r.owed_settled) continue;
     const names = parseNames(r.owed_by);
-    const people = names.length ? names : [NO_NAME];
-    for (const name of people) {
+    for (const name of names.length ? names : [NO_NAME]) {
       const key = name.toLowerCase();
-      const t = totals.get(key) ?? { name, owed: 0 };
-      t.owed += owedEur(r) / people.length;
-      totals.set(key, t);
+      const p = people.get(key) ?? { name, rows: [], open: 0 };
+      p.rows.push(r);
+      if (!r.owed_settled) p.open += owedEur(r) / Math.max(1, names.length);
+      people.set(key, p);
     }
   }
-  return [...totals.values()].sort((a, b) => b.owed - a.owed);
+  // Under a cent left after sharing is rounding, not money owed.
+  for (const p of people.values()) if (Math.abs(p.open) < 0.005) p.open = 0;
+  return [...people.values()].sort((a, b) => b.open - a.open);
 }
