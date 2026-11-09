@@ -330,7 +330,8 @@ class Store {
     const bad = (message: string): Result => ({ data: null, error: { message } });
     if (action === "confirm") row["user_status"] = "confirmed";
     else if (action === "dismiss") row["user_status"] = "dismissed";
-    else if (action === "undismiss") row["user_status"] = null;
+    else if (action === "undismiss")
+      row["user_status"] = row["detected_status"] == null ? "confirmed" : null;
     else if (action === "set_cadence") {
       const cadence = args["cadence"] as string | undefined;
       const unit = args["custom_unit"];

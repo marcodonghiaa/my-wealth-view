@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { demoStarts, isDemoMode } from "@/lib/demo/mode";
-import { groupStreams, monthlyEur, romeToday } from "@/lib/recurring";
+import { groupStreams, monthlyEur, monthlyTotal, romeToday } from "@/lib/recurring";
 import { formatMoney } from "@/lib/transactions";
 import { useRecurringStreams } from "@/lib/use-recurring-streams";
 
@@ -44,7 +44,7 @@ export function RevealDialog() {
   );
   const count = active.length;
   const show = count + toReview.length;
-  const monthly = active.reduce((sum, s) => sum + Math.abs(monthlyEur(s) ?? 0), 0);
+  const total = monthlyTotal(active);
   const top = active
     .map((s) => {
       const m = monthlyEur(s);
@@ -75,11 +75,13 @@ export function RevealDialog() {
         </DialogTitle>
         <DialogDescription>Your recurring charges add up to about</DialogDescription>
         <p className="figure-display">
-          ~{formatMoney(monthly, "EUR")}
-          <span className="text-[0.4em] font-medium tracking-normal text-muted-foreground">
-            {" "}
-            /month
-          </span>
+          {total.known === 0 ? "—" : `~${formatMoney(total.sum, "EUR")}`}
+          {total.known > 0 && (
+            <span className="text-[0.4em] font-medium tracking-normal text-muted-foreground">
+              {" "}
+              /month
+            </span>
+          )}
         </p>
         <ul className="divide-y">
           {top.map(({ s, m }) => (

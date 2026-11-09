@@ -528,6 +528,14 @@ describe("fake client: stream_action", () => {
     expect((await grouped(c)).toReview.some((s) => s.id === toReview.id)).toBe(true);
   });
 
+  it("undismiss confirms a row that has no detected status", async () => {
+    const { c, toReview } = await setup();
+    await c.from("recurring_streams").update({ detected_status: null }).eq("id", toReview.id);
+    await act(c, toReview.id, "dismiss");
+    await act(c, toReview.id, "undismiss");
+    expect((await grouped(c)).active.some((s) => s.id === toReview.id)).toBe(true);
+  });
+
   it("set_cadence sets a cadence or a custom interval and confirms", async () => {
     const { c, toReview } = await setup();
     await act(c, toReview.id, "set_cadence", { cadence: "yearly" });

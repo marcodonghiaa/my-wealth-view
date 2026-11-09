@@ -77,6 +77,17 @@ beforeEach(() => {
   serverApplies((action) => ({
     user_status: action === "dismiss" ? "dismissed" : action === "undismiss" ? null : "confirmed",
   }));
+  const base = rpc.getMockImplementation()!;
+  // Server rule: undismiss restores to confirmed when nothing was detected, else clears the status.
+  rpc.mockImplementation((fn: string, p: { p_stream: string; p_action: string }) => {
+    const r = db.rows.find((x) => x["id"] === p.p_stream);
+    const res = base(fn, p);
+    if (p.p_action === "undismiss" && r?.["detected_status"] == null)
+      db.rows = db.rows.map((x) =>
+        x["id"] === p.p_stream ? { ...x, user_status: "confirmed" } : x,
+      );
+    return res;
+  });
 });
 
 describe("Subscriptions page", () => {
@@ -141,7 +152,7 @@ describe("Subscriptions page", () => {
     await waitFor(() =>
       expect(toast.success).toHaveBeenCalledWith("Removed Streamflix", expect.anything()),
     );
-    expect(screen.getByLabelText("Estimated monthly cost")).toHaveTextContent("€0.00");
+    expect(screen.getByLabelText("Estimated monthly cost")).toHaveTextContent("—");
   });
 
   it("a preset frequency sends the lowercase cadence", async () => {
@@ -186,7 +197,7 @@ describe("Subscriptions page", () => {
     db.rows = [stream({ last_charged: "2020-01-01", next_expected: "2020-02-01" })];
     renderPage();
     expect(await screen.findByText("Stopped (1)")).toBeInTheDocument();
-    expect(screen.getByLabelText("Estimated monthly cost")).toHaveTextContent("€0.00");
+    expect(screen.getByLabelText("Estimated monthly cost")).toHaveTextContent("—");
   });
 
   it("shows the native amount for a non-EUR stream and a dash without a monthly amount", async () => {
@@ -255,7 +266,7 @@ describe("Subscriptions page", () => {
       expect(screen.queryByText(/Dismissed \(/)).not.toBeInTheDocument();
     });
 
-    it("lists dismissed streams and Restore calls undismiss", async () => {
+    it("Restore returns a detected stream to Active", async () => {
       db.rows = [stream({ id: "d1", display_name: "Oldplan", user_status: "dismissed" })];
       renderPage();
       expect(await screen.findByText("Dismissed (1)")).toBeInTheDocument();
@@ -268,9 +279,43 @@ describe("Subscriptions page", () => {
         }),
       );
       await waitFor(() => expect(screen.queryByText(/Dismissed \(/)).not.toBeInTheDocument());
+      expect(screen.getByText("Oldplan")).toBeInTheDocument();
+      expect(screen.getByLabelText("Estimated monthly cost")).toHaveTextContent("€10.00");
     });
 
-    it("null cadence shows Set frequency and no cost", async () => {
+    it("Restore returns a suggested stream to To review", async () => {
+      db.rows = [
+        stream({
+          id: "d4",
+          display_name: "Maybe",
+          detected_status: "suggested",
+          user_status: "dismissed",
+        }),
+      ];
+      renderPage();
+      fireEvent.click(await screen.findByRole("button", { name: "Restore Maybe" }));
+      const queue = await screen.findByRole("region", { name: "To review" });
+      expect(within(queue).getByText("Maybe")).toBeInTheDocument();
+    });
+
+    it("Restore of a row with no detected status confirms it into Active", async () => {
+      db.rows = [
+        stream({
+          id: "d5",
+          display_name: "Manual",
+          detected_status: null,
+          user_status: "dismissed",
+        }),
+      ];
+      renderPage();
+      fireEvent.click(await screen.findByRole("button", { name: "Restore Manual" }));
+      await waitFor(() => expect(screen.queryByText(/Dismissed \(/)).not.toBeInTheDocument());
+      expect(screen.getByText("Manual")).toBeInTheDocument();
+      expect(screen.queryByRole("region", { name: "To review" })).toBeNull();
+      expect(screen.getByLabelText("Estimated monthly cost")).toHaveTextContent("€10.00");
+    });
+
+    it("null cadence shows no cost and no picker", async () => {
       db.rows = [
         stream({
           id: "d2",
@@ -282,16 +327,34 @@ describe("Subscriptions page", () => {
       ];
       renderPage();
       const row = (await screen.findByText("Mystery")).closest("li")!;
-      expect(within(row).getByRole("button", { name: /Set frequency/ })).toBeInTheDocument();
       expect(row).not.toHaveTextContent("€");
+      expect(within(row).queryByText("Set frequency")).not.toBeInTheDocument();
+      expect(within(row).getByRole("button", { name: "Restore Mystery" })).toBeInTheDocument();
     });
 
-    it("known cadence shows the monthly cost and no Set frequency", async () => {
+    it("known cadence shows the monthly cost", async () => {
       db.rows = [stream({ id: "d3", display_name: "Oldplan", user_status: "dismissed" })];
       renderPage();
       const row = (await screen.findByText("Oldplan")).closest("li")!;
       expect(row).toHaveTextContent("€10.00");
-      expect(within(row).queryByText("Set frequency")).not.toBeInTheDocument();
     });
+  });
+
+  it("monthly total shows a dash when no active stream has a frequency", async () => {
+    db.rows = [stream({ cadence: null })];
+    renderPage();
+    await screen.findByText("Streamflix");
+    const total = screen.getByLabelText("Estimated monthly cost");
+    expect(total).toHaveTextContent("—");
+    expect(total).not.toHaveTextContent("€0.00");
+  });
+
+  it("monthly total adds a note for streams without a frequency", async () => {
+    db.rows = [stream({}), stream({ id: "s9", display_name: "Nofreq", cadence: null })];
+    renderPage();
+    await screen.findByText("Nofreq");
+    const total = screen.getByLabelText("Estimated monthly cost");
+    expect(total).toHaveTextContent("€10.00");
+    expect(total).toHaveTextContent("+ 1 without a frequency");
   });
 });

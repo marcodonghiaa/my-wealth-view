@@ -63,3 +63,16 @@ export function groupStreams(streams: Array<Stream>, today = new Date()) {
   }
   return out;
 }
+
+/** Sum of known monthly costs; `unknown` counts streams without one, so a missing price is never shown as 0. */
+export function monthlyTotal(streams: Array<Stream>) {
+  let sum = 0;
+  let known = 0;
+  for (const s of streams) {
+    const m = monthlyEur(s);
+    if (m == null) continue;
+    sum += Math.abs(m);
+    known++;
+  }
+  return { sum, known, unknown: streams.length - known };
+}

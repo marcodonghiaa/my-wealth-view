@@ -6,7 +6,13 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { Tables } from "@/integrations/supabase/types";
-import { effectiveCadence, groupStreams, monthlyEur, romeToday } from "@/lib/recurring";
+import {
+  effectiveCadence,
+  groupStreams,
+  monthlyEur,
+  monthlyTotal,
+  romeToday,
+} from "@/lib/recurring";
 import { RECURRING_KEY, useRecurringStreams } from "@/lib/use-recurring-streams";
 import { formatBookingDateShort, formatMoney } from "@/lib/transactions";
 import { CategoryAvatar } from "@/components/category-avatar";
@@ -48,7 +54,8 @@ interface StreamAction {
 // What stream_action does server-side, applied to the cached row for an instant UI update.
 function applyAction(s: Stream, { action, args }: StreamAction): Stream {
   if (action === "dismiss") return { ...s, user_status: "dismissed" };
-  if (action === "undismiss") return { ...s, user_status: null };
+  if (action === "undismiss")
+    return { ...s, user_status: s.detected_status == null ? "confirmed" : null };
   if (action === "confirm") return { ...s, user_status: "confirmed" };
   return {
     ...s,
@@ -122,10 +129,7 @@ function SubscriptionsPage() {
     };
   }, [query.data]);
 
-  const monthlyTotal = useMemo(
-    () => active.reduce((sum, s) => sum + Math.abs(monthlyEur(s) ?? 0), 0),
-    [active],
-  );
+  const total = useMemo(() => monthlyTotal(active), [active]);
 
   const renderCard = (s: Stream) => (
     <SubscriptionCard
@@ -172,14 +176,21 @@ function SubscriptionsPage() {
             <div className="h-16 w-72 animate-pulse rounded-2xl bg-muted" />
           ) : (
             <p className="figure-display">
-              ~{formatMoney(monthlyTotal, "EUR")}
-              <span className="text-[0.4em] font-medium tracking-normal text-muted-foreground">
-                {" "}
-                /month
-              </span>
+              {total.known === 0 ? "—" : `~${formatMoney(total.sum, "EUR")}`}
+              {total.known > 0 && (
+                <span className="text-[0.4em] font-medium tracking-normal text-muted-foreground">
+                  {" "}
+                  /month
+                </span>
+              )}
             </p>
           )}
         </div>
+        {!query.isPending && total.known > 0 && total.unknown > 0 && (
+          <p className="text-[0.8125rem] text-muted-foreground">
+            + {total.unknown} without a frequency
+          </p>
+        )}
       </section>
 
       {toReview.length > 0 && (
@@ -253,20 +264,6 @@ function SubscriptionsPage() {
                 key={s.id}
                 stream={s}
                 onRestore={() => actionMutation.mutate({ id: s.id, action: "undismiss" })}
-                onSelectFrequency={(frequency) =>
-                  actionMutation.mutate({
-                    id: s.id,
-                    action: "set_cadence",
-                    args: { cadence: frequency.toLowerCase() },
-                  })
-                }
-                onSelectCustom={(value, unit) =>
-                  actionMutation.mutate({
-                    id: s.id,
-                    action: "set_cadence",
-                    args: { custom_value: value, custom_unit: unit },
-                  })
-                }
               />
             ))}
           </ul>
@@ -276,17 +273,7 @@ function SubscriptionsPage() {
   );
 }
 
-function DismissedRow({
-  stream,
-  onRestore,
-  onSelectFrequency,
-  onSelectCustom,
-}: {
-  stream: Stream;
-  onRestore: () => void;
-  onSelectFrequency: (frequency: string) => void;
-  onSelectCustom: (value: number, unit: IntervalUnit) => void;
-}) {
+function DismissedRow({ stream, onRestore }: { stream: Stream; onRestore: () => void }) {
   const name = stream.display_name ?? "—";
   const cadence = effectiveCadence(stream);
   const monthly = monthlyEur(stream);
@@ -303,18 +290,6 @@ function DismissedRow({
         {monthly != null && Math.abs(monthly) > 0 && <MonthlyAmount stream={stream} />}
       </div>
       <div className="mt-1 flex items-center gap-2 pl-[3.25rem]">
-        {cadence == null && (
-          <div className="w-32">
-            <FrequencyPicker
-              frequency={null}
-              isManual={false}
-              customValue={null}
-              customUnit={null}
-              onSelect={onSelectFrequency}
-              onSelectCustom={onSelectCustom}
-            />
-          </div>
-        )}
         <button
           type="button"
           onClick={onRestore}
