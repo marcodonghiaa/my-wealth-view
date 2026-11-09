@@ -15,7 +15,7 @@ import {
   Wrench,
   type LucideIcon,
 } from "lucide-react";
-import { categoryCode } from "@/lib/categories";
+import { categoryCode, categoryColor } from "@/lib/categories";
 
 const ICONS: Record<string, LucideIcon> = {
   Shopping: ShoppingBag,
@@ -34,17 +34,20 @@ const ICONS: Record<string, LucideIcon> = {
 };
 
 /**
- * 40px Fill circle with the category's line icon, so rows scan by what the money went on.
+ * 40px circle with the category's line icon, tinted in the category colour, so rows scan by
+ * what the money went on.
  * Your own categories show their initial; no category shows a dashed circle.
  */
 export function CategoryAvatar({ category }: { category: string | null }) {
   const missing = !category || category === "Uncategorized";
   const Icon = missing ? CircleDashed : ICONS[category];
+  const color = categoryColor(category);
   return (
     <span
       aria-hidden
       data-category={category ?? ""}
-      className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted text-foreground"
+      className="flex size-10 shrink-0 items-center justify-center rounded-full"
+      style={{ color, backgroundColor: `color-mix(in oklab, ${color} 16%, var(--color-card))` }}
     >
       {Icon ? (
         <Icon className="size-[18px]" strokeWidth={1.75} />

@@ -7,6 +7,8 @@ describe("CategoryAvatar", () => {
     const { container } = render(<CategoryAvatar category="Groceries" />);
     expect(container.querySelector("svg")).not.toBeNull();
     expect(container.textContent).toBe("");
+    // Tinted in the category's own colour (Groceries).
+    expect((container.firstChild as HTMLElement).style.color).not.toBe("");
   });
 
   it("shows the initial for a custom category", () => {
