@@ -1,4 +1,4 @@
-import { Area, ComposedChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { ComposedChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { axisDateFormatter, formatISODate } from "@/lib/date";
 
 interface ValueChartProps<T extends { ts: number; snapshot_date: string }> {
@@ -10,7 +10,20 @@ interface ValueChartProps<T extends { ts: number; snapshot_date: string }> {
   onScrub: (index: number | null) => void;
 }
 
-// One line, no grid, no y-axis: hovering scrubs it and hands the day back to the page.
+/** Marks the latest value only: an Ember dot in a soft Ember halo. */
+export function latestDot(last: number) {
+  return function LatestDot({ cx, cy, index }: { cx?: number; cy?: number; index?: number }) {
+    if (index !== last || cx == null || cy == null) return <g key={index} />;
+    return (
+      <g key={index}>
+        <circle cx={cx} cy={cy} r={6} fill="var(--color-ember)" fillOpacity={0.2} />
+        <circle cx={cx} cy={cy} r={3} fill="var(--color-ember)" />
+      </g>
+    );
+  };
+}
+
+// One hairline on graph paper, no y-axis: hovering scrubs it and hands the day back to the page.
 export function ValueChart<T extends { ts: number; snapshot_date: string }>({
   data,
   dataKey,
@@ -18,76 +31,80 @@ export function ValueChart<T extends { ts: number; snapshot_date: string }>({
   estimateKey,
   onScrub,
 }: ValueChartProps<T>) {
-  const fillId = `${dataKey}-fill`;
   const formatTick = axisDateFormatter(data.at(0)?.snapshot_date, data.at(-1)?.snapshot_date);
   return (
-    <ResponsiveContainer width="100%" height="100%">
-      <ComposedChart
-        data={data}
-        margin={{ top: 8, right: 4, bottom: 0, left: 4 }}
-        onMouseMove={(state) =>
-          onScrub(
-            state?.isTooltipActive && state.activeTooltipIndex != null
-              ? state.activeTooltipIndex
-              : null,
-          )
-        }
-        onMouseLeave={() => onScrub(null)}
-      >
-        <defs>
-          <linearGradient id={fillId} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="var(--color-primary)" stopOpacity={0.16} />
-            <stop offset="100%" stopColor="var(--color-primary)" stopOpacity={0} />
-          </linearGradient>
-        </defs>
-        <XAxis
-          dataKey="ts"
-          type="number"
-          scale="time"
-          domain={["dataMin", "dataMax"]}
-          tickFormatter={(ts: number) => formatTick(formatISODate(new Date(ts)))}
-          tick={{ fill: "var(--color-muted-foreground)", fontSize: 11 }}
-          tickLine={false}
-          axisLine={false}
-          minTickGap={56}
-          interval="preserveStartEnd"
-        />
-        <YAxis hide domain={["auto", "auto"]} />
-        <Tooltip
-          content={() => null}
-          cursor={{ stroke: "var(--color-foreground)", strokeOpacity: 0.25 }}
-        />
-        <Area
-          type="monotone"
-          dataKey={dataKey}
-          name={name}
-          isAnimationActive={false}
-          stroke="var(--color-primary)"
-          strokeWidth={2}
-          fill={`url(#${fillId})`}
-          dot={false}
-          activeDot={{
-            r: 4,
-            fill: "var(--color-primary)",
-            stroke: "var(--color-background)",
-            strokeWidth: 2,
-          }}
-        />
-        {estimateKey && (
-          <Line
-            type="linear"
-            dataKey={estimateKey}
-            name="Estimate"
-            isAnimationActive={false}
-            stroke="var(--color-muted-foreground)"
-            strokeWidth={1.5}
-            strokeDasharray="2 4"
-            dot={false}
-            activeDot={false}
-            connectNulls
+    <div
+      className="h-full w-full"
+      style={{
+        backgroundImage: "radial-gradient(var(--color-grid-dot) 1px, transparent 1px)",
+        backgroundSize: "8px 8px",
+      }}
+    >
+      <ResponsiveContainer width="100%" height="100%">
+        <ComposedChart
+          data={data}
+          margin={{ top: 8, right: 8, bottom: 0, left: 8 }}
+          onMouseMove={(state) =>
+            onScrub(
+              state?.isTooltipActive && state.activeTooltipIndex != null
+                ? state.activeTooltipIndex
+                : null,
+            )
+          }
+          onMouseLeave={() => onScrub(null)}
+        >
+          <XAxis
+            dataKey="ts"
+            type="number"
+            scale="time"
+            domain={["dataMin", "dataMax"]}
+            tickFormatter={(ts: number) => formatTick(formatISODate(new Date(ts)))}
+            tick={{
+              fill: "var(--color-muted-foreground)",
+              fontSize: 11,
+              fontFamily: "var(--font-figure)",
+            }}
+            tickLine={false}
+            axisLine={false}
+            minTickGap={56}
+            interval="preserveStartEnd"
           />
-        )}
-      </ComposedChart>
-    </ResponsiveContainer>
+          <YAxis hide domain={["auto", "auto"]} />
+          <Tooltip
+            content={() => null}
+            cursor={{ stroke: "var(--color-foreground)", strokeWidth: 1, strokeDasharray: "2 3" }}
+          />
+          <Line
+            type="monotone"
+            dataKey={dataKey}
+            name={name}
+            isAnimationActive={false}
+            stroke="var(--color-foreground)"
+            strokeWidth={1.5}
+            dot={latestDot(data.length - 1)}
+            activeDot={{
+              r: 3,
+              fill: "var(--color-foreground)",
+              stroke: "var(--color-background)",
+              strokeWidth: 1.5,
+            }}
+          />
+          {estimateKey && (
+            <Line
+              type="linear"
+              dataKey={estimateKey}
+              name="Estimate"
+              isAnimationActive={false}
+              stroke="var(--color-muted-foreground)"
+              strokeWidth={1}
+              strokeDasharray="2 3"
+              dot={false}
+              activeDot={false}
+              connectNulls
+            />
+          )}
+        </ComposedChart>
+      </ResponsiveContainer>
+    </div>
   );
 }

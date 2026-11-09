@@ -1,4 +1,5 @@
 @import "@fontsource-variable/geist";
+@import "@fontsource/fragment-mono";
 @import "tailwindcss" source(none);
 @source "../src";
 @import "tw-animate-css";
@@ -6,11 +7,13 @@
 @custom-variant dark (&:is(.dark *));
 
 /*
- * MyFinances design system.
- * Number-first: Geist with tabular figures, a pale ground with white grouped
- * lists, brand forest as the one control tint (mint on dark), green/red only
- * for gains and losses, hairline rows and fully rounded pills. Tokens are
- * semantic roles; components never hard-code colors.
+ * Alopex design system.
+ * "Arctic Ledger": figures in Fragment Mono (money), words in Geist.
+ * Cold snow ground, cold ink as the one control tint, a single Ember accent
+ * (fox fur) for focus, the live cursor and counts. Gains/losses are the only
+ * other hues; categories are one hue ordered by lightness. Hairlines, not
+ * fills; 4px controls, 8px containers, no pills. Tokens are semantic roles;
+ * components never hard-code colors.
  */
 
 @theme inline {
@@ -59,100 +62,113 @@
   --color-sidebar-ring: var(--sidebar-ring);
   --font-sans:
     "Geist Variable", -apple-system, BlinkMacSystemFont, system-ui, "Segoe UI", Roboto, sans-serif;
+  --font-figure: "Fragment Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --font-mono: "Fragment Mono", ui-monospace, "SF Mono", Menlo, monospace;
   --color-mint: var(--mint);
-  --font-mono: ui-monospace, "SF Mono", Menlo, monospace;
+  --color-ember: var(--ember);
+  --color-ember-soft: var(--ember-soft);
+  --color-hairline: var(--hairline);
+  --color-rule: var(--rule);
+  --color-grid-dot: var(--grid-dot);
 }
 
 :root {
   color-scheme: light;
-  --radius: 0.875rem;
-  /* Surfaces: pale ground, white grouped lists, white elevated */
-  --background: oklch(0.977 0.003 165);
-  --foreground: oklch(0.19 0.012 165);
+  --radius: 0.5rem;
+  /* Surfaces: snow ground, white grouped lists */
+  --background: oklch(0.985 0.003 230);
+  --foreground: oklch(0.17 0.012 240);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.19 0.012 165);
+  --card-foreground: oklch(0.17 0.012 240);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.19 0.012 165);
-  /* Accent: brand forest #173F34, the only tint for controls */
-  --primary: oklch(0.33 0.05 167);
-  --primary-foreground: oklch(1 0 0);
-  --secondary: oklch(0.945 0.005 165);
-  --secondary-foreground: oklch(0.19 0.012 165);
-  --muted: oklch(0.945 0.005 165);
-  --muted-foreground: oklch(0.47 0.012 165);
-  --accent: oklch(0.955 0.006 165);
-  --accent-foreground: oklch(0.19 0.012 165);
-  /* Brand mint #D8ECDD: selection and soft highlights */
-  --mint: oklch(0.925 0.03 155);
-  /* Status: meaning only (gains, losses, warnings), each 4.5:1 on white. Categorical palettes
-     (chart-*, category colours) stay off these two hues so a category never reads as a gain or loss. */
-  --destructive: oklch(0.53 0.2 27);
+  --popover-foreground: oklch(0.17 0.012 240);
+  /* Cold ink: the one control tint */
+  --primary: oklch(0.17 0.012 240);
+  --primary-foreground: oklch(0.985 0.003 230);
+  --secondary: oklch(0.955 0.004 230);
+  --secondary-foreground: oklch(0.17 0.012 240);
+  --muted: oklch(0.955 0.004 230);
+  --muted-foreground: oklch(0.48 0.012 240);
+  --accent: oklch(0.965 0.004 230);
+  --accent-foreground: oklch(0.17 0.012 240);
+  /* Ember: fox fur, the single accent. Focus ring, live cursor, counts, links. Never a fill behind text. */
+  --ember: oklch(0.68 0.16 50);
+  --ember-soft: oklch(0.68 0.16 50 / 12%);
+  /* Highlight for text selection */
+  --mint: oklch(0.68 0.16 50 / 22%);
+  /* Status: meaning only (gains, losses, warnings) */
+  --destructive: oklch(0.55 0.2 18);
   --destructive-foreground: oklch(1 0 0);
-  --positive: oklch(0.5 0.13 155);
-  --negative: oklch(0.53 0.2 27);
-  --warning: oklch(0.55 0.13 65);
-  /* Separators and fields */
-  --border: oklch(0.19 0.012 165 / 10%);
-  --input: oklch(0.19 0.012 165 / 16%);
-  --ring: oklch(0.33 0.05 167 / 50%);
-  --chart-1: oklch(0.55 0.07 200);
-  --chart-2: oklch(0.55 0.15 250);
-  --chart-3: oklch(0.74 0.14 75);
-  --chart-4: oklch(0.55 0.17 310);
-  --chart-5: oklch(0.62 0.07 60);
-  --sidebar: oklch(0.977 0.003 165);
-  --sidebar-foreground: oklch(0.19 0.012 165);
-  --sidebar-primary: oklch(0.33 0.05 167);
-  --sidebar-primary-foreground: oklch(1 0 0);
-  --sidebar-accent: oklch(0.19 0.012 165 / 6%);
-  --sidebar-accent-foreground: oklch(0.19 0.012 165);
-  --sidebar-border: oklch(0.19 0.012 165 / 10%);
-  --sidebar-ring: oklch(0.33 0.05 167 / 50%);
+  --positive: oklch(0.52 0.12 160);
+  --negative: oklch(0.55 0.2 18);
+  --warning: oklch(0.68 0.16 50);
+  /* Hairlines and fields */
+  --hairline: oklch(0.17 0.012 240 / 10%);
+  --rule: oklch(0.17 0.012 240 / 18%);
+  --grid-dot: oklch(0.17 0.012 240 / 12%);
+  --border: var(--hairline);
+  --input: var(--rule);
+  --ring: var(--ember);
+  /* Categorical: one hue, low chroma, ordered by lightness (rank 1 = darkest) */
+  --chart-1: oklch(0.30 0.03 240);
+  --chart-2: oklch(0.42 0.04 240);
+  --chart-3: oklch(0.54 0.05 240);
+  --chart-4: oklch(0.66 0.05 240);
+  --chart-5: oklch(0.78 0.04 240);
+  --sidebar: oklch(0.985 0.003 230);
+  --sidebar-foreground: oklch(0.17 0.012 240);
+  --sidebar-primary: oklch(0.17 0.012 240);
+  --sidebar-primary-foreground: oklch(0.985 0.003 230);
+  --sidebar-accent: oklch(0.17 0.012 240 / 5%);
+  --sidebar-accent-foreground: oklch(0.17 0.012 240);
+  --sidebar-border: var(--hairline);
+  --sidebar-ring: var(--ember);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
     color-scheme: dark;
-    /* Surfaces: forest-black ground, raised grouped lists, elevated sheets */
-    --background: oklch(0.155 0.006 170);
-    --foreground: oklch(0.965 0.004 165);
-    --card: oklch(0.2 0.007 170);
-    --card-foreground: oklch(0.965 0.004 165);
-    --popover: oklch(0.235 0.008 170);
-    --popover-foreground: oklch(0.965 0.004 165);
-    /* Accent: mint on dark, with forest text on it */
-    --primary: oklch(0.925 0.03 155);
-    --primary-foreground: oklch(0.3 0.05 167);
-    --secondary: oklch(0.245 0.008 170);
-    --secondary-foreground: oklch(0.965 0.004 165);
-    --muted: oklch(0.245 0.008 170);
-    --muted-foreground: oklch(0.72 0.01 165);
-    --accent: oklch(0.26 0.009 170);
-    --accent-foreground: oklch(0.965 0.004 165);
-    --mint: oklch(0.925 0.03 155);
-    /* Status */
-    --destructive: oklch(0.7 0.18 25);
-    --destructive-foreground: oklch(0.155 0.006 170);
-    --positive: oklch(0.8 0.15 155);
-    --negative: oklch(0.72 0.18 25);
-    --warning: oklch(0.82 0.14 75);
-    /* Separators and fields */
-    --border: oklch(1 0 0 / 10%);
-    --input: oklch(1 0 0 / 16%);
-    --ring: oklch(0.925 0.03 155 / 60%);
-    --chart-1: oklch(0.75 0.07 200);
-    --chart-2: oklch(0.7 0.14 250);
-    --chart-3: oklch(0.82 0.14 75);
-    --chart-4: oklch(0.7 0.16 310);
-    --chart-5: oklch(0.76 0.07 60);
-    --sidebar: oklch(0.155 0.006 170);
-    --sidebar-foreground: oklch(0.965 0.004 165);
-    --sidebar-primary: oklch(0.925 0.03 155);
-    --sidebar-primary-foreground: oklch(0.3 0.05 167);
+    --background: oklch(0.15 0.008 240);
+    --foreground: oklch(0.95 0.006 230);
+    --card: oklch(0.19 0.008 240);
+    --card-foreground: oklch(0.95 0.006 230);
+    --popover: oklch(0.22 0.008 240);
+    --popover-foreground: oklch(0.95 0.006 230);
+    --primary: oklch(0.95 0.006 230);
+    --primary-foreground: oklch(0.15 0.008 240);
+    --secondary: oklch(0.23 0.008 240);
+    --secondary-foreground: oklch(0.95 0.006 230);
+    --muted: oklch(0.23 0.008 240);
+    --muted-foreground: oklch(0.70 0.01 230);
+    --accent: oklch(0.25 0.008 240);
+    --accent-foreground: oklch(0.95 0.006 230);
+    --ember: oklch(0.74 0.15 50);
+    --ember-soft: oklch(0.74 0.15 50 / 16%);
+    --mint: oklch(0.74 0.15 50 / 28%);
+    --destructive: oklch(0.72 0.17 20);
+    --destructive-foreground: oklch(0.15 0.008 240);
+    --positive: oklch(0.76 0.13 160);
+    --negative: oklch(0.72 0.17 20);
+    --warning: oklch(0.74 0.15 50);
+    --hairline: oklch(1 0 0 / 10%);
+    --rule: oklch(1 0 0 / 20%);
+    --grid-dot: oklch(1 0 0 / 12%);
+    --border: var(--hairline);
+    --input: var(--rule);
+    --ring: var(--ember);
+    --chart-1: oklch(0.90 0.03 240);
+    --chart-2: oklch(0.80 0.04 240);
+    --chart-3: oklch(0.68 0.05 240);
+    --chart-4: oklch(0.56 0.05 240);
+    --chart-5: oklch(0.44 0.04 240);
+    --sidebar: oklch(0.15 0.008 240);
+    --sidebar-foreground: oklch(0.95 0.006 230);
+    --sidebar-primary: oklch(0.95 0.006 230);
+    --sidebar-primary-foreground: oklch(0.15 0.008 240);
     --sidebar-accent: oklch(1 0 0 / 7%);
-    --sidebar-accent-foreground: oklch(0.965 0.004 165);
-    --sidebar-border: oklch(1 0 0 / 10%);
-    --sidebar-ring: oklch(0.925 0.03 155 / 60%);
+    --sidebar-accent-foreground: oklch(0.95 0.006 230);
+    --sidebar-border: var(--hairline);
+    --sidebar-ring: var(--ember);
   }
 }
 
@@ -194,24 +210,34 @@
 
   ::selection {
     background-color: var(--color-mint);
-    color: oklch(0.3 0.05 167);
+    color: var(--color-foreground);
   }
 }
 
 @utility font-figure {
-  font-family: var(--font-sans);
+  font-family: var(--font-figure);
   font-variant-numeric: tabular-nums lining-nums;
   letter-spacing: -0.02em;
 }
 
+/* Mono eyebrow: section indices and small labels ("01 OVERVIEW"). */
+@utility eyebrow {
+  font-family: var(--font-figure);
+  font-size: 0.6875rem;
+  line-height: 1.2;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-muted-foreground);
+}
+
 /* The headline figure on a screen: one exact number, cents set smaller by the component. */
 @utility figure-display {
-  font-family: var(--font-sans);
+  font-family: var(--font-figure);
   font-variant-numeric: tabular-nums lining-nums;
-  font-weight: 600;
-  font-size: clamp(2.75rem, 1.6rem + 3.2vw, 4rem);
+  font-weight: 400;
+  font-size: clamp(2.5rem, 1.5rem + 2.8vw, 3.75rem);
   line-height: 1;
-  letter-spacing: -0.035em;
+  letter-spacing: -0.04em;
   color: var(--color-foreground);
   /* A huge amount wraps rather than pushing the page wider than a phone. */
   overflow-wrap: anywhere;

@@ -25,12 +25,12 @@ type FxRate = { date: string; currency: string; rate_to_eur: number };
 export const Route = createFileRoute("/_authenticated/")({
   head: () => ({
     meta: [
-      { title: "Net Worth — MyFinances" },
+      { title: "Net Worth — Alopex" },
       {
         name: "description",
         content: "Track your net worth over time with daily snapshots and currency conversion.",
       },
-      { property: "og:title", content: "Net Worth — MyFinances" },
+      { property: "og:title", content: "Net Worth — Alopex" },
       {
         property: "og:description",
         content: "Track your net worth over time with daily snapshots and currency conversion.",

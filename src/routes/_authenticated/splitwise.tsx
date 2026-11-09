@@ -26,12 +26,12 @@ import { fetchSplits, money, peopleFrom, type SplitRow } from "@/lib/splits";
 export const Route = createFileRoute("/_authenticated/splitwise")({
   head: () => ({
     meta: [
-      { title: "Who owes you — MyFinances" },
+      { title: "Who owes you — Alopex" },
       {
         name: "description",
         content: "Who owes you, from your Splitwise groups and the bills you split.",
       },
-      { property: "og:title", content: "Who owes you — MyFinances" },
+      { property: "og:title", content: "Who owes you — Alopex" },
       {
         property: "og:description",
         content: "Who owes you, from your Splitwise groups and the bills you split.",

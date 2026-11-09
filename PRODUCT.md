@@ -8,7 +8,7 @@ web
 
 ## Users
 
-Self-hosters: technical people who run their own copy of MyFinances to see all their wealth in one place. They mostly use it on a laptop, with the phone as a secondary way to check in. Their job is to know where their money stands (net worth, spending, holdings) without handing bank data to a third-party app.
+Self-hosters: technical people who run their own copy of Alopex to see all their wealth in one place. They mostly use it on a laptop, with the phone as a secondary way to check in. Their job is to know where their money stands (net worth, spending, holdings) without handing bank data to a third-party app.
 
 ## Product Purpose
 
@@ -51,9 +51,9 @@ A self-hosted net worth dashboard. It brings together bank accounts (synced thro
 
 ## Brand Commitments
 
-- Name: MyFinances.
-- Mark: three rising mint bars on a forest tile (`src/components/brand-mark.tsx`, `public/icon-*.png`).
-- Colours: Forest `#173F34`, Mint `#D8ECDD`, Ivory `#F7F5EE`.
+- Name: Alopex.
+- Mark: Alopex the arctic fox, a flat fox head with a white mask cut out (`src/components/brand-mark.tsx`, `public/icon-*.png`). The mascot and the logo are the same drawing. The outline fox (`src/components/empty-state.tsx`) appears only in empty states: never beside an amount, never in a chart, one per viewport.
+- Look: "Arctic Ledger". Figures in Fragment Mono, text in Geist; snow ground, cold ink controls, one Ember accent (fox fur, oklch(0.68 0.16 50)) for focus, cursor and counts; categories one hue ranked by lightness; 4px/8px corners, no pills.
 - The user asked for a Revolut / Trade Republic direction for the app UI.
 
 ## Evidence on Hand

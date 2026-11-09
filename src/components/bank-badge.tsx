@@ -54,7 +54,7 @@ export function AccountBadge({
     return (
       <span
         title={label}
-        className="inline-flex size-7 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-white"
+        className="inline-flex size-7 shrink-0 items-center justify-center overflow-hidden rounded-sm border border-rule bg-white"
       >
         <img
           src={src}
@@ -69,7 +69,7 @@ export function AccountBadge({
   return (
     <span
       title={label}
-      className="inline-flex size-7 shrink-0 items-center justify-center rounded-lg bg-muted text-xs font-bold text-muted-foreground"
+      className="inline-flex size-7 shrink-0 items-center justify-center rounded-sm border border-rule bg-card font-figure text-[11px] text-muted-foreground"
     >
       {bankName.slice(0, 1).toUpperCase()}
     </span>

@@ -17,7 +17,7 @@ describe("DemoBadge", () => {
     expect(screen.getByRole("status").textContent).toBe("Demo, fake data");
   });
 
-  // Regression: at 320px the full badge overlapped the centred "MyFinances" title in the
+  // Regression: at 320px the full badge overlapped the centred "Alopex" title in the
   // mobile top bar. jsdom has no layout, so check that narrow screens show only "Demo".
   it("shortens to Demo under 360px but keeps the full text for screen readers", () => {
     enterDemoMode();

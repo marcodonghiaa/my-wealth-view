@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { EmptyState } from "@/components/empty-state";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import {
@@ -28,12 +29,12 @@ import { formatDay } from "@/lib/date";
 export const Route = createFileRoute("/_authenticated/portfolio")({
   head: () => ({
     meta: [
-      { title: "Portfolio — MyFinances" },
+      { title: "Portfolio — Alopex" },
       {
         name: "description",
         content: "Track your investment holdings and allocation.",
       },
-      { property: "og:title", content: "Portfolio — MyFinances" },
+      { property: "og:title", content: "Portfolio — Alopex" },
       {
         property: "og:description",
         content: "Track your investment holdings and allocation.",
@@ -247,9 +248,11 @@ function PortfolioPage() {
           <div className="h-64 animate-pulse rounded-2xl bg-muted/50" />
         </>
       ) : holdings.length === 0 ? (
-        <div className="flex h-48 items-center justify-center rounded-2xl bg-card text-sm text-muted-foreground">
-          No investments yet. Search for your first one below.
-        </div>
+        <EmptyState
+          className="rounded-lg bg-card"
+          title="No investments yet."
+          hint="Search for your first one below."
+        />
       ) : (
         <>
           {/* Holdings grouped by type */}

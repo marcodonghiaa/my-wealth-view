@@ -74,6 +74,6 @@ describe("buildZip", () => {
   });
 
   it("names the file with the day", () => {
-    expect(exportFileName("2026-10-30")).toBe("myfinances-export-2026-10-30.zip");
+    expect(exportFileName("2026-10-30")).toBe("alopex-export-2026-10-30.zip");
   });
 });

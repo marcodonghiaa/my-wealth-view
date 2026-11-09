@@ -68,7 +68,7 @@ jobs:
           SHA: ${{ steps.sync.outputs.sha }}
         run: |
           set -euo pipefail
-          title="Update MyFinances dashboard to $SHA"
+          title="Update Alopex dashboard to $SHA"
           # Only ever our own bot branch; never the default branch. Hooks are off so nothing the
           # previous step wrote into .git runs with the token.
           git -c core.hooksPath=/dev/null push --force \

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { categoryColor } from "@/lib/categories";
+import { CategoryAvatar } from "@/components/category-avatar";
 import { formatISODate } from "@/lib/date";
 import { formatBookingDateShort, formatEur } from "@/lib/transactions";
 
@@ -103,11 +103,7 @@ export function CategoryRow({
           <ChevronDown
             className={`size-4 text-muted-foreground transition-transform ${open ? "" : "-rotate-90"}`}
           />
-          <span
-            aria-hidden
-            className="inline-block size-2.5 shrink-0 rounded-full"
-            style={{ backgroundColor: categoryColor(category) }}
-          />
+          <CategoryAvatar category={category === UNCATEGORIZED ? null : category} />
           {category}
         </span>
         <span className="font-figure text-foreground">{formatEur(total)}</span>
@@ -123,7 +119,7 @@ export function CategoryRow({
           )}
           {txQuery.data?.map((tx) => (
             <li key={tx.key} className="flex items-center gap-3 py-2 text-[0.8125rem]">
-              <span className="w-14 shrink-0 text-muted-foreground">
+              <span className="font-figure w-14 shrink-0 text-muted-foreground">
                 {formatBookingDateShort(tx.booking_date)}
               </span>
               <span className="min-w-0 flex-1 truncate text-foreground">{tx.label}</span>

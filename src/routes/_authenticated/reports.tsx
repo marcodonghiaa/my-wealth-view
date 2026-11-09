@@ -14,12 +14,12 @@ import { MonthSwitcher } from "@/components/month-switcher";
 export const Route = createFileRoute("/_authenticated/reports")({
   head: () => ({
     meta: [
-      { title: "Monthly Report — MyFinances" },
+      { title: "Monthly Report — Alopex" },
       {
         name: "description",
         content: "Net worth change, income vs expenses, and spending for the month.",
       },
-      { property: "og:title", content: "Monthly Report — MyFinances" },
+      { property: "og:title", content: "Monthly Report — Alopex" },
       {
         property: "og:description",
         content: "Net worth change, income vs expenses, and spending for the month.",

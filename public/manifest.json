@@ -1,13 +1,13 @@
 {
-  "name": "MyFinances",
-  "short_name": "MyFinances",
+  "name": "Alopex",
+  "short_name": "Alopex",
   "description": "Track net worth, spending, subscriptions and portfolio in one place.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#173f34",
-  "theme_color": "#173f34",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
   "icons": [
     {
       "src": "/icon-192.png",

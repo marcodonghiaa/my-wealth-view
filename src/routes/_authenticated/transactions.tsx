@@ -1,4 +1,5 @@
 import { fetchSplitContacts } from "@/lib/splits";
+import { EmptyState } from "@/components/empty-state";
 import { createFileRoute } from "@tanstack/react-router";
 import { accountName, bankOf } from "@/components/bank-badge";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -47,12 +48,12 @@ import { MonthSwitcher } from "@/components/month-switcher";
 export const Route = createFileRoute("/_authenticated/transactions")({
   head: () => ({
     meta: [
-      { title: "Transactions — MyFinances" },
+      { title: "Transactions — Alopex" },
       {
         name: "description",
         content: "Browse and search transactions month by month, newest first.",
       },
-      { property: "og:title", content: "Transactions — MyFinances" },
+      { property: "og:title", content: "Transactions — Alopex" },
       {
         property: "og:description",
         content: "Browse and search transactions month by month, newest first.",
@@ -487,11 +488,14 @@ function TransactionsPage() {
             ))}
           </div>
         ) : txQuery.isError ? null : filtered.length === 0 ? (
-          <div className="px-4 py-12 text-center text-sm text-muted-foreground md:hidden">
-            {transactions.length === 0
-              ? `No transactions for ${monthLabel}.`
-              : "No transactions match your filters."}
-          </div>
+          <EmptyState
+            className="md:hidden"
+            title={
+              transactions.length === 0
+                ? `No transactions for ${monthLabel}.`
+                : "No transactions match your filters."
+            }
+          />
         ) : (
           <ul className="divide-y md:hidden">
             {filtered.map((tx) => (
@@ -534,10 +538,14 @@ function TransactionsPage() {
                 ))
               ) : txQuery.isError ? null : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-4 py-12 text-center text-sm text-muted-foreground">
-                    {transactions.length === 0
-                      ? `No transactions for ${monthLabel}.`
-                      : "No transactions match your filters."}
+                  <td colSpan={5}>
+                    <EmptyState
+                      title={
+                        transactions.length === 0
+                          ? `No transactions for ${monthLabel}.`
+                          : "No transactions match your filters."
+                      }
+                    />
                   </td>
                 </tr>
               ) : (

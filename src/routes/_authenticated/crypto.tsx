@@ -20,12 +20,12 @@ import { formatEur, formatUsd } from "@/lib/transactions";
 export const Route = createFileRoute("/_authenticated/crypto")({
   head: () => ({
     meta: [
-      { title: "Crypto — MyFinances" },
+      { title: "Crypto — Alopex" },
       {
         name: "description",
         content: "Track your cryptocurrency holdings and allocation.",
       },
-      { property: "og:title", content: "Crypto — MyFinances" },
+      { property: "og:title", content: "Crypto — Alopex" },
       {
         property: "og:description",
         content: "Track your cryptocurrency holdings and allocation.",

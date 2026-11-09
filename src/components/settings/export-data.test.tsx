@@ -41,7 +41,7 @@ describe("ExportData", () => {
     fireEvent.click(screen.getByRole("button", { name: /Download my data/ }));
     expect(await screen.findByText("Downloaded.")).toBeInTheDocument();
     expect(click).toHaveBeenCalledTimes(1);
-    expect(click.mock.calls[0]![0]).toMatch(/^myfinances-export-\d{4}-\d{2}-\d{2}\.zip$/);
+    expect(click.mock.calls[0]![0]).toMatch(/^alopex-export-\d{4}-\d{2}-\d{2}\.zip$/);
     expect(fetchAllTables).toHaveBeenCalledWith(expect.anything(), "u1", expect.any(Function));
   });
 

@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { EmptyState } from "@/components/empty-state";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { Check, ChevronDown, Pencil, Trash2 } from "lucide-react";
@@ -21,12 +22,12 @@ import { RevealDialog } from "@/components/subscriptions/reveal-dialog";
 export const Route = createFileRoute("/_authenticated/subscriptions")({
   head: () => ({
     meta: [
-      { title: "Subscriptions — MyFinances" },
+      { title: "Subscriptions — Alopex" },
       {
         name: "description",
         content: "Track recurring subscription charges and estimated monthly spend.",
       },
-      { property: "og:title", content: "Subscriptions — MyFinances" },
+      { property: "og:title", content: "Subscriptions — Alopex" },
       {
         property: "og:description",
         content: "Track recurring subscription charges and estimated monthly spend.",
@@ -229,9 +230,11 @@ function SubscriptionsPage() {
       )}
 
       {!query.isPending && active.length === 0 && (
-        <div className="mt-8 rounded-2xl border border-dashed bg-card/50 p-12 text-center text-sm text-muted-foreground">
-          No subscription charges found yet.
-        </div>
+        <EmptyState
+          className="mt-8 rounded-lg bg-card"
+          title="No subscription charges found yet."
+          hint="Recurring charges show up here once a few months of transactions are in."
+        />
       )}
 
       {stopped.length > 0 && (

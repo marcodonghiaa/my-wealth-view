@@ -19,7 +19,7 @@ const {
 
 if (!configured && typeof window !== "undefined") {
   console.warn(
-    "[my-wealth-view] VITE_SUPABASE_URL / VITE_SUPABASE_PUBLISHABLE_KEY not set: only /demo works. " +
+    "[alopex] VITE_SUPABASE_URL / VITE_SUPABASE_PUBLISHABLE_KEY not set: only /demo works. " +
       "Set them in .env (see .env.example) to use your own project.",
   );
 }
