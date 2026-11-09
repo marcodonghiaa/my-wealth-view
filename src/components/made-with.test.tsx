@@ -4,11 +4,11 @@ import { MadeWith } from "./made-with";
 import { showBranding } from "@/lib/branding";
 
 describe("MadeWith", () => {
-  it("credits the project with a link to its repository by default", () => {
+  it("credits the project with a link to its site by default", () => {
     expect(showBranding({})).toBe(true);
     render(<MadeWith />);
     const link = screen.getByRole("link", { name: /made with alopex/i });
-    expect(link.getAttribute("href")).toBe("https://github.com/marcodonghiaa/alopex-web");
+    expect(link.getAttribute("href")).toBe("https://alopex.finance");
     expect(link.getAttribute("rel")).toContain("noopener");
   });
 

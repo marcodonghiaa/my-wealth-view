@@ -200,7 +200,6 @@ function AuthenticatedLayout() {
             <LogOut className="size-[1.125rem] shrink-0" />
             {signingOut ? "Signing out…" : "Sign out"}
           </button>
-          <MadeWith className="mt-2 px-3" />
         </div>
       </aside>
 
@@ -311,7 +310,6 @@ function AuthenticatedLayout() {
                   {signingOut ? "Signing out…" : "Sign out"}
                 </button>
               </GroupedList>
-              <MadeWith className="min-h-11 px-4" />
             </div>
           </nav>
         </SheetContent>
@@ -323,7 +321,10 @@ function AuthenticatedLayout() {
       <main className="min-w-0 flex-1 pt-[calc(2.75rem+env(safe-area-inset-top))] pb-[calc(3.25rem+env(safe-area-inset-bottom))] md:pt-0 md:pb-0 md:pl-64">
         <Outlet />
         <footer className="mx-auto max-w-5xl px-4 pb-8 sm:px-8 md:pb-12">
-          <TrustNote className="border-t pt-4" />
+          <div className="flex flex-col gap-3 border-t pt-4 sm:flex-row sm:items-start sm:justify-between">
+            <TrustNote />
+            <MadeWith />
+          </div>
         </footer>
       </main>
     </div>

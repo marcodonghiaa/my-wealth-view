@@ -1,19 +1,23 @@
-import { Heart } from "lucide-react";
+import { BrandMark } from "@/components/brand-mark";
 import { showBranding } from "@/lib/branding";
 
-const REPO_URL = "https://github.com/marcodonghiaa/alopex-web";
+const SITE_URL = "https://alopex.finance";
 
+// Quiet credit at the end of every page: the fox mark and one line in caption type,
+// muted until hovered. Self-hosters can hide it (VITE_HIDE_BRANDING).
 export function MadeWith({ className = "" }: { className?: string }) {
   if (!showBranding()) return null;
   return (
     <a
-      href={REPO_URL}
+      href={SITE_URL}
       target="_blank"
       rel="noopener noreferrer"
-      className={`inline-flex items-center gap-1.5 font-figure text-[0.6875rem] uppercase tracking-wide text-muted-foreground transition-colors hover:text-foreground ${className}`}
+      className={`group inline-flex shrink-0 items-center gap-1.5 rounded-sm text-xs text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${className}`}
     >
-      Made with Alopex
-      <Heart aria-hidden className="size-3 fill-current" />
+      <BrandMark className="size-3.5 text-muted-foreground transition-colors group-hover:text-foreground" />
+      <span>
+        Made with <span className="font-medium">Alopex</span>
+      </span>
     </a>
   );
 }
