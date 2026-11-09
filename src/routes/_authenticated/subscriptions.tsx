@@ -108,7 +108,7 @@ function SubscriptionsPage() {
     },
   });
 
-  const { toReview, active, stopped } = useMemo(() => {
+  const { toReview, active, stopped, dismissed } = useMemo(() => {
     const g = groupStreams(query.data ?? [], romeToday());
     const byCost = (a: Stream, b: Stream) =>
       Math.abs(monthlyEur(b) ?? 0) - Math.abs(monthlyEur(a) ?? 0);
@@ -116,6 +116,9 @@ function SubscriptionsPage() {
       toReview: g.toReview.sort(byCost),
       active: g.active.sort(byCost),
       stopped: g.stopped.sort(byCost),
+      dismissed: g.dismissed.sort((a, b) =>
+        (a.display_name ?? "").localeCompare(b.display_name ?? ""),
+      ),
     };
   }, [query.data]);
 
@@ -234,7 +237,94 @@ function SubscriptionsPage() {
           </ul>
         </details>
       )}
+
+      {dismissed.length > 0 && (
+        <details className="group mt-8">
+          <summary className="ios-section-title flex min-h-11 cursor-pointer list-none items-center gap-2">
+            <ChevronDown className="size-4 transition-transform group-open:rotate-180" />
+            Dismissed ({dismissed.length})
+          </summary>
+          <p className="mb-3 px-4 text-[0.8125rem] text-muted-foreground">
+            Hidden and not counted. Restore to bring one back.
+          </p>
+          <ul className="divide-y overflow-hidden rounded-2xl bg-card">
+            {dismissed.map((s) => (
+              <DismissedRow
+                key={s.id}
+                stream={s}
+                onRestore={() => actionMutation.mutate({ id: s.id, action: "undismiss" })}
+                onSelectFrequency={(frequency) =>
+                  actionMutation.mutate({
+                    id: s.id,
+                    action: "set_cadence",
+                    args: { cadence: frequency.toLowerCase() },
+                  })
+                }
+                onSelectCustom={(value, unit) =>
+                  actionMutation.mutate({
+                    id: s.id,
+                    action: "set_cadence",
+                    args: { custom_value: value, custom_unit: unit },
+                  })
+                }
+              />
+            ))}
+          </ul>
+        </details>
+      )}
     </div>
+  );
+}
+
+function DismissedRow({
+  stream,
+  onRestore,
+  onSelectFrequency,
+  onSelectCustom,
+}: {
+  stream: Stream;
+  onRestore: () => void;
+  onSelectFrequency: (frequency: string) => void;
+  onSelectCustom: (value: number, unit: IntervalUnit) => void;
+}) {
+  const name = stream.display_name ?? "—";
+  const cadence = effectiveCadence(stream);
+  const monthly = monthlyEur(stream);
+  return (
+    <li className="px-4 py-3">
+      <div className="flex items-center gap-3">
+        <CategoryAvatar category={stream.category} />
+        <div className="min-w-0 flex-1">
+          <h3 className="truncate text-[0.9375rem] font-medium text-foreground">{name}</h3>
+          <p className="truncate text-[0.8125rem] text-muted-foreground">
+            {[stream.category, cadence].filter(Boolean).join(" · ")}
+          </p>
+        </div>
+        {monthly != null && Math.abs(monthly) > 0 && <MonthlyAmount stream={stream} />}
+      </div>
+      <div className="mt-1 flex items-center gap-2 pl-[3.25rem]">
+        {cadence == null && (
+          <div className="w-32">
+            <FrequencyPicker
+              frequency={null}
+              isManual={false}
+              customValue={null}
+              customUnit={null}
+              onSelect={onSelectFrequency}
+              onSelectCustom={onSelectCustom}
+            />
+          </div>
+        )}
+        <button
+          type="button"
+          onClick={onRestore}
+          aria-label={`Restore ${name}`}
+          className="inline-flex min-h-11 items-center rounded-full border border-border px-4 text-sm font-medium text-foreground/80 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+        >
+          Restore
+        </button>
+      </div>
+    </li>
   );
 }
 

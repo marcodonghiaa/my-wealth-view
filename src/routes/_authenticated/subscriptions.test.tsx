@@ -115,7 +115,8 @@ describe("Subscriptions page", () => {
   it("Not a subscription dismisses, and the Undo toast restores the stream", async () => {
     renderPage();
     fireEvent.click(await screen.findByRole("button", { name: "Cloudbox is not a subscription" }));
-    await waitFor(() => expect(screen.queryByText("Cloudbox")).toBeNull());
+    await waitFor(() => expect(screen.queryByRole("region", { name: "To review" })).toBeNull());
+    expect(screen.getByText("Dismissed (1)")).toBeInTheDocument();
     await waitFor(() =>
       expect(rpc).toHaveBeenCalledWith("stream_action", {
         p_stream: "s2",
@@ -245,5 +246,52 @@ describe("Subscriptions page", () => {
     expect(spy).not.toHaveBeenCalled();
     resolvers[1]!();
     await waitFor(() => expect(spy).toHaveBeenCalledTimes(1));
+  });
+
+  describe("Dismissed section", () => {
+    it("is hidden when nothing is dismissed", async () => {
+      renderPage();
+      await screen.findByText("Streamflix");
+      expect(screen.queryByText(/Dismissed \(/)).not.toBeInTheDocument();
+    });
+
+    it("lists dismissed streams and Restore calls undismiss", async () => {
+      db.rows = [stream({ id: "d1", display_name: "Oldplan", user_status: "dismissed" })];
+      renderPage();
+      expect(await screen.findByText("Dismissed (1)")).toBeInTheDocument();
+      fireEvent.click(screen.getByRole("button", { name: "Restore Oldplan" }));
+      await waitFor(() =>
+        expect(rpc).toHaveBeenCalledWith("stream_action", {
+          p_stream: "d1",
+          p_action: "undismiss",
+          p_args: {},
+        }),
+      );
+      await waitFor(() => expect(screen.queryByText(/Dismissed \(/)).not.toBeInTheDocument());
+    });
+
+    it("null cadence shows Set frequency and no cost", async () => {
+      db.rows = [
+        stream({
+          id: "d2",
+          display_name: "Mystery",
+          user_status: "dismissed",
+          cadence: null,
+          typical_amount_eur: 0,
+        }),
+      ];
+      renderPage();
+      const row = (await screen.findByText("Mystery")).closest("li")!;
+      expect(within(row).getByRole("button", { name: /Set frequency/ })).toBeInTheDocument();
+      expect(row).not.toHaveTextContent("€");
+    });
+
+    it("known cadence shows the monthly cost and no Set frequency", async () => {
+      db.rows = [stream({ id: "d3", display_name: "Oldplan", user_status: "dismissed" })];
+      renderPage();
+      const row = (await screen.findByText("Oldplan")).closest("li")!;
+      expect(row).toHaveTextContent("€10.00");
+      expect(within(row).queryByText("Set frequency")).not.toBeInTheDocument();
+    });
   });
 });
