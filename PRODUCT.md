@@ -52,8 +52,8 @@ A self-hosted net worth dashboard. It brings together bank accounts (synced thro
 ## Brand Commitments
 
 - Name: Alopex.
-- Mark: three rising mint bars on a forest tile (`src/components/brand-mark.tsx`, `public/icon-*.png`).
-- Colours: Forest `#173F34`, Mint `#D8ECDD`, Ivory `#F7F5EE`.
+- Mark: Alopex the arctic fox, a flat fox head with a white mask cut out (`src/components/brand-mark.tsx`, `public/icon-*.png`). The mascot and the logo are the same drawing.
+- Colours: white and near-black ink (`#0A0A0A`), neutral greys; clean like Vercel, friendly like Monarch.
 - The user asked for a Revolut / Trade Republic direction for the app UI.
 
 ## Evidence on Hand

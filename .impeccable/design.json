@@ -4,10 +4,10 @@
   "title": "Design System: Alopex",
   "extensions": {
     "colorMeta": {
-      "forest": {
+      "ink": {
         "role": "primary",
-        "displayName": "Forest",
-        "canonical": "oklch(0.33 0.05 167)",
+        "displayName": "Ink",
+        "canonical": "oklch(0.145 0 0)",
         "tonalRamp": [
           "oklch(0.15 0.05 167)",
           "oklch(0.26 0.05 167)",
@@ -18,12 +18,12 @@
           "oklch(0.84 0.05 167)",
           "oklch(0.95 0.05 167)"
         ],
-        "hexApprox": "#173F34"
+        "hexApprox": "#0A0A0A"
       },
-      "mint": {
+      "highlight": {
         "role": "primary",
-        "displayName": "Mint",
-        "canonical": "oklch(0.925 0.03 155)",
+        "displayName": "Highlight",
+        "canonical": "oklch(0.92 0 0)",
         "tonalRamp": [
           "oklch(0.15 0.03 155)",
           "oklch(0.26 0.03 155)",
@@ -34,7 +34,7 @@
           "oklch(0.84 0.03 155)",
           "oklch(0.95 0.03 155)"
         ],
-        "hexApprox": "#D8ECDD"
+        "hexApprox": "#EBEBEB"
       },
       "ground": {
         "role": "neutral",
@@ -366,10 +366,10 @@
           "oklch(0.95 0.008 170)"
         ]
       },
-      "dark-forest-ink": {
+      "dark-ink": {
         "role": "primary",
-        "displayName": "Forest Ink (on mint, dark)",
-        "canonical": "oklch(0.3 0.05 167)",
+        "displayName": "Ink (on white, dark)",
+        "canonical": "oklch(0.145 0 0)",
         "tonalRamp": [
           "oklch(0.15 0.05 167)",
           "oklch(0.26 0.05 167)",
@@ -587,11 +587,11 @@
   ],
   "narrative": {
     "northStar": "The Number Is the Interface",
-    "overview": "Alopex reads like a well-made bank app: one exact figure at the top of the screen, quiet rows beneath, and nothing else competing. The world is played straight in the Revolut / Trade Republic register the user pinned: a pale green-grey ground, white grouped lists floating on it with no outlines, Geist with tabular figures everywhere, and a single forest tint for controls. Colour carries meaning (gain, loss, warning) or identity (a category, a coin), never decoration.\n\nDensity is calm rather than sparse. Rows are generous (40px avatar, 64px breakdown rows, 44px minimum tap targets), sections breathe at 32px, and the page column caps at 64rem so the figure and its chart stay in one glance on a 1440 screen. The interface is read-only in tone: no trading cues, no hype, no tinted stat tiles in boxed cards.\n\nThe tinted ground with white grouped lists was approved by the user after seeing it. Import, onboarding and setup surfaces are out of scope for this system and keep their older styling; do not treat them as reference.",
+    "overview": "Alopex reads like a well-made bank app: one exact figure at the top of the screen, quiet rows beneath, and nothing else competing. The world is played straight in the Revolut / Trade Republic register the user pinned: a pale green-grey ground, white grouped lists floating on it with no outlines, Geist with tabular figures everywhere, and a single ink tint for controls. Colour carries meaning (gain, loss, warning) or identity (a category, a coin), never decoration.\n\nDensity is calm rather than sparse. Rows are generous (40px avatar, 64px breakdown rows, 44px minimum tap targets), sections breathe at 32px, and the page column caps at 64rem so the figure and its chart stay in one glance on a 1440 screen. The interface is read-only in tone: no trading cues, no hype, no tinted stat tiles in boxed cards.\n\nThe tinted ground with white grouped lists was approved by the user after seeing it. Import, onboarding and setup surfaces are out of scope for this system and keep their older styling; do not treat them as reference.",
     "keyCharacteristics": [
       "One headline figure per screen that has one agreed total, cents set half-size and muted.",
       "Pale ground, white grouped lists, hairline dividers, no borders or drop shadows on containers.",
-      "Forest is the only control tint in light mode; mint takes that role in dark mode.",
+      "Ink is the only control tint in light mode; white takes that role in dark mode.",
       "Green and red mean gain and loss, and nothing else.",
       "Fully rounded pills for every control; 22px corners for grouped lists.",
       "Light and dark follow the system setting; both are first-class."
@@ -599,7 +599,7 @@
     "rules": [
       {
         "name": "The One Tint Rule",
-        "body": "Forest is the only colour a control may wear (mint on dark). No second accent, no blue links, no coloured secondary buttons.",
+        "body": "Ink is the only colour a control may wear (white on dark). No second accent, no blue links, no coloured secondary buttons.",
         "section": "colors"
       },
       {
@@ -630,7 +630,7 @@
     ],
     "dos": [
       "**Do** open every screen with one agreed total on the Headline Figure, and list screens on the large title or the month switcher.",
-      "**Do** keep Forest (mint on dark) as the only control tint.",
+      "**Do** keep Ink (white on dark) as the only control tint.",
       "**Do** set every amount in tabular lining figures, right-aligned in rows.",
       "**Do** separate rows with hairlines inside white grouped lists on the pale ground.",
       "**Do** use fully rounded pills for controls and 22px corners for containers.",

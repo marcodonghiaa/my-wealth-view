@@ -24,7 +24,7 @@ Number-first design in the spirit of Trade Republic and Revolut:
 - Each screen opens on one exact figure, set in Geist with tabular numbers.
 - Scrub the net-worth chart to read any past day.
 - Lists use rounded pills and hairline rows.
-- Brand forest is the only control colour (mint in dark mode).
+- Brand ink is the only control colour (white in dark mode).
 - Phones get a bottom tab bar.
 - Light and dark themes follow the system setting (no toggle). Account numbers are masked until tapped, charts carry text alternatives, and translucency falls back to solid when the OS asks for reduced transparency.
 
