@@ -2,7 +2,7 @@
 
 A self-hosted net worth dashboard. Bank accounts, investments and crypto in one place, converted to a single currency.
 
-**[Try the live demo →](https://myfinancess-view.vercel.app/demo)** No sign-up. The demo runs on generated fake data inside your browser and never touches a real account. The data follows today's date, so the latest transactions are always from today or yesterday.
+**[Try the live demo →](https://app.alopex.finance/demo)** No sign-up. The demo runs on generated fake data inside your browser and never touches a real account. The data follows today's date, so the latest transactions are always from today or yesterday.
 
 ![Net worth dashboard](docs/screenshots/net-worth.png)
 
