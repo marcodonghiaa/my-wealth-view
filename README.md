@@ -1,4 +1,4 @@
-# My Wealth View
+# Alopex (dashboard)
 
 A self-hosted net worth dashboard. Bank accounts, investments and crypto in one place, converted to a single currency.
 
@@ -38,7 +38,7 @@ Start from the backend: [myfinances → Getting started](https://github.com/marc
 
 Then put the dashboard online:
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fmarcodonghiaa%2Fmy-wealth-view&project-name=my-finances&repository-name=my-finances&env=VITE_SUPABASE_URL%2CVITE_SUPABASE_PUBLISHABLE_KEY%2CVITE_VAPID_PUBLIC_KEY&envDescription=Printed+at+the+end+of+the+backend%27s+setup.sh&envLink=https%3A%2F%2Fgithub.com%2Fmarcodonghiaa%2Fmyfinances%23-getting-started)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fmarcodonghiaa%2Fmy-wealth-view&project-name=alopex&repository-name=alopex-web&env=VITE_SUPABASE_URL%2CVITE_SUPABASE_PUBLISHABLE_KEY%2CVITE_VAPID_PUBLIC_KEY&envDescription=Printed+at+the+end+of+the+backend%27s+setup.sh&envLink=https%3A%2F%2Fgithub.com%2Fmarcodonghiaa%2Fmyfinances%23-getting-started)
 
 Vercel copies this repo to your GitHub, asks for `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY` and `VITE_VAPID_PUBLIC_KEY` (paste the values setup printed) and gives you an HTTPS address. Open the address under **Domains** on the Vercel project page (not a per-deployment address) and sign in. On that first sign-in the dashboard tells your database its own address, so bank linking sends you back to it: there is nothing to copy back and no second `./setup.sh` run (the backend's setup waits for it and prints your link). Free on Vercel's Hobby plan; phone and push notifications work because it is HTTPS.
 
@@ -73,7 +73,7 @@ Use the Deploy button above, or import the repo in Vercel yourself (framework: O
 Your Vercel copy never receives upstream fixes by itself. It ships a workflow, **update-from-upstream**, that does it as a pull request:
 
 - Runs every Monday and on demand: **Actions** tab → **update-from-upstream** → **Run workflow**.
-- Fetches the latest `main` of this repo and opens a PR titled "Update MyFinances dashboard to <sha>" with the upstream commit list. If one is still open it updates that PR instead of opening another.
+- Fetches the latest `main` of this repo and opens a PR titled "Update Alopex dashboard to <sha>" with the upstream commit list. If one is still open it updates that PR instead of opening another.
 - Never pushes to your default branch. Review the PR and merge it; Vercel redeploys.
 - Copies over the files upstream has, leaving alone `.env*`, `vercel.json`, `.vercel/`, anything your `.gitignore` matches and `.github/workflows/` (GitHub does not let a workflow change workflows). Files only in your copy are kept; edits you made to files upstream also has are overwritten, so keep customisations in new files.
 - First time only: Settings → Actions → General → enable **Allow GitHub Actions to create and approve pull requests**, or the run stops after pushing the branch `update-from-upstream` and you open the PR from it by hand.
@@ -86,7 +86,7 @@ The backend repo ([myfinances](https://github.com/marcodonghiaa/myfinances)) is 
 
 ## Support
 
-If MyFinances is useful to you, a ⭐ on [GitHub](https://github.com/marcodonghiaa/my-wealth-view) helps others find it. The app shows a small "Made with MyFinances" credit in its menu; set `VITE_HIDE_BRANDING=true` to hide it.
+If Alopex is useful to you, a ⭐ on [GitHub](https://github.com/marcodonghiaa/my-wealth-view) helps others find it. The app shows a small "Made with Alopex" credit in its menu; set `VITE_HIDE_BRANDING=true` to hide it.
 
 ## License
 

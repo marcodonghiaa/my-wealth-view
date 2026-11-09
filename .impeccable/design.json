@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
   "generatedAt": "2026-10-27T07:26:17+00:00",
-  "title": "Design System: MyFinances",
+  "title": "Design System: Alopex",
   "extensions": {
     "colorMeta": {
       "forest": {
@@ -587,7 +587,7 @@
   ],
   "narrative": {
     "northStar": "The Number Is the Interface",
-    "overview": "MyFinances reads like a well-made bank app: one exact figure at the top of the screen, quiet rows beneath, and nothing else competing. The world is played straight in the Revolut / Trade Republic register the user pinned: a pale green-grey ground, white grouped lists floating on it with no outlines, Geist with tabular figures everywhere, and a single forest tint for controls. Colour carries meaning (gain, loss, warning) or identity (a category, a coin), never decoration.\n\nDensity is calm rather than sparse. Rows are generous (40px avatar, 64px breakdown rows, 44px minimum tap targets), sections breathe at 32px, and the page column caps at 64rem so the figure and its chart stay in one glance on a 1440 screen. The interface is read-only in tone: no trading cues, no hype, no tinted stat tiles in boxed cards.\n\nThe tinted ground with white grouped lists was approved by the user after seeing it. Import, onboarding and setup surfaces are out of scope for this system and keep their older styling; do not treat them as reference.",
+    "overview": "Alopex reads like a well-made bank app: one exact figure at the top of the screen, quiet rows beneath, and nothing else competing. The world is played straight in the Revolut / Trade Republic register the user pinned: a pale green-grey ground, white grouped lists floating on it with no outlines, Geist with tabular figures everywhere, and a single forest tint for controls. Colour carries meaning (gain, loss, warning) or identity (a category, a coin), never decoration.\n\nDensity is calm rather than sparse. Rows are generous (40px avatar, 64px breakdown rows, 44px minimum tap targets), sections breathe at 32px, and the page column caps at 64rem so the figure and its chart stay in one glance on a 1440 screen. The interface is read-only in tone: no trading cues, no hype, no tinted stat tiles in boxed cards.\n\nThe tinted ground with white grouped lists was approved by the user after seeing it. Import, onboarding and setup surfaces are out of scope for this system and keep their older styling; do not treat them as reference.",
     "keyCharacteristics": [
       "One headline figure per screen that has one agreed total, cents set half-size and muted.",
       "Pale ground, white grouped lists, hairline dividers, no borders or drop shadows on containers.",

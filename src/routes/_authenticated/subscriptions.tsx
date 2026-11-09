@@ -21,12 +21,12 @@ import { RevealDialog } from "@/components/subscriptions/reveal-dialog";
 export const Route = createFileRoute("/_authenticated/subscriptions")({
   head: () => ({
     meta: [
-      { title: "Subscriptions — MyFinances" },
+      { title: "Subscriptions — Alopex" },
       {
         name: "description",
         content: "Track recurring subscription charges and estimated monthly spend.",
       },
-      { property: "og:title", content: "Subscriptions — MyFinances" },
+      { property: "og:title", content: "Subscriptions — Alopex" },
       {
         property: "og:description",
         content: "Track recurring subscription charges and estimated monthly spend.",

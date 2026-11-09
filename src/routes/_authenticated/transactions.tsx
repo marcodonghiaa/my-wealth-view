@@ -47,12 +47,12 @@ import { MonthSwitcher } from "@/components/month-switcher";
 export const Route = createFileRoute("/_authenticated/transactions")({
   head: () => ({
     meta: [
-      { title: "Transactions — MyFinances" },
+      { title: "Transactions — Alopex" },
       {
         name: "description",
         content: "Browse and search transactions month by month, newest first.",
       },
-      { property: "og:title", content: "Transactions — MyFinances" },
+      { property: "og:title", content: "Transactions — Alopex" },
       {
         property: "og:description",
         content: "Browse and search transactions month by month, newest first.",

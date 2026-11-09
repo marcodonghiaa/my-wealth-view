@@ -34,13 +34,13 @@ export const Route = createFileRoute("/auth")({
   },
   head: () => ({
     meta: [
-      { title: "Sign in — MyFinances" },
+      { title: "Sign in — Alopex" },
       {
         name: "description",
         content: "Sign in to your personal finance dashboard.",
       },
       { name: "robots", content: "noindex" },
-      { property: "og:title", content: "Sign in — MyFinances" },
+      { property: "og:title", content: "Sign in — Alopex" },
       {
         property: "og:description",
         content: "Sign in to your personal finance dashboard.",
@@ -129,7 +129,7 @@ function AuthPage() {
       <div className="w-full max-w-sm">
         <div className="mb-8 flex flex-col items-center text-center">
           <BrandMark className="mb-4 size-12" />
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">MyFinances</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Alopex</h1>
           <p className="mt-1 text-sm text-muted-foreground">Sign in to view your finances</p>
         </div>
 

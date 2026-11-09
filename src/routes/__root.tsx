@@ -94,13 +94,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
-      { title: "MyFinances" },
+      { title: "Alopex" },
       {
         name: "description",
         content:
           "A personal finance dashboard to track net worth, spending, and portfolio over time.",
       },
-      { property: "og:title", content: "MyFinances" },
+      { property: "og:title", content: "Alopex" },
       {
         property: "og:description",
         content:
@@ -120,7 +120,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         name: "apple-mobile-web-app-status-bar-style",
         content: "black-translucent",
       },
-      { name: "apple-mobile-web-app-title", content: "MyFinances" },
+      { name: "apple-mobile-web-app-title", content: "Alopex" },
     ],
     links: [
       {

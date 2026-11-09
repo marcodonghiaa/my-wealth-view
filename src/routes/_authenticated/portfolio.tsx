@@ -28,12 +28,12 @@ import { formatDay } from "@/lib/date";
 export const Route = createFileRoute("/_authenticated/portfolio")({
   head: () => ({
     meta: [
-      { title: "Portfolio — MyFinances" },
+      { title: "Portfolio — Alopex" },
       {
         name: "description",
         content: "Track your investment holdings and allocation.",
       },
-      { property: "og:title", content: "Portfolio — MyFinances" },
+      { property: "og:title", content: "Portfolio — Alopex" },
       {
         property: "og:description",
         content: "Track your investment holdings and allocation.",

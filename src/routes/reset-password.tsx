@@ -17,7 +17,7 @@ export const Route = createFileRoute("/reset-password")({
     context.queryClient.clear();
   },
   head: () => ({
-    meta: [{ title: "Choose a new password — MyFinances" }, { name: "robots", content: "noindex" }],
+    meta: [{ title: "Choose a new password — Alopex" }, { name: "robots", content: "noindex" }],
   }),
   component: ResetPasswordPage,
 });

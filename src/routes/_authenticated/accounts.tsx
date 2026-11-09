@@ -19,12 +19,12 @@ import { activeDepositsEur } from "@/lib/holdings";
 export const Route = createFileRoute("/_authenticated/accounts")({
   head: () => ({
     meta: [
-      { title: "Accounts — MyFinances" },
+      { title: "Accounts — Alopex" },
       {
         name: "description",
         content: "Your bank accounts and fixed-term deposits.",
       },
-      { property: "og:title", content: "Accounts — MyFinances" },
+      { property: "og:title", content: "Accounts — Alopex" },
       {
         property: "og:description",
         content: "Your bank accounts and fixed-term deposits.",

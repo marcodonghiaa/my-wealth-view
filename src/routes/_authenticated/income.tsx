@@ -13,12 +13,12 @@ import { useIncomeCategoryMutation } from "@/components/transactions/mutations";
 export const Route = createFileRoute("/_authenticated/income")({
   head: () => ({
     meta: [
-      { title: "Income — MyFinances" },
+      { title: "Income — Alopex" },
       {
         name: "description",
         content: "Real income for the month, separate from spending and transfers.",
       },
-      { property: "og:title", content: "Income — MyFinances" },
+      { property: "og:title", content: "Income — Alopex" },
       {
         property: "og:description",
         content: "Real income for the month, separate from spending and transfers.",

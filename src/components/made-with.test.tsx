@@ -7,7 +7,7 @@ describe("MadeWith", () => {
   it("credits the project with a link to its repository by default", () => {
     expect(showBranding({})).toBe(true);
     render(<MadeWith />);
-    const link = screen.getByRole("link", { name: /made with myfinances/i });
+    const link = screen.getByRole("link", { name: /made with alopex/i });
     expect(link.getAttribute("href")).toBe("https://github.com/marcodonghiaa/my-wealth-view");
     expect(link.getAttribute("rel")).toContain("noopener");
   });

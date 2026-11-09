@@ -12,12 +12,12 @@ import { useCategories } from "@/lib/use-categories";
 export const Route = createFileRoute("/_authenticated/rules")({
   head: () => ({
     meta: [
-      { title: "Rules — MyFinances" },
+      { title: "Rules — Alopex" },
       {
         name: "description",
         content: "Manage automatic transaction categorization rules.",
       },
-      { property: "og:title", content: "Rules — MyFinances" },
+      { property: "og:title", content: "Rules — Alopex" },
       {
         property: "og:description",
         content: "Manage automatic transaction categorization rules.",

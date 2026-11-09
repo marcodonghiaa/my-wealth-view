@@ -12,7 +12,7 @@ export function MadeWith({ className = "" }: { className?: string }) {
       rel="noopener noreferrer"
       className={`inline-flex items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground ${className}`}
     >
-      Made with MyFinances
+      Made with Alopex
       <Heart aria-hidden className="size-3 fill-current" />
     </a>
   );

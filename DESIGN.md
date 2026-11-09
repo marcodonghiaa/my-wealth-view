@@ -1,5 +1,5 @@
 ---
-name: MyFinances
+name: Alopex
 description: A self-hosted net worth app where the number is the interface.
 colors:
   forest: "oklch(0.33 0.05 167)"
@@ -154,13 +154,13 @@ components:
     padding: "12px 16px"
 ---
 
-# Design System: MyFinances
+# Design System: Alopex
 
 ## Overview
 
 **Creative North Star: "The Number Is the Interface"**
 
-MyFinances reads like a well-made bank app: one exact figure at the top of the screen, quiet rows beneath, and nothing else competing. The world is played straight in the Revolut / Trade Republic register the user pinned: a pale green-grey ground, white grouped lists floating on it with no outlines, Geist with tabular figures everywhere, and a single forest tint for controls. Colour carries meaning (gain, loss, warning) or identity (a category, a coin), never decoration.
+Alopex reads like a well-made bank app: one exact figure at the top of the screen, quiet rows beneath, and nothing else competing. The world is played straight in the Revolut / Trade Republic register the user pinned: a pale green-grey ground, white grouped lists floating on it with no outlines, Geist with tabular figures everywhere, and a single forest tint for controls. Colour carries meaning (gain, loss, warning) or identity (a category, a coin), never decoration.
 
 Density is calm rather than sparse. Rows are generous (40px avatar, 64px breakdown rows, 44px minimum tap targets), sections breathe at 32px, and the page column caps at 64rem so the figure and its chart stay in one glance on a 1440 screen. The interface is read-only in tone: no trading cues, no hype, no tinted stat tiles in boxed cards.
 

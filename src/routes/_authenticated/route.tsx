@@ -137,7 +137,7 @@ function AuthenticatedLayout() {
         <div className="flex h-16 items-center gap-2.5 px-5">
           <BrandMark className="size-8" />
           <span className="text-[0.9375rem] font-semibold tracking-tight text-sidebar-foreground">
-            MyFinances
+            Alopex
           </span>
         </div>
 
@@ -198,7 +198,7 @@ function AuthenticatedLayout() {
       {/* Mobile top bar: padded for the notch (safe-area-inset-top is 0 in a normal tab).
           Page titles are large titles inside each page; this bar only names the app. */}
       <div className="glass fixed inset-x-0 top-0 z-30 flex h-[calc(2.75rem+env(safe-area-inset-top))] items-center justify-center border-b pt-[env(safe-area-inset-top)] md:hidden">
-        <span className="text-[0.9375rem] font-semibold text-foreground">MyFinances</span>
+        <span className="text-[0.9375rem] font-semibold text-foreground">Alopex</span>
       </div>
 
       {/* Mobile bottom tab bar: max 5 items, icon + label, current tab in the tint colour. */}

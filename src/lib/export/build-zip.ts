@@ -12,4 +12,4 @@ export function buildZip(data: ExportData, exportedAt: Date): Uint8Array {
   return zipSync(Object.fromEntries(Object.entries(files).map(([n, t]) => [n, strToU8(t)])));
 }
 
-export const exportFileName = (day: string) => `myfinances-export-${day}.zip`;
+export const exportFileName = (day: string) => `alopex-export-${day}.zip`;

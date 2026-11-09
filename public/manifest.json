@@ -1,6 +1,6 @@
 {
-  "name": "MyFinances",
-  "short_name": "MyFinances",
+  "name": "Alopex",
+  "short_name": "Alopex",
   "description": "Track net worth, spending, subscriptions and portfolio in one place.",
   "start_url": "/",
   "scope": "/",
