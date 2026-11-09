@@ -1,17 +1,22 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Loader2 } from "lucide-react";
+import { ChevronLeft, Loader2, TriangleAlert } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { CategoryTable } from "@/components/import/splitwise-category-table";
+import { FindInBank } from "@/components/import/find-in-bank";
+import { CTA, Group, LINK, PRIMARY, Steps, TINTED } from "@/components/import/splitwise-ui";
+import { money as amount, shortDate } from "@/lib/import/splitwise-format";
 import type { ClassifiedRow } from "@/lib/import/splitwise-classify";
 import { refreshKeys } from "@/lib/import/last-import";
+import { IMPORT_KEY, runSplitwiseImport, type RpcClient } from "@/lib/import/splitwise-commit";
 import {
-  IMPORT_KEY,
-  runSplitwiseImport,
-  undoSplitwiseImport,
-  type RpcClient,
-} from "@/lib/import/splitwise-commit";
-import { fingerprintRows, matchBank, type BankTx } from "@/lib/import/splitwise-match";
+  fingerprintRows,
+  manualMatch,
+  manualSplit,
+  matchBank,
+  type BankMatch,
+  type BankTx,
+} from "@/lib/import/splitwise-match";
 import { saveBalances, type FileBalances } from "@/lib/import/splitwise-balances";
 import { SplitwiseCorrections } from "@/components/import/splitwise-corrections";
 import { isShareRow, type StoredShare } from "@/lib/import/splitwise-corrections";
@@ -28,11 +33,6 @@ const PAGE_LIMIT = 1000;
 
 const addDays = (iso: string, days: number) =>
   new Date(Date.parse(`${iso}T00:00:00Z`) + days * 86_400_000).toISOString().slice(0, 10);
-const BUTTON =
-  "inline-flex min-h-11 items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50";
-const SECONDARY =
-  "inline-flex min-h-11 items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition-colors hover:bg-muted disabled:opacity-50";
-const money = (cents: number) => (cents / 100).toFixed(2);
 
 const expenses = (n: number) => (n === 1 ? "1 expense" : `${n} expenses`);
 
@@ -54,26 +54,15 @@ async function load(rows: Array<ClassifiedRow>, group: string): Promise<Loaded> 
   const dates = rows.map((r) => r.date).sort();
   const first = dates[0] ?? "";
   const last = dates[dates.length - 1] ?? "";
-  const currencies = [...new Set(rows.map((r) => r.currency))].filter((c) => c !== "EUR");
-
-  const [bank, fx, stored, rules] = await Promise.all([
+  const [bank, stored, rules] = await Promise.all([
     supabase
       .from("transactions")
       .select(
-        "account_uid, entry_reference, booking_date, amount, currency, credit_debit_indicator, personal_amount, flow_type, deleted_at",
+        "account_uid, entry_reference, booking_date, amount, currency, credit_debit_indicator, personal_amount, flow_type, deleted_at, creditor_name",
       )
       .gte("booking_date", addDays(first, -DAYS_BEFORE))
       .lte("booking_date", addDays(last, DAYS_AFTER))
       .limit(PAGE_LIMIT),
-    currencies.length === 0
-      ? Promise.resolve({ data: [] as Array<FxRow>, error: null })
-      : supabase
-          .from("fx_rates")
-          .select("currency, date, rate_to_eur")
-          .in("currency", currencies)
-          .gte("date", addDays(first, -FX_DAYS_BEFORE))
-          .lte("date", last)
-          .limit(PAGE_LIMIT),
     supabase
       .from("splitwise_expenses")
       .select(
@@ -86,6 +75,21 @@ async function load(rows: Array<ClassifiedRow>, group: string): Promise<Loaded> 
       .select("match_text, set_category, priority")
       .order("priority", { ascending: true }),
   ]);
+
+  // Rates for the file's currencies and the bank's: a payment picked by hand may be in another one.
+  const currencies = [
+    ...new Set([...rows.map((r) => r.currency), ...(bank.data ?? []).map((t) => t.currency)]),
+  ].filter((c) => c !== "EUR");
+  const fx =
+    currencies.length === 0
+      ? { data: [] as Array<FxRow>, error: null }
+      : await supabase
+          .from("fx_rates")
+          .select("currency, date, rate_to_eur")
+          .in("currency", currencies)
+          .gte("date", addDays(first, -FX_DAYS_BEFORE))
+          .lte("date", addDays(last, DAYS_AFTER))
+          .limit(PAGE_LIMIT);
 
   const failed = bank.error ?? fx.error ?? stored.error ?? rules.error;
   if (failed) throw new Error(failed.message);
@@ -104,20 +108,30 @@ async function load(rows: Array<ClassifiedRow>, group: string): Promise<Loaded> 
   };
 }
 
+/** What a finished import hands back, so the page can say so and offer Undo. */
+export interface ImportDone {
+  batchId: string;
+  group: string;
+  shares: number;
+  /** Set when the shares are saved but the friends' balances are not. */
+  balancesError: string | null;
+}
+
+const txKey = (t: { accountUid: string; entryReference: string }) =>
+  `${t.accountUid}|${t.entryReference}`;
+
 export function SplitwiseReview({
   rows,
   group,
   balances = null,
   onImported,
   onBack,
-  onClose,
 }: {
   rows: Array<ClassifiedRow>;
   group: string;
   balances?: FileBalances | null;
-  onImported?: () => void;
+  onImported?: (done: ImportDone) => void;
   onBack: () => void;
-  onClose: () => void;
 }) {
   const [loaded, setLoaded] = useState<Loaded | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -129,13 +143,11 @@ export function SplitwiseReview({
   const [manualTicks, setChoices] = useState<Map<number, boolean>>(new Map());
   // For each expense I paid with no bank match: count my share (true) or leave it out (false).
   const [unmatchedChoices, setUnmatchedChoices] = useState<Map<number, boolean>>(new Map());
-  const [view, setView] = useState<"review" | "confirm" | "done">("review");
-  const [categoriesOpen, setCategoriesOpen] = useState(false);
+  // Payments picked by hand with Find in bank, per row; the sheet shows for `finding`.
+  const [manual, setManual] = useState<Map<number, BankMatch>>(new Map());
+  const [finding, setFinding] = useState<ClassifiedRow | null>(null);
   const queryClient = useQueryClient();
   const [userId, setUserId] = useState<string | null>(null);
-  // Undo is offered only for the import just made here.
-  const [last, setLast] = useState<{ batchId: string } | null>(null);
-  const [done, setDone] = useState<string | null>(null);
 
   useEffect(() => {
     void supabase.auth.getUser().then(({ data }) => setUserId(data.user?.id ?? null));
@@ -198,7 +210,14 @@ export function SplitwiseReview({
   );
   const uncategorised = [...categoryOf.values()].filter((c) => c === null).length;
 
-  const confirmed = matches.filter((m) => ticked.has(m.row));
+  // A row can leave the import after corrections move the checkpoint; its hand-picked link goes too.
+  const confirmed = useMemo(() => {
+    const inImport = new Set(split.rows.map((r) => r.row));
+    return [
+      ...matches.filter((m) => ticked.has(m.row)),
+      ...[...manual.values()].filter((m) => inImport.has(m.row)),
+    ];
+  }, [split, matches, ticked, manual]);
   const plan = useMemo(
     () =>
       loaded
@@ -206,7 +225,7 @@ export function SplitwiseReview({
             group,
             rows,
             fingerprints,
-            confirmed: matches.filter((m) => ticked.has(m.row)),
+            confirmed,
             stored: loaded.stored,
             countedRows: new Set(
               [...unmatchedChoices].filter(([, counted]) => counted).map(([row]) => row),
@@ -215,7 +234,7 @@ export function SplitwiseReview({
             rate,
           })
         : null,
-    [loaded, group, rows, fingerprints, matches, ticked, unmatchedChoices, categoryOf, rate],
+    [loaded, group, rows, fingerprints, confirmed, unmatchedChoices, categoryOf, rate],
   );
 
   const rememberRule = useMutation({
@@ -264,261 +283,298 @@ export function SplitwiseReview({
       }
       return { ...result, balancesError };
     },
-    onSuccess: ({ batchId, shares, links, balancesError }) => {
-      setLast({ batchId });
-      setView("done");
-      onImported?.();
-      setDone(
-        `Imported ${shares} shares and updated ${links} bank transactions.` +
-          (balancesError
-            ? ` The friends' balances were not saved (${balancesError}); import again to retry.`
-            : ""),
-      );
-      reload();
+    onSuccess: ({ batchId, shares, balancesError }) => {
       void refresh();
-    },
-  });
-
-  const undo = useMutation({
-    mutationFn: async () => {
-      if (!last) return;
-      await undoSplitwiseImport(supabase as unknown as RpcClient, last.batchId);
-    },
-    onSuccess: () => {
-      setLast(null);
-      setDone("Import removed. Nothing from it is left.");
-      importShares.reset();
-      reload();
-      void refresh();
+      onImported?.({ batchId, group: group.trim(), shares, balancesError });
     },
   });
 
   const byRow = new Map(rows.map((r) => [r.row, r]));
-  const bankByKey = new Map(
-    (loaded?.bank ?? []).map((t) => [`${t.accountUid}|${t.entryReference}`, t]),
-  );
+  const bankByKey = new Map((loaded?.bank ?? []).map((t) => [txKey(t), t]));
   // An unticked match is not a link, so that expense counts as not in the bank.
   const linkedRows = new Set(confirmed.map((m) => m.row));
   const unmatched = split.rows.filter(
     (r) => r.kind === "paid_by_me" && isShareRow(r) && !linkedRows.has(r.row),
   );
-  const nothingToWrite = plan?.shares.length === 0 && plan.links.length === 0;
+  const undecided = unmatched.filter((r) => !unmatchedChoices.has(r.row)).length;
+  // An expense still waiting for a decision is something to write, not "nothing new".
+  const nothingToWrite = undecided === 0 && plan?.shares.length === 0 && plan.links.length === 0;
+
+  const header = (
+    <div className="flex min-h-11 items-center gap-3 pr-10">
+      <button type="button" className={`${LINK} -ml-1 gap-0.5`} onClick={onBack}>
+        <ChevronLeft aria-hidden className="size-5" />
+        Back
+      </button>
+      <span className="flex-1" />
+      <Steps current={2} />
+    </div>
+  );
 
   if (loadError)
     return (
-      <p role="alert" className="text-sm text-negative">
-        {loadError}
-      </p>
+      <div className="space-y-6">
+        {header}
+        <p role="alert" className="text-sm text-negative">
+          {loadError}
+        </p>
+      </div>
     );
   if (!loaded || !plan)
-    return <p className="text-sm text-muted-foreground">Reading your bank transactions…</p>;
+    return (
+      <div className="space-y-6">
+        {header}
+        <p role="status" className="text-sm text-muted-foreground">
+          Reading your bank transactions…
+        </p>
+      </div>
+    );
 
   const suggested = new Set(matches.map((m) => m.row));
-  const noSuggestion = unmatched.filter((r) => !suggested.has(r.row));
-  const countChoice = (r: ClassifiedRow) => (
-    <fieldset aria-label={`What to do with ${r.description}`}>
-      <div className="flex flex-wrap gap-x-4">
-        {[
-          { label: "Count my share", value: true },
-          { label: "Leave out", value: false },
-        ].map((o) => (
-          <label key={o.label} className="flex min-h-11 items-center gap-2">
-            <input
-              type="radio"
-              name={`unmatched-${r.row}`}
-              checked={unmatchedChoices.get(r.row) === o.value}
-              onChange={() => setUnmatchedChoices(new Map(unmatchedChoices).set(r.row, o.value))}
-            />
-            {o.label}
-          </label>
-        ))}
-      </div>
-    </fieldset>
+  // Expenses I paid that the matcher found nothing for: the user says what happened.
+  const needsYou = split.rows.filter(
+    (r) => r.kind === "paid_by_me" && isShareRow(r) && !suggested.has(r.row),
   );
-  const undecided = unmatched.filter((r) => !unmatchedChoices.has(r.row)).length;
   const total = sharesTotal(plan.shares);
-  const headline = nothingToWrite
-    ? split.checkpoint
-      ? "Nothing new since your last import. Nothing will be written."
-      : "Nothing to import yet."
-    : split.checkpoint
-      ? `${plan.shares.length === 1 ? "1 new expense" : `${plan.shares.length} new expenses`} since ${split.checkpoint}: ${total}.`
-      : `${expenses(plan.shares.length)} to import: ${total}.`;
-  const bankPart =
-    plan.links.length === 0
-      ? ""
-      : ` and update ${plan.links.length === 1 ? "1 bank transaction" : `${plan.links.length} bank transactions`}`;
+  // Payments another row uses, or that the matcher suggested (on or off), cannot be picked: a
+  // suggestion switched on later would otherwise land on the same payment twice.
+  const takenExcept = (row: number) =>
+    new Set([
+      ...matches.map((m) => txKey(m)),
+      ...confirmed.filter((m) => m.row !== row).map((m) => txKey(m)),
+    ]);
+  // After the sheet or a choice closes, focus goes back to that expense, not to the page top.
+  const focusRow = (row: number) =>
+    requestAnimationFrame(() => document.getElementById(`sw-row-${row}`)?.focus());
 
-  if (view === "done")
-    return (
-      <div className="space-y-4 text-sm">
-        <h2 className="text-base font-semibold">Step 3 of 3: Done</h2>
-        {done && <p role="status">{done}</p>}
-        {last && <p className="text-muted-foreground">Undo is only available now.</p>}
-        {undo.error && (
-          <p role="alert" className="text-negative">
-            Undo failed: {undo.error.message}
-          </p>
-        )}
-        <div className="flex flex-wrap gap-2">
-          <button type="button" className={BUTTON} onClick={onClose}>
-            Close
-          </button>
-          {last && (
-            <button
-              type="button"
-              className={SECONDARY}
-              disabled={undo.isPending}
-              onClick={() => undo.mutate()}
-            >
-              {undo.isPending && <Loader2 className="size-4 animate-spin" />}
-              Undo this import
-            </button>
-          )}
-        </div>
-      </div>
-    );
+  const decide = (row: number, counted: boolean | null) => {
+    const choices = new Map(unmatchedChoices);
+    if (counted === null) choices.delete(row);
+    else choices.set(row, counted);
+    setUnmatchedChoices(choices);
+    if (manual.has(row)) {
+      const next = new Map(manual);
+      next.delete(row);
+      setManual(next);
+    }
+  };
 
-  if (view === "confirm")
-    return (
-      <div className="space-y-4 text-sm">
-        <h2 className="text-base font-semibold">Step 3 of 3: Confirm</h2>
-        <p>
-          Import {expenses(plan.shares.length)} ({total}) into {group.trim()}
-          {bankPart}.
-        </p>
-        {importShares.error && (
-          <p role="alert" className="text-negative">
-            Import failed: {importShares.error.message}
-          </p>
-        )}
-        <div className="flex flex-wrap gap-2">
+  /** What happens to an expense I paid that is not linked yet, or how it was settled. */
+  const actions = (r: ClassifiedRow) => {
+    const link = manual.get(r.row);
+    const tx = link && bankByKey.get(txKey(link));
+    const choice = unmatchedChoices.get(r.row);
+    const status =
+      link && tx
+        ? `Linked to ${tx.name?.trim() || "a payment"} on ${shortDate(tx.bookingDate)} · counts ${amount(link.personalAmountCents ?? 0, tx.currency)}`
+        : choice === true
+          ? "Paid outside your bank: your share counts"
+          : choice === false
+            ? "Skipped: not counted"
+            : null;
+    if (status)
+      return (
+        <div className="flex min-h-12 items-center justify-between gap-3 px-4 py-2 text-sm">
+          <span role="status" className="text-muted-foreground">
+            {status}
+          </span>
           <button
             type="button"
-            className={BUTTON}
-            disabled={!userId || importShares.isPending}
-            onClick={() => importShares.mutate()}
+            className={LINK}
+            id={`sw-row-${r.row}`}
+            aria-label={`Change what to do with ${r.description.trim()}`}
+            onClick={() => {
+              decide(r.row, null);
+              focusRow(r.row);
+            }}
           >
-            {importShares.isPending && <Loader2 className="size-4 animate-spin" />}
-            Import {expenses(plan.shares.length)}
-          </button>
-          <button
-            type="button"
-            className={SECONDARY}
-            disabled={importShares.isPending}
-            onClick={() => setView("review")}
-          >
-            Back
+            Change
           </button>
         </div>
+      );
+    return (
+      <div
+        role="group"
+        aria-label={`What to do with ${r.description.trim()}`}
+        className="grid grid-cols-3 gap-2 px-4 py-3 [&>button]:px-2 [&>button]:text-sm [&>button]:whitespace-nowrap"
+      >
+        <button
+          type="button"
+          id={`sw-row-${r.row}`}
+          className={PRIMARY}
+          onClick={() => setFinding(r)}
+        >
+          Find in bank
+        </button>
+        <button
+          type="button"
+          className={TINTED}
+          onClick={() => {
+            decide(r.row, true);
+            focusRow(r.row);
+          }}
+        >
+          Paid in cash
+        </button>
+        <button
+          type="button"
+          className={TINTED}
+          onClick={() => {
+            decide(r.row, false);
+            focusRow(r.row);
+          }}
+        >
+          Skip
+        </button>
       </div>
     );
+  };
+
+  const expenseLine = (r: ClassifiedRow, right: React.ReactNode) => (
+    <div className="flex min-h-14 items-center gap-3 px-4 py-2.5">
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-[0.9375rem] font-medium">{r.description.trim()}</span>
+        <span className="block text-[0.8125rem] text-muted-foreground">
+          {shortDate(r.date)} · {r.kind === "paid_by_me" ? "paid by you" : "paid by others"}
+        </span>
+      </span>
+      <span className="shrink-0 text-right font-figure text-[0.9375rem]">{right}</span>
+    </div>
+  );
+
+  const buttonLabel =
+    undecided > 0
+      ? `Decide on ${expenses(undecided)} to continue`
+      : `Import ${expenses(plan.shares.length)}`;
 
   return (
-    <div className="space-y-6">
-      <div className="text-sm">
-        <h2 className="mb-1 text-base font-semibold">Step 2 of 3: Review</h2>
-        <p className="text-base" role={nothingToWrite ? "status" : undefined}>
-          {headline}
-        </p>
-        {done && (
-          <p role="status" className="mt-1">
-            {done}
-          </p>
-        )}
-        {split.checkpoint && (
-          <p className="mt-1 text-muted-foreground">
-            Your last import goes up to {split.checkpoint}. Everything already imported stays as it
-            is.
-          </p>
+    <div className="space-y-7">
+      {header}
+
+      <div aria-live="polite">
+        {nothingToWrite ? (
+          <>
+            <h2 className="text-[1.75rem] leading-tight font-semibold tracking-tight">
+              Nothing new
+            </h2>
+            <p role="status" className="mt-1 text-[0.9375rem] text-muted-foreground">
+              {split.checkpoint
+                ? `Everything up to ${shortDate(split.checkpoint)} is already imported. Nothing will be written.`
+                : "Nothing to import yet."}
+            </p>
+          </>
+        ) : (
+          <>
+            <p className="text-[0.9375rem] text-muted-foreground">
+              {split.checkpoint
+                ? `New since ${shortDate(split.checkpoint)}`
+                : `Into ${group.trim()}`}
+            </p>
+            <h2 className="mt-0.5 font-figure text-[2.75rem] leading-none font-semibold tracking-tight">
+              {expenses(plan.shares.length)}
+            </h2>
+            <p className="mt-2 text-[0.9375rem] text-muted-foreground">
+              Your share {total}
+              {split.checkpoint ? " · already-imported ones stay as they are" : ""}
+            </p>
+          </>
         )}
       </div>
 
-      {noSuggestion.length > 0 && (
-        <div className="rounded-2xl border bg-card p-5 text-sm card-ring">
-          <h3 className="mb-1 font-semibold">Expenses you paid that are not in your bank</h3>
-          <p className="mb-3 text-muted-foreground">
-            Paid by cash or a card not connected here? Count your share. Left out, one dated before
-            this import's newest expense shows under Added late next time.
-          </p>
-          <ul className="space-y-3">
-            {noSuggestion.map((r) => (
-              <li key={r.row}>
-                <p>
-                  {r.date} {r.description}: your share {money(r.shareCents ?? 0)} {r.currency}
+      {needsYou.length > 0 && (
+        <Group
+          label={`Needs you · ${needsYou.length}`}
+          tone={undecided > 0 ? "warning" : undefined}
+        >
+          {needsYou.map((r) => (
+            <div key={r.row} className="divide-y divide-border">
+              {!linkedRows.has(r.row) && !unmatchedChoices.has(r.row) && (
+                <p className="flex items-center gap-2 px-4 py-2.5 text-[0.8125rem] text-amber-600 dark:text-amber-300">
+                  <TriangleAlert aria-hidden className="size-4 shrink-0" />
+                  You paid this, but it isn't in your bank yet
                 </p>
-                {countChoice(r)}
-              </li>
-            ))}
-          </ul>
-        </div>
+              )}
+              {expenseLine(
+                r,
+                // Once linked, the bank decides what counts; Splitwise's share is only a hint.
+                manual.has(r.row) ? "" : `your share ${amount(r.shareCents ?? 0, r.currency)}`,
+              )}
+              {actions(r)}
+            </div>
+          ))}
+        </Group>
       )}
 
       {matches.length > 0 && (
-        <div className="rounded-2xl border bg-card p-5 text-sm card-ring">
-          <h3 className="mb-1 font-semibold">Matches with your bank</h3>
-          <p className="mb-3 text-muted-foreground">
-            These look like a bank transaction you already have. Tick the ones that are right.
-            Unsure ones start unticked.
-          </p>
-          <ul className="space-y-2">
-            {matches.map((m) => {
-              const row = byRow.get(m.row);
-              const tx = bankByKey.get(`${m.accountUid}|${m.entryReference}`);
-              if (!row || !tx) return null;
-              return (
-                <li key={m.row}>
-                  <label className="flex min-h-11 items-start gap-2">
-                    <input
-                      type="checkbox"
-                      className="mt-1"
-                      checked={ticked.has(m.row)}
-                      onChange={(e) => {
-                        setChoices(new Map(manualTicks).set(m.row, e.target.checked));
-                      }}
-                    />
-                    <span>
-                      {row.date} {row.description} ({money(row.costCents)} {row.currency}) matches
-                      the bank on {tx.bookingDate}: {money(tx.amountCents)} {tx.currency}
-                      {m.confidence === "ambiguous" && (
-                        <span className="text-muted-foreground"> (not sure)</span>
-                      )}
+        <Group
+          label="Found in your bank"
+          footer={
+            matches.some((m) => m.confidence === "ambiguous")
+              ? "Unsure ones start off. Switch on the ones that are right."
+              : undefined
+          }
+        >
+          {matches.map((m) => {
+            const row = byRow.get(m.row);
+            const tx = bankByKey.get(txKey(m));
+            if (!row || !tx) return null;
+            const on = ticked.has(m.row);
+            return (
+              <div key={m.row} className="divide-y divide-border">
+                <label className="flex min-h-14 cursor-pointer items-center gap-3 px-4 py-2.5">
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[0.9375rem] font-medium">
+                      {row.description.trim()}{" "}
+                      <span className="font-figure font-normal text-muted-foreground">
+                        {amount(row.costCents, row.currency)}
+                      </span>
                     </span>
-                  </label>
-                  {!ticked.has(m.row) && row.kind === "paid_by_me" && (
-                    <div className="ml-6">
-                      <p className="text-muted-foreground">Not this one? Then:</p>
-                      {countChoice(row)}
-                    </div>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        </div>
+                    <span className="block text-[0.8125rem] text-muted-foreground">
+                      {tx.name?.trim() || "Bank"} · {shortDate(tx.bookingDate)} ·{" "}
+                      <span className="font-figure">{amount(tx.amountCents, tx.currency)}</span>
+                      {m.confidence === "ambiguous" && " · not sure"}
+                    </span>
+                  </span>
+                  <input
+                    type="checkbox"
+                    role="switch"
+                    aria-label={`${row.description.trim()} is this bank payment`}
+                    checked={on}
+                    onChange={(e) => {
+                      setChoices(new Map(manualTicks).set(m.row, e.target.checked));
+                      // Switching the suggestion on replaces a payment picked by hand.
+                      if (e.target.checked && manual.has(m.row)) {
+                        const next = new Map(manual);
+                        next.delete(m.row);
+                        setManual(next);
+                      }
+                    }}
+                    className="peer sr-only"
+                  />
+                  <span
+                    aria-hidden
+                    className="relative h-[31px] w-[51px] shrink-0 rounded-full bg-foreground/15 transition-colors peer-checked:bg-positive peer-focus-visible:ring-2 peer-focus-visible:ring-ring after:absolute after:top-[2px] after:left-[2px] after:size-[27px] after:rounded-full after:bg-white after:shadow after:transition-transform peer-checked:after:translate-x-5"
+                  />
+                </label>
+                {!on && row.kind === "paid_by_me" && actions(row)}
+              </div>
+            );
+          })}
+        </Group>
       )}
 
       {categorised.length > 0 && (
-        <details
-          className="rounded-2xl border bg-card p-5 text-sm card-ring"
-          open={categoriesOpen || uncategorised > 0}
-          onToggle={(e) => setCategoriesOpen(e.currentTarget.open)}
+        <Group
+          label={`Expenses · ${categorised.length}`}
+          footer={uncategorised > 0 ? undefined : "Tap a category to change it."}
         >
-          <summary className="min-h-11 cursor-pointer font-semibold">
-            Categories
-            {uncategorised > 0 ? `: ${uncategorised} to choose` : ""}
-          </summary>
           {uncategorised > 0 && (
-            <p
-              role="alert"
-              className="my-3 rounded-lg border border-amber-500/50 bg-amber-500/10 px-3 py-2 text-foreground"
-            >
+            <p role="alert" className="bg-amber-500/10 px-4 py-3 text-[0.8125rem] text-foreground">
               {uncategorised === 1
                 ? "1 expense was not recognised."
                 : `${uncategorised} expenses were not recognised.`}{" "}
-              Choose a category for them (the highlighted ones, at the top), or pick Others. If you
-              leave them empty, the AI will categorize {uncategorised === 1 ? "it" : "them"}{" "}
-              overnight.
+              Pick a category, or leave it and the AI will categorize{" "}
+              {uncategorised === 1 ? "it" : "them"} overnight.
             </p>
           )}
           <CategoryTable
@@ -526,29 +582,26 @@ export function SplitwiseReview({
             categoryOf={categoryOf}
             picked={picked}
             remembered={remembered}
-            onPick={(row, category) => {
-              setCategoriesOpen(true);
-              setPicked(new Map(picked).set(row, category));
-            }}
+            onPick={(row, category) => setPicked(new Map(picked).set(row, category))}
             onRemember={(row, category) => rememberRule.mutate({ row, category })}
             saving={rememberRule.isPending}
           />
           {rememberRule.error && (
-            <p role="alert" className="mt-2 text-negative">
+            <p role="alert" className="px-4 py-2 text-sm text-negative">
               Could not save the rule: {rememberRule.error.message}
             </p>
           )}
-        </details>
+        </Group>
       )}
 
       {plan.problems.map((p, i) => (
-        <p key={i} role="alert" className="text-sm text-negative">
+        <p key={i} role="alert" className="px-4 text-sm text-negative">
           {p}
         </p>
       ))}
 
       {balances && balances.skippedRows > 0 && (
-        <p className="text-sm text-muted-foreground">
+        <p className="px-4 text-sm text-muted-foreground">
           {balances.skippedRows} {balances.skippedRows === 1 ? "row is" : "rows are"} in another
           currency than {balances.currency}: who owes you leaves{" "}
           {balances.skippedRows === 1 ? "it" : "them"} out.
@@ -556,10 +609,10 @@ export function SplitwiseReview({
       )}
 
       {nothingToWrite && balances && (
-        <div className="text-sm">
+        <div className="space-y-2">
           <button
             type="button"
-            className={SECONDARY}
+            className={CTA}
             disabled={saveOnlyBalances.isPending || saveOnlyBalances.isSuccess}
             onClick={() => saveOnlyBalances.mutate()}
           >
@@ -567,38 +620,38 @@ export function SplitwiseReview({
             Update balances from this file
           </button>
           {saveOnlyBalances.isSuccess && (
-            <p role="status" className="mt-2">
+            <p role="status" className="px-4 text-sm">
               Balances updated.
             </p>
           )}
           {saveOnlyBalances.error && (
-            <p role="alert" className="mt-2 text-negative">
+            <p role="alert" className="px-4 text-sm text-negative">
               Could not save the balances: {saveOnlyBalances.error.message}
             </p>
           )}
         </div>
       )}
 
-      <div className="text-sm">
-        {undecided > 0 && (
-          <p className="mb-2 text-muted-foreground">
-            Decide on {expenses(undecided)} above to continue.
-          </p>
-        )}
-        <div className="flex flex-wrap gap-2">
+      {!nothingToWrite && (
+        <div className="space-y-2">
+          {importShares.error && (
+            <p role="alert" className="px-4 text-sm text-negative">
+              Import failed: {importShares.error.message}
+            </p>
+          )}
           <button
             type="button"
-            className={BUTTON}
-            disabled={plan.problems.length > 0 || nothingToWrite || undecided > 0}
-            onClick={() => setView("confirm")}
+            className={CTA}
+            disabled={
+              plan.problems.length > 0 || undecided > 0 || !userId || importShares.isPending
+            }
+            onClick={() => importShares.mutate()}
           >
-            Continue
-          </button>
-          <button type="button" className={SECONDARY} onClick={onBack}>
-            Back
+            {importShares.isPending && <Loader2 className="size-4 animate-spin" />}
+            {buttonLabel}
           </button>
         </div>
-      </div>
+      )}
 
       <SplitwiseCorrections
         group={group}
@@ -608,6 +661,30 @@ export function SplitwiseReview({
         rate={rate}
         categoryFor={(row) => categorizeRow(row, rules).category}
         onApplied={reload}
+      />
+
+      <FindInBank
+        row={finding}
+        bank={loaded.bank}
+        taken={finding ? takenExcept(finding.row) : new Set()}
+        rate={rate}
+        onClose={() => {
+          if (finding) focusRow(finding.row);
+          setFinding(null);
+        }}
+        onPick={(tx) => {
+          if (!finding) return;
+          const split = manualSplit(finding, tx, rate);
+          if (!split) return;
+          const choices = new Map(unmatchedChoices);
+          choices.delete(finding.row);
+          setUnmatchedChoices(choices);
+          // A picked payment replaces a doubtful suggestion for the same row.
+          setChoices(new Map(manualTicks).set(finding.row, false));
+          setManual(new Map(manual).set(finding.row, manualMatch(finding, tx, split)));
+          focusRow(finding.row);
+          setFinding(null);
+        }}
       />
     </div>
   );

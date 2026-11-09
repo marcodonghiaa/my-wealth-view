@@ -46,7 +46,11 @@ describe("toBankTx", () => {
       direction: "DBIT",
       personalAmountCents: 500,
       flowType: null,
+      name: null,
     });
+  });
+  it("keeps who was paid, for the user to recognise the payment", () => {
+    expect(toBankTx(dbRow({ creditor_name: "Uber" }))?.name).toBe("Uber");
   });
   it("skips deleted rows and rows it cannot place", () => {
     expect(toBankTx(dbRow({ deleted_at: "2026-09-01" }))).toBeNull();

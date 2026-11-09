@@ -12,6 +12,8 @@ export interface BankTx {
   direction: "DBIT" | "CRDT";
   personalAmountCents: number | null;
   flowType: string | null;
+  /** Who was paid, as the bank names it; only shown to the user. */
+  name?: string | null;
 }
 
 export interface BankMatch {
@@ -146,4 +148,82 @@ export function matchBank(
     });
   }
   return matches.sort((a, b) => a.row - b.row);
+}
+
+// Find in bank: the user picks the payment by hand, so any amount is fine; the window is a bit
+// wider before the expense date than the matcher's, since people log a bill a few days late.
+const PICK_DAYS_BEFORE = 3;
+const PICK_DAYS_AFTER = 7;
+
+const txKey = (t: { accountUid: string; entryReference: string }) =>
+  `${t.accountUid}|${t.entryReference}`;
+
+/**
+ * Payments out of my accounts around an expense I paid, closest date first, leaving out the ones
+ * already split, marked as transfers, or taken by another row of this import (`taken` keys are
+ * "accountUid|entryReference").
+ */
+export function nearbyPayments(
+  r: ClassifiedRow,
+  bank: Array<BankTx>,
+  taken: Set<string>,
+): Array<BankTx> {
+  const day = dayNumber(r.date);
+  return bank
+    .filter((tx) => {
+      const days = dayNumber(tx.bookingDate) - day;
+      return (
+        tx.direction === "DBIT" &&
+        tx.personalAmountCents === null &&
+        tx.flowType !== "transfer" &&
+        !taken.has(txKey(tx)) &&
+        days >= -PICK_DAYS_BEFORE &&
+        days <= PICK_DAYS_AFTER
+      );
+    })
+    .sort(
+      (a, b) =>
+        Math.abs(dayNumber(a.bookingDate) - day) - Math.abs(dayNumber(b.bookingDate) - day) ||
+        b.amountCents - a.amountCents,
+    );
+}
+
+export interface ManualSplit {
+  /** What the others owe me for this expense, in the bank transaction's currency. */
+  othersOweCents: number;
+  /** What stays my spending: the bank amount minus what the others owe, never below zero. */
+  personalAmountCents: number;
+}
+
+/**
+ * My part of a payment the user linked by hand: what left the bank minus what the others owe me
+ * on Splitwise. The amounts may differ (tip, a split entered differently), so the bank amount is
+ * the truth and Splitwise only says how much comes back. Null when a rate is missing.
+ */
+export function manualSplit(r: ClassifiedRow, tx: BankTx, rate: RateToEur): ManualSplit | null {
+  const owedInRow = Math.max(0, Math.abs(r.costCents) - (r.shareCents ?? 0));
+  let othersOweCents = owedInRow;
+  // Same currency: no conversion, so rates on two different days cannot make the amount drift.
+  if (r.currency !== tx.currency) {
+    const rowRate = rate(r.currency, r.date);
+    const txRate = rate(tx.currency, tx.bookingDate);
+    if (rowRate === null || txRate === null || txRate === 0) return null;
+    othersOweCents = Math.round((owedInRow * rowRate) / txRate);
+  }
+  return {
+    othersOweCents,
+    personalAmountCents: Math.max(0, tx.amountCents - othersOweCents),
+  };
+}
+
+/** The link the plan writes when the user picks a payment by hand. */
+export function manualMatch(r: ClassifiedRow, tx: BankTx, split: ManualSplit): BankMatch {
+  return {
+    row: r.row,
+    entryReference: tx.entryReference,
+    accountUid: tx.accountUid,
+    action: "set_personal_amount",
+    confidence: "likely",
+    personalAmountCents: split.personalAmountCents,
+  };
 }

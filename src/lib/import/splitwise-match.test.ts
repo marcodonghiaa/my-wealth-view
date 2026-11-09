@@ -1,7 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { classifyRows } from "./splitwise-classify";
 import type { SplitwiseRow } from "./splitwise-parse";
-import { fingerprintRows, matchBank, type BankTx } from "./splitwise-match";
+import {
+  fingerprintRows,
+  manualMatch,
+  manualSplit,
+  matchBank,
+  nearbyPayments,
+  type BankTx,
+} from "./splitwise-match";
 
 const row = (over: Partial<SplitwiseRow> = {}): SplitwiseRow => ({
   row: 1,
@@ -150,5 +157,84 @@ describe("matchBank", () => {
       rate,
     );
     expect(result).toMatchObject([{ entryReference: "near", confidence: "ambiguous" }]);
+  });
+});
+
+describe("nearbyPayments", () => {
+  // Uber on 2026-08-16, paid by me: cost 99 USD, my share 30 USD (net +69 = others owe me).
+  const [uber] = classify([row()]);
+  const key = (t: BankTx) => `${t.accountUid}|${t.entryReference}`;
+
+  it("lists money out around the date, any amount, closest date first", () => {
+    const list = nearbyPayments(
+      uber!,
+      [
+        tx({ entryReference: "far", bookingDate: "2026-08-22", amountCents: 100 }),
+        tx({ entryReference: "same", bookingDate: "2026-08-16", amountCents: 50 }),
+        tx({ entryReference: "before", bookingDate: "2026-08-14", amountCents: 999999 }),
+      ],
+      new Set(),
+    );
+    expect(list.map((t) => t.entryReference)).toEqual(["same", "before", "far"]);
+  });
+
+  it("leaves out money in, other dates, split or transfer rows, and taken payments", () => {
+    const taken = tx({ entryReference: "taken" });
+    const list = nearbyPayments(
+      uber!,
+      [
+        tx({ entryReference: "in", direction: "CRDT" }),
+        tx({ entryReference: "early", bookingDate: "2026-08-12" }),
+        tx({ entryReference: "late", bookingDate: "2026-08-24" }),
+        tx({ entryReference: "split", personalAmountCents: 100 }),
+        tx({ entryReference: "transfer", flowType: "transfer" }),
+        taken,
+        tx({ entryReference: "ok" }),
+      ],
+      new Set([key(taken)]),
+    );
+    expect(list.map((t) => t.entryReference)).toEqual(["ok"]);
+  });
+});
+
+describe("manualSplit", () => {
+  const [uber] = classify([row()]);
+
+  it("keeps the bank amount minus what the others owe, converted to the bank currency", () => {
+    // Others owe 69 USD = 62.10 EUR; Revolut charged 80 EUR (a bigger total than in Splitwise).
+    const split = manualSplit(uber!, tx({ amountCents: 8000 }), rate);
+    expect(split).toEqual({ othersOweCents: 6210, personalAmountCents: 1790 });
+  });
+
+  it("never goes below zero when the others owe more than the bank charge", () => {
+    expect(manualSplit(uber!, tx({ amountCents: 5000 }), rate)?.personalAmountCents).toBe(0);
+  });
+
+  it("gives up when an exchange rate is missing", () => {
+    expect(manualSplit(uber!, tx({ currency: "GBP" }), rate)).toBeNull();
+    expect(manualSplit({ ...uber!, currency: "GBP" }, tx(), rate)).toBeNull();
+  });
+
+  it("does not convert when the expense and the payment share a currency", () => {
+    // A rate that moves by day would make 69 USD drift if it were converted twice.
+    const drifting = (c: string, d: string) =>
+      c === "USD" ? (d === "2026-08-16" ? 0.9 : 0.91) : 1;
+    const split = manualSplit(uber!, tx({ currency: "USD", amountCents: 9900 }), drifting);
+    expect(split).toEqual({ othersOweCents: 6900, personalAmountCents: 3000 });
+    // Even with no rate at all.
+    expect(manualSplit(uber!, tx({ currency: "USD" }), () => null)?.othersOweCents).toBe(6900);
+  });
+
+  it("builds the link the plan writes", () => {
+    const t = tx({ amountCents: 8000 });
+    const split = manualSplit(uber!, t, rate)!;
+    expect(manualMatch(uber!, t, split)).toEqual({
+      row: 1,
+      entryReference: "e1",
+      accountUid: "a1",
+      action: "set_personal_amount",
+      confidence: "likely",
+      personalAmountCents: 1790,
+    });
   });
 });

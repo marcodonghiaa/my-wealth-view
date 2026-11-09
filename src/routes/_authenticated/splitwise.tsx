@@ -1,13 +1,24 @@
-import { useIsMutating, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useIsMutating, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { SplitwisePanel } from "@/components/import/splitwise-panel";
-import { IMPORT_KEY } from "@/lib/import/splitwise-commit";
+import { IMPORT_KEY, undoSplitwiseImport, type RpcClient } from "@/lib/import/splitwise-commit";
+import type { ImportDone } from "@/components/import/splitwise-review";
+import {
+  browserStorage,
+  clearLastImport,
+  loadLastImport,
+  refreshKeys,
+  saveLastImport,
+  type LastImport,
+} from "@/lib/import/last-import";
+import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { BalancesView } from "@/components/splitwise/balances-view";
 import { summarizeBalances } from "@/lib/import/splitwise-balances";
 import { useSplitwiseBalances } from "@/lib/use-splitwise-balances";
 import { OwedView } from "@/components/splitwise/owed-view";
+import { LastImportRow } from "@/components/splitwise/last-import-row";
 import { useSettleSplitMutation } from "@/components/transactions/mutations";
 import { toast } from "sonner";
 import { fetchSplits, money, peopleFrom, type SplitRow } from "@/lib/splits";
@@ -40,6 +51,57 @@ function SplitwisePage() {
   const queryClient = useQueryClient();
   const splits = useQuery({ queryKey: ["splits"], queryFn: fetchSplits, staleTime: 60_000 });
   const settle = useSettleSplitMutation(queryClient);
+
+  // The last Splitwise import, kept in this browser so it can be undone after looking at the page.
+  const [userId, setUserId] = useState<string | null>(null);
+  const [last, setLast] = useState<LastImport | null>(null);
+  useEffect(() => {
+    void supabase.auth.getUser().then(({ data }) => {
+      const id = data.user?.id ?? null;
+      setUserId(id);
+      setLast(id ? loadLastImport(browserStorage(), id, "splitwise") : null);
+    });
+  }, []);
+
+  const undo = useMutation({
+    mutationFn: (batchId: string) => undoSplitwiseImport(supabase as unknown as RpcClient, batchId),
+    onSuccess: ({ shares }, batchId) => {
+      // Only forget the stored import when it is the one undone; a newer one keeps its Undo.
+      setLast((current) => {
+        if (current?.batchId !== batchId) return current;
+        if (userId) clearLastImport(browserStorage(), userId, "splitwise");
+        return null;
+      });
+      toast.success(
+        shares === 1
+          ? "Import undone: 1 expense removed"
+          : `Import undone: ${shares} expenses removed`,
+      );
+      for (const queryKey of refreshKeys("splitwise"))
+        void queryClient.invalidateQueries({ queryKey });
+    },
+    onError: (err) => toast.error(`Undo failed: ${err.message}`),
+  });
+  const undoBatch = (batchId: string) => {
+    if (!undo.isPending) undo.mutate(batchId);
+  };
+
+  const onImported = (done: ImportDone) => {
+    const entry = { batchId: done.batchId, count: done.shares };
+    if (userId) saveLastImport(browserStorage(), userId, "splitwise", entry);
+    setLast(entry);
+    setImporting(false);
+    const n = done.shares === 1 ? "1 expense" : `${done.shares} expenses`;
+    toast.success(`${n} imported into ${done.group}`, {
+      duration: 10_000,
+      action: { label: "Undo", onClick: () => undoBatch(done.batchId) },
+    });
+    if (done.balancesError) {
+      toast.error(
+        `The friends' balances were not saved (${done.balancesError}). Import again to retry.`,
+      );
+    }
+  };
 
   const totals = useMemo(() => {
     let owedToYou = 0;
@@ -136,15 +198,22 @@ function SplitwisePage() {
       ) : (
         <BalancesView groups={groups} />
       )}
+      {last && (
+        <LastImportRow
+          count={last.count}
+          pending={undo.isPending}
+          onUndo={() => undoBatch(last.batchId)}
+        />
+      )}
 
       <Dialog open={importing} onOpenChange={(open) => writing || setImporting(open)}>
-        <DialogContent className="left-0 top-0 block h-dvh max-h-dvh w-screen max-w-none translate-x-0 translate-y-0 rounded-none border-0 p-0 sm:rounded-none">
-          <div className="mx-auto max-w-2xl px-4 py-6 sm:px-8">
-            <DialogTitle className="mb-1 pr-10 text-xl">Import from Splitwise</DialogTitle>
-            <DialogDescription className="mb-6">
+        <DialogContent className="left-0 top-0 block h-dvh max-h-dvh w-screen overflow-y-auto max-w-none translate-x-0 translate-y-0 rounded-none border-0 p-0 sm:rounded-none">
+          <div className="mx-auto max-w-lg px-4 pt-6 pb-16 sm:pt-12">
+            <DialogTitle className="sr-only">Import from Splitwise</DialogTitle>
+            <DialogDescription className="sr-only">
               Your share of each expense counts as spending, and everyone's balance is saved.
             </DialogDescription>
-            <SplitwisePanel onClose={() => setImporting(false)} />
+            <SplitwisePanel onDone={onImported} />
           </div>
         </DialogContent>
       </Dialog>
