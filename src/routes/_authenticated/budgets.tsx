@@ -45,15 +45,24 @@ const NOT_BUDGETED = new Set(ALWAYS_SHOWN);
 // Spend history read for averages and unbudgeted spend: this many months back, every category.
 const HISTORY_MONTHS = AVERAGE_MONTHS;
 
-async function fetchBudgets(): Promise<Array<BudgetRow>> {
-  const { data, error } = await supabase
-    .from("category_budgets")
-    .select("category,month,amount,rollover");
-  if (error) throw error;
-  return ((data ?? []) as Array<BudgetRow>).map((r) => ({ ...r, amount: Number(r.amount) }));
-}
-
 const PAGE_SIZE = 1000; // PostgREST returns at most 1000 rows per request
+
+/** Every budget row, read page by page: each change in a month adds a row, so they add up. */
+async function fetchBudgets(): Promise<Array<BudgetRow>> {
+  const out: Array<BudgetRow> = [];
+  for (let start = 0; ; start += PAGE_SIZE) {
+    const { data, error } = await supabase
+      .from("category_budgets")
+      .select("category,month,amount,rollover")
+      .order("month")
+      .order("category")
+      .range(start, start + PAGE_SIZE - 1);
+    if (error) throw error;
+    const page = (data ?? []) as Array<BudgetRow>;
+    for (const r of page) out.push({ ...r, amount: Number(r.amount) });
+    if (page.length < PAGE_SIZE) return out;
+  }
+}
 
 /**
  * Spend per month and category from `from` to `to`, every page of it. With `categories`, only

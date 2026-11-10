@@ -233,6 +233,26 @@ describe("Budgets page", () => {
     expect(await screen.findByText("€480.00 left")).toBeTruthy();
   });
 
+  // protects=P1-2 budgets past the 1000-row cap are all read;
+  // fails_when=fetchBudgets stops after one request
+  it("reads every budget row past 1000", async () => {
+    // 1100 removed budgets (amount 0) come first; the live Groceries budget is row 1101.
+    db["category_budgets"] = [
+      ...Array.from({ length: 1100 }, (_, i) => ({
+        category: `Old ${String(i).padStart(4, "0")}`,
+        month: "2026-11-01",
+        amount: 0,
+        rollover: false,
+      })),
+      { category: "Zz Groceries", month: "2026-11-01", amount: 300, rollover: false },
+    ];
+    db["v_spend_by_category_monthly"] = [
+      { month: "2026-11-01", category: "Zz Groceries", spend_eur: 120 },
+    ];
+    renderPage();
+    expect(await screen.findByText("€180.00 left")).toBeTruthy();
+  });
+
   // protects=clearing the field and pressing Save keeps the budget (P1-4);
   // fails_when=a blank amount is saved as 0, which removes the budget
   it("does not remove a budget when the amount is cleared", async () => {
