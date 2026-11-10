@@ -238,4 +238,15 @@ describe("Budgets page", () => {
     await waitFor(() => expect(upserts).toHaveLength(1));
     expect(upserts[0]!.rows[0]).toMatchObject({ month: "2026-10-01", amount: 280 });
   });
+
+  it("refuses an amount of 10 million or more in the add form", async () => {
+    renderPage();
+    fireEvent.change(await screen.findByLabelText("Category"), { target: { value: "Groceries" } });
+    fireEvent.change(screen.getByLabelText("Monthly budget in euros"), {
+      target: { value: "10000000" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Add" }));
+    expect((await screen.findByRole("alert")).textContent).toContain("below 10 million");
+    expect(upserts).toHaveLength(0);
+  });
 });

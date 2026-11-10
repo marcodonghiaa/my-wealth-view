@@ -462,7 +462,7 @@ function BudgetLineRow({
             </Button>
             {invalid && (
               <span id={`budget-error-${line.category}`} role="alert" className="text-negative">
-                Type an amount, like 250.
+                Type an amount below 10 million, like 250.
               </span>
             )}
           </form>
@@ -516,12 +516,15 @@ function AddBudget({
 }) {
   const [category, setCategory] = useState("");
   const [amount, setAmount] = useState("");
+  const [invalid, setInvalid] = useState(false);
   if (categories.length === 0) return null;
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
     const value = parseAmount(amount);
-    if (!category || value == null || value <= 0) return;
+    if (!category) return;
+    if (value == null || value <= 0) return setInvalid(true);
+    setInvalid(false);
     onAdd(category, value);
     setCategory("");
     setAmount("");
@@ -553,13 +556,22 @@ function AddBudget({
             inputMode="decimal"
             placeholder="€ per month"
             value={amount}
-            onChange={(e) => setAmount(e.target.value)}
+            aria-invalid={invalid}
+            onChange={(e) => {
+              setAmount(e.target.value);
+              setInvalid(false);
+            }}
             className="sm:w-40"
           />
           <Button type="submit" disabled={busy || !category || !amount}>
             Add
           </Button>
         </form>
+        {invalid && (
+          <p role="alert" className="px-4 pb-4 text-sm text-negative sm:px-5">
+            Type an amount above 0 and below 10 million, like 250.
+          </p>
+        )}
       </GroupedList>
     </section>
   );

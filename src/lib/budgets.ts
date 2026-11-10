@@ -33,12 +33,18 @@ export interface BudgetLine {
 
 const cents = (v: number) => Math.round(v * 100) / 100;
 
-/** A typed budget amount ("250", "250,5"), rounded to cents; null when blank or not a number. */
+/** Budgets stay below this (the database's limit too). */
+export const MAX_BUDGET = 10_000_000;
+
+/**
+ * A typed budget amount ("250", "250,5"), rounded to cents; null when blank, not a number,
+ * negative or not below MAX_BUDGET.
+ */
 export function parseAmount(text: string): number | null {
   const t = text.trim().replace(",", ".");
   if (t === "") return null;
-  const v = Number(t);
-  return Number.isFinite(v) && v >= 0 ? Math.round(v * 100) / 100 : null;
+  const v = Math.round(Number(t) * 100) / 100;
+  return Number.isFinite(v) && v >= 0 && v < MAX_BUDGET ? v : null;
 }
 
 /** "YYYY-MM-01" of the month `offset` months after `month`. */

@@ -259,4 +259,10 @@ describe("parseAmount", () => {
     expect(parseAmount("abc")).toBeNull();
     expect(parseAmount("-5")).toBeNull();
   });
+  // protects=amounts the database would reject get a readable message instead (P2-6)
+  it("refuses 10 million or more", () => {
+    expect(parseAmount("9999999.99")).toBe(9999999.99);
+    expect(parseAmount("10000000")).toBeNull();
+    expect(parseAmount("9999999.999")).toBeNull();
+  });
 });
