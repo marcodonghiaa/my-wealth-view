@@ -34,6 +34,8 @@ export interface RowRule {
   when?: Array<string>;
   unless?: Array<string>;
   match?: RegExp;
+  /** A second rule the same row must also match. */
+  and?: RowRule;
 }
 
 export const PRESETS: Array<StatementPreset> = [
@@ -60,7 +62,8 @@ export const PRESETS: Array<StatementPreset> = [
     // Currency exchanges and moves to Savings or other pockets stay your money.
     transfer: [
       { column: "type", when: ["exchange"] },
-      { column: "product", unless: ["current"] },
+      // Moves between own pockets are TRANSFER rows; interest paid into Savings stays income.
+      { column: "type", when: ["transfer"], and: { column: "product", unless: ["current"] } },
       // The Current side of the same move: "To EUR Savings", "From pocket …", "To Vault …".
       { column: "description", match: /^(?:to|from) (?:(?:[a-z]{3} )?savings$|pocket\b|vault\b)/ },
     ],
@@ -126,10 +129,11 @@ export function presetColumns(preset: StatementPreset, headers: Array<string>) {
     in: null,
     out: null,
   };
-  const rule = (r: RowRule | undefined) => {
+  const rule = (r: RowRule | undefined): ((row: Array<string>) => boolean) => {
     const i = at(r?.column);
+    const also = r?.and ? rule(r.and) : () => true;
     return (row: Array<string>) => {
-      if (!r || i == null) return false;
+      if (!r || i == null || !also(row)) return false;
       const value = (row[i] ?? "").trim().toLowerCase();
       if (r.match) return r.match.test(value);
       return r.when ? r.when.includes(value) : r.unless != null && !r.unless.includes(value);

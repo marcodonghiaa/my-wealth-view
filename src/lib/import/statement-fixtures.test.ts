@@ -58,6 +58,21 @@ describe("presets", () => {
     ]);
   });
 
+  it("polish-3 #3 Revolut: interest paid into Savings stays income", () => {
+    const head = fixture("revolut.csv").split("\n")[0];
+    const csv = [
+      head,
+      "INTEREST,Savings,2026-03-31 00:00:00,2026-03-31 00:00:01,Interest earned,1.25,0.00,EUR,COMPLETED,501.25",
+      "TRANSFER,Savings,2026-03-08 09:00:00,2026-03-08 09:00:00,To EUR Savings,500.00,0.00,EUR,COMPLETED,500.00",
+    ].join("\n");
+    expect(
+      readStatement(csv).rows.map((r) => [r.description, r.direction, r.category ?? null]),
+    ).toEqual([
+      ["Interest earned", "CRDT", null],
+      ["To EUR Savings", "CRDT", "Transfer"],
+    ]);
+  });
+
   it("Spiir: day-first dates, decimal comma, Spiir's own duplicates left out", () => {
     const s = readStatement(fixture("spiir.csv"));
     expect(s.preset).toBe("Spiir");
