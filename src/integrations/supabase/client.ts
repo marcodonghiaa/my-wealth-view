@@ -68,3 +68,22 @@ export const supabase = new Proxy(realClient, {
 export function pauseRealClient(): void {
   void realClient.auth.stopAutoRefresh();
 }
+
+/**
+ * Check a password without touching this tab's session: a throwaway client signs in, then signs
+ * that one session out. Signing in on the main client would swap a two-step (aal2) session for a
+ * password-only one, which the database refuses until the code is typed again.
+ */
+export async function checkPassword(email: string, password: string): Promise<{ error: unknown }> {
+  const probe = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+      storageKey: "alopex-password-check",
+    },
+  });
+  const { error } = await probe.auth.signInWithPassword({ email, password });
+  if (!error) await probe.auth.signOut({ scope: "local" });
+  return { error };
+}
