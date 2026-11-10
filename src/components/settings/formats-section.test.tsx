@@ -3,7 +3,11 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { localeOverride, setLocaleOverride } from "@/lib/locale";
 import { FormatsSection } from "./formats-section";
 
-afterEach(() => setLocaleOverride(""));
+// Restore spies even when a test fails, so a blocked Storage can't leak into the next one.
+afterEach(() => {
+  vi.restoreAllMocks();
+  setLocaleOverride("");
+});
 
 describe("FormatsSection", () => {
   it("follows the browser by default and shows an example", () => {
@@ -31,7 +35,7 @@ describe("FormatsSection", () => {
   });
 
   it("says so and does not reload when the browser blocks storage", () => {
-    const setItem = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
       throw new DOMException("blocked", "SecurityError");
     });
     const reload = vi.fn();
@@ -39,16 +43,14 @@ describe("FormatsSection", () => {
     fireEvent.change(screen.getByLabelText("Format"), { target: { value: "de-DE" } });
     expect(screen.getByRole("alert")).toHaveTextContent(/Couldn't save/);
     expect(reload).not.toHaveBeenCalled();
-    setItem.mockRestore();
   });
 
   it("polish-3 #10 keeps showing the format in use when the new one can't be saved", () => {
-    const setItem = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
       throw new DOMException("blocked", "SecurityError");
     });
     render(<FormatsSection reload={() => {}} />);
     fireEvent.change(screen.getByLabelText("Format"), { target: { value: "de-DE" } });
     expect(screen.getByLabelText("Format")).toHaveValue("");
-    setItem.mockRestore();
   });
 });

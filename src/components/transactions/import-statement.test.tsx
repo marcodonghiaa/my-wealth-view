@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { afterEach, describe, expect, it, vi, beforeEach } from "vitest";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
@@ -49,6 +49,9 @@ function upload(name: string, content: string | Uint8Array, size?: number) {
   return { invalidate };
 }
 
+// Restore spies even when a test fails (polish-3 #20).
+afterEach(() => vi.restoreAllMocks());
+
 beforeEach(() => {
   rpc.mockReset();
   rpc.mockResolvedValue({ data: [], error: null });
@@ -93,7 +96,6 @@ describe("ImportStatement", () => {
     upload("huge.csv", "Date,Description,Amount", 5_000_000_000);
     expect(await screen.findByRole("alert")).toHaveTextContent(/too large/i);
     expect(read).not.toHaveBeenCalled();
-    read.mockRestore();
   });
 
   it("#6 keeps the From name to 60 characters", async () => {
