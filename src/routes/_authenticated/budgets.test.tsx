@@ -82,9 +82,11 @@ beforeEach(() => {
     { month: "2026-11-01", category: "Groceries", spend_eur: 120 },
     { month: "2026-11-01", category: "Dine Out", spend_eur: 60 },
   ];
-  db["v_transactions_eur"] = [
-    { booking_date: "2026-06-27", signed_amount_eur: 4000, flow_type: "income" },
-    { booking_date: "2026-11-27", signed_amount_eur: 2000, flow_type: "income" },
+  db["v_income_vs_expenses_monthly"] = [
+    { month: "2025-10-01", income_eur: 9999 }, // more than 12 months back: never read
+    { month: "2026-06-01", income_eur: 4000 },
+    { month: "2026-11-01", income_eur: 2000 },
+    { month: "2026-12-01", income_eur: 9999 }, // after the viewed month: never read
   ];
 });
 afterEach(() => vi.useRealTimers());

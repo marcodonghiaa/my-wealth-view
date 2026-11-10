@@ -90,24 +90,16 @@ async function fetchSpend(
   }
 }
 
-async function fetchIncomeByMonth(from: string, before: string): Promise<Map<string, number>> {
+// Same income as Reports: my share of money in, per month (transfers and refunds excluded).
+async function fetchIncomeByMonth(from: string, to: string): Promise<Map<string, number>> {
   const { data, error } = await supabase
-    .from("v_transactions_eur")
-    .select("booking_date,signed_amount_eur")
-    .eq("flow_type", "income")
-    .gte("booking_date", from)
-    .lt("booking_date", before);
+    .from("v_income_vs_expenses_monthly")
+    .select("month,income_eur")
+    .gte("month", from)
+    .lte("month", to);
   if (error) throw error;
-  const out = new Map<string, number>();
-  for (const r of (data ?? []) as Array<{
-    booking_date: string | null;
-    signed_amount_eur: number | null;
-  }>) {
-    if (!r.booking_date) continue;
-    const m = `${r.booking_date.slice(0, 7)}-01`;
-    out.set(m, (out.get(m) ?? 0) + Math.abs(Number(r.signed_amount_eur ?? 0)));
-  }
-  return out;
+  const rows = (data ?? []) as Array<{ month: string; income_eur: number | null }>;
+  return new Map(rows.map((r) => [String(r.month), Number(r.income_eur ?? 0)]));
 }
 
 function readSpread(): boolean {
@@ -149,7 +141,7 @@ function BudgetsPage() {
   });
   const incomeQuery = useQuery({
     queryKey: ["budget-income", monthIso],
-    queryFn: () => fetchIncomeByMonth(addMonths(monthIso, -11), addMonths(monthIso, 1)),
+    queryFn: () => fetchIncomeByMonth(addMonths(monthIso, -12), monthIso),
   });
   const { list: categories } = useCategories();
 

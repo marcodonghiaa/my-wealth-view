@@ -207,6 +207,18 @@ describe("monthIncome", () => {
   it("divides by the months since the first income when history is shorter", () => {
     expect(monthIncome(income, "2026-03-01", true)).toBe(2000);
   });
+  // protects=spread income before payday; fails_when=the unfinished month counts as 0 income
+  it("ends the 12 months with the month before while this month has no income yet", () => {
+    const early = new Map([
+      ["2026-09-01", 3000],
+      ["2026-10-01", 3000],
+    ]);
+    expect(monthIncome(early, "2026-11-01", true)).toBe(3000);
+    const year = new Map(income);
+    year.delete("2026-12-01");
+    // Dec before payday: Dec 2025 has none, so Jan–Nov 2026 (11 months, incl. the June 14th) = 24000 / 11.
+    expect(monthIncome(year, "2026-12-01", true)).toBe(2181.82);
+  });
   it("is 0 without any income", () => {
     expect(monthIncome(new Map(), "2026-03-01", true)).toBe(0);
   });
