@@ -317,6 +317,8 @@ export function detectDateOrder(cells: Array<string>, locale: string = appLocale
   return monthFirst(locale) ? "MDY" : "DMY";
 }
 
+const MAX_AMOUNT = 1e12;
+
 const cell = (row: Array<string>, i: number | null | undefined) =>
   i == null ? "" : (row[i] ?? "").trim();
 
@@ -356,7 +358,8 @@ function readRow(row: Array<string>, r: Recipe): StatementRow | null {
     const money = (i: number | null) => Math.abs(amount(i) ?? 0);
     signed = money(c.in) - money(c.out);
   }
-  if (signed == null || Math.abs(signed) < 0.005) return null;
+  // Below a cent is no row; above a trillion is a broken or crafted file, not a payment.
+  if (signed == null || Math.abs(signed) < 0.005 || !(Math.abs(signed) <= MAX_AMOUNT)) return null;
   const currency = currencyCode(cell(row, r.currency));
   return {
     date,

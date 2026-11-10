@@ -222,3 +222,13 @@ describe("readStatement options", () => {
     ).toBeNull();
   });
 });
+
+describe("untrusted values in a file", () => {
+  it("#1 skips amounts too large to be real", () => {
+    const huge = "9".repeat(308);
+    const csv = `Date,Description,Amount\n2026-01-02,Huge,${huge}\n2026-01-03,Big,100000000000000000000\n2026-01-04,Shop,-12.50`;
+    const s = readStatement(csv);
+    expect(s.rows.map((r) => r.description)).toEqual(["Shop"]);
+    expect(s.skipped).toBe(2);
+  });
+});
