@@ -8,6 +8,8 @@ import {
   type SplitRow,
 } from "@/lib/splits";
 import { txId } from "@/lib/transactions";
+import { Button } from "@/components/ui/button";
+import { GroupedList } from "@/components/ui/grouped-list";
 
 const eur = (value: number) => money(value, "EUR");
 
@@ -43,7 +45,7 @@ export function OwedView({
 }) {
   if (rows.length === 0) {
     return (
-      <p className="rounded-2xl bg-card px-4 py-6 text-center text-sm text-muted-foreground">
+      <p className="rounded-lg bg-card px-4 py-6 text-center text-sm text-muted-foreground">
         No split bills yet. Split a transaction in Transactions and it shows up here.
       </p>
     );
@@ -70,9 +72,7 @@ export function OwedView({
               </span>
             </span>
             {p.open !== 0 && (
-              <span className="shrink-0 font-figure text-[0.9375rem] font-semibold">
-                {eur(Math.abs(p.open))}
-              </span>
+              <span className="shrink-0 font-figure text-[0.9375rem]">{eur(Math.abs(p.open))}</span>
             )}
             <ChevronDown
               aria-hidden
@@ -106,7 +106,7 @@ export function OwedView({
                     type="button"
                     aria-label={`${isSettled ? "Mark as not settled" : "Settle"}: ${label}, ${day(r.booking_date)}, ${eur(share)}`}
                     onClick={() => onToggleSettled(r, !isSettled)}
-                    className={`min-h-11 min-w-20 shrink-0 rounded-full px-3 text-xs font-medium transition-colors ${
+                    className={`min-h-11 min-w-20 shrink-0 rounded-sm px-3 text-xs font-medium transition-colors ${
                       isSettled
                         ? "text-muted-foreground hover:bg-accent"
                         : "bg-muted text-foreground hover:bg-accent"
@@ -119,13 +119,13 @@ export function OwedView({
             })}
             {alone.length > 1 && (
               <li className="px-4 py-2 text-right sm:px-5">
-                <button
-                  type="button"
+                <Button
+                  size="sm"
+                  className="min-h-11 px-4"
                   onClick={() => onSettleAll(p.name, alone)}
-                  className="min-h-11 rounded-full bg-primary px-4 text-xs font-medium text-primary-foreground transition-colors hover:opacity-90"
                 >
                   Settle all {alone.length} with {p.name}
-                </button>
+                </Button>
               </li>
             )}
           </ul>
@@ -137,9 +137,11 @@ export function OwedView({
   return (
     <div>
       {open.length > 0 ? (
-        <ul className="divide-y overflow-hidden rounded-2xl bg-card">{open.map(card)}</ul>
+        <GroupedList>
+          <ul className="divide-y divide-hairline">{open.map(card)}</ul>
+        </GroupedList>
       ) : (
-        <p className="rounded-2xl bg-card px-4 py-6 text-center text-sm text-muted-foreground">
+        <p className="rounded-lg bg-card px-4 py-6 text-center text-sm text-muted-foreground">
           Nobody owes you from split bills.
         </p>
       )}
@@ -152,7 +154,9 @@ export function OwedView({
             />
             Settled ({settled.length})
           </summary>
-          <ul className="mt-2 divide-y overflow-hidden rounded-2xl bg-card">{settled.map(card)}</ul>
+          <GroupedList className="mt-2">
+            <ul className="divide-y divide-hairline">{settled.map(card)}</ul>
+          </GroupedList>
         </details>
       )}
     </div>

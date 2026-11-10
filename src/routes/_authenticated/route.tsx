@@ -22,6 +22,7 @@ import { loadDemoClient, supabase } from "@/integrations/supabase/client";
 import { isDemoMode } from "@/lib/demo/mode";
 import { registerDashboardOrigin } from "@/lib/register-origin";
 import { MadeWith } from "@/components/made-with";
+import { GroupedList } from "@/components/ui/grouped-list";
 import { BrandMark } from "@/components/brand-mark";
 import { TrustNote } from "@/components/trust-note";
 import { DemoBadge } from "@/components/demo-badge";
@@ -108,19 +109,19 @@ const TAB_BAR_ITEMS: Array<{ label: string; icon: LucideIcon; to: string }> = [
   { label: "Portfolio", icon: Briefcase, to: "/portfolio" },
 ];
 
-// Desktop sidebar: text-only rows; the active one carries a 2px Ember rule on the left.
-// Both states keep the same border width so text never shifts.
+// Desktop sidebar (DESIGN.md "Navigation"): 18px line icon + label, 4px corners; hover and
+// active take the sidebar accent fill, active adds weight 500.
 const SIDEBAR_LINK =
-  "flex items-center gap-3 border-l-2 border-transparent px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground";
+  "flex items-center gap-3 rounded-sm px-3 py-2 text-[0.9375rem] text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-foreground";
 const SIDEBAR_LINK_ACTIVE =
-  "flex items-center gap-3 border-l-2 border-ember px-3 py-1.5 text-sm font-medium text-foreground";
+  "flex items-center gap-3 rounded-sm px-3 py-2 text-[0.9375rem] font-medium bg-sidebar-accent text-foreground";
 
-// Mobile tab bar: icon + mono label; the active tab carries a 2px Ember rule on top.
+// Mobile tab bar: icon + sans label; the active tab carries a 2px Ember rule on top.
 const TAB_LINK =
   "flex flex-col items-center justify-center gap-0.5 border-t-2 border-transparent text-muted-foreground transition-opacity active:opacity-60";
 const TAB_LINK_ACTIVE =
   "flex flex-col items-center justify-center gap-0.5 border-t-2 border-ember text-foreground transition-opacity active:opacity-60";
-const TAB_LABEL = "font-figure text-[0.6875rem] uppercase tracking-wide";
+const TAB_LABEL = "text-[0.6875rem] font-medium";
 
 function AuthenticatedLayout() {
   const { user } = Route.useRouteContext();
@@ -184,6 +185,7 @@ function AuthenticatedLayout() {
                     className={SIDEBAR_LINK}
                     activeProps={{ className: SIDEBAR_LINK_ACTIVE }}
                   >
+                    <item.icon className="size-[1.125rem] shrink-0" />
                     {item.label}
                     <NavBadge count={badges[item.label]} />
                   </Link>
@@ -200,10 +202,12 @@ function AuthenticatedLayout() {
             className={SIDEBAR_LINK}
             activeProps={{ className: SIDEBAR_LINK_ACTIVE }}
           >
+            <Settings className="size-[1.125rem] shrink-0" />
             Settings
           </Link>
           {demo ? (
             <a href={GET_YOUR_OWN_URL} className={SIDEBAR_LINK}>
+              <Download className="size-[1.125rem] shrink-0" />
               Get your own
             </a>
           ) : (
@@ -213,10 +217,10 @@ function AuthenticatedLayout() {
               disabled={signingOut}
               className={`${SIDEBAR_LINK} w-full disabled:opacity-50`}
             >
+              <LogOut className="size-[1.125rem] shrink-0" />
               {signingOut ? "Signing out…" : "Sign out"}
             </button>
           )}
-          <MadeWith className="mt-2 px-3" />
         </div>
       </aside>
 
@@ -268,7 +272,7 @@ function AuthenticatedLayout() {
         <SheetContent
           side="bottom"
           onOpenAutoFocus={(e) => e.preventDefault()}
-          className="max-h-[88dvh] gap-0 overflow-y-auto rounded-t-3xl border-0 bg-background p-0 pb-[env(safe-area-inset-bottom)] [&>button]:size-11"
+          className="max-h-[88dvh] gap-0 overflow-y-auto rounded-t-xl border-0 bg-background p-0 pb-[env(safe-area-inset-bottom)] [&>button]:size-11"
         >
           <div aria-hidden className="mx-auto mt-2 h-1 w-9 rounded-md bg-muted-foreground/40" />
           <SheetHeader className="px-5 pt-3 pb-2 text-left">
@@ -279,7 +283,7 @@ function AuthenticatedLayout() {
             {NAV_GROUPS.map((group) => (
               <div key={group.label}>
                 <div className="ios-section-title">{group.label}</div>
-                <div className="divide-y overflow-hidden rounded-2xl bg-card">
+                <GroupedList>
                   {group.items.map((item) => (
                     <Link
                       key={item.label}
@@ -297,13 +301,13 @@ function AuthenticatedLayout() {
                       <NavBadge count={badges[item.label]} />
                     </Link>
                   ))}
-                </div>
+                </GroupedList>
               </div>
             ))}
 
             <div>
               <div className="ios-section-title">Account</div>
-              <div className="divide-y overflow-hidden rounded-2xl bg-card">
+              <GroupedList>
                 <div className="truncate px-4 py-3 text-sm text-muted-foreground">{user.email}</div>
                 <Link
                   to="/settings"
@@ -336,8 +340,7 @@ function AuthenticatedLayout() {
                     {signingOut ? "Signing out…" : "Sign out"}
                   </button>
                 )}
-              </div>
-              <MadeWith className="min-h-11 px-4" />
+              </GroupedList>
             </div>
           </nav>
         </SheetContent>
@@ -349,7 +352,10 @@ function AuthenticatedLayout() {
       <main className="min-w-0 flex-1 pt-[calc(2.75rem+env(safe-area-inset-top))] pb-[calc(3.25rem+env(safe-area-inset-bottom))] md:pt-0 md:pb-0 md:pl-64">
         <Outlet />
         <footer className="mx-auto max-w-5xl px-4 pb-8 sm:px-8 md:pb-12">
-          <TrustNote className="border-t pt-4" />
+          <div className="flex flex-col gap-3 border-t pt-4 sm:flex-row sm:items-start sm:justify-between">
+            <TrustNote />
+            <MadeWith />
+          </div>
         </footer>
       </main>
     </div>

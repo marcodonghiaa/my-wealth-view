@@ -13,7 +13,7 @@ export function SoldHoldings({
       <summary className="ios-section-title flex min-h-11 cursor-pointer list-none items-center gap-2">
         Sold ({items.length})
       </summary>
-      <ul className="divide-y overflow-hidden rounded-2xl bg-card">
+      <ul className="divide-y divide-hairline overflow-hidden rounded-lg bg-card">
         {items.map((item) => (
           <li key={item.key} className="flex items-center justify-between gap-3 px-4 py-1">
             <span className="min-w-0 truncate text-sm text-muted-foreground">{item.name}</span>

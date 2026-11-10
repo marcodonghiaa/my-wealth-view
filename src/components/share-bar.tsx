@@ -4,19 +4,19 @@ import { categoryTone } from "@/lib/categories";
 export interface Share {
   label: string;
   value: number;
-  /** Kept for callers; stripes are toned by rank, largest share darkest. */
+  /** The segment's own colour (a category, a coin); without one it is toned by rank. */
   color?: string;
   /** Two-letter code shown before the label in the legend. */
   code?: string;
 }
 
-/** Shares sorted largest first, each given its tone by rank. */
-export function rankShares<T extends { value: number }>(
+/** Shares sorted largest first, each keeping its own colour or toned by rank. */
+export function rankShares<T extends { value: number; color?: string }>(
   shares: Array<T>,
 ): Array<T & { tone: string }> {
   return [...shares]
     .sort((a, b) => b.value - a.value)
-    .map((s, rank) => ({ ...s, tone: categoryTone(rank) }));
+    .map((s, rank) => ({ ...s, tone: s.color ?? categoryTone(rank) }));
 }
 
 // "Ledger stripes": one 8px bar of segments split by 1px gaps of background, no radius.

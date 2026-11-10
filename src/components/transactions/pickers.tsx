@@ -30,12 +30,12 @@ export function CategoryPicker({
           className="-m-2 inline-flex min-h-11 cursor-pointer items-center p-2 disabled:opacity-60"
         >
           {variant === "icon" ? (
-            <span className="rounded-full transition-opacity hover:opacity-80">
+            <span className="rounded-sm transition-opacity hover:opacity-80">
               <CategoryAvatar category={tx.category} />
             </span>
           ) : tx.category ? (
             <span
-              className="inline-flex min-w-24 items-center justify-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium text-foreground transition-colors"
+              className="inline-flex min-w-24 items-center justify-center gap-1.5 rounded-sm border px-2.5 py-0.5 text-xs font-medium text-foreground transition-colors"
               style={{
                 backgroundColor: `color-mix(in srgb, ${categoryColor(tx.category)} 16%, transparent)`,
                 borderColor: `color-mix(in srgb, ${categoryColor(tx.category)} 45%, transparent)`,
@@ -49,7 +49,7 @@ export function CategoryPicker({
               {tx.category}
             </span>
           ) : (
-            <span className="inline-flex min-w-24 justify-center rounded-full border border-dashed px-2.5 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-accent">
+            <span className="inline-flex min-w-24 justify-center rounded-sm border border-dashed px-2.5 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-accent">
               Uncategorized
             </span>
           )}
@@ -65,7 +65,7 @@ export function CategoryPicker({
                 setOpen(false);
                 if (c !== tx.category) onSelect(c);
               }}
-              className={`block min-h-11 w-full rounded-md px-2.5 py-1.5 text-left text-sm transition-colors hover:bg-accent ${
+              className={`block min-h-11 w-full rounded-sm px-2.5 py-1.5 text-left text-sm transition-colors hover:bg-accent ${
                 c === tx.category ? "font-medium text-primary" : "text-foreground"
               }`}
             >
@@ -94,7 +94,7 @@ export function BulkCategoryPicker({
         <button
           type="button"
           disabled={disabled}
-          className="inline-flex h-9 items-center rounded-full border bg-background px-3 text-sm font-medium text-foreground transition-colors hover:bg-accent disabled:opacity-60"
+          className="inline-flex h-9 items-center rounded-sm border bg-background px-3 text-sm font-medium text-foreground transition-colors hover:bg-accent disabled:opacity-60"
         >
           {disabled ? "Saving…" : "Set category…"}
         </button>
@@ -109,7 +109,7 @@ export function BulkCategoryPicker({
                 setOpen(false);
                 onSelect(c);
               }}
-              className="block min-h-11 w-full rounded-md px-2.5 py-1.5 text-left text-sm text-foreground transition-colors hover:bg-accent"
+              className="block min-h-11 w-full rounded-sm px-2.5 py-1.5 text-left text-sm text-foreground transition-colors hover:bg-accent"
             >
               {c}
             </button>
@@ -141,11 +141,11 @@ export function TypePicker({
           className="-m-2 inline-flex min-h-11 cursor-pointer items-center p-2 disabled:opacity-60"
         >
           {tx.transaction_type ? (
-            <span className="inline-flex min-w-24 justify-center rounded-full border border-border bg-card px-2.5 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-accent">
+            <span className="inline-flex min-w-24 justify-center rounded-sm border border-border bg-card px-2.5 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-accent">
               {tx.transaction_type}
             </span>
           ) : (
-            <span className="inline-flex min-w-24 justify-center rounded-full border border-dashed px-2.5 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-accent">
+            <span className="inline-flex min-w-24 justify-center rounded-sm border border-dashed px-2.5 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-accent">
               —
             </span>
           )}
@@ -161,7 +161,7 @@ export function TypePicker({
                 setOpen(false);
                 if (t !== tx.transaction_type) onSelect(t);
               }}
-              className={`block min-h-11 w-full rounded-md px-2.5 py-1.5 text-left text-sm transition-colors hover:bg-accent ${
+              className={`block min-h-11 w-full rounded-sm px-2.5 py-1.5 text-left text-sm transition-colors hover:bg-accent ${
                 t === tx.transaction_type ? "font-medium text-primary" : "text-foreground"
               }`}
             >

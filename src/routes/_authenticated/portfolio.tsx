@@ -20,6 +20,9 @@ import { SoldHoldings } from "@/components/holdings/sold-holdings";
 import { EditHolding } from "@/components/holdings/edit-holding";
 import { HeadlineFigure } from "@/components/headline-figure";
 import { ShareBar } from "@/components/share-bar";
+import { Alert } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
+import { GroupedList } from "@/components/ui/grouped-list";
 import { ValueHistoryChart } from "@/components/value-history";
 import { useValueHistory } from "@/lib/use-value-history";
 import { usePerformance } from "@/lib/use-performance";
@@ -196,28 +199,20 @@ function PortfolioPage() {
       </header>
 
       {query.isError && (
-        <div
-          role="alert"
-          className="mb-6 rounded-2xl bg-negative/10 px-4 py-3 text-sm text-negative"
-        >
-          Couldn't load portfolio data: {query.error.message}
-        </div>
+        <Alert className="mb-6">Couldn't load portfolio data: {query.error.message}</Alert>
       )}
 
       {history.error && (
-        <div
-          role="alert"
-          className="mb-6 rounded-2xl bg-negative/10 px-4 py-3 text-sm text-negative"
-        >
+        <Alert className="mb-6">
           Couldn't load your portfolio history: {history.error.message}
-        </div>
+        </Alert>
       )}
 
       {/* Headline: total value and its change over the chart range */}
       <section aria-label="Total portfolio value" className="mb-6">
         <div className="min-h-16" aria-live="polite">
           {query.isPending ? (
-            <div className="h-16 w-72 animate-pulse rounded-2xl bg-muted" />
+            <Skeleton className="h-16 w-72" />
           ) : (
             <HeadlineFigure value={history.shownEur} currency="EUR" />
           )}
@@ -244,8 +239,8 @@ function PortfolioPage() {
 
       {query.isPending ? (
         <>
-          <div className="mb-6 h-80 animate-pulse rounded-2xl bg-muted/50" />
-          <div className="h-64 animate-pulse rounded-2xl bg-muted/50" />
+          <Skeleton className="mb-6 h-80" />
+          <Skeleton className="h-64" />
         </>
       ) : holdings.length === 0 ? (
         <EmptyState
@@ -256,7 +251,7 @@ function PortfolioPage() {
       ) : (
         <>
           {/* Holdings grouped by type */}
-          <div className="divide-y overflow-hidden rounded-2xl bg-card">
+          <GroupedList>
             {groups.map((group) => {
               const percent = totalEur > 0 ? (group.totalEur / totalEur) * 100 : 0;
               const color = colorForType(group.type);
@@ -289,7 +284,7 @@ function PortfolioPage() {
                         {group.holdings.length === 1 ? "" : "s"} · {percent.toFixed(1)}%
                       </span>
                     </span>
-                    <span className="font-figure text-[0.9375rem] font-semibold text-foreground">
+                    <span className="font-figure text-[0.9375rem] text-foreground">
                       {formatEur(group.totalEur)}
                     </span>
                     <ChevronDown
@@ -351,7 +346,7 @@ function PortfolioPage() {
                                       quantity={row.shares ?? 0}
                                     />
                                   </td>
-                                  <td className="px-4 py-3 text-right font-figure font-medium text-foreground sm:px-5">
+                                  <td className="px-4 py-3 text-right font-figure text-foreground sm:px-5">
                                     {formatEur(valueEur)}
                                   </td>
                                   <td className="px-4 py-3 text-right font-figure text-foreground sm:px-5">
@@ -428,7 +423,7 @@ function PortfolioPage() {
                                 </div>
                                 <div>
                                   <div className="text-xs text-muted-foreground">Value</div>
-                                  <div className="font-figure font-medium text-foreground">
+                                  <div className="font-figure text-foreground">
                                     {formatEur(valueEur)}
                                   </div>
                                 </div>
@@ -448,7 +443,7 @@ function PortfolioPage() {
                 </section>
               );
             })}
-          </div>
+          </GroupedList>
         </>
       )}
 

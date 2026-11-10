@@ -23,17 +23,38 @@ export function categoryTone(rank: number): string {
   return `var(--color-chart-${step})`;
 }
 
+// One fixed colour per category, reused by the spending chart, its rows, avatars and pills so a
+// category reads the same everywhere. A better-tuned palette is still to be chosen (2026-11-09).
+const CATEGORY_COLORS: Record<(typeof CATEGORIES)[number], string> = {
+  Shopping: "#ec4899",
+  Entertainment: "#8b5cf6",
+  Groceries: "#6366f1",
+  "Dine Out": "#f97316",
+  Services: "#3b82f6",
+  Housing: "#14b8a6",
+  Transports: "#eab308",
+  Experiences: "#06b6d4",
+  Income: "#84cc16",
+  Health: "#d946ef",
+  Transfer: "#64748b",
+  Taxes: "#a16207",
+  Others: "#94a3b8",
+};
+
 const UNKNOWN_CATEGORY_COLOR = "var(--color-muted-foreground)";
 
-/** The category's tone, from its place in the built-in list; your own categories hash to one. */
+// Your own categories get one of these, picked from the name so it stays the same everywhere.
+const CUSTOM_COLORS = ["#0ea5e9", "#f43f5e", "#22c55e", "#a855f7", "#f59e0b", "#10b981", "#e11d48"];
+
+/** The category's colour; your own categories hash to one of the custom colours. */
 export function categoryColor(category: string | null | undefined): string {
   // "Uncategorized" is what the spending views call a missing category.
   if (!category || category === "Uncategorized") return UNKNOWN_CATEGORY_COLOR;
-  const index = (CATEGORIES as ReadonlyArray<string>).indexOf(category);
-  if (index >= 0) return categoryTone(index);
+  const builtIn = (CATEGORY_COLORS as Record<string, string>)[category];
+  if (builtIn) return builtIn;
   let hash = 0;
   for (const ch of category) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
-  return categoryTone(hash % 5);
+  return CUSTOM_COLORS[hash % CUSTOM_COLORS.length]!;
 }
 
 const CATEGORY_CODES: Record<(typeof CATEGORIES)[number], string> = {

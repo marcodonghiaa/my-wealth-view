@@ -5,6 +5,10 @@ import { flushSync } from "react-dom";
 import { ChevronDown, Link2, Loader2, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { MaskedIban } from "@/components/masked-iban";
+import { Button } from "@/components/ui/button";
+import { Input, Select } from "@/components/ui/field";
+import { Alert } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { assertHttpsUrl } from "@/lib/consent-url";
 import {
@@ -381,7 +385,7 @@ function AccountsPage() {
         <h1 className="text-[0.9375rem] font-medium text-muted-foreground">Accounts</h1>
         <div className="mt-1 min-h-16">
           {bankQuery.isPending || cdQuery.isPending ? (
-            <div className="h-16 w-72 animate-pulse rounded-2xl bg-muted" />
+            <Skeleton className="h-16 w-72" />
           ) : bankQuery.isError || cdQuery.isError ? (
             // A total missing one of its two parts would look complete; show none instead.
             <p className="figure-display text-muted-foreground">—</p>
@@ -402,19 +406,12 @@ function AccountsPage() {
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-lg font-semibold text-foreground">Bank accounts</h2>
           {!bankQuery.isPending && (
-            <span className="font-figure text-sm font-medium text-foreground">
-              {formatEur(totalBankEur)}
-            </span>
+            <span className="font-figure text-sm text-foreground">{formatEur(totalBankEur)}</span>
           )}
         </div>
 
         {bankQuery.isError && (
-          <div
-            role="alert"
-            className="mb-4 rounded-2xl bg-negative/10 px-4 py-3 text-sm text-negative"
-          >
-            Couldn't load bank accounts: {bankQuery.error.message}
-          </div>
+          <Alert className="mb-4">Couldn't load bank accounts: {bankQuery.error.message}</Alert>
         )}
 
         {/* Renewing is linking the bank again, so the button opens Connect a bank below. */}
@@ -422,11 +419,11 @@ function AccountsPage() {
           <div
             key={alert.bank}
             role="status"
-            className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-warning/60 bg-warning/10 px-4 py-3 text-sm text-foreground"
+            className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg bg-warning/10 px-4 py-3 text-sm text-foreground"
           >
             <span>{consentMessage(alert)}</span>
-            <button
-              type="button"
+            <Button
+              variant="ghost"
               onClick={() => {
                 // Prefill without the country select's handler, which would clear the bank.
                 const t = renewTarget(alert.bank, bankAccounts);
@@ -440,15 +437,15 @@ function AccountsPage() {
                 connectStepsRef.current?.scrollIntoView({ block: "center" });
                 connectStepsRef.current?.focus({ preventScroll: true });
               }}
-              className="min-h-11 rounded-full px-3 font-medium text-primary hover:bg-primary/10"
+              className="px-3 text-primary hover:bg-primary/10 hover:text-primary"
             >
               Renew access
-            </button>
+            </Button>
           </div>
         ))}
 
         {/* Connect a bank — collapsed by default, same pattern as Add CD below. */}
-        <form onSubmit={handleConnectBank} className="mb-4 rounded-2xl bg-card">
+        <form onSubmit={handleConnectBank} className="mb-4 rounded-lg bg-card">
           <button
             type="button"
             onClick={() => setShowConnectForm((v) => !v)}
@@ -492,32 +489,31 @@ function AccountsPage() {
                   <label htmlFor="acc-country" className="mb-1 block text-xs text-muted-foreground">
                     Country
                   </label>
-                  <select
+                  <Select
                     id="acc-country"
                     value={bankCountry}
                     onChange={(e) => {
                       setBankCountry(e.target.value);
                       setBankName("");
                     }}
-                    className="w-full rounded-lg border bg-background px-3 py-2 text-base focus:ring-2 focus:ring-ring focus:outline-none sm:w-28"
+                    className="sm:w-28"
                   >
                     {COUNTRIES.map((c) => (
                       <option key={c.code} value={c.code}>
                         {c.name}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                 </div>
                 <div>
                   <label htmlFor="acc-bank" className="mb-1 block text-xs text-muted-foreground">
                     Bank
                   </label>
-                  <select
+                  <Select
                     id="acc-bank"
                     value={bankName}
                     onChange={(e) => setBankName(e.target.value)}
                     disabled={banksQuery.isPending || banksQuery.isError}
-                    className="w-full rounded-lg border bg-background px-3 py-2 text-base focus:ring-2 focus:ring-ring focus:outline-none disabled:opacity-50"
                   >
                     <option value="">
                       {banksQuery.isPending ? "Loading banks…" : "Select a bank…"}
@@ -527,7 +523,7 @@ function AccountsPage() {
                         {b.name}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                   {banksQuery.isError && (
                     <p className="mt-1 break-words text-xs text-negative">
                       {banksQuery.error.message}
@@ -536,10 +532,9 @@ function AccountsPage() {
                 </div>
               </div>
               <div className="mt-4 flex items-center gap-3">
-                <button
+                <Button
                   type="submit"
                   disabled={connectBank.isPending || !banks.some((b) => b.name === bankName)}
-                  className="inline-flex min-h-11 items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
                 >
                   {connectBank.isPending ? (
                     <Loader2 className="size-4 animate-spin" />
@@ -547,7 +542,7 @@ function AccountsPage() {
                     <Link2 className="size-4" />
                   )}
                   {connectBank.isPending ? "Connecting…" : "Approve here"}
-                </button>
+                </Button>
                 {connectError && <p className="text-sm text-negative">{connectError}</p>}
               </div>
               <p className="mt-3 text-xs text-muted-foreground">You sign in on your bank's site.</p>
@@ -555,11 +550,11 @@ function AccountsPage() {
           )}
         </form>
 
-        <div className="overflow-hidden rounded-2xl bg-card">
+        <div className="overflow-hidden rounded-lg bg-card">
           {bankQuery.isPending ? (
             <div className="space-y-3 p-4">
               {Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="h-12 animate-pulse rounded-xl bg-muted" />
+                <Skeleton key={i} className="h-12" />
               ))}
             </div>
           ) : bankAccounts.length === 0 ? (
@@ -592,7 +587,7 @@ function AccountsPage() {
                         </div>
                       </div>
                       <div className="shrink-0 text-right">
-                        <div className="font-figure text-sm font-medium text-foreground">
+                        <div className="font-figure text-sm text-foreground">
                           {formatEur(group.subtotalEur)}
                         </div>
                         <div className="text-xs text-muted-foreground">
@@ -642,15 +637,13 @@ function AccountsPage() {
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-lg font-semibold text-foreground">Certificates of deposit</h2>
           {!cdQuery.isPending && cds.length > 0 && (
-            <span className="font-figure text-sm font-medium text-foreground">
-              {formatEur(totalCdEur)}
-            </span>
+            <span className="font-figure text-sm text-foreground">{formatEur(totalCdEur)}</span>
           )}
         </div>
 
         {/* Add CD form — collapsed by default so it doesn't push the actual
             CD list below the fold on a phone. */}
-        <form onSubmit={handleAddCd} className="mb-4 rounded-2xl bg-card">
+        <form onSubmit={handleAddCd} className="mb-4 rounded-lg bg-card">
           <button
             type="button"
             onClick={() => setShowCdForm((v) => !v)}
@@ -669,13 +662,12 @@ function AccountsPage() {
                   <label htmlFor="acc-name" className="mb-1 block text-xs text-muted-foreground">
                     Name
                   </label>
-                  <input
+                  <Input
                     id="acc-name"
                     type="text"
                     value={label}
                     onChange={(e) => setLabel(e.target.value)}
                     placeholder="e.g. House deposit CD"
-                    className="w-full rounded-lg border bg-background px-3 py-2 text-base placeholder:text-muted-foreground/50 focus:ring-2 focus:ring-ring focus:outline-none"
                   />
                 </div>
                 <div>
@@ -685,13 +677,12 @@ function AccountsPage() {
                   >
                     Bank (optional)
                   </label>
-                  <input
+                  <Input
                     id="acc-bank-optional"
                     type="text"
                     value={bankLabel}
                     onChange={(e) => setBankLabel(e.target.value)}
                     placeholder="Fineco"
-                    className="w-full rounded-lg border bg-background px-3 py-2 text-base placeholder:text-muted-foreground/50 focus:ring-2 focus:ring-ring focus:outline-none"
                   />
                 </div>
                 <div>
@@ -701,17 +692,16 @@ function AccountsPage() {
                   >
                     Currency
                   </label>
-                  <select
+                  <Select
                     id="acc-currency"
                     value={currency}
                     onChange={(e) => setCurrency(e.target.value)}
-                    className="w-full rounded-lg border bg-background px-3 py-2 text-base focus:ring-2 focus:ring-ring focus:outline-none"
                   >
                     <option value="EUR">EUR</option>
                     <option value="USD">USD</option>
                     <option value="GBP">GBP</option>
                     <option value="CHF">CHF</option>
-                  </select>
+                  </Select>
                 </div>
                 <div>
                   <label
@@ -720,7 +710,7 @@ function AccountsPage() {
                   >
                     Principal
                   </label>
-                  <input
+                  <Input
                     id="acc-principal"
                     type="number"
                     min={0}
@@ -728,14 +718,13 @@ function AccountsPage() {
                     value={principal}
                     onChange={(e) => setPrincipal(e.target.value)}
                     placeholder="10000"
-                    className="w-full rounded-lg border bg-background px-3 py-2 text-base placeholder:text-muted-foreground/50 focus:ring-2 focus:ring-ring focus:outline-none"
                   />
                 </div>
                 <div>
                   <label htmlFor="acc-apy" className="mb-1 block text-xs text-muted-foreground">
                     APY %
                   </label>
-                  <input
+                  <Input
                     id="acc-apy"
                     type="number"
                     min={0}
@@ -743,7 +732,6 @@ function AccountsPage() {
                     value={annualRatePct}
                     onChange={(e) => setAnnualRatePct(e.target.value)}
                     placeholder="3.5"
-                    className="w-full rounded-lg border bg-background px-3 py-2 text-base placeholder:text-muted-foreground/50 focus:ring-2 focus:ring-ring focus:outline-none"
                   />
                 </div>
                 <div>
@@ -753,12 +741,11 @@ function AccountsPage() {
                   >
                     Start date
                   </label>
-                  <input
+                  <Input
                     id="acc-start-date"
                     type="date"
                     value={startDate}
                     onChange={(e) => setStartDate(e.target.value)}
-                    className="w-full rounded-lg border bg-background px-3 py-2 text-base focus:ring-2 focus:ring-ring focus:outline-none"
                   />
                 </div>
                 <div>
@@ -768,28 +755,23 @@ function AccountsPage() {
                   >
                     Maturity date
                   </label>
-                  <input
+                  <Input
                     id="acc-maturity-date"
                     type="date"
                     value={maturityDate}
                     onChange={(e) => setMaturityDate(e.target.value)}
-                    className="w-full rounded-lg border bg-background px-3 py-2 text-base focus:ring-2 focus:ring-ring focus:outline-none"
                   />
                 </div>
               </div>
               <div className="mt-4 flex items-center gap-3">
-                <button
-                  type="submit"
-                  disabled={addCd.isPending}
-                  className="inline-flex min-h-11 items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
-                >
+                <Button type="submit" disabled={addCd.isPending}>
                   {addCd.isPending ? (
                     <Loader2 className="size-4 animate-spin" />
                   ) : (
                     <Plus className="size-4" />
                   )}
                   Add CD
-                </button>
+                </Button>
                 {formError && <p className="text-sm text-negative">{formError}</p>}
               </div>
             </div>
@@ -797,16 +779,11 @@ function AccountsPage() {
         </form>
 
         {cdQuery.isError && (
-          <div
-            role="alert"
-            className="mb-4 rounded-2xl bg-negative/10 px-4 py-3 text-sm text-negative"
-          >
-            Couldn't load CDs: {cdQuery.error.message}
-          </div>
+          <Alert className="mb-4">Couldn't load CDs: {cdQuery.error.message}</Alert>
         )}
 
         {!cdQuery.isPending && cds.length === 0 && !cdQuery.isError && (
-          <div className="rounded-2xl border border-dashed bg-card/50 p-10 text-center text-sm text-muted-foreground">
+          <div className="rounded-lg bg-card p-10 text-center text-sm text-muted-foreground">
             No deposits yet.
           </div>
         )}
@@ -824,7 +801,7 @@ function AccountsPage() {
                 ),
               );
               return (
-                <div key={cd.id} className="rounded-2xl bg-card p-5">
+                <div key={cd.id} className="rounded-lg bg-card p-5">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <h3 className="truncate font-medium text-foreground">{cd.label}</h3>
@@ -833,18 +810,19 @@ function AccountsPage() {
                         {(cd.annual_rate * 100).toFixed(2)}% APY
                       </p>
                     </div>
-                    <button
-                      type="button"
+                    <Button
+                      variant="ghost"
+                      size="icon"
                       onClick={() => deleteCd.mutate(cd.id)}
                       disabled={deleteCd.isPending}
                       aria-label={`Remove ${cd.label}`}
-                      className="-m-2 inline-flex size-11 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-negative/10 hover:text-negative disabled:opacity-50"
+                      className="-m-2 hover:bg-negative/10 hover:text-negative"
                     >
-                      <Trash2 className="size-4" />
-                    </button>
+                      <Trash2 />
+                    </Button>
                   </div>
 
-                  <div className="mt-3 font-figure text-2xl font-semibold text-foreground">
+                  <div className="mt-3 font-figure text-2xl text-foreground">
                     {formatMoney(cd.current_value_native, cd.currency)}
                   </div>
                   {cd.currency !== "EUR" && (
@@ -853,11 +831,8 @@ function AccountsPage() {
                     </div>
                   )}
 
-                  <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-muted">
-                    <div
-                      className="h-full rounded-full bg-primary"
-                      style={{ width: `${progressPct}%` }}
-                    />
+                  <div className="mt-3 h-1.5 w-full overflow-hidden rounded-sm bg-muted">
+                    <div className="h-full bg-primary" style={{ width: `${progressPct}%` }} />
                   </div>
                   <p className="mt-1.5 text-xs text-muted-foreground">
                     {cd.is_matured

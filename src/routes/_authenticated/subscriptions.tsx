@@ -18,6 +18,11 @@ import { RECURRING_KEY, useRecurringStreams } from "@/lib/use-recurring-streams"
 import { formatBookingDateShort, formatMoney } from "@/lib/transactions";
 import { CategoryAvatar } from "@/components/category-avatar";
 import { RevealDialog } from "@/components/subscriptions/reveal-dialog";
+import { Alert } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import { Input, Select } from "@/components/ui/field";
+import { GroupedList, SectionTitle } from "@/components/ui/grouped-list";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export const Route = createFileRoute("/_authenticated/subscriptions")({
   head: () => ({
@@ -162,27 +167,19 @@ function SubscriptionsPage() {
       </header>
 
       {query.isError && (
-        <div
-          role="alert"
-          className="mb-6 rounded-2xl bg-negative/10 px-4 py-3 text-sm text-negative"
-        >
-          Couldn't load subscriptions: {query.error.message}
-        </div>
+        <Alert className="mb-6">Couldn't load subscriptions: {query.error.message}</Alert>
       )}
 
       {/* Estimated monthly cost */}
       <section aria-label="Estimated monthly cost" className="mb-8">
         <div className="min-h-16">
           {query.isPending ? (
-            <div className="h-16 w-72 animate-pulse rounded-2xl bg-muted" />
+            <Skeleton className="h-16 w-72" />
           ) : (
             <p className="figure-display">
               {total.known === 0 ? "—" : `~${formatMoney(total.sum, "EUR")}`}
               {total.known > 0 && (
-                <span className="text-[0.4em] font-medium tracking-normal text-muted-foreground">
-                  {" "}
-                  /month
-                </span>
+                <span className="text-[0.4em] tracking-normal text-muted-foreground"> /month</span>
               )}
             </p>
           )}
@@ -196,36 +193,42 @@ function SubscriptionsPage() {
 
       {toReview.length > 0 && (
         <section aria-label="To review" className="mb-8">
-          <h2 className="ios-section-title">To review ({toReview.length})</h2>
-          <ul className="divide-y overflow-hidden rounded-2xl bg-card">
-            {toReview.map((s) => (
-              <ReviewRow
-                key={s.id}
-                stream={s}
-                onConfirm={() => actionMutation.mutate({ id: s.id, action: "confirm" })}
-                onDismiss={() => actionMutation.mutate({ id: s.id, action: "dismiss" })}
-              />
-            ))}
-          </ul>
+          <SectionTitle>To review ({toReview.length})</SectionTitle>
+          <GroupedList>
+            <ul className="divide-y divide-hairline">
+              {toReview.map((s) => (
+                <ReviewRow
+                  key={s.id}
+                  stream={s}
+                  onConfirm={() => actionMutation.mutate({ id: s.id, action: "confirm" })}
+                  onDismiss={() => actionMutation.mutate({ id: s.id, action: "dismiss" })}
+                />
+              ))}
+            </ul>
+          </GroupedList>
         </section>
       )}
 
       {/* Recurring subscriptions: one grouped list */}
       {query.isPending ? (
-        <ul className="divide-y overflow-hidden rounded-2xl bg-card">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <li key={i} className="flex items-center gap-3 px-4 py-3">
-              <div className="size-10 animate-pulse rounded-full bg-muted" />
-              <div className="flex-1 space-y-2">
-                <div className="h-4 w-1/2 animate-pulse rounded bg-muted" />
-                <div className="h-3 w-3/4 animate-pulse rounded bg-muted" />
-              </div>
-            </li>
-          ))}
-        </ul>
+        <GroupedList>
+          <ul className="divide-y divide-hairline">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <li key={i} className="flex items-center gap-3 px-4 py-3">
+                <Skeleton className="size-10 rounded-full" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-4 w-1/2" />
+                  <Skeleton className="h-3 w-3/4" />
+                </div>
+              </li>
+            ))}
+          </ul>
+        </GroupedList>
       ) : (
         active.length > 0 && (
-          <ul className="divide-y overflow-hidden rounded-2xl bg-card">{active.map(renderCard)}</ul>
+          <GroupedList>
+            <ul className="divide-y divide-hairline">{active.map(renderCard)}</ul>
+          </GroupedList>
         )
       )}
 
@@ -246,9 +249,9 @@ function SubscriptionsPage() {
           <p className="mb-3 px-4 text-[0.8125rem] text-muted-foreground">
             No recent charge. Not counted.
           </p>
-          <ul className="divide-y overflow-hidden rounded-2xl bg-card">
-            {stopped.map(renderCard)}
-          </ul>
+          <GroupedList>
+            <ul className="divide-y divide-hairline">{stopped.map(renderCard)}</ul>
+          </GroupedList>
         </details>
       )}
 
@@ -261,15 +264,17 @@ function SubscriptionsPage() {
           <p className="mb-3 px-4 text-[0.8125rem] text-muted-foreground">
             Hidden and not counted. Restore to bring one back.
           </p>
-          <ul className="divide-y overflow-hidden rounded-2xl bg-card">
-            {dismissed.map((s) => (
-              <DismissedRow
-                key={s.id}
-                stream={s}
-                onRestore={() => actionMutation.mutate({ id: s.id, action: "undismiss" })}
-              />
-            ))}
-          </ul>
+          <GroupedList>
+            <ul className="divide-y divide-hairline">
+              {dismissed.map((s) => (
+                <DismissedRow
+                  key={s.id}
+                  stream={s}
+                  onRestore={() => actionMutation.mutate({ id: s.id, action: "undismiss" })}
+                />
+              ))}
+            </ul>
+          </GroupedList>
         </details>
       )}
     </div>
@@ -293,14 +298,9 @@ function DismissedRow({ stream, onRestore }: { stream: Stream; onRestore: () => 
         {monthly != null && Math.abs(monthly) > 0 && <MonthlyAmount stream={stream} />}
       </div>
       <div className="mt-1 flex items-center gap-2 pl-[3.25rem]">
-        <button
-          type="button"
-          onClick={onRestore}
-          aria-label={`Restore ${name}`}
-          className="inline-flex min-h-11 items-center rounded-full border border-border px-4 text-sm font-medium text-foreground/80 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-        >
+        <Button variant="quiet" onClick={onRestore} aria-label={`Restore ${name}`}>
           Restore
-        </button>
+        </Button>
       </div>
     </li>
   );
@@ -309,13 +309,13 @@ function DismissedRow({ stream, onRestore }: { stream: Stream; onRestore: () => 
 function MonthlyAmount({ stream }: { stream: Stream }) {
   const monthly = monthlyEur(stream);
   return (
-    <div className="shrink-0 text-right font-figure text-[0.9375rem] font-semibold">
+    <div className="shrink-0 text-right font-figure text-[0.9375rem]">
       {monthly == null ? (
         <span className="text-muted-foreground">—</span>
       ) : (
         <span className="text-foreground">
           {formatMoney(Math.abs(monthly), "EUR")}
-          <span className="text-[0.8125rem] font-normal text-muted-foreground"> /mo</span>
+          <span className="text-[0.8125rem] text-muted-foreground"> /mo</span>
         </span>
       )}
     </div>
@@ -344,22 +344,12 @@ function ReviewRow({
         <MonthlyAmount stream={stream} />
       </div>
       <div className="mt-1 flex gap-2 pl-[3.25rem]">
-        <button
-          type="button"
-          onClick={onConfirm}
-          aria-label={`Confirm ${name}`}
-          className="inline-flex min-h-11 items-center rounded-full bg-primary px-4 text-sm font-medium text-primary-foreground hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-        >
+        <Button onClick={onConfirm} aria-label={`Confirm ${name}`}>
           Confirm
-        </button>
-        <button
-          type="button"
-          onClick={onDismiss}
-          aria-label={`${name} is not a subscription`}
-          className="inline-flex min-h-11 items-center rounded-full border border-border px-4 text-sm font-medium text-foreground/80 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-        >
+        </Button>
+        <Button variant="quiet" onClick={onDismiss} aria-label={`${name} is not a subscription`}>
           Not a subscription
-        </button>
+        </Button>
       </div>
     </li>
   );
@@ -408,14 +398,15 @@ function SubscriptionCard({
         <span className="truncate text-[0.8125rem] text-muted-foreground">
           {lastCharged ? `Last ${lastCharged}` : ""}
         </span>
-        <button
-          type="button"
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={onDismiss}
           aria-label={`Remove ${name}`}
-          className="-my-2 -mr-3 inline-flex size-11 items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-negative focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+          className="-my-2 -mr-3 hover:text-negative"
         >
           <Trash2 className="size-4" />
-        </button>
+        </Button>
       </div>
     </li>
   );
@@ -479,10 +470,10 @@ function FrequencyPicker({
                 : `${label} — auto-detected`
               : "Not enough history to detect — set the billing frequency"
           }
-          className={`inline-flex min-h-11 w-full items-center justify-between gap-1 rounded-full px-3 py-0.5 text-xs font-medium whitespace-nowrap transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+          className={`inline-flex min-h-11 w-full items-center justify-between gap-1 rounded-sm px-3 py-0.5 text-xs font-medium whitespace-nowrap transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring ${
             frequency
-              ? "border border-border text-foreground/80 hover:border-primary/50 hover:text-foreground"
-              : "border border-warning/60 bg-warning/10 text-warning hover:bg-warning/20"
+              ? "bg-muted text-foreground hover:bg-accent"
+              : "bg-warning/10 text-warning hover:bg-warning/20"
           }`}
         >
           <span className="truncate">{label}</span>
@@ -498,7 +489,7 @@ function FrequencyPicker({
           <div className="p-2">
             <div className="flex items-center gap-1.5">
               <span className="text-sm text-muted-foreground">Every</span>
-              <input
+              <Input
                 type="number"
                 min={1}
                 max={999}
@@ -506,37 +497,34 @@ function FrequencyPicker({
                 aria-label="Interval"
                 value={draftValue}
                 onChange={(e) => setDraftValue(e.target.value)}
-                className="h-8 w-14 rounded-md border bg-background px-2 text-base text-foreground focus:ring-2 focus:ring-ring focus:outline-none"
+                className="w-14 px-2"
                 autoFocus
               />
-              <select
+              <Select
                 value={draftUnit}
                 aria-label="Unit"
                 onChange={(e) => setDraftUnit(e.target.value as IntervalUnit)}
-                className="h-8 flex-1 rounded-md border bg-background px-1.5 text-base text-foreground focus:ring-2 focus:ring-ring focus:outline-none"
+                className="flex-1 px-1.5"
               >
                 {INTERVAL_UNITS.map((u) => (
                   <option key={u} value={u}>
                     {u}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
             <div className="mt-2 flex justify-end gap-2">
-              <button
-                type="button"
+              <Button
+                variant="ghost"
+                size="sm"
+                className="min-h-11"
                 onClick={() => setCustomOpen(false)}
-                className="min-h-11 rounded-md px-3 py-1 text-xs text-muted-foreground hover:bg-accent"
               >
                 Back
-              </button>
-              <button
-                type="button"
-                onClick={submitCustom}
-                className="min-h-11 rounded-md bg-primary px-3 py-1 text-xs font-medium text-primary-foreground hover:opacity-90"
-              >
+              </Button>
+              <Button size="sm" className="min-h-11" onClick={submitCustom}>
                 Save
-              </button>
+              </Button>
             </div>
           </div>
         ) : (
@@ -549,7 +537,7 @@ function FrequencyPicker({
                   onSelect(option);
                   setOpen(false);
                 }}
-                className="flex min-h-11 w-full items-center justify-between rounded-md px-2.5 py-1.5 text-left text-sm text-foreground hover:bg-accent"
+                className="flex min-h-11 w-full items-center justify-between rounded-sm px-2.5 py-1.5 text-left text-sm text-foreground hover:bg-accent"
               >
                 {option}
                 {frequency === option && <Check className="size-4 text-primary" />}
@@ -558,7 +546,7 @@ function FrequencyPicker({
             <button
               type="button"
               onClick={openCustomForm}
-              className="flex min-h-11 w-full items-center justify-between rounded-md px-2.5 py-1.5 text-left text-sm text-foreground hover:bg-accent"
+              className="flex min-h-11 w-full items-center justify-between rounded-sm px-2.5 py-1.5 text-left text-sm text-foreground hover:bg-accent"
             >
               Custom…
               {isCustom && <Check className="size-4 text-primary" />}

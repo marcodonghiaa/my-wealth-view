@@ -1,3 +1,6 @@
+import { Button, buttonVariants } from "@/components/ui/button";
+import { fieldClass } from "@/components/ui/field";
+import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Plus } from "lucide-react";
@@ -45,8 +48,7 @@ async function addTransaction(tx: NewTransaction): Promise<void> {
   }
 }
 
-const field =
-  "h-11 w-full min-w-0 rounded-full border bg-background px-4 text-base focus:ring-2 focus:ring-ring focus:outline-none";
+const field = fieldClass();
 
 // A transaction typed in by hand: for a bank that isn't linked, or cash. With no category,
 // the next sync picks one (your rules first, then the AI).
@@ -119,7 +121,7 @@ export function AddTransaction({ today }: { today: string }) {
     >
       <DialogTrigger
         aria-label="Add transaction"
-        className="inline-flex size-11 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground hover:opacity-90"
+        className={cn(buttonVariants({ size: "icon" }), "[&_svg]:size-5")}
       >
         <Plus className="size-5" />
       </DialogTrigger>
@@ -145,7 +147,7 @@ export function AddTransaction({ today }: { today: string }) {
                 role="radio"
                 aria-checked={direction === value}
                 onClick={() => setDirection(value)}
-                className={`min-h-11 rounded-full border text-sm font-medium ${
+                className={`min-h-11 rounded-sm border text-sm font-medium ${
                   direction === value
                     ? "border-primary bg-primary/10 text-primary"
                     : "text-foreground"
@@ -220,14 +222,10 @@ export function AddTransaction({ today }: { today: string }) {
               {error}
             </p>
           )}
-          <button
-            type="submit"
-            disabled={add.isPending}
-            className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-primary px-4 text-sm font-medium text-primary-foreground disabled:opacity-50"
-          >
+          <Button type="submit" disabled={add.isPending} className="w-full">
             {add.isPending && <Loader2 className="size-4 animate-spin" />}
             Save
-          </button>
+          </Button>
         </form>
       </DialogContent>
     </Dialog>

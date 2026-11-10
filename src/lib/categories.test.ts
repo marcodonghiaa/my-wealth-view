@@ -2,15 +2,12 @@ import { describe, expect, it } from "vitest";
 import { CATEGORIES, categoriesFor, categoryCode, categoryColor, categoryTone } from "./categories";
 
 describe("categoryColor", () => {
-  it("ranks built-ins by their defined order, darkest first", () => {
-    expect(categoryColor("Shopping")).toBe("var(--color-chart-1)");
-    expect(categoryColor("Entertainment")).toBe("var(--color-chart-2)");
-    expect(categoryColor("Services")).toBe("var(--color-chart-5)");
-    expect(categoryColor("Others")).toBe("var(--color-chart-5)");
-  });
-
-  it("only ever returns a chart tone for a category", () => {
-    for (const c of CATEGORIES) expect(categoryColor(c)).toMatch(/^var\(--color-chart-[1-5]\)$/);
+  it("gives every built-in its own fixed colour", () => {
+    expect(categoryColor("Shopping")).toBe("#ec4899");
+    expect(categoryColor("Dine Out")).toBe("#f97316");
+    const colors = CATEGORIES.map((c) => categoryColor(c));
+    for (const c of colors) expect(c).toMatch(/^#[0-9a-f]{6}$/);
+    expect(new Set(colors).size).toBe(CATEGORIES.length);
   });
 
   it("falls back to the muted token for missing categories", () => {
@@ -38,8 +35,8 @@ describe("categoriesFor", () => {
 });
 
 describe("categoryColor for your own categories", () => {
-  it("gives a custom category a chart tone, the same every time", () => {
-    expect(categoryColor("Gym")).toMatch(/^var\(--color-chart-[1-5]\)$/);
+  it("gives a custom category a colour, the same every time", () => {
+    expect(categoryColor("Gym")).toMatch(/^#[0-9a-f]{6}$/);
     expect(categoryColor("Gym")).toBe(categoryColor("Gym"));
   });
 });

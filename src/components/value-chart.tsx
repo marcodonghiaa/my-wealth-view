@@ -23,7 +23,7 @@ export function latestDot(last: number) {
   };
 }
 
-// One hairline on graph paper, no y-axis: hovering scrubs it and hands the day back to the page.
+// One line, no grid, no y-axis: hovering scrubs it and hands the day back to the page.
 export function ValueChart<T extends { ts: number; snapshot_date: string }>({
   data,
   dataKey,
@@ -33,17 +33,11 @@ export function ValueChart<T extends { ts: number; snapshot_date: string }>({
 }: ValueChartProps<T>) {
   const formatTick = axisDateFormatter(data.at(0)?.snapshot_date, data.at(-1)?.snapshot_date);
   return (
-    <div
-      className="h-full w-full"
-      style={{
-        backgroundImage: "radial-gradient(var(--color-grid-dot) 1px, transparent 1px)",
-        backgroundSize: "8px 8px",
-      }}
-    >
+    <div className="h-full w-full">
       <ResponsiveContainer width="100%" height="100%">
         <ComposedChart
           data={data}
-          margin={{ top: 8, right: 8, bottom: 0, left: 8 }}
+          margin={{ top: 8, right: 24, bottom: 0, left: 24 }}
           onMouseMove={(state) =>
             onScrub(
               state?.isTooltipActive && state.activeTooltipIndex != null

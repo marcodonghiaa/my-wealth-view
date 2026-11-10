@@ -11,6 +11,9 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { fieldClass } from "@/components/ui/field";
+import { cn } from "@/lib/utils";
 import { localToday } from "@/lib/trades";
 import type { Trade } from "@/lib/trades";
 import { newTrades, parseTradesCsv, shareUpdates } from "@/lib/trades-csv";
@@ -117,7 +120,7 @@ export function ImportTrades({ kind, saved }: { kind: "stock" | "crypto"; saved:
           onChange={(e) => setText(e.target.value)}
           rows={6}
           placeholder={`date,side,${keyColumn},shares,price,fee`}
-          className="w-full rounded-lg border bg-background px-3 py-2 font-mono text-sm focus:ring-2 focus:ring-ring focus:outline-none"
+          className={cn(fieldClass(), "h-auto py-2 font-mono md:text-sm")}
         />
         {keys.isError && (
           <p role="alert" className="text-sm text-negative">
@@ -155,8 +158,7 @@ export function ImportTrades({ kind, saved }: { kind: "stock" | "crypto"; saved:
             {save.error.message}
           </p>
         )}
-        <button
-          type="button"
+        <Button
           disabled={
             !parsed ||
             parsed.errors.length > 0 ||
@@ -164,11 +166,10 @@ export function ImportTrades({ kind, saved }: { kind: "stock" | "crypto"; saved:
             save.isPending
           }
           onClick={() => save.mutate()}
-          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground disabled:opacity-50"
         >
           {save.isPending && <Loader2 className="size-4 animate-spin" />}
           Save trades
-        </button>
+        </Button>
       </DialogContent>
     </Dialog>
   );

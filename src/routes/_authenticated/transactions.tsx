@@ -5,6 +5,10 @@ import { accountName, bankOf } from "@/components/bank-badge";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Search, Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input, Select } from "@/components/ui/field";
+import { Alert } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { formatISODate } from "@/lib/date";
 import {
@@ -397,22 +401,10 @@ function TransactionsPage() {
       </header>
 
       {txQuery.isError && (
-        <div
-          role="alert"
-          className="mb-6 rounded-2xl bg-negative/10 px-4 py-3 text-sm text-negative"
-        >
-          Couldn't load transactions: {txQuery.error.message}
-        </div>
+        <Alert className="mb-6">Couldn't load transactions: {txQuery.error.message}</Alert>
       )}
 
-      {extraError && (
-        <div
-          role="alert"
-          className="mb-6 rounded-2xl bg-negative/10 px-4 py-3 text-sm text-negative"
-        >
-          List may be incomplete: {extraError.message}
-        </div>
-      )}
+      {extraError && <Alert className="mb-6">List may be incomplete: {extraError.message}</Alert>}
 
       <ReviewSection
         groups={review}
@@ -432,20 +424,22 @@ function TransactionsPage() {
       <div className="mb-4 flex flex-col gap-3 sm:flex-row">
         <div className="relative flex-1">
           <Search className="pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 text-muted-foreground" />
-          <input
+          <Input
+            onGround
             type="search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search"
             aria-label="Search by merchant"
-            className="h-11 w-full rounded-full bg-card pr-4 pl-10 text-base text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-ring focus:outline-none"
+            className="pr-4 pl-10"
           />
         </div>
-        <select
+        <Select
+          onGround
           value={category}
           onChange={(e) => setCategory(e.target.value)}
           aria-label="Filter by category"
-          className="h-11 rounded-full bg-card px-4 text-base text-foreground focus:ring-2 focus:ring-ring focus:outline-none"
+          className="w-auto px-4"
         >
           <option value="all">All categories</option>
           {categories.hasUncategorized && <option value={UNCATEGORIZED}>Uncategorized</option>}
@@ -454,13 +448,14 @@ function TransactionsPage() {
               {c}
             </option>
           ))}
-        </select>
+        </Select>
         {banks.length > 1 && (
-          <select
+          <Select
+            onGround
             value={bank}
             onChange={(e) => setBank(e.target.value)}
             aria-label="Filter by bank"
-            className="h-11 rounded-full bg-card px-4 text-base text-foreground focus:ring-2 focus:ring-ring focus:outline-none"
+            className="w-auto px-4"
           >
             <option value="all">All banks</option>
             {banks.map((b) => (
@@ -468,22 +463,23 @@ function TransactionsPage() {
                 {b}
               </option>
             ))}
-          </select>
+          </Select>
         )}
-        <input
+        <Input
+          onGround
           type="date"
           value={day}
           min={formatISODate(month)}
           max={formatISODate(new Date(month.getFullYear(), month.getMonth() + 1, 0))}
           onChange={(e) => setDay(e.target.value)}
           aria-label="Filter by day"
-          className="h-11 min-w-0 rounded-full bg-card px-4 text-base text-foreground focus:ring-2 focus:ring-ring focus:outline-none"
+          className="w-auto px-4"
         />
       </div>
 
       {/* Bulk action bar */}
       {selectedVisible.length > 0 && (
-        <div className="sticky top-[calc(2.75rem+env(safe-area-inset-top)+0.5rem)] z-20 mb-4 flex flex-wrap items-center gap-3 rounded-2xl bg-card p-3 shadow-[0_8px_24px_-12px_oklch(0_0_0/0.25)] md:top-4">
+        <div className="sticky top-[calc(2.75rem+env(safe-area-inset-top)+0.5rem)] z-20 mb-4 flex flex-wrap items-center gap-3 rounded-lg bg-card p-3 shadow-[0_8px_24px_-12px_oklch(0_0_0/0.25)] md:top-4">
           <span className="text-sm font-medium text-foreground">
             {selectedVisible.length} selected
           </span>
@@ -496,8 +492,9 @@ function TransactionsPage() {
             }
             disabled={bulkUpdateCategory.isPending}
           />
-          <button
-            type="button"
+          <Button
+            variant="destructive"
+            size="md"
             onClick={() =>
               deleteTxs.mutate({
                 txs: selectedVisible,
@@ -505,27 +502,23 @@ function TransactionsPage() {
               })
             }
             disabled={deleteTxs.isPending}
-            className="inline-flex min-h-11 items-center gap-1.5 rounded-full px-3 text-sm font-medium text-negative transition-colors hover:bg-negative/10 disabled:opacity-50"
+            className="gap-1.5 px-3"
           >
             <Trash2 className="size-4" />
             Delete
-          </button>
-          <button
-            type="button"
-            onClick={() => setSelected(new Set())}
-            className="ml-auto min-h-11 px-3 text-sm text-muted-foreground transition-colors hover:text-foreground"
-          >
+          </Button>
+          <Button variant="ghost" onClick={() => setSelected(new Set())} className="ml-auto px-3">
             Clear
-          </button>
+          </Button>
         </div>
       )}
 
       {/* Register — cards on mobile, table from md up */}
-      <section className="overflow-hidden rounded-2xl bg-card">
+      <section className="overflow-hidden rounded-lg bg-card">
         {txQuery.isPending ? (
           <div className="space-y-3 p-4 md:hidden">
             {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="h-14 animate-pulse rounded-2xl bg-muted" />
+              <Skeleton key={i} className="h-14" />
             ))}
           </div>
         ) : txQuery.isError ? null : filtered.length === 0 ? (
@@ -573,7 +566,7 @@ function TransactionsPage() {
                 Array.from({ length: 8 }).map((_, i) => (
                   <tr key={i} className="border-b last:border-0">
                     <td colSpan={5} className="px-4 py-3">
-                      <div className="h-5 animate-pulse rounded bg-muted" />
+                      <Skeleton className="h-5" />
                     </td>
                   </tr>
                 ))
@@ -598,14 +591,15 @@ function TransactionsPage() {
       </section>
 
       {transfers.length > 0 && (
-        <button
-          type="button"
+        <Button
+          variant="quiet"
+          size="sm"
           onClick={() => setShowTransfers((v) => !v)}
-          className="mt-4 h-9 rounded-full bg-card px-4 text-xs font-medium text-foreground transition-colors hover:bg-accent"
+          className="mt-4 px-4"
         >
           {showTransfers ? "Hide" : "Show"} {transfers.length} transfer
           {transfers.length === 1 ? "" : "s"}
-        </button>
+        </Button>
       )}
       {showTransfers && transfers.length > 0 && (
         <TransfersSection

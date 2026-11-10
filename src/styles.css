@@ -17,13 +17,14 @@
  */
 
 @theme inline {
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
-  --radius-2xl: calc(var(--radius) + 8px);
-  --radius-3xl: calc(var(--radius) + 12px);
-  --radius-4xl: calc(var(--radius) + 16px);
+  /* Two radii only (DESIGN.md): 4px controls, 8px containers, 12px sheets. */
+  --radius-sm: 4px;
+  --radius-md: 4px;
+  --radius-lg: 8px;
+  --radius-xl: 8px;
+  --radius-2xl: 8px;
+  --radius-3xl: 12px;
+  --radius-4xl: 12px;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -69,7 +70,6 @@
   --color-ember-soft: var(--ember-soft);
   --color-hairline: var(--hairline);
   --color-rule: var(--rule);
-  --color-grid-dot: var(--grid-dot);
 }
 
 :root {
@@ -105,7 +105,6 @@
   /* Hairlines and fields */
   --hairline: oklch(0.17 0.012 240 / 10%);
   --rule: oklch(0.17 0.012 240 / 18%);
-  --grid-dot: oklch(0.17 0.012 240 / 12%);
   --border: var(--hairline);
   --input: var(--rule);
   --ring: var(--ember);
@@ -157,7 +156,6 @@
     --warning: oklch(0.74 0.15 50);
     --hairline: oklch(1 0 0 / 10%);
     --rule: oklch(1 0 0 / 20%);
-    --grid-dot: oklch(1 0 0 / 12%);
     --border: var(--hairline);
     --input: var(--rule);
     --ring: var(--ember);
@@ -225,6 +223,9 @@
 
 @utility font-figure {
   font-family: var(--font-figure);
+  /* Fragment Mono ships one weight: never let the browser fake a bold. */
+  font-weight: 400;
+  font-synthesis: none;
   font-variant-numeric: tabular-nums lining-nums;
   letter-spacing: -0.02em;
 }

@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/button";
 import { ThumbsDown, ThumbsUp } from "lucide-react";
 import {
   Dialog,
@@ -34,14 +35,14 @@ export function WorthItPrompt({
       <button
         type="button"
         onClick={() => onAnswer("yes")}
-        className="min-h-11 rounded-md px-2 py-1 font-medium text-positive transition-colors hover:bg-positive/10"
+        className="min-h-11 rounded-sm px-2 py-1 font-medium text-foreground transition-colors hover:bg-accent"
       >
         Yes
       </button>
       <button
         type="button"
         onClick={() => onAnswer("no")}
-        className="min-h-11 rounded-md px-2 py-1 font-medium text-negative transition-colors hover:bg-negative/10"
+        className="min-h-11 rounded-sm px-2 py-1 font-medium text-foreground transition-colors hover:bg-accent"
       >
         No
       </button>
@@ -73,30 +74,29 @@ export function WorthItSpotlight({
               {tx.creditor_name ?? "A purchase"} · {tx.category}
             </DialogDescription>
           </DialogHeader>
-          <p className="font-figure py-4 text-4xl font-semibold text-foreground">
+          <p className="font-figure py-4 text-4xl text-foreground">
             {formatMoney(Math.abs(tx.amount ?? 0), tx.currency ?? "EUR")}
           </p>
           <div className="flex gap-3">
-            <button
-              type="button"
+            <Button
+              variant="quiet"
               onClick={() => {
                 onAnswer(tx, "no");
                 onClose();
               }}
-              className="min-h-11 flex-1 rounded-full bg-negative/10 text-sm font-semibold text-negative transition-colors hover:bg-negative/20"
+              className="flex-1 bg-muted"
             >
               No
-            </button>
-            <button
-              type="button"
+            </Button>
+            <Button
               onClick={() => {
                 onAnswer(tx, "yes");
                 onClose();
               }}
-              className="min-h-11 flex-1 rounded-full border border-positive/30 bg-positive/10 text-sm font-semibold text-positive transition-colors hover:bg-positive/20"
+              className="flex-1"
             >
               Yes
-            </button>
+            </Button>
           </div>
         </DialogContent>
       )}

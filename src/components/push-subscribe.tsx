@@ -2,6 +2,7 @@ import { isDemoMode } from "@/lib/demo/mode";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Bell, BellOff } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 
 // Self-hosters get their own VAPID keypair from setup.sh; falls back to the
@@ -125,7 +126,7 @@ export function PushSubscribeButton({ onSubscribed }: { onSubscribed?: () => voi
 
   if (subscribed) {
     return (
-      <div className="flex min-h-11 items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground">
+      <div className="flex min-h-11 items-center gap-3 rounded-sm px-3 py-2 text-sm font-medium text-muted-foreground">
         <Bell className="size-4" />
         Check-ins enabled
       </div>
@@ -133,11 +134,11 @@ export function PushSubscribeButton({ onSubscribed }: { onSubscribed?: () => voi
   }
 
   return (
-    <button
-      type="button"
+    <Button
+      variant="ghost"
       onClick={subscribe}
       disabled={busy}
-      className="flex min-h-11 w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground disabled:opacity-50"
+      className="w-full justify-start gap-3 px-3 py-2"
     >
       {permission === "denied" ? <BellOff className="size-4" /> : <Bell className="size-4" />}
       {permission === "denied"
@@ -145,6 +146,6 @@ export function PushSubscribeButton({ onSubscribed }: { onSubscribed?: () => voi
         : busy
           ? "Enabling…"
           : "Enable purchase check-ins"}
-    </button>
+    </Button>
   );
 }
