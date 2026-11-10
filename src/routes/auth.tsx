@@ -171,7 +171,7 @@ export function AuthPage() {
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
-              {mode === "mfa" && (
+              {mode === "mfa" ? (
                 <div className="space-y-1.5">
                   <label htmlFor="mfa-code" className="text-xs font-medium text-muted-foreground">
                     Authenticator code
@@ -187,8 +187,7 @@ export function AuthPage() {
                     Open your authenticator app and type the 6-digit code for Alopex.
                   </p>
                 </div>
-              )}
-              {mode !== "mfa" && (
+              ) : (
                 <div className="space-y-1.5">
                   <label htmlFor="email" className="text-xs font-medium text-muted-foreground">
                     Email
