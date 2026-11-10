@@ -36,7 +36,7 @@ export interface BudgetLine {
 const cents = (v: number) => Math.round(v * 100) / 100;
 
 /** Budgets stay below this (the database's limit too). */
-export const MAX_BUDGET = 10_000_000;
+const MAX_BUDGET = 10_000_000;
 
 /**
  * A typed budget amount ("250", "250,5", "1.250", "1,250.50"), rounded to cents; null when blank,

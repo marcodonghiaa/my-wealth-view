@@ -41,8 +41,6 @@ export const Route = createFileRoute("/_authenticated/budgets")({
 
 const BUDGETS_KEY = ["category-budgets"];
 const SPREAD_KEY = "alopex.budgets.spreadIncome";
-// Spend history read for averages and unbudgeted spend: this many months back, every category.
-const HISTORY_MONTHS = AVERAGE_MONTHS;
 
 const PAGE_SIZE = 1000; // PostgREST returns at most 1000 rows per request
 
@@ -139,7 +137,7 @@ function BudgetsPage() {
   const rows = useMemo(() => budgetsQuery.data ?? [], [budgetsQuery.data]);
   // Recent months for every category (averages, unbudgeted spend); older months only for the
   // budgeted categories, as far back as their first budget (rollover).
-  const recentFrom = addMonths(monthIso, -HISTORY_MONTHS);
+  const recentFrom = addMonths(monthIso, -AVERAGE_MONTHS);
   const earliest = rows.reduce((a, r) => (r.month < a ? r.month : a), recentFrom);
   const budgetedCategories = [...new Set(rows.map((r) => r.category))].sort();
   const spendQuery = useQuery({
@@ -415,7 +413,7 @@ function BudgetLineRow({
   onSave: (amount: number, rollover: boolean) => void;
 }) {
   const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(String(line.budget));
+  const [draft, setDraft] = useState("");
   const over = line.left < 0;
   const used = line.available > 0 ? Math.min(1, line.spent / line.available) : over ? 1 : 0;
 
