@@ -10,6 +10,8 @@ let failTable: string | null = null;
 let failUpsert: string | null = null;
 // When set, reads of category_budgets wait for it: holds a refetch open.
 let holdBudgets: Promise<void> | null = null;
+// Spend reads under way right now, and the most there were at once.
+const spendReads = { now: 0, most: 0 };
 const toast = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }));
 vi.mock("sonner", () => ({ toast }));
 
@@ -55,7 +57,10 @@ vi.mock("@/integrations/supabase/client", () => ({
           resolve({ data: rows.slice(from, Math.min(to + 1, from + CAP)), error: null });
         };
         if (table === "category_budgets" && holdBudgets) void holdBudgets.then(answer);
-        else answer();
+        else if (table === "v_spend_by_category_monthly") {
+          spendReads.most = Math.max(spendReads.most, ++spendReads.now);
+          setTimeout(() => (spendReads.now--, answer()), 0);
+        } else answer();
       };
       return q;
     },
@@ -84,6 +89,7 @@ beforeEach(() => {
   failTable = null;
   failUpsert = null;
   holdBudgets = null;
+  spendReads.now = spendReads.most = 0;
   toast.error.mockClear();
   window.localStorage.clear();
   db["v_spend_by_category_monthly"] = [
@@ -259,6 +265,17 @@ describe("Budgets page", () => {
     release();
     await waitFor(() => expect(box.disabled).toBe(false));
     expect(box.checked).toBe(true);
+  });
+
+  // protects=P2-2 older history and recent months load side by side;
+  // fails_when=the second read waits for the first
+  it("reads older history and recent months at the same time", async () => {
+    db["category_budgets"] = [
+      { category: "Groceries", month: "2025-01-01", amount: 300, rollover: false },
+    ];
+    renderPage();
+    expect(await screen.findByText("€180.00 left")).toBeTruthy();
+    expect(spendReads.most).toBe(2);
   });
 
   // P1-4: visible behaviour that had no test.

@@ -145,10 +145,13 @@ function BudgetsPage() {
   const budgetedCategories = [...new Set(rows.map((r) => r.category))].sort();
   const spendQuery = useQuery({
     queryKey: ["budget-spend", earliest, monthIso, budgetedCategories],
-    queryFn: async () => [
-      ...(await fetchSpend(earliest, addMonths(recentFrom, -1), budgetedCategories)),
-      ...(await fetchSpend(recentFrom, monthIso)),
-    ],
+    queryFn: async () =>
+      (
+        await Promise.all([
+          fetchSpend(earliest, addMonths(recentFrom, -1), budgetedCategories),
+          fetchSpend(recentFrom, monthIso),
+        ])
+      ).flat(),
     enabled: budgetsQuery.isSuccess,
     // A new budget changes the categories in the key: keep this month's page on screen while
     // its history loads. Another month always starts from its own data.
