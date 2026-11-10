@@ -268,6 +268,16 @@ describe("untrusted values in a file", () => {
     expect(s.skipped).toBe(0);
   });
 
+  it("polish-3 #15 keeps an Italian Valuta column when a footer row has digits in it", () => {
+    const csv =
+      "Data;Descrizione;Importo;Valuta\n02/01/2026;Bar;-2,50;EUR\n03/01/2026;Amazon;-20,00;USD\n;Saldo finale;;1234,56";
+    const s = readStatement(csv);
+    expect(s.rows.map((r) => [r.description, r.currency ?? "EUR"])).toEqual([
+      ["Bar", "EUR"],
+      ["Amazon", "USD"],
+    ]);
+  });
+
   it("polish-3 #15 skips a row whose currency it can't tell instead of calling it EUR", () => {
     const csv =
       "Date,Description,Amount,Currency\n2026-01-02,Diner,-10.00,$\n2026-01-03,Shop,-2.00,EUR\n2026-01-04,Bus,-1.00,";

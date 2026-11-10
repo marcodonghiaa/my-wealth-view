@@ -397,8 +397,10 @@ function genericRecipe(
       : [],
   );
   const free = (i: number) => i >= 0 && !Object.values(columns).includes(i);
-  // A column named like a currency doesn't count if it holds digits: German "Valuta" is a date.
-  const holdsCodes = (i: number) => !rows.some((r) => /\d/.test(r[i] ?? ""));
+  // A column named like a currency doesn't count if it holds digits and never a code: German
+  // "Valuta" is a date. One footer like "1234,56" under an Italian Valuta keeps the column.
+  const holdsCodes = (i: number) =>
+    rows.some((r) => currencyCode(r[i] ?? "")) || !rows.some((r) => /\d/.test(r[i] ?? ""));
   const currency =
     CURRENCY_HEADERS.map((h) => names.indexOf(h)).find((i) => free(i) && holdsCodes(i)) ?? -1;
   return {
