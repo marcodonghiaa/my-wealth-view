@@ -1,7 +1,7 @@
 import { MutationCache, QueryCache, QueryClient } from "@tanstack/react-query";
 import { createRouter } from "@tanstack/react-router";
 import { routeTree } from "./routeTree.gen";
-import { onMfaRequired } from "@/lib/mfa";
+import { onMfaRequired, retryUnlessRefused } from "@/lib/mfa";
 import { backHereSearch } from "./routes/auth";
 
 export const getRouter = () => {
@@ -13,6 +13,7 @@ export const getRouter = () => {
   const queryClient = new QueryClient({
     queryCache: new QueryCache({ onError }),
     mutationCache: new MutationCache({ onError }),
+    defaultOptions: { queries: { retry: retryUnlessRefused } },
   });
 
   const router = createRouter({

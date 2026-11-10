@@ -22,6 +22,7 @@ import {
   needsMfaCode,
   onMfaRequired,
   removeAuthenticator,
+  retryUnlessRefused,
   startEnrollment,
   verifyMfaCode,
 } from "./mfa";
@@ -261,5 +262,17 @@ describe("onMfaRequired", () => {
     await onMfaRequired(go)(new Error("boom"));
     expect(go).not.toHaveBeenCalled();
     expect(refreshSession).not.toHaveBeenCalled();
+  });
+});
+
+// protects=a session refused for a missing code reaches the code step at once;
+// fails_when=the refusal is retried 3 times with backoff (about 7s of spinner) first
+describe("retryUnlessRefused", () => {
+  it("never retries a refusal, retries other errors up to 3 times", () => {
+    expect(retryUnlessRefused(0, dbRefusal)).toBe(false);
+    expect(retryUnlessRefused(0, fnRefusal({ code: "mfa_required" }))).toBe(false);
+    expect(retryUnlessRefused(0, new Error("Failed to fetch"))).toBe(true);
+    expect(retryUnlessRefused(2, new Error("Failed to fetch"))).toBe(true);
+    expect(retryUnlessRefused(3, new Error("Failed to fetch"))).toBe(false);
   });
 });

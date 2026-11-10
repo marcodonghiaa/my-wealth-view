@@ -121,6 +121,17 @@ export async function isMfaRequired(error: unknown): Promise<boolean> {
 }
 
 /**
+ * React Query's retry rule: a refused session (database 42501, or a 401/403 from an Edge Function)
+ * won't change by asking again, so it goes straight to the error handler below.
+ */
+export function retryUnlessRefused(failureCount: number, error: unknown): boolean {
+  const e = error as { code?: unknown; context?: unknown } | null;
+  const status = e?.context instanceof Response ? e.context.status : 0;
+  if (e?.code === "42501" || status === 401 || status === 403) return false;
+  return failureCount < 3;
+}
+
+/**
  * A query/mutation error handler: when the server refuses a session for a missing code (signed
  * in elsewhere before the authenticator was added, so this tab's stored factor list is stale),
  * refresh the session so it knows about the authenticator, then open the sign-in page's code step.
