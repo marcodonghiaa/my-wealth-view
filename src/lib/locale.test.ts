@@ -125,3 +125,14 @@ describe("numberFormat", () => {
     expect(numberFormat({ style: "percent" }).format(0.5)).toBe("50 %");
   });
 });
+
+describe("a planted locale value", () => {
+  it("#8 can't switch the digits: only Settings choices count, extensions are dropped", () => {
+    setLocaleOverride("de-DE-u-nu-arab");
+    expect(appLocale()).toBe("en-GB");
+    expect(formatNumber(12, 0)).toBe("12");
+    setLocaleOverride("");
+    setBrowser("de-DE-u-nu-arab");
+    expect(appLocale()).toBe("de-DE");
+  });
+});

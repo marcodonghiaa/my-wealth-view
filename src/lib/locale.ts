@@ -24,7 +24,9 @@ export const LOCALE_CHOICES: Array<[string, string]> = [
 /** The locale picked in Settings, or "" to follow the browser. */
 export function localeOverride(): string {
   try {
-    return localStorage.getItem(KEY) ?? "";
+    const saved = localStorage.getItem(KEY) ?? "";
+    // Only a Settings choice counts, whatever else ends up in storage.
+    return LOCALE_CHOICES.some(([value]) => value === saved) ? saved : "";
   } catch {
     return "";
   }
@@ -45,7 +47,8 @@ export function setLocaleOverride(locale: string): boolean {
 export function appLocale(): string {
   const wanted = localeOverride() || (typeof navigator === "undefined" ? "" : navigator.language);
   try {
-    return Intl.getCanonicalLocales(wanted || FALLBACK)[0] ?? FALLBACK;
+    // baseName drops extensions such as -u-nu-arab, which would swap every digit.
+    return new Intl.Locale(wanted || FALLBACK).baseName;
   } catch {
     return FALLBACK;
   }
