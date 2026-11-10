@@ -338,7 +338,15 @@ function BudgetsPage() {
                   {spread ? "Income, spread over the year" : "Income this month"}
                 </span>
                 <span className="font-figure text-foreground">
-                  {income == null ? "—" : formatEur(income)}
+                  {incomeQuery.isError ? (
+                    <span className="text-negative">
+                      Couldn't load income: {incomeQuery.error.message}
+                    </span>
+                  ) : income == null ? (
+                    "—"
+                  ) : (
+                    formatEur(income)
+                  )}
                 </span>
               </div>
               {lines.length > 0 && income != null && (

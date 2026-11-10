@@ -249,4 +249,17 @@ describe("Budgets page", () => {
     expect((await screen.findByRole("alert")).textContent).toContain("below 10 million");
     expect(upserts).toHaveLength(0);
   });
+
+  // protects=an income load failure is reported, not shown as a blank (P2-7)
+  it("says when income couldn't load", async () => {
+    failTable = "v_income_vs_expenses_monthly";
+    renderPage();
+    expect(await screen.findByText(/Couldn't load income: relation does not exist/)).toBeTruthy();
+  });
+
+  it("says when spending couldn't load", async () => {
+    failTable = "v_spend_by_category_monthly";
+    renderPage();
+    expect((await screen.findByRole("alert")).textContent).toContain("relation does not exist");
+  });
 });
