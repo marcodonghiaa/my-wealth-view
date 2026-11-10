@@ -1,4 +1,4 @@
-import { appLocale, dateLocale, formatNumber, formatPercent } from "@/lib/locale";
+import { dateLocale, formatNumber, formatPercent, numberFormat } from "@/lib/locale";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
@@ -72,7 +72,7 @@ function formatFxDate(iso: string | undefined): string {
 }
 
 function formatMoney(value: number, currency: Currency): string {
-  return new Intl.NumberFormat(appLocale(), {
+  return numberFormat({
     style: "currency",
     currency,
     maximumFractionDigits: 0,

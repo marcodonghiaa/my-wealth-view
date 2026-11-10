@@ -1,4 +1,4 @@
-import { appLocale, formatPercent } from "@/lib/locale";
+import { formatPercent, numberFormat } from "@/lib/locale";
 import { createFileRoute } from "@tanstack/react-router";
 import { EmptyState } from "@/components/empty-state";
 import { useQuery } from "@tanstack/react-query";
@@ -100,7 +100,7 @@ async function fetchPortfolio(): Promise<Array<PortfolioRow>> {
 
 function formatMoney(value: number, currency: string): string {
   try {
-    return new Intl.NumberFormat(appLocale(), {
+    return numberFormat({
       style: "currency",
       currency,
       minimumFractionDigits: 2,
@@ -109,7 +109,7 @@ function formatMoney(value: number, currency: string): string {
   } catch {
     // Intl.NumberFormat throws on a malformed ISO 4217 code -- fall back to
     // a plain number rather than crashing the whole page during render.
-    return `${new Intl.NumberFormat(appLocale(), {
+    return `${numberFormat({
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     }).format(value)} ${currency}`;
@@ -117,7 +117,7 @@ function formatMoney(value: number, currency: string): string {
 }
 
 function formatShares(value: number): string {
-  return new Intl.NumberFormat(appLocale(), {
+  return numberFormat({
     minimumFractionDigits: 0,
     maximumFractionDigits: 3,
   }).format(value);

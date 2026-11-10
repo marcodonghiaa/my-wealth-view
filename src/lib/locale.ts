@@ -51,12 +51,26 @@ export function appLocale(): string {
   }
 }
 
+const formats = new Map<string, Intl.NumberFormat>();
+
+/** A number formatter for the chosen locale, built once per locale and options. */
+export function numberFormat(options: Intl.NumberFormatOptions = {}): Intl.NumberFormat {
+  const locale = appLocale();
+  const key = `${locale}|${JSON.stringify(options)}`;
+  let format = formats.get(key);
+  if (!format) {
+    format = new Intl.NumberFormat(locale, options);
+    formats.set(key, format);
+  }
+  return format;
+}
+
 /** Whether people in this locale write the month before the day (03/25/2026). */
 export const monthFirst = (locale: string = appLocale()): boolean => /^en-US\b/.test(locale);
 
 /** A plain number with fixed decimals in the chosen locale: 1.0842 → "1.0842" / "1,0842". */
 export function formatNumber(value: number, digits: number): string {
-  return new Intl.NumberFormat(appLocale(), {
+  return numberFormat({
     minimumFractionDigits: digits,
     maximumFractionDigits: digits,
   }).format(value);
@@ -70,7 +84,7 @@ export function formatPercent(
   fraction: number,
   { digits = 1, signed = false }: { digits?: number; signed?: boolean } = {},
 ): string {
-  const text = new Intl.NumberFormat(appLocale(), {
+  const text = numberFormat({
     style: "percent",
     minimumFractionDigits: digits,
     maximumFractionDigits: digits,

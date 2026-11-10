@@ -1,4 +1,4 @@
-import { appLocale, dateLocale } from "@/lib/locale";
+import { dateLocale, numberFormat } from "@/lib/locale";
 
 export interface TransactionRow {
   entry_reference: string;
@@ -135,7 +135,7 @@ export function startOfMonth(date: Date): Date {
 }
 
 export function formatMoney(value: number, currency: string): string {
-  return new Intl.NumberFormat(appLocale(), {
+  return numberFormat({
     style: "currency",
     currency,
     minimumFractionDigits: 2,
@@ -149,7 +149,7 @@ export const formatUsd = (value: number): string => formatMoney(value, "USD");
 
 /** Amount without a currency symbol — the Currency column states it instead. */
 export function formatAmountPlain(value: number): string {
-  return new Intl.NumberFormat(appLocale(), {
+  return numberFormat({
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
     signDisplay: "never",

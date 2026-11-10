@@ -1,4 +1,4 @@
-import { appLocale, formatPercent } from "@/lib/locale";
+import { formatPercent, numberFormat } from "@/lib/locale";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
@@ -79,7 +79,7 @@ function formatPrice(asset: AssetGroup): string {
 }
 
 function formatAmount(value: number): string {
-  return new Intl.NumberFormat(appLocale(), {
+  return numberFormat({
     minimumFractionDigits: 0,
     maximumFractionDigits: 8,
   }).format(value);

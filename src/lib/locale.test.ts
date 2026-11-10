@@ -7,6 +7,7 @@ import {
   formatPercent,
   localeOverride,
   monthFirst,
+  numberFormat,
   setLocaleOverride,
 } from "./locale";
 import { formatBookingDate, formatMoney } from "./transactions";
@@ -111,5 +112,16 @@ describe("US English dates", () => {
     setBrowser("en-US");
     expect(formatDay("2026-03-03")).toBe("Mar 3, 2026");
     expect(formatBookingDate("2026-03-03")).toBe("Mar 3, 2026");
+  });
+});
+
+describe("numberFormat", () => {
+  it("reuses one formatter per locale and options", () => {
+    const a = numberFormat({ style: "percent" });
+    expect(numberFormat({ style: "percent" })).toBe(a);
+    expect(numberFormat({ style: "decimal" })).not.toBe(a);
+    setBrowser("de-DE");
+    expect(numberFormat({ style: "percent" })).not.toBe(a);
+    expect(numberFormat({ style: "percent" }).format(0.5)).toBe("50 %");
   });
 });

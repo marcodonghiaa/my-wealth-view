@@ -1,4 +1,4 @@
-import { appLocale, formatPercent } from "@/lib/locale";
+import { formatPercent, numberFormat } from "@/lib/locale";
 import { formatMoney } from "@/lib/transactions";
 
 export type HeadlineDelta = {
@@ -21,7 +21,7 @@ export function HeadlineFigure({
   currency: string;
   delta?: HeadlineDelta;
 }) {
-  const parts = new Intl.NumberFormat(appLocale(), {
+  const parts = numberFormat({
     style: "currency",
     currency,
     minimumFractionDigits: 2,
