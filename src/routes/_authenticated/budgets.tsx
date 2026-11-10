@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
+import { Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { formatISODate } from "@/lib/date";
@@ -502,7 +503,7 @@ function BudgetLineRow({
             <span className="font-figure">{formatEur(line.spent)}</span> of{" "}
             <button
               type="button"
-              className="font-figure text-foreground underline decoration-rule underline-offset-4 hover:decoration-foreground"
+              className="inline-flex items-center gap-1.5 font-figure text-foreground underline decoration-rule underline-offset-4 hover:decoration-foreground"
               aria-label={`Change budget for ${line.category}, now ${formatEur(line.budget)}`}
               onClick={() => {
                 setDraft(String(line.budget));
@@ -511,6 +512,7 @@ function BudgetLineRow({
               }}
             >
               {formatEur(line.budget)}
+              <Pencil aria-hidden className="size-3.5 text-muted-foreground" />
             </button>
             {line.carriedIn !== 0 && (
               <span className="font-figure">

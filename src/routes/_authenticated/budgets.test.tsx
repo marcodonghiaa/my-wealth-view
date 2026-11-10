@@ -310,6 +310,17 @@ describe("Budgets page", () => {
     expect(screen.queryByText("Not yet budgeted")).toBeNull();
   });
 
+  // protects=P4 P1-3 the amount shows it can be changed; fails_when=an underline is the only cue
+  it("marks the budget amount as editable with a pencil", async () => {
+    db["category_budgets"] = [
+      { category: "Groceries", month: "2026-11-01", amount: 300, rollover: false },
+    ];
+    renderPage();
+    const change = await screen.findByRole("button", { name: /Change budget for Groceries/ });
+    expect(change.querySelector("svg[aria-hidden]")).not.toBeNull();
+    expect(change.textContent).toBe("€300.00");
+  });
+
   // P1-4: visible behaviour that had no test.
   it("says Left to spend or Over budget above the total", async () => {
     db["category_budgets"] = [
