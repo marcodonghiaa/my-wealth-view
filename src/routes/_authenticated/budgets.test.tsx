@@ -207,6 +207,32 @@ describe("Budgets page", () => {
     expect(await screen.findByText("€480.00 left")).toBeTruthy();
   });
 
+  // protects=P1-1 paging: budgeted history alone past the 1000-row cap is read in full;
+  // fails_when=fetchSpend stops after the first page
+  it("reads every page when budgeted history alone passes 1000 rows", async () => {
+    const months = Array.from({ length: 48 }, (_, i) => {
+      const d = new Date(2022, 11 + i, 1);
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
+    });
+    const cats = [
+      "Groceries",
+      ...Array.from({ length: 29 }, (_, c) => `Cat ${String(c).padStart(2, "0")}`),
+    ];
+    // 30 budgeted categories × 48 months = 1440 rows in the budgeted-history read.
+    db["v_spend_by_category_monthly"] = months.flatMap((month) =>
+      cats.map((category) => ({ month, category, spend_eur: category === "Groceries" ? 90 : 5 })),
+    );
+    db["category_budgets"] = cats.map((category) => ({
+      category,
+      month: months[0],
+      amount: category === "Groceries" ? 100 : 5,
+      rollover: true,
+    }));
+    renderPage();
+    // Groceries: 47 earlier months each leave 10 → 470 carried; 100 + 470 − 90 = 480 left.
+    expect(await screen.findByText("€480.00 left")).toBeTruthy();
+  });
+
   // protects=clearing the field and pressing Save keeps the budget (P1-4);
   // fails_when=a blank amount is saved as 0, which removes the budget
   it("does not remove a budget when the amount is cleared", async () => {
