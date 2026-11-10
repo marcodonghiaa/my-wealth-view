@@ -36,11 +36,16 @@ export const COUNTRIES: Array<{ code: string; name: string }> = [
   { code: "GB", name: "UK" },
 ];
 
-// The form's first country: the region of the browser's language (de-AT -> AT) when it is in
-// the list, else the first one listed.
+// The form's first country: the region of the browser's language (de-AT -> AT, a bare "it" ->
+// IT, "sv" -> SE) when it is in the list, else the first one listed.
 export function defaultCountry(languages: readonly string[]): string {
   for (const lang of languages) {
-    const region = lang.split("-")[1]?.toUpperCase();
+    let region: string | undefined;
+    try {
+      region = new Intl.Locale(lang).maximize().region;
+    } catch {
+      continue; // not a valid language tag
+    }
     if (region && COUNTRIES.some((c) => c.code === region)) return region;
   }
   return COUNTRIES[0]!.code;

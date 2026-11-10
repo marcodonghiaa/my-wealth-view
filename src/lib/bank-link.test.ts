@@ -132,8 +132,14 @@ describe("defaultCountry", () => {
     expect(defaultCountry(["en", "de-AT", "fr-FR"])).toBe("AT");
   });
 
-  it("falls back to the first country when no region is listed", () => {
-    expect(defaultCountry(["en-US", "ja"])).toBe("AT");
-    expect(defaultCountry([])).toBe("AT");
+  it("infers the country of a bare language", () => {
+    expect(defaultCountry(["it"])).toBe("IT");
+    expect(defaultCountry(["sv"])).toBe("SE");
+  });
+
+  it("falls back to the first country when no listed region is found", () => {
+    const first = COUNTRIES[0]!.code;
+    expect(defaultCountry(["en-US", "ja", "not a tag!"])).toBe(first);
+    expect(defaultCountry([])).toBe(first);
   });
 });
