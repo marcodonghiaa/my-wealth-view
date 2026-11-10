@@ -319,13 +319,15 @@ function BudgetsPage() {
                       key={s.category}
                       className="flex min-h-11 items-center justify-between gap-3 px-4 py-2 text-sm sm:px-5"
                     >
-                      <span className="flex items-center gap-2 font-medium text-foreground">
+                      <span className="flex min-w-0 items-center gap-2 font-medium text-foreground">
                         <CategoryAvatar
                           category={s.category === "Uncategorized" ? null : s.category}
                         />
-                        {s.category}
+                        <span className="truncate" title={s.category}>
+                          {s.category}
+                        </span>
                       </span>
-                      <span className="flex items-center gap-3">
+                      <span className="flex shrink-0 items-center gap-3">
                         <span className="font-figure text-foreground">
                           {formatEur(s.spend_eur)}
                         </span>
@@ -529,7 +531,11 @@ function BudgetLineRow({
               Remove
             </Button>
             {invalid && (
-              <span id={`budget-error-${line.category}`} role="alert" className="text-negative">
+              <span
+                id={`budget-error-${line.category}`}
+                role="alert"
+                className="basis-full text-negative"
+              >
                 Type an amount below 10 million, like 250.
               </span>
             )}
@@ -607,7 +613,10 @@ function AddBudget({
     <section className="mt-6">
       <SectionTitle>Add a budget</SectionTitle>
       <GroupedList>
-        <form onSubmit={submit} className="flex flex-col gap-2 p-4 sm:flex-row sm:px-5">
+        <form
+          onSubmit={submit}
+          className="flex flex-col gap-2 p-4 sm:flex-row sm:flex-wrap sm:px-5"
+        >
           <Select
             id={ADD_CATEGORY_ID}
             aria-label="Category"
@@ -640,12 +649,12 @@ function AddBudget({
           <Button type="submit" disabled={busy || !category || !amount}>
             Add
           </Button>
+          {invalid && (
+            <p role="alert" className="basis-full text-sm text-negative">
+              Type an amount above 0 and below 10 million, like 250.
+            </p>
+          )}
         </form>
-        {invalid && (
-          <p role="alert" className="px-4 pb-4 text-sm text-negative sm:px-5">
-            Type an amount above 0 and below 10 million, like 250.
-          </p>
-        )}
       </GroupedList>
     </section>
   );

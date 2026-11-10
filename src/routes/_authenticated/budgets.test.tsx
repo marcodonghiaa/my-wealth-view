@@ -419,6 +419,33 @@ describe("Budgets page", () => {
     await screen.findByText(whole("€20.00 over"));
   });
 
+  // protects=P4 P2-4 long names and messages keep the layout; fails_when=a long name wraps the
+  // unbudgeted row, the amount message shares a line with the buttons, or the add-form
+  // message is split from its form by a divider
+  it("keeps long names and messages tidy", async () => {
+    const long = "A category name that goes on for a very long while ".repeat(2).trim();
+    db["category_budgets"] = [
+      { category: "Groceries", month: "2026-11-01", amount: 300, rollover: false },
+    ];
+    db["v_spend_by_category_monthly"]!.push({ month: "2026-11-01", category: long, spend_eur: 9 });
+    renderPage();
+    const name = await screen.findByText(long);
+    expect(name.className).toMatch(/\btruncate\b/);
+    expect(name.getAttribute("title")).toBe(long);
+
+    fireEvent.click(screen.getByRole("button", { name: /Change budget for Groceries/ }));
+    fireEvent.change(screen.getByLabelText("Budget for Groceries"), { target: { value: "" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect((await screen.findByRole("alert")).className).toMatch(/\bbasis-full\b/);
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+    fireEvent.change(screen.getByLabelText("Category"), { target: { value: "Dine Out" } });
+    fireEvent.change(screen.getByLabelText("Monthly budget in euros"), { target: { value: "0" } });
+    fireEvent.click(screen.getByRole("button", { name: "Add" }));
+    const message = await screen.findByRole("alert");
+    expect(message.parentElement).toBe(screen.getByLabelText("Category").closest("form"));
+  });
+
   // P1-4: visible behaviour that had no test.
   it("says Left to spend or Over budget above the total", async () => {
     db["category_budgets"] = [
