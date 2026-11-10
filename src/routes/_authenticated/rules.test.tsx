@@ -110,6 +110,7 @@ afterEach(() => {
     deleteError: null,
     insertError: null,
   });
+  invoke.mockReset();
   toastSuccess.mockReset();
   toastError.mockReset();
 });
