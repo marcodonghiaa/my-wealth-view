@@ -25,11 +25,15 @@ export interface StatementPreset {
   decimal?: DecimalMark;
 }
 
-/** Matches a row by a column's lower-cased value: one of `when`, or anything but `unless`. */
+/**
+ * Matches a row by a column's lower-cased value: one of `when`, anything but `unless`, or one
+ * that fits `match`.
+ */
 export interface RowRule {
   column: string;
   when?: Array<string>;
   unless?: Array<string>;
+  match?: RegExp;
 }
 
 export const PRESETS: Array<StatementPreset> = [
@@ -57,6 +61,8 @@ export const PRESETS: Array<StatementPreset> = [
     transfer: [
       { column: "type", when: ["exchange"] },
       { column: "product", unless: ["current"] },
+      // The Current side of the same move: "To EUR Savings", "From pocket …", "To Vault …".
+      { column: "description", match: /^(?:to|from) (?:(?:[a-z]{3} )?savings$|pocket\b|vault\b)/ },
     ],
     decimal: ".",
   },
@@ -125,6 +131,7 @@ export function presetColumns(preset: StatementPreset, headers: Array<string>) {
     return (row: Array<string>) => {
       if (!r || i == null) return false;
       const value = (row[i] ?? "").trim().toLowerCase();
+      if (r.match) return r.match.test(value);
       return r.when ? r.when.includes(value) : r.unless != null && !r.unless.includes(value);
     };
   };

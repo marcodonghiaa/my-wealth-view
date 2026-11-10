@@ -41,6 +41,23 @@ describe("presets", () => {
     ]);
   });
 
+  it("#9 Revolut: both sides of a move to or from Savings, a pocket or a Vault are transfers", () => {
+    const head = fixture("revolut.csv").split("\n")[0];
+    const csv = [
+      head,
+      "TRANSFER,Current,2026-03-08 09:00:00,2026-03-08 09:00:00,To EUR Savings,-500.00,0.00,EUR,COMPLETED,446.30",
+      "TRANSFER,Current,2026-03-09 09:00:00,2026-03-09 09:00:00,From pocket EUR Holiday,20.00,0.00,EUR,COMPLETED,466.30",
+      "TRANSFER,Current,2026-03-10 09:00:00,2026-03-10 09:00:00,To Vault Rainy day,-5.00,0.00,EUR,COMPLETED,461.30",
+      "TRANSFER,Current,2026-03-11 09:00:00,2026-03-11 09:00:00,To Savings Bank Ltd,-40.00,0.00,EUR,COMPLETED,421.30",
+    ].join("\n");
+    expect(readStatement(csv).rows.map((r) => r.category ?? null)).toEqual([
+      "Transfer",
+      "Transfer",
+      "Transfer",
+      null,
+    ]);
+  });
+
   it("Spiir: day-first dates, decimal comma, Spiir's own duplicates left out", () => {
     const s = readStatement(fixture("spiir.csv"));
     expect(s.preset).toBe("Spiir");
