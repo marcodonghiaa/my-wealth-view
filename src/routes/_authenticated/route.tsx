@@ -21,6 +21,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { loadDemoClient, supabase } from "@/integrations/supabase/client";
 import { isDemoMode } from "@/lib/demo/mode";
 import { needsMfaCode } from "@/lib/mfa";
+import { backHereSearch } from "@/routes/auth";
 import { registerDashboardOrigin } from "@/lib/register-origin";
 import { MadeWith } from "@/components/made-with";
 import { GroupedList } from "@/components/ui/grouped-list";
@@ -36,11 +37,7 @@ export const Route = createFileRoute("/_authenticated")({
   beforeLoad: async ({ location }) => {
     // Sign-in sends the user back here, so a bank redirect (#bank_code=…) survives an expired
     // session. The hash stays in `next`: the browser never sends it to the server.
-    const toAuth = () => {
-      const next =
-        location.pathname + location.searchStr + (location.hash ? `#${location.hash}` : "");
-      return redirect({ to: "/auth", search: next === "/" ? {} : { next } });
-    };
+    const toAuth = () => redirect({ to: "/auth", search: backHereSearch(location) });
     // A reloaded demo tab needs the fake client (its own chunk) before anything asks for data.
     if (isDemoMode()) await loadDemoClient();
     try {

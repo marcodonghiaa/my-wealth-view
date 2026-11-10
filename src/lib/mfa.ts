@@ -117,6 +117,8 @@ export async function isMfaRequired(error: unknown): Promise<boolean> {
  * A query/mutation error handler: when the server refuses a session for a missing code (signed
  * in elsewhere before the authenticator was added, so this tab's stored factor list is stale),
  * refresh the session so it knows about the authenticator, then open the sign-in page's code step.
+ * A session that can't refresh is signed out here, so sign-in asks for the password instead of
+ * sending a stale session back to the dashboard (and here again).
  */
 export function onMfaRequired(goToSignIn: () => Promise<unknown>) {
   let busy = false;
@@ -124,7 +126,8 @@ export function onMfaRequired(goToSignIn: () => Promise<unknown>) {
     if (busy || !(await isMfaRequired(error))) return;
     busy = true;
     try {
-      await supabase.auth.refreshSession();
+      const { error: refreshError } = await supabase.auth.refreshSession();
+      if (refreshError) await supabase.auth.signOut({ scope: "local" });
       await goToSignIn();
     } finally {
       busy = false;

@@ -8,7 +8,10 @@ const mfa = vi.hoisted(() => ({
   unenroll: vi.fn(),
 }));
 const refreshSession = vi.hoisted(() => vi.fn());
-vi.mock("@/integrations/supabase/client", () => ({ supabase: { auth: { mfa, refreshSession } } }));
+const signOut = vi.hoisted(() => vi.fn());
+vi.mock("@/integrations/supabase/client", () => ({
+  supabase: { auth: { mfa, refreshSession, signOut } },
+}));
 
 import {
   cleanCode,
@@ -198,7 +201,10 @@ describe("isMfaRequired", () => {
 // protects=a session the database refuses lands on the code step instead of error screens;
 // fails_when=the stale factor list is not refreshed, or every failing query navigates again
 describe("onMfaRequired", () => {
-  beforeEach(() => refreshSession.mockReset().mockResolvedValue({ error: null }));
+  beforeEach(() => {
+    refreshSession.mockReset().mockResolvedValue({ error: null });
+    signOut.mockReset().mockResolvedValue({ error: null });
+  });
 
   it("refreshes the session, then goes to sign-in, once for a burst of refusals", async () => {
     let finish: () => void = () => {};
@@ -213,6 +219,23 @@ describe("onMfaRequired", () => {
     expect(refreshSession.mock.invocationCallOrder[0]).toBeLessThan(
       go.mock.invocationCallOrder[0]!,
     );
+    expect(go).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the session when the refresh works", async () => {
+    const go = vi.fn(async () => {});
+    await onMfaRequired(go)(dbRefusal);
+    expect(signOut).not.toHaveBeenCalled();
+    expect(go).toHaveBeenCalledTimes(1);
+  });
+
+  // protects=no bounce between sign-in and the dashboard;
+  // fails_when=a session that can't refresh stays signed in with its stale factor list
+  it("signs this tab out when the session can't refresh, then goes to sign-in", async () => {
+    refreshSession.mockResolvedValue({ error: new Error("Invalid Refresh Token") });
+    const go = vi.fn(async () => {});
+    await onMfaRequired(go)(dbRefusal);
+    expect(signOut).toHaveBeenCalledWith({ scope: "local" });
     expect(go).toHaveBeenCalledTimes(1);
   });
 

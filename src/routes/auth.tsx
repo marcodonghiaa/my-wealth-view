@@ -22,6 +22,14 @@ export function safeNext(value: unknown): string | undefined {
   }
 }
 
+/** Sign-in's search for coming back to this page afterwards (hash included: a bank's #bank_code). */
+export function backHereSearch(location: { pathname: string; searchStr: string; hash: string }): {
+  next?: string;
+} {
+  const next = location.pathname + location.searchStr + (location.hash ? `#${location.hash}` : "");
+  return next === "/" ? {} : { next };
+}
+
 export const Route = createFileRoute("/auth")({
   ssr: false,
   // Arriving here always ends a demo visit, so a real sign-in never shares a tab with fake data.
