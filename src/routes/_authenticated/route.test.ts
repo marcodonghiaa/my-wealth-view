@@ -7,6 +7,12 @@ const { getSession, getUser, aal } = vi.hoisted(() => ({
 }));
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: { auth: { getSession, getUser, mfa: { getAuthenticatorAssuranceLevel: aal } } },
+  loadDemoClient: async () => {},
+}));
+const demo = vi.hoisted(() => ({ on: false }));
+vi.mock("@/lib/demo/mode", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/demo/mode")>()),
+  isDemoMode: () => demo.on,
 }));
 
 import { Route } from "./route";
@@ -37,6 +43,15 @@ describe("authenticated layout guard", () => {
     getSession.mockResolvedValue({ data: { session: { user: { id: "u1" } } }, error: null });
     aal.mockResolvedValue({ data: { currentLevel: "aal1", nextLevel: "aal2" }, error: null });
     await expect(beforeLoad()).rejects.toMatchObject({ options: { to: "/auth" } });
+  });
+
+  // fails_when=the demo's fake client is asked for an assurance level it doesn't have
+  it("skips the code check in the demo", async () => {
+    demo.on = true;
+    getSession.mockResolvedValue({ data: { session: { user: { id: "demo" } } }, error: null });
+    await expect(beforeLoad()).resolves.toEqual({ user: { id: "demo" } });
+    expect(aal).not.toHaveBeenCalled();
+    demo.on = false;
   });
 
   it("lets a signed-in user through using the local session, with no server round trip", async () => {

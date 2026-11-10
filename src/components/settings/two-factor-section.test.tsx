@@ -130,6 +130,17 @@ describe("TwoFactorSection", () => {
     expect(screen.getByRole("button", { name: "Remove Laptop" })).toBeDisabled();
   });
 
+  it("keeps the authenticator and says why when removing fails", async () => {
+    lib.listAuthenticators.mockResolvedValue([{ id: "a", name: "Phone" }]);
+    lib.removeAuthenticator.mockRejectedValue(new Error("AAL2 required"));
+    render(<TwoFactorSection />);
+    fireEvent.click(await screen.findByRole("button", { name: "Remove Phone" }));
+    fireEvent.click(screen.getByRole("button", { name: "Confirm remove" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("AAL2 required");
+    expect(screen.getByText("Phone")).toBeInTheDocument();
+    expect(screen.getByText(/^On\./)).toBeInTheDocument();
+  });
+
   it("says when the list can't load", async () => {
     lib.listAuthenticators.mockRejectedValue(new Error("network down"));
     render(<TwoFactorSection />);

@@ -120,6 +120,11 @@ describe("verifyMfaCode", () => {
     await expect(verifyMfaCode("123456")).rejects.toThrow(/Too many tries.*wait a minute/);
     expect(mfa.challengeAndVerify).toHaveBeenCalledTimes(1);
   });
+  it("surfaces a failed factor lookup without checking the code", async () => {
+    mfa.listFactors.mockResolvedValue({ data: null, error: new Error("Failed to fetch") });
+    await expect(verifyMfaCode("123456")).rejects.toThrow("Failed to fetch");
+    expect(mfa.challengeAndVerify).not.toHaveBeenCalled();
+  });
   it("says when there is no authenticator", async () => {
     mfa.listFactors.mockResolvedValue({ data: { totp: [] }, error: null });
     await expect(verifyMfaCode("123456")).rejects.toThrow(/no authenticator/);
@@ -187,6 +192,24 @@ describe("enrollment", () => {
       "You already have an authenticator with that name. Pick another.",
     );
   });
+  it("still enrolls when the cleanup lookup fails", async () => {
+    mfa.listFactors.mockResolvedValue({ data: null, error: new Error("Failed to fetch") });
+    mfa.enroll.mockResolvedValue({
+      data: { id: "n", totp: { qr_code: "q", secret: "s" } },
+      error: null,
+    });
+    await expect(startEnrollment("")).resolves.toEqual({ factorId: "n", qrCode: "q", secret: "s" });
+    expect(mfa.unenroll).not.toHaveBeenCalled();
+    expect(mfa.enroll).toHaveBeenCalledWith(
+      expect.objectContaining({ friendlyName: "Authenticator 1" }),
+    );
+  });
+  it("surfaces a server error when finishing or listing", async () => {
+    mfa.challengeAndVerify.mockResolvedValue({ error: new Error("Failed to fetch") });
+    await expect(finishEnrollment("f1", "123456")).rejects.toThrow("Failed to fetch");
+    mfa.listFactors.mockResolvedValue({ data: null, error: new Error("Failed to fetch") });
+    await expect(listAuthenticators()).rejects.toThrow("Failed to fetch");
+  });
   it("surfaces an enroll error", async () => {
     mfa.listFactors.mockResolvedValue({ data: { all: [] }, error: null });
     mfa.enroll.mockResolvedValue({ data: null, error: new Error("MFA enroll is disabled") });
@@ -242,6 +265,11 @@ describe("isMfaRequired", () => {
     );
     expect(await isMfaRequired(fnRefusal({ error: "Server update incomplete" }, 503))).toBe(false);
     expect(await isMfaRequired(new Error("boom"))).toBe(false);
+    expect(
+      await isMfaRequired(
+        Object.assign(new Error("x"), { context: new Response("not json", { status: 403 }) }),
+      ),
+    ).toBe(false);
     expect(await isMfaRequired(null)).toBe(false);
   });
 });
@@ -268,6 +296,17 @@ describe("onMfaRequired", () => {
       go.mock.invocationCallOrder[0]!,
     );
     expect(go).toHaveBeenCalledTimes(1);
+  });
+
+  it("handles the next refusal after a failed navigation", async () => {
+    const go = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("navigation aborted"))
+      .mockResolvedValue(undefined);
+    const onError = onMfaRequired(go);
+    await expect(onError(dbRefusal)).rejects.toThrow("navigation aborted");
+    await onError(dbRefusal);
+    expect(go).toHaveBeenCalledTimes(2);
   });
 
   it("keeps the session when the refresh works", async () => {

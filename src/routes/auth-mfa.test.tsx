@@ -56,6 +56,13 @@ describe("sign-in with two-step", () => {
     await waitFor(() => expect(navigate).toHaveBeenCalledWith({ to: "/", replace: true }));
   });
 
+  it("an existing session that needs no code goes straight to the dashboard", async () => {
+    session = { user: { id: "u" } };
+    render(<AuthPage />);
+    await waitFor(() => expect(navigate).toHaveBeenCalledWith({ to: "/", replace: true }));
+    expect(screen.queryByLabelText("Authenticator code")).not.toBeInTheDocument();
+  });
+
   it("asks for the code after the password, then goes in", async () => {
     mfa.needsMfaCode.mockResolvedValue(true);
     render(<AuthPage />);
