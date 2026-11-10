@@ -633,6 +633,7 @@ function AddBudget({
           <Select
             id={ADD_CATEGORY_ID}
             aria-label="Category"
+            className="sm:w-0 sm:flex-1"
             value={category}
             onChange={(e) => {
               setCategory(e.target.value);
