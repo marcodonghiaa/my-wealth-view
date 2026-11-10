@@ -69,8 +69,10 @@ export interface Enrollment {
   secret: string;
 }
 
-/** The name an authenticator gets when none is typed: "Authenticator 1", "Authenticator 2"… */
-export const defaultAuthenticatorName = (existing: number) => `Authenticator ${existing + 1}`;
+/** The name an authenticator gets when none is typed: the first "Authenticator N" not taken. */
+export function defaultAuthenticatorName(taken: Array<string>): string {
+  for (let n = 1; ; n++) if (!taken.includes(`Authenticator ${n}`)) return `Authenticator ${n}`;
+}
 
 /**
  * Start adding an authenticator. Leftover unfinished ones (a closed tab or Cancel mid-setup) are
@@ -85,7 +87,8 @@ export async function startEnrollment(name: string): Promise<Enrollment> {
   }
   const { data, error } = await supabase.auth.mfa.enroll({
     factorType: "totp",
-    friendlyName: name.trim() || defaultAuthenticatorName(list?.totp?.length ?? 0),
+    friendlyName:
+      name.trim() || defaultAuthenticatorName((list?.totp ?? []).map((f) => f.friendly_name ?? "")),
     issuer: "Alopex",
   });
   if (error) throw error;

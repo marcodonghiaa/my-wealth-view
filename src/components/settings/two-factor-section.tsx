@@ -175,7 +175,7 @@ export function TwoFactorSection() {
                   value={name}
                   maxLength={60}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder={defaultAuthenticatorName(list.length)}
+                  placeholder={defaultAuthenticatorName(list.map((a) => a.name))}
                 />
               </div>
               <Button

@@ -138,21 +138,28 @@ describe("enrollment", () => {
       issuer: "Alopex",
     });
   });
-  // protects=an unnamed authenticator gets the next number shown in the name field's placeholder;
-  // fails_when=the default counts unfinished factors or differs from the placeholder
-  it("names an unnamed one after the verified count", async () => {
+  // protects=an unnamed authenticator gets a name the account doesn't already use;
+  // fails_when=the default counts factors, so removing one makes the next name collide
+  // (Supabase refuses a duplicate name and setup fails)
+  it("names an unnamed one with the first free number", async () => {
     mfa.listFactors.mockResolvedValue({
-      data: { all: [totp("a"), totp("b", { status: "unverified" })], totp: [totp("a")] },
+      data: {
+        all: [totp("b", { status: "unverified", friendly_name: "Authenticator 1" })],
+        totp: [totp("a", { friendly_name: "Authenticator 2" })],
+      },
       error: null,
     });
     mfa.enroll.mockResolvedValue({
       data: { id: "n", totp: { qr_code: "q", secret: "s" } },
       error: null,
     });
-    expect(defaultAuthenticatorName(0)).toBe("Authenticator 1");
+    expect(defaultAuthenticatorName([])).toBe("Authenticator 1");
+    expect(defaultAuthenticatorName(["Authenticator 1", "Authenticator 2"])).toBe(
+      "Authenticator 3",
+    );
     await startEnrollment("  ");
     expect(mfa.enroll).toHaveBeenCalledWith(
-      expect.objectContaining({ friendlyName: "Authenticator 2" }),
+      expect.objectContaining({ friendlyName: "Authenticator 1" }),
     );
   });
   it("surfaces an enroll error", async () => {

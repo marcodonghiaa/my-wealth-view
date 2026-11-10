@@ -9,7 +9,7 @@ const lib = vi.hoisted(() => ({
 }));
 vi.mock("@/lib/mfa", () => ({
   ...lib,
-  defaultAuthenticatorName: (n: number) => `Authenticator ${n + 1}`,
+  defaultAuthenticatorName: (taken: Array<string>) => `Authenticator ${taken.length + 1}`,
 }));
 
 import { TwoFactorSection } from "./two-factor-section";
