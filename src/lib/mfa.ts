@@ -1,5 +1,6 @@
 import type { AuthError } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { functionErrorBody } from "@/lib/function-error";
 
 // Two-step sign-in with an authenticator app (Supabase Auth TOTP). The database enforces it:
 // once a user has a verified factor, a session without the code (aal1) gets 403 on every call.
@@ -124,16 +125,10 @@ const isRewrappedRefusal = (error: unknown) =>
 
 /** True when the database or an Edge Function refused because this session skipped the code. */
 export async function isMfaRequired(error: unknown): Promise<boolean> {
-  const e = error as { code?: unknown; hint?: unknown; context?: unknown } | null;
+  const e = error as { code?: unknown; hint?: unknown } | null;
   if (isRewrappedRefusal(error)) return true;
   if (e?.code === "42501" && e.hint === "mfa_required") return true;
-  if (!(e?.context instanceof Response)) return false;
-  try {
-    const body: unknown = await e.context.clone().json();
-    return (body as { code?: unknown } | null)?.code === "mfa_required";
-  } catch {
-    return false;
-  }
+  return ((await functionErrorBody(error)) as { code?: unknown } | null)?.code === "mfa_required";
 }
 
 /**
