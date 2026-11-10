@@ -1,5 +1,6 @@
 import { groupStreams } from "@/lib/recurring";
 import { describe, expect, it } from "vitest";
+import { isDebt } from "@/lib/account-types";
 import { formatISODate } from "@/lib/date";
 import { DEMO_EXEMPT_TABLES, DEMO_USER_ID, generateDemoData } from "./generate";
 
@@ -135,10 +136,10 @@ describe("generateDemoData: internal consistency", () => {
     for (const m of months) expect(m.endsWith("-01")).toBe(true);
   });
 
-  it("daily net worth total is bank + portfolio + crypto", () => {
+  it("daily net worth total is bank + portfolio + crypto - liabilities", () => {
     for (const d of db.v_net_worth_daily) {
       expect(d.total_eur).toBeCloseTo(
-        d.bank_total_eur! + d.portfolio_total_eur! + d.crypto_total_eur!,
+        d.bank_total_eur! + d.portfolio_total_eur! + d.crypto_total_eur! - d.liabilities_eur!,
         1,
       );
     }
@@ -190,7 +191,15 @@ describe("generateDemoData: the dashboard tells one story", () => {
   it("today's net worth parts match the Accounts, Portfolio and Crypto screens", () => {
     const sumOf = (xs: Array<number | null>) => xs.reduce<number>((s, x) => s + (x ?? 0), 0);
     expect(last.bank_total_eur).toBeCloseTo(
-      sumOf(db.v_bank_accounts_latest.map((a) => a.amount_eur)),
+      sumOf(
+        db.v_bank_accounts_latest.filter((a) => !isDebt(a.account_type)).map((a) => a.amount_eur),
+      ),
+      1,
+    );
+    expect(last.liabilities_eur).toBeCloseTo(
+      -sumOf(
+        db.v_bank_accounts_latest.filter((a) => isDebt(a.account_type)).map((a) => a.amount_eur),
+      ),
       1,
     );
     expect(last.portfolio_total_eur).toBeCloseTo(

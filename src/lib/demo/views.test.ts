@@ -40,17 +40,6 @@ describe("demo views match the real ones", () => {
     for (const s of data ?? []) expect(s.monthly_equivalent_eur).toBeLessThan(0);
   });
 
-  // protects=demo CDs grow with compound interest, like the real v_cd_holdings;
-  // fails_when=interest is computed as simple interest
-  it("CD value compounds", async () => {
-    const { data } = await createFakeClient(NOW).from("v_cd_holdings").select("*");
-    expect(data?.length).toBeGreaterThan(0);
-    for (const c of data ?? []) {
-      const expected = c.principal! * (1 + c.annual_rate!) ** ((c.days_elapsed ?? 0) / 365.25);
-      expect(c.current_value_native).toBeCloseTo(expected, 1);
-    }
-  });
-
   // protects=monthly totals include Splitwise shares, and imported history only for months with no
   // live bank spend, as in the real views; fails_when=either is left out
   it("monthly spend includes Splitwise and fills history-only months", async () => {

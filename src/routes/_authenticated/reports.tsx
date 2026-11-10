@@ -311,6 +311,14 @@ function ReportsPage() {
                   {formatSigned(netWorthDelta.delta.crypto)}
                 </span>
               </li>
+              {netWorthDelta.delta.debts !== 0 && (
+                <li className="flex items-center justify-between px-4 py-3 text-sm sm:px-5">
+                  <span className="text-foreground">Debts</span>
+                  <span className="font-figure text-foreground">
+                    {formatSigned(netWorthDelta.delta.debts)}
+                  </span>
+                </li>
+              )}
             </ul>
           </GroupedList>
         </section>

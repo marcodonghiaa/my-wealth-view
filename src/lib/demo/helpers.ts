@@ -11,7 +11,10 @@ export const DEMO_USER_ID = "00000000-0000-4000-8000-00000000demo";
 // Not UI sections: bank-consent handshakes, browser push endpoints and past market prices that only
 // the holding_performance database function reads (the demo answers that from its snapshots).
 // Empty on purpose.
+// Certificates of deposit left the app; their table goes in a later release.
 export const DEMO_EXEMPT_TABLES = [
+  "cd_holdings",
+  "v_cd_holdings",
   "pending_bank_consents",
   "price_history",
   "push_subscriptions",
@@ -21,6 +24,7 @@ export const DEMO_WINDOW_DAYS = 90;
 export const DAY_MS = 86_400_000;
 export const MAIN = "demo-acc-main";
 export const SAVINGS = "demo-acc-savings";
+export const CARD = "demo-acc-card";
 
 // ---------- deterministic helpers ----------
 

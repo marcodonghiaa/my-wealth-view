@@ -2,6 +2,7 @@ import {
   DAY_MS,
   DEMO_USER_ID,
   DEMO_WINDOW_DAYS,
+  CARD,
   MAIN,
   SAVINGS,
   between,
@@ -141,9 +142,12 @@ export function generateDemoData(now: Date = new Date()): DemoDb {
         )
         .map((t) => t.amount),
     );
+  // A credit card with a small balance owed, so the Debts group and net worth's subtraction show.
+  const CARD_OWED = -320;
   const balances = days.flatMap((n) => [
     { uid: MAIN, amount: round2(MAIN_TODAY - mainSigned(n)), n },
     { uid: SAVINGS, amount: round2(SAVINGS_TODAY - transferredAfter(n)), n },
+    { uid: CARD, amount: CARD_OWED, n },
   ]);
   const net_worth_snapshots: DemoDb["net_worth_snapshots"] = balances.map((b, id) => ({
     account_uid: b.uid,
@@ -157,11 +161,30 @@ export function generateDemoData(now: Date = new Date()): DemoDb {
   }));
 
   const accounts: DemoDb["accounts"] = [
-    { uid: MAIN, label: "Demo Bank Current", iban: "IT00DEMO0000000000000001", currency: "EUR" },
-    { uid: SAVINGS, label: "Demo Bank Savings", iban: "IT00DEMO0000000000000002", currency: "EUR" },
+    {
+      uid: MAIN,
+      label: "Demo Bank Current",
+      iban: "IT00DEMO0000000000000001",
+      currency: "EUR",
+      account_type: "checking",
+    },
+    {
+      uid: SAVINGS,
+      label: "Demo Bank Savings",
+      iban: "IT00DEMO0000000000000002",
+      currency: "EUR",
+      account_type: "savings",
+    },
+    {
+      uid: CARD,
+      label: "Demo Bank Card",
+      iban: "IT00DEMO0000000000000003",
+      currency: "EUR",
+      account_type: "credit_card",
+    },
   ].map((a) => ({
     ...a,
-    // No bank fields: the two demo accounts keep grouping by label, as before bank_name existed.
+    // No bank fields: the demo accounts keep grouping by label, as before bank_name existed.
     bank_country: null,
     bank_logo: null,
     bank_name: null,
@@ -173,6 +196,7 @@ export function generateDemoData(now: Date = new Date()): DemoDb {
   }));
 
   const v_bank_accounts_latest: DemoDb["v_bank_accounts_latest"] = accounts.map((a) => ({
+    account_type: a.account_type,
     amount: balances.find((b) => b.uid === a.uid && b.n === todayNum)!.amount,
     amount_eur: balances.find((b) => b.uid === a.uid && b.n === todayNum)!.amount,
     bank_country: a.bank_country,
@@ -182,6 +206,7 @@ export function generateDemoData(now: Date = new Date()): DemoDb {
     currency: "EUR",
     iban: a.iban,
     label: a.label,
+    manual: a.manual,
     snapshot_date: today,
     uid: a.uid,
     user_id,
@@ -271,8 +296,11 @@ export function generateDemoData(now: Date = new Date()): DemoDb {
 
   const v_net_worth_daily: DemoDb["v_net_worth_daily"] = days.map((n) => {
     const d = iso(n);
-    const bank = sum(
-      net_worth_snapshots.filter((s) => s.snapshot_date === d).map((s) => s.eur_equivalent!),
+    // Like the view: debts are left out of bank and subtracted from the total.
+    const ofDay = net_worth_snapshots.filter((s) => s.snapshot_date === d);
+    const bank = sum(ofDay.filter((s) => s.account_uid !== CARD).map((s) => s.eur_equivalent!));
+    const owed = sum(
+      ofDay.filter((s) => s.account_uid === CARD).map((s) => Math.abs(s.eur_equivalent!)),
     );
     const held = portfolio_snapshots.filter((s) => s.snapshot_date === d);
     const port = sum(held.map((s) => s.value_eur!));
@@ -283,10 +311,11 @@ export function generateDemoData(now: Date = new Date()): DemoDb {
     return {
       bank_total_eur: round2(bank),
       crypto_total_eur: round2(crypto),
+      liabilities_eur: round2(owed),
       portfolio_bonds_eur: round2(bonds),
       portfolio_total_eur: round2(port),
       snapshot_date: d,
-      total_eur: round2(bank + port + crypto),
+      total_eur: round2(bank + port + crypto - owed),
       user_id,
     };
   });
@@ -351,37 +380,6 @@ export function generateDemoData(now: Date = new Date()): DemoDb {
     { created_at: stamp(iso(n)), currency: "USD", date: iso(n), rate_to_eur: usdRate(n) },
     { created_at: stamp(iso(n)), currency: "GBP", date: iso(n), rate_to_eur: gbpRate(n) },
   ]);
-
-  const cd = [
-    {
-      id: "demo-cd-1",
-      label: "12-month deposit",
-      principal: 5000,
-      rate: 0.032,
-      start: -180,
-      end: 185,
-    },
-    {
-      id: "demo-cd-2",
-      label: "Matured deposit",
-      principal: 3000,
-      rate: 0.025,
-      start: -430,
-      end: -65,
-    },
-  ];
-  const cd_holdings: DemoDb["cd_holdings"] = cd.map((c) => ({
-    annual_rate: c.rate,
-    bank_label: "Demo Bank",
-    created_at: stamp(iso(todayNum + c.start)),
-    currency: "EUR",
-    id: c.id,
-    label: c.label,
-    maturity_date: iso(todayNum + c.end),
-    principal: c.principal,
-    start_date: iso(todayNum + c.start),
-    user_id,
-  }));
 
   const swGroups = ["Casa", "Viaggio Lisbona"];
   const splitwise_expenses: DemoDb["splitwise_expenses"] = days
@@ -462,7 +460,7 @@ export function generateDemoData(now: Date = new Date()): DemoDb {
     accounts,
     category_rules,
     transfer_pairs,
-    cd_holdings,
+    cd_holdings: [],
     crypto_holdings,
     crypto_snapshots,
     fx_rates,
@@ -527,7 +525,7 @@ export function generateDemoData(now: Date = new Date()): DemoDb {
     v_subscriptions: [],
     v_transactions_eur: [],
   };
-  const views = deriveViews(db, todayNum);
+  const views = deriveViews(db);
   return { ...db, ...views, recurring_streams: demoStreams(views.v_subscriptions, todayNum) };
 }
 

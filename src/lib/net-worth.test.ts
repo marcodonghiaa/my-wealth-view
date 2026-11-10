@@ -296,6 +296,16 @@ describe("allocationHistory", () => {
     expect(rows[0]).toMatchObject({ stocks_eur: 500, bonds_eur: 300 });
   });
 
+  // protects=live debts reach the chart rows; fails_when=liabilities stay hardcoded to 0
+  it("carries live liabilities, and 0 when the view has none", () => {
+    const rows = allocationHistory(
+      [],
+      [{ ...live("2026-09-04"), liabilities_eur: 250 }, live("2026-09-05")],
+    );
+    expect(rows.map((r) => r.liabilities_eur)).toEqual([250, 0]);
+    expect(rows[0]).toMatchObject({ cash_eur: 100, total_eur: 1000 });
+  });
+
   // protects=partial early snapshots do not distort the mix; fails_when=the start date is ignored
   it("leaves out live snapshots before the configured start", () => {
     const rows = allocationHistory([], [live("2026-09-02"), live("2026-09-04")], "2026-09-04");
@@ -354,6 +364,26 @@ describe("monthNetWorth", () => {
       "2026-03-31",
     );
     expect(m?.delta?.total).toBe(30);
+  });
+
+  // protects=the parts add up to the total change; fails_when=a debt's growth is left out
+  it("counts more debt as a fall", () => {
+    const m = monthNetWorth(
+      [
+        row("2026-02-28", 100),
+        {
+          ...row("2026-03-31", 80),
+          bank_total_eur: 50,
+          portfolio_total_eur: 60,
+          liabilities_eur: 30,
+        },
+      ],
+      "2026-02-28",
+      "2026-03-31",
+    );
+    expect(m?.delta).toMatchObject({ total: -20, bank: 0, portfolio: 10, debts: -30 });
+    const d = m!.delta!;
+    expect(d.bank + d.portfolio + d.crypto + d.debts).toBe(d.total);
   });
 
   it("has no change when nothing precedes the month", () => {

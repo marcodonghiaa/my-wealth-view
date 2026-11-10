@@ -44,7 +44,7 @@ describe("fake client: reading", () => {
   it("supports head+count and maybeSingle", async () => {
     const c = fresh();
     const counted = await c.from("accounts").select("uid", { count: "exact", head: true });
-    expect(counted.count).toBe(2);
+    expect(counted.count).toBe(3);
     expect(counted.data).toBeNull();
     const one = await c.from("accounts").select("*").eq("uid", "demo-acc-main").maybeSingle();
     expect(one.data?.uid).toBe("demo-acc-main");
@@ -184,13 +184,6 @@ describe("fake client: writes live in memory only", () => {
       billing_frequency: "Yearly",
       billing_frequency_is_manual: true,
     });
-  });
-
-  it("a new CD holding appears in its view; a fresh client forgets every edit", async () => {
-    const c = fresh();
-    await c.from("cd_holdings").delete().neq("id", "");
-    expect((await c.from("v_cd_holdings").select("*")).data).toHaveLength(0);
-    expect((await fresh().from("v_cd_holdings").select("*")).data!.length).toBeGreaterThan(0);
   });
 });
 
@@ -400,6 +393,142 @@ describe("fake client: delete_holding", () => {
       ).data,
     ).toEqual([]);
     expect((await del()).data).toBe(0);
+  });
+});
+
+describe("fake client: account types and debts", () => {
+  const rpc = (c: ReturnType<typeof fresh>, f: string, a: object) =>
+    (
+      c.rpc as unknown as (
+        f: string,
+        a: object,
+      ) => PromiseLike<{ data: unknown; error: { message: string } | null }>
+    )(f, a);
+  const today = async (c: ReturnType<typeof fresh>) => {
+    const { data } = await c
+      .from("v_net_worth_daily")
+      .select("*")
+      .order("snapshot_date", { ascending: false })
+      .limit(1);
+    return data![0]!;
+  };
+
+  // protects=the demo card is a debt: out of bank, subtracted from the total
+  it("counts the demo credit card as a liability", async () => {
+    const day = await today(fresh());
+    expect(day.liabilities_eur).toBe(320);
+    expect(day.total_eur).toBeCloseTo(
+      day.bank_total_eur! + day.portfolio_total_eur! + day.crypto_total_eur! - 320,
+      1,
+    );
+  });
+
+  // protects=correcting a type moves the balance between bank and debts in net worth
+  it("set_account_type moves the account between bank and liabilities", async () => {
+    const c = fresh();
+    const before = await today(c);
+    expect(
+      (await rpc(c, "set_account_type", { p_account: "demo-acc-card", p_type: "checking" })).error,
+    ).toBeNull();
+    const after = await today(c);
+    expect(after.liabilities_eur).toBe(0);
+    expect(after.bank_total_eur).toBeCloseTo(before.bank_total_eur! - 320, 1);
+    expect(after.total_eur).toBeCloseTo(before.total_eur!, 1);
+    const { data } = await c.from("v_bank_accounts_latest").select("*").eq("uid", "demo-acc-card");
+    expect(data![0]!.account_type).toBe("checking");
+    // Same debt-ness: net worth stays.
+    await rpc(c, "set_account_type", { p_account: "demo-acc-main", p_type: "savings" });
+    expect((await today(c)).total_eur).toBeCloseTo(after.total_eur!, 1);
+  });
+
+  it("set_account_type refuses an unknown type or account", async () => {
+    const c = fresh();
+    expect(
+      (await rpc(c, "set_account_type", { p_account: "demo-acc-main", p_type: "boat" })).error
+        ?.message,
+    ).toBe("unknown account type");
+    expect(
+      (await rpc(c, "set_account_type", { p_account: "nope", p_type: "loan" })).error?.message,
+    ).toBe("account not found");
+  });
+
+  // protects=a debt typed by hand shows in Accounts and lowers net worth; editing it follows
+  it("add_manual_debt adds a loan, set_manual_balance changes what is owed", async () => {
+    const c = fresh();
+    const before = await today(c);
+    const { data: uid, error } = await rpc(c, "add_manual_debt", {
+      p_name: "Car loan",
+      p_amount: 1000,
+      p_currency: "EUR",
+    });
+    expect(error).toBeNull();
+    const { data: rows } = await c
+      .from("v_bank_accounts_latest")
+      .select("*")
+      .eq("uid", uid as string);
+    expect(rows).toMatchObject([
+      { label: "Car loan", account_type: "loan", manual: true, amount: 1000 },
+    ]);
+    expect((await today(c)).total_eur).toBeCloseTo(before.total_eur! - 1000, 1);
+    expect(
+      (await rpc(c, "set_manual_balance", { p_account: uid, p_amount: 400 })).error,
+    ).toBeNull();
+    const after = await today(c);
+    expect(after.liabilities_eur).toBeCloseTo(before.liabilities_eur! + 400, 1);
+    expect(after.total_eur).toBeCloseTo(before.total_eur! - 400, 1);
+  });
+
+  // protects=a deleted debt leaves the list and net worth
+  it("delete_manual_debt removes the debt and its effect on net worth", async () => {
+    const c = fresh();
+    const before = await today(c);
+    const { data: uid } = await rpc(c, "add_manual_debt", { p_name: "Loan", p_amount: 500 });
+    expect((await rpc(c, "delete_manual_debt", { p_account: uid })).error).toBeNull();
+    const { data } = await c
+      .from("v_bank_accounts_latest")
+      .select("*")
+      .eq("uid", uid as string);
+    expect(data).toHaveLength(0);
+    expect((await today(c)).total_eur).toBeCloseTo(before.total_eur!, 1);
+    expect((await rpc(c, "delete_manual_debt", { p_account: uid })).error?.message).toBe(
+      "account not found",
+    );
+    expect(
+      (await rpc(c, "delete_manual_debt", { p_account: "demo-acc-card" })).error?.message,
+    ).toBe("not a manual debt");
+  });
+
+  it("add_manual_debt converts another currency at the demo rate", async () => {
+    const c = fresh();
+    const { data: uid } = await rpc(c, "add_manual_debt", {
+      p_name: "US card",
+      p_amount: 100,
+      p_currency: "usd",
+    });
+    const { data: rows } = await c
+      .from("v_bank_accounts_latest")
+      .select("*")
+      .eq("uid", uid as string);
+    expect(rows![0]!.currency).toBe("USD");
+    expect(rows![0]!.amount_eur).toBeGreaterThan(80);
+    expect(rows![0]!.amount_eur).toBeLessThan(100);
+  });
+
+  it("refuses a debt with no name or amount, and a balance on a bank account", async () => {
+    const c = fresh();
+    expect((await rpc(c, "add_manual_debt", { p_name: " ", p_amount: 5 })).error?.message).toBe(
+      "name is required",
+    );
+    expect((await rpc(c, "add_manual_debt", { p_name: "X" })).error?.message).toBe(
+      "amount is required",
+    );
+    expect(
+      (await rpc(c, "set_manual_balance", { p_account: "demo-acc-main", p_amount: 5 })).error
+        ?.message,
+    ).toBe("not a manual account");
+    expect(
+      (await rpc(c, "set_manual_balance", { p_account: "nope", p_amount: 5 })).error?.message,
+    ).toBe("account not found");
   });
 });
 

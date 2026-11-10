@@ -22,6 +22,9 @@ export type NetWorthRow = {
   crypto_total_eur: number;
   // The bond-type holdings inside portfolio_total_eur. Only live snapshots carry it.
   portfolio_bonds_eur?: number;
+  // Credit cards and loans, as a positive number; total_eur already subtracts it, bank_total_eur
+  // leaves it out.
+  liabilities_eur?: number;
 };
 
 // Month-end rows imported from before live snapshots existed (table net_worth_history).
@@ -106,6 +109,7 @@ export function withHistory(
       bank_total_eur: h.cash_eur,
       portfolio_total_eur: h.stocks_eur + h.bonds_eur,
       crypto_total_eur: h.crypto_eur,
+      liabilities_eur: h.liabilities_eur,
     })),
     ...reconstructed
       .filter((r) => before(r.snapshot_date) && !importedDates.has(r.snapshot_date))
@@ -143,6 +147,8 @@ export function monthNetWorth(rows: Array<NetWorthRow>, dayBeforeIso: string, en
       bank: end.bank_total_eur - start.bank_total_eur,
       portfolio: end.portfolio_total_eur - start.portfolio_total_eur,
       crypto: end.crypto_total_eur - start.crypto_total_eur,
+      // Debts owed more is a fall in net worth.
+      debts: (start.liabilities_eur ?? 0) - (end.liabilities_eur ?? 0),
     },
   };
 }
@@ -206,7 +212,7 @@ export function allocationHistory(
       bonds_eur: s.portfolio_bonds_eur ?? 0,
       crypto_eur: s.crypto_total_eur,
       cash_eur: s.bank_total_eur,
-      liabilities_eur: 0,
+      liabilities_eur: s.liabilities_eur ?? 0,
       total_eur: s.total_eur,
     })),
   ];
