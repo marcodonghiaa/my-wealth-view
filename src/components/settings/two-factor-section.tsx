@@ -128,6 +128,7 @@ export function TwoFactorSection() {
                     variant="ghost"
                     size="sm"
                     aria-label={`Remove ${a.name}`}
+                    disabled={pending}
                     onClick={() => setConfirmRemove(a.id)}
                   >
                     <Trash2 />

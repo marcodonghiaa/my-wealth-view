@@ -107,6 +107,19 @@ describe("TwoFactorSection", () => {
     expect(lib.removeAuthenticator).toHaveBeenCalledWith("a");
   });
 
+  // protects=one remove at a time; fails_when=another row can start a remove mid-request
+  it("disables the other rows' remove buttons while one is being removed", async () => {
+    lib.listAuthenticators.mockResolvedValue([
+      { id: "a", name: "Phone", createdAt: "" },
+      { id: "b", name: "Laptop", createdAt: "" },
+    ]);
+    lib.removeAuthenticator.mockReturnValue(new Promise(() => {}));
+    render(<TwoFactorSection />);
+    fireEvent.click(await screen.findByRole("button", { name: "Remove Phone" }));
+    fireEvent.click(screen.getByRole("button", { name: "Confirm remove" }));
+    expect(screen.getByRole("button", { name: "Remove Laptop" })).toBeDisabled();
+  });
+
   it("says when the list can't load", async () => {
     lib.listAuthenticators.mockRejectedValue(new Error("network down"));
     render(<TwoFactorSection />);
