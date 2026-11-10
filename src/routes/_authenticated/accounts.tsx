@@ -1,3 +1,4 @@
+import { formatPercent } from "@/lib/locale";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -473,7 +474,7 @@ function AccountsPage() {
                         <div className="text-xs text-muted-foreground">
                           {group.main.snapshot_date
                             ? [
-                                `${percent.toFixed(1)}%`,
+                                formatPercent(percent),
                                 asOf(group.main.snapshot_date, formatISODate(new Date())),
                               ]
                                 .filter(Boolean)

@@ -4,10 +4,10 @@ import { money, shortDate } from "./splitwise-format";
 describe("shortDate", () => {
   const today = new Date("2026-11-09T12:00:00Z");
   it("drops the year when it is this year", () => {
-    expect(shortDate("2026-11-03", today)).toBe("Nov 3");
+    expect(shortDate("2026-11-03", today)).toBe("3 Nov");
   });
   it("keeps the year for another year", () => {
-    expect(shortDate("2025-12-31", today)).toBe("Dec 31, 2025");
+    expect(shortDate("2025-12-31", today)).toBe("31 Dec 2025");
   });
   it("gives back text it cannot read as a date", () => {
     expect(shortDate("soon", today)).toBe("soon");

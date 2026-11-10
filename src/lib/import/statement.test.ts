@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { dedupeKey, guessStatementColumns, parseDay, readStatement } from "./statement";
+import {
+  dedupeKey,
+  detectDateOrder,
+  guessStatementColumns,
+  parseDay,
+  readStatement,
+} from "./statement";
 
 describe("parseDay", () => {
   it("reads ISO, European and Excel dates", () => {
@@ -29,7 +35,7 @@ describe("guessStatementColumns", () => {
         "Descrizione",
         "Descrizione completa",
       ]),
-    ).toEqual({ date: 0, description: 4, amount: null, in: 2, out: 3 });
+    ).toEqual({ date: 0, description: 4, amount: null, direction: null, in: 2, out: 3 });
   });
 
   it("finds a signed amount column", () => {
@@ -37,6 +43,7 @@ describe("guessStatementColumns", () => {
       date: 0,
       description: 1,
       amount: 2,
+      direction: null,
       in: null,
       out: null,
     });
@@ -98,5 +105,66 @@ describe("dedupeKey", () => {
     ).not.toBe(
       dedupeKey({ date: "2026-04-25", description: "Coffee", amount: 2.5, direction: "CRDT" }),
     );
+  });
+});
+
+describe("parseDay, more formats", () => {
+  it("reads month-first dates when told", () => {
+    expect(parseDay("03/04/2026", "MDY")).toBe("2026-03-04");
+    expect(parseDay("03/04/2026", "DMY")).toBe("2026-04-03");
+    expect(parseDay("13/04/2026", "MDY")).toBeNull();
+  });
+
+  it("reads compact, slashed-ISO and named-month dates", () => {
+    expect(parseDay("20260304")).toBe("2026-03-04");
+    expect(parseDay("2026/03/04")).toBe("2026-03-04");
+    expect(parseDay("4 Mar 2026")).toBe("2026-03-04");
+    expect(parseDay("04-Mar-26")).toBe("2026-03-04");
+    expect(parseDay("4. März 2026")).toBe("2026-03-04");
+    expect(parseDay("Mar 4, 2026")).toBe("2026-03-04");
+    expect(parseDay("4 Foo 2026")).toBeNull();
+    expect(parseDay("20261340")).toBeNull();
+  });
+});
+
+describe("detectDateOrder", () => {
+  it("reads the order from a day above 12", () => {
+    expect(detectDateOrder(["01/02/2026", "25/02/2026"], "en-US")).toBe("DMY");
+    expect(detectDateOrder(["01/02/2026", "02/25/2026"], "en-GB")).toBe("MDY");
+  });
+
+  it("lets the locale decide when every date fits both", () => {
+    expect(detectDateOrder(["01/02/2026", "2026-02-03", ""], "en-US")).toBe("MDY");
+    expect(detectDateOrder(["01/02/2026"], "it-IT")).toBe("DMY");
+  });
+});
+
+describe("readStatement options", () => {
+  const csv = "Date,Description,Amount\n01/02/2026,Card,12.50\n01/03/2026,Refund,-2.00";
+
+  it("flips signs for exports that write spending as positive", () => {
+    const rows = readStatement(csv, undefined, { invert: true }).rows;
+    expect(rows.map((r) => r.direction)).toEqual(["DBIT", "CRDT"]);
+  });
+
+  it("uses the date order picked by hand over the guess", () => {
+    expect(readStatement(csv).rows[0]!.date).toBe("2026-02-01");
+    expect(readStatement(csv, undefined, { dateOrder: "MDY" }).rows[0]!.date).toBe("2026-01-02");
+  });
+
+  it("reads a generic D/C marker next to an unsigned amount", () => {
+    const marked =
+      "Date;Description;Amount;D/C\n2026-01-02;Shop;10,00;D\n2026-01-03;Pay;5,00;C\n2026-01-04;Odd;-1,00;?";
+    expect(readStatement(marked).rows.map((r) => [r.direction, r.amount])).toEqual([
+      ["DBIT", 10],
+      ["CRDT", 5],
+      ["DBIT", 1],
+    ]);
+  });
+
+  it("drops a marker column when there is no single amount column", () => {
+    expect(
+      guessStatementColumns(["Date", "Description", "Debit", "Credit", "D/C"]).direction,
+    ).toBeNull();
   });
 });

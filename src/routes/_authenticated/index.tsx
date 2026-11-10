@@ -1,3 +1,4 @@
+import { appLocale, formatPercent as percentText } from "@/lib/locale";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
@@ -64,14 +65,14 @@ async function fetchLatestFxRates(): Promise<Record<string, FxRate>> {
 
 function formatFxDate(iso: string | undefined): string {
   if (!iso) return "latest";
-  return new Date(`${iso}T00:00:00`).toLocaleDateString("en-GB", {
+  return new Date(`${iso}T00:00:00`).toLocaleDateString(appLocale(), {
     day: "numeric",
     month: "short",
   });
 }
 
 function formatMoney(value: number, currency: Currency): string {
-  return new Intl.NumberFormat("en-IE", {
+  return new Intl.NumberFormat(appLocale(), {
     style: "currency",
     currency,
     maximumFractionDigits: 0,
@@ -292,7 +293,7 @@ function NetWorthPage() {
 
 function formatPercent(value: number, signed = true): string {
   const sign = signed ? (value > 0 ? "+" : value < 0 ? "−" : "") : "";
-  return `${sign}${Math.abs(value * 100).toFixed(2)}%`;
+  return `${sign}${percentText(Math.abs(value * 100), 2)}`;
 }
 
 function LegendDot({ color, label, dashed }: { color: string; label: string; dashed?: boolean }) {

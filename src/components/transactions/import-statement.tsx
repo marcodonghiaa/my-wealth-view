@@ -16,10 +16,14 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import {
   readStatement,
+  type DateOrder,
   type Statement,
   type StatementColumns,
+  type StatementOptions,
   type StatementRow,
 } from "@/lib/import/statement";
+import { decodeCsv } from "@/lib/import/parse-csv";
+import { formatDay } from "@/lib/date";
 import { importStatement, newRows, type StatementClient } from "@/lib/import/statement-commit";
 import { readStatementPdf } from "@/lib/import/statement-pdf";
 import { formatMoney } from "@/lib/transactions";
@@ -32,6 +36,7 @@ const FIELD_LABELS: Array<[keyof StatementColumns, string]> = [
   ["amount", "Amount (+/−)"],
   ["in", "Money in"],
   ["out", "Money out"],
+  ["direction", "In/out marker (D/C, Soll/Haben…)"],
 ];
 
 const NO_COLUMNS: StatementColumns = {
@@ -40,6 +45,7 @@ const NO_COLUMNS: StatementColumns = {
   amount: null,
   in: null,
   out: null,
+  direction: null,
 };
 
 const field = fieldClass();
@@ -56,6 +62,9 @@ export function ImportStatement() {
   const [statement, setStatement] = useState<Statement | null>(null);
   const [headers, setHeaders] = useState<Array<string>>([]);
   const [columns, setColumns] = useState<StatementColumns | null>(null);
+  // Columns picked by hand; until then the reader finds them (or a known export) itself.
+  const [picked, setPicked] = useState<StatementColumns | undefined>(undefined);
+  const [options, setOptions] = useState<StatementOptions>({});
   const [fresh, setFresh] = useState<Array<StatementRow> | null>(null);
   const [source, setSource] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -67,17 +76,19 @@ export function ImportStatement() {
     setStatement(null);
     setHeaders([]);
     setColumns(null);
+    setPicked(undefined);
+    setOptions({});
     setFresh(null);
     setSource("");
     setError(null);
     setProgress(null);
   }
 
-  async function read(csv: string, picked?: StatementColumns) {
+  async function read(csv: string, cols?: StatementColumns, opts: StatementOptions = {}) {
     setError(null);
     setFresh(null);
     try {
-      const result = readStatement(csv, picked);
+      const result = readStatement(csv, cols, opts);
       setStatement(result);
       setHeaders(result.headers);
       setColumns(result.columns);
@@ -95,7 +106,15 @@ export function ImportStatement() {
         (name, opts) => supabase.functions.invoke(name, opts),
         file,
       );
-      setStatement({ headers: [], columns: NO_COLUMNS, rows, skipped: 0 });
+      setStatement({
+        headers: [],
+        columns: NO_COLUMNS,
+        rows,
+        skipped: 0,
+        preset: null,
+        dateOrder: "DMY",
+        decimal: null,
+      });
       setFresh(await newRows(client, rows));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn't read the PDF.");
@@ -112,7 +131,7 @@ export function ImportStatement() {
       setError("Use a CSV or PDF. Excel files: File → Save as → CSV first.");
       return;
     }
-    const csv = await file.text();
+    const csv = decodeCsv(await file.arrayBuffer());
     setText(csv);
     // Headers for the column pickers, even when the columns can't be guessed.
     const firstLine = csv.replace(/^\uFEFF/, "").split(/\r?\n/)[0] ?? "";
@@ -127,7 +146,15 @@ export function ImportStatement() {
       [key]: value === "" ? null : Number(value),
     };
     setColumns(next);
-    void read(text, next);
+    setPicked(next);
+    void read(text, next, options);
+  }
+
+  function setOption(next: StatementOptions) {
+    if (!text) return;
+    const merged = { ...options, ...next };
+    setOptions(merged);
+    void read(text, picked, merged);
   }
 
   async function handleImport() {
@@ -224,6 +251,37 @@ export function ImportStatement() {
             </details>
           )}
 
+          {text && statement && (
+            <div className="space-y-2 rounded-lg bg-card p-3 text-xs text-muted-foreground">
+              <p>
+                {statement.preset ? `Read as a ${statement.preset} export. ` : ""}
+                Amounts use {statement.decimal === "," ? "a decimal comma" : "a decimal point"}.
+              </p>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                <label className="flex items-center gap-2">
+                  <span>Dates</span>
+                  <select
+                    aria-label="Date order"
+                    value={statement.dateOrder}
+                    onChange={(e) => setOption({ dateOrder: e.target.value as DateOrder })}
+                    className={cn(field, "w-auto")}
+                  >
+                    <option value="DMY">Day first (31/12)</option>
+                    <option value="MDY">Month first (12/31)</option>
+                  </select>
+                </label>
+                <label className="flex min-h-11 items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={options.invert ?? false}
+                    onChange={(e) => setOption({ invert: e.target.checked })}
+                  />
+                  <span>Spending is written as positive</span>
+                </label>
+              </div>
+            </div>
+          )}
+
           {statement && fresh && (
             <>
               <p className="text-sm text-foreground">
@@ -238,7 +296,7 @@ export function ImportStatement() {
                   {fresh.slice(0, 5).map((r, i) => (
                     <li key={i} className="flex items-center justify-between gap-3 px-3 py-2">
                       <span className="min-w-0 truncate">
-                        <span className="text-muted-foreground">{r.date} · </span>
+                        <span className="text-muted-foreground">{formatDay(r.date)} · </span>
                         {r.description}
                       </span>
                       <span

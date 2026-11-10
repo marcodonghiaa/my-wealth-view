@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseAmount, parseMonth } from "./normalize";
+import { detectDecimal, parseAmount, parseMonth } from "./normalize";
 
 describe("parseMonth", () => {
   // protects=a month typed in any common way becomes YYYY-MM; fails_when=a format is misread
@@ -41,5 +41,45 @@ describe("parseAmount", () => {
 
   it.each(["", "  ", "abc", "1.2.3,4,5x"])("rejects %j", (raw) => {
     expect(parseAmount(raw)).toBeNull();
+  });
+});
+
+describe("parseAmount, as banks write it", () => {
+  it.each([
+    ["(12.50)", -12.5],
+    ["12,50-", -12.5],
+    ["+3,00", 3],
+    ["EUR 4,20", 4.2],
+    ["-1 234,56 €", -1234.56],
+    ["1 234,56", 1234.56],
+    ["1'234.56", 1234.56],
+    ["$-7.10", -7.1],
+  ])("reads %s as %s", (raw, expected) => {
+    expect(parseAmount(raw)).toBe(expected);
+  });
+
+  it("uses the file's decimal mark when it is known", () => {
+    expect(parseAmount("1,234", ",")).toBe(1.234);
+    expect(parseAmount("1.500", ",")).toBe(1500);
+    expect(parseAmount("1.500", ".")).toBe(1.5);
+    expect(parseAmount("1.234.567,8", ",")).toBe(1234567.8);
+    expect(parseAmount(",5", ",")).toBe(0.5);
+    expect(parseAmount("1,2,3", ",")).toBeNull();
+    expect(parseAmount(",", ",")).toBeNull();
+    expect(parseAmount("12a", ",")).toBeNull();
+  });
+});
+
+describe("detectDecimal", () => {
+  it("reads the mark from cells that can only mean one thing", () => {
+    expect(detectDecimal(["1.500", "12,50", "3,1"])).toBe(",");
+    expect(detectDecimal(["1,500", "12.50", "-3.99"])).toBe(".");
+    expect(detectDecimal(["1.234,56"])).toBe(",");
+    expect(detectDecimal(["1,234.56"])).toBe(".");
+  });
+
+  it("is undefined when no cell tells", () => {
+    expect(detectDecimal(["1,234", "12", ""])).toBeUndefined();
+    expect(detectDecimal([])).toBeUndefined();
   });
 });

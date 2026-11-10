@@ -1,3 +1,4 @@
+import { appLocale, formatPercent } from "@/lib/locale";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
@@ -78,7 +79,7 @@ function formatPrice(asset: AssetGroup): string {
 }
 
 function formatAmount(value: number): string {
-  return new Intl.NumberFormat("en-IE", {
+  return new Intl.NumberFormat(appLocale(), {
     minimumFractionDigits: 0,
     maximumFractionDigits: 8,
   }).format(value);
@@ -275,7 +276,7 @@ function CryptoPage() {
                           {formatEur(asset.valueEur)}
                         </td>
                         <td className="px-4 py-3 text-right font-figure text-foreground sm:px-5">
-                          {percent.toFixed(1)}%
+                          {formatPercent(percent)}
                         </td>
                         <td className="px-2 py-1 text-right">
                           <AssetEdits asset={asset} />
@@ -346,7 +347,7 @@ function CryptoPage() {
                     </div>
                     <div>
                       <div className="text-xs text-muted-foreground">% of total</div>
-                      <div className="font-figure text-foreground">{percent.toFixed(1)}%</div>
+                      <div className="font-figure text-foreground">{formatPercent(percent)}</div>
                     </div>
                   </div>
                 </div>

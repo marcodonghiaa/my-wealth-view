@@ -33,7 +33,7 @@ const CSV = [
   "24/04/2026;5.000,00;;Bonifico papà",
 ].join("\n");
 
-function upload(name: string, content: string) {
+function upload(name: string, content: string | Uint8Array) {
   const queryClient = new QueryClient();
   const invalidate = vi.spyOn(queryClient, "invalidateQueries");
   render(
@@ -42,7 +42,7 @@ function upload(name: string, content: string) {
     </QueryClientProvider>,
   );
   fireEvent.click(screen.getByRole("button", { name: "Import statement" }));
-  const file = new File([content], name, { type: "text/csv" });
+  const file = new File([content as BlobPart], name, { type: "text/csv" });
   fireEvent.change(screen.getByLabelText("Statement file"), { target: { files: [file] } });
   return { invalidate };
 }
@@ -126,5 +126,35 @@ describe("ImportStatement", () => {
     upload("Fineco.csv", CSV);
     fireEvent.click(await screen.findByRole("button", { name: "Import 2" }));
     expect(await screen.findByRole("alert")).toHaveTextContent(/0 of 2 added.*database update/);
+  });
+
+  it("reads a Windows-1252 file and says the decimal mark it found", async () => {
+    // "Datum;Omschrijving;Bedrag\n03.02.2026;Café;-3,80" with é as the single byte 0xE9
+    const text = "Datum;Omschrijving;Bedrag\n03.02.2026;Caf\u00e9;-3,80";
+    const bytes = Uint8Array.from([...text].map((c) => c.charCodeAt(0)));
+    upload("bank.csv", bytes);
+    expect(await screen.findByText(/1 new transaction/)).toBeTruthy();
+    expect(screen.getByText(/Café/)).toBeTruthy();
+    expect(screen.getByText(/3 Feb 2026/)).toBeTruthy();
+    expect(screen.getByText(/decimal comma/)).toBeTruthy();
+  });
+
+  it("names a known export and lets you flip signs and the date order", async () => {
+    const revolut = [
+      "Type,Product,Started Date,Completed Date,Description,Amount,Fee,Currency,State,Balance",
+      "CARD_PAYMENT,Current,2026-03-02 09:00:00,2026-03-03 10:00:00,Coffee,-3.20,0.00,EUR,COMPLETED,1",
+    ].join("\n");
+    upload("revolut.csv", revolut);
+    expect(await screen.findByText(/Read as a Revolut export/)).toBeTruthy();
+    expect(screen.getByText("−€3.20")).toBeTruthy();
+    fireEvent.click(screen.getByLabelText("Spending is written as positive"));
+    expect(await screen.findByText("+€3.20")).toBeTruthy();
+  });
+
+  it("re-reads the dates month first when picked", async () => {
+    upload("card.csv", "Date,Description,Amount\n01/02/2026,Shop,-5");
+    expect(await screen.findByText(/1 Feb 2026/)).toBeTruthy();
+    fireEvent.change(screen.getByLabelText("Date order"), { target: { value: "MDY" } });
+    expect(await screen.findByText(/2 Jan 2026/)).toBeTruthy();
   });
 });

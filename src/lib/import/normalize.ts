@@ -1,6 +1,6 @@
 // Turns the messy text people have in spreadsheets into clean values for the import.
 
-const MONTH_NAMES: Array<Array<string>> = [
+export const MONTH_NAMES: Array<Array<string>> = [
   ["jan", "january", "gen", "gennaio"],
   ["feb", "february", "febbraio"],
   ["mar", "march", "marzo"],
@@ -64,17 +64,44 @@ export function parseMonth(raw: string): string | null {
 
 const THOUSANDS_GROUPS = /^\d{1,3}([.,]\d{3})+$/;
 
+export type DecimalMark = "," | ".";
+
+/** Strips what banks put around a number and reads its sign: "(12.50)", "12,50-", "+3", "EUR 4". */
+function unwrap(raw: string): { body: string; negative: boolean } {
+  let s = raw.replace(/[€$£\s'’]/g, "").replace(/^[A-Z]{3}|[A-Z]{3}$/g, "");
+  let negative = false;
+  const paren = /^\((.*)\)$/.exec(s);
+  if (paren) [negative, s] = [true, paren[1] ?? ""];
+  if (s.endsWith("-")) [negative, s] = [!negative, s.slice(0, -1)];
+  if (s.startsWith("-")) [negative, s] = [!negative, s.slice(1)];
+  else if (s.startsWith("+")) s = s.slice(1);
+  return { body: s, negative };
+}
+
 /**
  * Reads an amount written the European way (1.234,56) or the English way (1,234.56).
- * A single separator followed by exactly three digits ("1,234") is read as thousands, except
- * after a leading zero ("0.125"). Returns null when the text is not a clean number.
+ * With `decimal` (the file's decimal mark, see detectDecimal) the other mark is always thousands.
+ * Without it, a single separator followed by exactly three digits ("1,234") is read as thousands,
+ * except after a leading zero ("0.125"). Returns null when the text is not a clean number.
  */
-export function parseAmount(raw: string): number | null {
-  const s = raw.replace(/[€$£\s]/g, "");
-  if (!/^-?[\d.,]+$/.test(s)) return null;
-  const negative = s.startsWith("-");
-  const body = negative ? s.slice(1) : s;
+export function parseAmount(raw: string, decimal?: DecimalMark): number | null {
+  const { body, negative } = unwrap(raw);
+  if (!/^[\d.,]+$/.test(body)) return null;
+  const value = decimal ? withMark(body, decimal) : guessMark(body);
+  if (value === null || !Number.isFinite(value)) return null;
+  return negative ? -value : value;
+}
 
+function withMark(body: string, decimal: DecimalMark): number | null {
+  const parts = body.split(decimal);
+  if (parts.length > 2) return null;
+  const whole = (parts[0] ?? "").split(decimal === "," ? "." : ",").join("");
+  const fraction = parts[1] ?? "";
+  if (!/^\d*$/.test(whole) || !/^\d*$/.test(fraction) || whole + fraction === "") return null;
+  return Number(`${whole || "0"}.${fraction || "0"}`);
+}
+
+function guessMark(body: string): number | null {
   const sepPos = Math.max(body.lastIndexOf("."), body.lastIndexOf(","));
   let intPart = body;
   let fraction = "";
@@ -98,8 +125,28 @@ export function parseAmount(raw: string): number | null {
     if (!THOUSANDS_GROUPS.test(intPart)) return null;
     intPart = intPart.replace(/[.,]/g, "");
   }
+  return Number(fraction ? `${intPart}.${fraction}` : intPart);
+}
 
-  const value = Number(fraction ? `${intPart}.${fraction}` : intPart);
-  if (!Number.isFinite(value)) return null;
-  return negative ? -value : value;
+/**
+ * The decimal mark a column of amounts uses, from the cells that can only be read one way
+ * ("12,50", "1.234,5", "3.99"). Undefined when no cell tells (only "1,234" or "12").
+ */
+export function detectDecimal(cells: Array<string>): DecimalMark | undefined {
+  let comma = 0;
+  let dot = 0;
+  for (const raw of cells) {
+    const { body } = unwrap(raw);
+    const pos = Math.max(body.lastIndexOf("."), body.lastIndexOf(","));
+    if (pos === -1) continue;
+    const mark = body[pos] as DecimalMark;
+    const after = body.slice(pos + 1);
+    const both = body.includes(mark === "." ? "," : ".");
+    if (both || (/^\d{1,2}$/.test(after) && body.split(mark).length === 2)) {
+      if (mark === ",") comma++;
+      else dot++;
+    }
+  }
+  if (comma === dot) return undefined;
+  return comma > dot ? "," : ".";
 }

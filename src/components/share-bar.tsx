@@ -1,3 +1,4 @@
+import { formatPercent } from "@/lib/locale";
 import { shareSummary } from "@/lib/chart-summary";
 import { categoryTone } from "@/lib/categories";
 
@@ -54,7 +55,7 @@ export function ShareBar({ title, shares }: { title: string; shares: Array<Share
             <span aria-hidden className="inline-block size-2" style={{ backgroundColor: s.tone }} />
             {s.code && <span className="text-muted-foreground">{s.code} ·</span>}
             <span className="text-foreground">{s.label}</span>
-            <span className="text-muted-foreground">{((s.value / total) * 100).toFixed(1)}%</span>
+            <span className="text-muted-foreground">{formatPercent((s.value / total) * 100)}</span>
           </li>
         ))}
       </ul>

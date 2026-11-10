@@ -1,3 +1,5 @@
+import { appLocale } from "@/lib/locale";
+
 export interface TransactionRow {
   entry_reference: string;
   account_uid: string | null;
@@ -133,7 +135,7 @@ export function startOfMonth(date: Date): Date {
 }
 
 export function formatMoney(value: number, currency: string): string {
-  return new Intl.NumberFormat("en-IE", {
+  return new Intl.NumberFormat(appLocale(), {
     style: "currency",
     currency,
     minimumFractionDigits: 2,
@@ -147,7 +149,7 @@ export const formatUsd = (value: number): string => formatMoney(value, "USD");
 
 /** Amount without a currency symbol — the Currency column states it instead. */
 export function formatAmountPlain(value: number): string {
-  return new Intl.NumberFormat("en-IE", {
+  return new Intl.NumberFormat(appLocale(), {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
     signDisplay: "never",
@@ -175,7 +177,7 @@ export const personalAmountEur = (
 export function formatBookingDateShort(bookingDate: string | null, now: Date = new Date()): string {
   if (!bookingDate) return "—";
   const date = new Date(`${bookingDate}T00:00:00`);
-  return date.toLocaleDateString("en-GB", {
+  return date.toLocaleDateString(appLocale(), {
     day: "numeric",
     month: "short",
     ...(date.getFullYear() === now.getFullYear() ? {} : { year: "numeric" }),
@@ -184,7 +186,7 @@ export function formatBookingDateShort(bookingDate: string | null, now: Date = n
 
 export function formatBookingDate(bookingDate: string | null): string {
   return bookingDate
-    ? new Date(`${bookingDate}T00:00:00`).toLocaleDateString("en-GB", {
+    ? new Date(`${bookingDate}T00:00:00`).toLocaleDateString(appLocale(), {
         day: "numeric",
         month: "short",
         year: "numeric",

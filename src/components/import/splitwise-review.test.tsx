@@ -429,14 +429,14 @@ describe("SplitwiseReview", () => {
   it("shows the checkpoint and lists older rows that are not imported", async () => {
     tables.splitwise_expenses = { data: [TAXI], error: null };
     show();
-    expect(await screen.findByText(/Everything up to Aug 17 is already imported/)).toBeTruthy();
+    expect(await screen.findByText(/Everything up to 17 Aug is already imported/)).toBeTruthy();
     const toggle = screen.getByRole("button", { name: /Changes to earlier imports/ });
     expect(toggle.getAttribute("aria-expanded")).toBe("false");
     expect(screen.queryByRole("region", { name: /Added late/ })).toBeNull();
     fireEvent.click(toggle);
     const older = screen.getByRole("region", { name: /Added late/ });
     expect(older.textContent).toMatch(/Older than your last import, not imported/);
-    expect(older.textContent).toMatch(/Dinner.*Aug 16/);
+    expect(older.textContent).toMatch(/Dinner.*16 Aug/);
     expect(screen.getByRole("heading", { name: "Nothing new" })).toBeTruthy();
   });
 

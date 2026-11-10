@@ -1,0 +1,60 @@
+import { afterEach, describe, expect, it } from "vitest";
+import { formatDay } from "./date";
+import { appLocale, formatPercent, localeOverride, monthFirst, setLocaleOverride } from "./locale";
+import { formatMoney } from "./transactions";
+
+const setBrowser = (language: string) =>
+  Object.defineProperty(navigator, "language", { value: language, configurable: true });
+
+afterEach(() => {
+  setLocaleOverride("");
+  setBrowser("en-GB");
+});
+
+describe("appLocale", () => {
+  it("follows the browser", () => {
+    setBrowser("de-DE");
+    expect(appLocale()).toBe("de-DE");
+    expect(formatMoney(1234.5, "EUR")).toBe("1.234,50\u00a0€");
+    expect(formatDay("2026-03-03")).toBe("3. März 2026");
+  });
+
+  it("prefers the Settings choice over the browser", () => {
+    setBrowser("en-US");
+    setLocaleOverride("it-IT");
+    expect(localeOverride()).toBe("it-IT");
+    expect(formatMoney(1234.5, "EUR")).toBe("1234,50\u00a0€");
+    expect(formatDay("2026-03-03")).toBe("3 mar 2026");
+  });
+
+  it("goes back to the browser when the choice is cleared", () => {
+    setLocaleOverride("it-IT");
+    setLocaleOverride("");
+    expect(localeOverride()).toBe("");
+    expect(appLocale()).toBe("en-GB");
+  });
+
+  it("falls back to en-GB on a broken value", () => {
+    setBrowser("");
+    expect(appLocale()).toBe("en-GB");
+    setLocaleOverride("not a locale!!");
+    expect(appLocale()).toBe("en-GB");
+  });
+});
+
+describe("monthFirst", () => {
+  it("is true only for US English", () => {
+    expect(monthFirst("en-US")).toBe(true);
+    expect(monthFirst("en-GB")).toBe(false);
+    expect(monthFirst("de-DE")).toBe(false);
+  });
+});
+
+describe("formatPercent", () => {
+  it("writes a percent the locale's way", () => {
+    expect(formatPercent(25.48)).toBe("25.5%");
+    expect(formatPercent(25.48, 2)).toBe("25.48%");
+    setBrowser("de-DE");
+    expect(formatPercent(25.48)).toBe("25,5\u00a0%");
+  });
+});

@@ -10,3 +10,8 @@ if (typeof window !== "undefined" && !window.matchMedia) {
       removeEventListener: () => {},
     }) as unknown as MediaQueryList;
 }
+
+// Formats follow the browser locale (src/lib/locale.ts). Pin it so tests read the same anywhere.
+if (typeof navigator !== "undefined") {
+  Object.defineProperty(navigator, "language", { value: "en-GB", configurable: true });
+}

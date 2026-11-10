@@ -1,3 +1,4 @@
+import { appLocale, formatPercent } from "@/lib/locale";
 import { createFileRoute } from "@tanstack/react-router";
 import { EmptyState } from "@/components/empty-state";
 import { useQuery } from "@tanstack/react-query";
@@ -99,7 +100,7 @@ async function fetchPortfolio(): Promise<Array<PortfolioRow>> {
 
 function formatMoney(value: number, currency: string): string {
   try {
-    return new Intl.NumberFormat("en-IE", {
+    return new Intl.NumberFormat(appLocale(), {
       style: "currency",
       currency,
       minimumFractionDigits: 2,
@@ -108,7 +109,7 @@ function formatMoney(value: number, currency: string): string {
   } catch {
     // Intl.NumberFormat throws on a malformed ISO 4217 code -- fall back to
     // a plain number rather than crashing the whole page during render.
-    return `${new Intl.NumberFormat("en-IE", {
+    return `${new Intl.NumberFormat(appLocale(), {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     }).format(value)} ${currency}`;
@@ -116,7 +117,7 @@ function formatMoney(value: number, currency: string): string {
 }
 
 function formatShares(value: number): string {
-  return new Intl.NumberFormat("en-IE", {
+  return new Intl.NumberFormat(appLocale(), {
     minimumFractionDigits: 0,
     maximumFractionDigits: 3,
   }).format(value);
@@ -281,7 +282,7 @@ function PortfolioPage() {
                       </span>
                       <span className="block text-xs text-muted-foreground">
                         {group.holdings.length} holding
-                        {group.holdings.length === 1 ? "" : "s"} · {percent.toFixed(1)}%
+                        {group.holdings.length === 1 ? "" : "s"} · {formatPercent(percent)}
                       </span>
                     </span>
                     <span className="font-figure text-[0.9375rem] text-foreground">
@@ -350,7 +351,7 @@ function PortfolioPage() {
                                     {formatEur(valueEur)}
                                   </td>
                                   <td className="px-4 py-3 text-right font-figure text-foreground sm:px-5">
-                                    {rowPercent.toFixed(1)}%
+                                    {formatPercent(rowPercent)}
                                   </td>
                                   <td className="px-2 py-1 text-right">
                                     {row.isin && (
@@ -430,7 +431,7 @@ function PortfolioPage() {
                                 <div>
                                   <div className="text-xs text-muted-foreground">% of total</div>
                                   <div className="font-figure text-foreground">
-                                    {rowPercent.toFixed(1)}%
+                                    {formatPercent(rowPercent)}
                                   </div>
                                 </div>
                               </div>

@@ -1,3 +1,4 @@
+import { formatPercent } from "@/lib/locale";
 import { Cell, Pie, PieChart, ResponsiveContainer } from "recharts";
 import { Bitcoin, Building2, CreditCard, Landmark, ScrollText, Shapes } from "lucide-react";
 import { shareSummary } from "@/lib/chart-summary";
@@ -103,7 +104,7 @@ export function AllocationChart({
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium text-foreground">{label}</p>
                 <p className="font-figure text-xs text-muted-foreground">
-                  {((value / gross) * 100).toFixed(1)}%
+                  {formatPercent((value / gross) * 100)}
                 </p>
               </div>
               <p className="font-figure text-sm text-foreground">{format(value)}</p>
