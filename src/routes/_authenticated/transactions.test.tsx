@@ -35,6 +35,12 @@ vi.mock("@/integrations/supabase/client", () => ({
   },
 }));
 
+let searchParams: Record<string, string> = {};
+vi.mock("@tanstack/react-router", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@tanstack/react-router")>()),
+  useSearch: () => searchParams,
+}));
+
 import { Route } from "./transactions";
 
 const Page = Route.options.component as () => React.JSX.Element;
@@ -167,5 +173,39 @@ describe("Activity page", () => {
     renderPage();
     await screen.findAllByText("Shop 1");
     expect(screen.queryByTitle("Unknown account")).toBeNull();
+  });
+});
+
+// protects=a Spending category row opens Activity on that category and month;
+// fails_when=the route ignores ?category / ?month, or the month param is applied off by one
+describe("Activity deep link", () => {
+  afterEach(() => {
+    tableData = {};
+    searchParams = {};
+  });
+
+  it("opens on the linked month and category", async () => {
+    tableData = { v_transactions_eur: [row("1"), row("2", { category: "Dine Out" })] };
+    searchParams = { category: "Dine Out", month: "2026-03" };
+    renderPage();
+    expect(document.querySelector("[aria-live]")?.textContent).toBe("March 2026");
+    expect((await screen.findAllByText("Shop 2")).length).toBeGreaterThan(0);
+    expect(screen.queryByText("Shop 1")).toBeNull();
+  });
+
+  it("opens on this month with every category without params", async () => {
+    tableData = { v_transactions_eur: [row("1"), row("2", { category: "Dine Out" })] };
+    renderPage();
+    expect((await screen.findAllByText("Shop 1")).length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Shop 2").length).toBeGreaterThan(0);
+  });
+
+  it("validates its search params", () => {
+    const validate = Route.options.validateSearch as (s: Record<string, unknown>) => unknown;
+    expect(validate({ category: "Dine Out", month: "2026-03", junk: 1 })).toEqual({
+      category: "Dine Out",
+      month: "2026-03",
+    });
+    expect(validate({ category: 5, month: "2026-13" })).toEqual({});
   });
 });

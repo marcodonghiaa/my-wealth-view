@@ -132,6 +132,40 @@ export function startOfMonth(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth(), 1);
 }
 
+/** Deep-link filters for /transactions, e.g. from a Spending category row. */
+export interface TransactionsSearch {
+  /** A category name, or UNCATEGORIZED for rows without one. */
+  category?: string;
+  /** "YYYY-MM". */
+  month?: string;
+}
+
+const MONTH_PARAM = /^(\d{4})-(0[1-9]|1[0-2])$/;
+
+/** Keeps only well-formed params, so a hand-edited URL never breaks the page. */
+export function parseTransactionsSearch(raw: Record<string, unknown>): TransactionsSearch {
+  const out: TransactionsSearch = {};
+  const category = raw["category"];
+  if (typeof category === "string" && category.trim()) out.category = category.trim();
+  const month = raw["month"];
+  if (typeof month === "string" && MONTH_PARAM.test(month)) out.month = month;
+  return out;
+}
+
+/** The "YYYY-MM" param for a month. */
+export function monthParam(month: Date): string {
+  return `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, "0")}`;
+}
+
+/** The month a "YYYY-MM" param names; the current month when absent or in the future. */
+export function monthFromParam(param: string | undefined, now = new Date()): Date {
+  const current = startOfMonth(now);
+  const match = param ? MONTH_PARAM.exec(param) : null;
+  if (!match) return current;
+  const month = new Date(Number(match[1]), Number(match[2]) - 1, 1);
+  return month > current ? current : month;
+}
+
 export function formatMoney(value: number, currency: string): string {
   return new Intl.NumberFormat("en-IE", {
     style: "currency",

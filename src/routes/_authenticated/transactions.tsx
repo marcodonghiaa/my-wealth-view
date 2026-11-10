@@ -1,6 +1,6 @@
 import { fetchSplitContacts } from "@/lib/splits";
 import { EmptyState } from "@/components/empty-state";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useSearch } from "@tanstack/react-router";
 import { accountName, bankOf } from "@/components/bank-badge";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -25,8 +25,11 @@ import {
   listCategories,
   mergeShares,
   nameRefunds,
+  monthFromParam,
+  parseTransactionsSearch,
   startOfMonth,
   type AccountRow,
+  type TransactionsSearch,
   type SplitwiseShare,
   type TransactionRow,
   isSameTx,
@@ -81,8 +84,16 @@ export const Route = createFileRoute("/_authenticated/transactions")({
       { name: "twitter:card", content: "summary" },
     ],
   }),
-  component: TransactionsPage,
+  validateSearch: parseTransactionsSearch,
+  component: TransactionsRoute,
 });
+
+// A new deep link (another category or month) starts the page fresh; the Activity tab, with no
+// params, does too.
+function TransactionsRoute() {
+  const search = useSearch({ from: "/_authenticated/transactions" });
+  return <TransactionsPage key={`${search.category ?? ""}|${search.month ?? ""}`} {...search} />;
+}
 
 async function fetchTransactionsForMonth(month: Date): Promise<Array<TransactionRow>> {
   const start = formatISODate(startOfMonth(month));
@@ -165,12 +176,12 @@ async function fetchAccounts(): Promise<Record<string, AccountRow>> {
   return map;
 }
 
-function TransactionsPage() {
+function TransactionsPage({ category: initialCategory, month: initialMonth }: TransactionsSearch) {
   const [search, setSearch] = useState("");
-  const [category, setCategory] = useState<string>("all");
+  const [category, setCategory] = useState<string>(initialCategory ?? "all");
   const [bank, setBank] = useState<string>("all");
   const [day, setDay] = useState("");
-  const [month, setMonth] = useState(() => startOfMonth(new Date()));
+  const [month, setMonth] = useState(() => monthFromParam(initialMonth));
   const monthKey = useMemo(() => formatISODate(month), [month]);
   const queryClient = useQueryClient();
   const [selected, setSelected] = useState<Set<string>>(new Set());

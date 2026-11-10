@@ -1,15 +1,20 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { CategoryRow } from "@/components/spending/category-row";
 import { supabase } from "@/integrations/supabase/client";
 import { formatISODate } from "@/lib/date";
 import { categoryColor } from "@/lib/categories";
+import { shareSummary } from "@/lib/chart-summary";
+import { categorySpend, sharePercent, spendChange, type MonthlySpendRow } from "@/lib/spending";
+import { TONE_TEXT, type Tone } from "@/lib/tone";
 import { formatEur, personalAmountEur, startOfMonth } from "@/lib/transactions";
 import { MonthSwitcher } from "@/components/month-switcher";
 import { HeadlineFigure } from "@/components/headline-figure";
-import { ShareBar } from "@/components/share-bar";
+import { Stripes } from "@/components/share-bar";
+import { EmptyState } from "@/components/empty-state";
 import { Alert } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import { GroupedList, SectionTitle } from "@/components/ui/grouped-list";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -33,12 +38,6 @@ export const Route = createFileRoute("/_authenticated/spending")({
   component: SpendingPage,
 });
 
-interface SpendRow {
-  month: string | null;
-  category: string | null;
-  spend_eur: number | null;
-}
-
 interface RegretRow {
   category: string | null;
   personal_signed_amount_eur: number | null;
@@ -51,13 +50,13 @@ interface RegretGroup {
   count: number;
 }
 
-async function fetchSpendForMonth(month: Date): Promise<Array<SpendRow>> {
+async function fetchSpendForMonth(month: Date): Promise<Array<MonthlySpendRow>> {
   const { data, error } = await supabase
     .from("v_spend_by_category_monthly")
     .select("month,category,spend_eur")
     .eq("month", formatISODate(startOfMonth(month)));
   if (error) throw error;
-  return (data ?? []) as Array<SpendRow>;
+  return (data ?? []) as Array<MonthlySpendRow>;
 }
 
 // Scoped to the selected month, like the rest of the page.
@@ -95,6 +94,13 @@ function SpendingPage() {
     queryFn: () => fetchSpendForMonth(month),
   });
 
+  // Last month, for "is that normal?": same view and cache key as when you step back to it.
+  const prevMonth = new Date(month.getFullYear(), month.getMonth() - 1, 1);
+  const prevSpendQuery = useQuery({
+    queryKey: ["spend-by-category", formatISODate(prevMonth)],
+    queryFn: () => fetchSpendForMonth(prevMonth),
+  });
+
   const regretQuery = useQuery({
     queryKey: ["worth-it-regret", formatISODate(month)],
     queryFn: () => fetchRegretSpend(month),
@@ -103,24 +109,19 @@ function SpendingPage() {
   const regretTotal = regretRows.reduce((sum, r) => sum + r.total, 0);
   const regretCount = regretRows.reduce((sum, r) => sum + r.count, 0);
 
-  const rows = useMemo(
-    () =>
-      (spendQuery.data ?? [])
-        .filter((r) => r.spend_eur != null && r.spend_eur > 0)
-        .map((r) => ({
-          category: r.category ?? "Uncategorized",
-          spend_eur: r.spend_eur as number,
-        }))
-        .sort((a, b) => b.spend_eur - a.spend_eur),
-    [spendQuery.data],
-  );
-
+  const rows = useMemo(() => categorySpend(spendQuery.data ?? []), [spendQuery.data]);
   const total = rows.reduce((sum, r) => sum + r.spend_eur, 0);
+  const prevTotal = categorySpend(prevSpendQuery.data ?? []).reduce((s, r) => s + r.spend_eur, 0);
+  const change = prevSpendQuery.data ? spendChange(total, prevTotal) : null;
+  const isCurrentMonth = month.getTime() === startOfMonth(new Date()).getTime();
 
   const monthLabel = month.toLocaleDateString("en-GB", {
     month: "long",
     year: "numeric",
   });
+
+  const prevMonthName = prevMonth.toLocaleDateString("en-GB", { month: "long" });
+  const goToPrevMonth = () => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1));
 
   const canGoNext =
     startOfMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1)) <=
@@ -144,7 +145,7 @@ function SpendingPage() {
       <MonthSwitcher
         className="mb-6"
         label={monthLabel}
-        onPrev={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))}
+        onPrev={goToPrevMonth}
         onNext={() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))}
         canGoNext={canGoNext}
       />
@@ -152,9 +153,14 @@ function SpendingPage() {
       {spendQuery.isPending ? (
         <Skeleton className="h-80" />
       ) : rows.length === 0 ? (
-        <div className="flex h-48 items-center justify-center rounded-lg bg-card text-sm text-muted-foreground">
-          No spending recorded for {monthLabel}.
-        </div>
+        <EmptyState
+          title={`No spending recorded for ${monthLabel}.`}
+          action={
+            <Button variant="quiet" onClick={goToPrevMonth} className="bg-muted">
+              Previous month
+            </Button>
+          }
+        />
       ) : (
         <>
           {/* Headline: the month's spend, then how it splits by category */}
@@ -163,9 +169,21 @@ function SpendingPage() {
             <div className="mt-1">
               <HeadlineFigure value={total} currency="EUR" />
             </div>
-            <div className="mt-5">
-              <ShareBar
-                title="Spend by category"
+            {change && (
+              <SpendChangeLine
+                delta={change.delta}
+                tone={change.tone}
+                versus={prevMonthName}
+                partial={isCurrentMonth}
+              />
+            )}
+            {/* The stripes show the split at a glance; each row below names its own share */}
+            <div className="mt-5 max-w-2xl">
+              <Stripes
+                label={shareSummary(
+                  "Spend by category",
+                  rows.map((r) => ({ label: r.category, value: r.spend_eur })),
+                )}
                 shares={rows.map((r) => ({
                   label: r.category,
                   value: r.spend_eur,
@@ -183,13 +201,10 @@ function SpendingPage() {
                   key={row.category}
                   category={row.category}
                   total={row.spend_eur}
+                  share={sharePercent(row.spend_eur, total)}
                   month={month}
                 />
               ))}
-              <li className="flex items-center justify-between px-4 py-3 text-sm sm:px-5">
-                <span className="font-medium text-foreground">Total</span>
-                <span className="font-figure text-foreground">{formatEur(total)}</span>
-              </li>
             </ul>
           </GroupedList>
         </>
@@ -221,4 +236,45 @@ function SpendingPage() {
       )}
     </div>
   );
+}
+
+// "Is that normal?": the month against the one before, coloured by meaning (less is good).
+// A month still running is compared with all of last month, so it stays neutral until it
+// has already spent more.
+function SpendChangeLine({
+  delta,
+  tone,
+  versus,
+  partial,
+}: {
+  delta: number;
+  tone: Tone;
+  versus: string;
+  partial: boolean;
+}) {
+  const amount = <span className="font-figure">{formatEur(Math.abs(delta))}</span>;
+  let text: ReactNode;
+  let shown = tone;
+  if (partial) {
+    shown = delta > 0 ? "negative" : "neutral";
+    text =
+      delta > 0 ? (
+        <>
+          {amount} more than all of {versus} already
+        </>
+      ) : (
+        <>
+          {amount} less than all of {versus}, so far
+        </>
+      );
+  } else if (tone === "neutral") {
+    text = <>About the same as {versus}</>;
+  } else {
+    text = (
+      <>
+        {amount} {delta < 0 ? "less" : "more"} than {versus}
+      </>
+    );
+  }
+  return <p className={`mt-1.5 text-sm ${TONE_TEXT[shown]}`}>{text}</p>;
 }

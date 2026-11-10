@@ -1,5 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  monthFromParam,
+  monthParam,
+  parseTransactionsSearch,
   UNCATEGORIZED,
   activeFilterCount,
   formatDayHeading,
@@ -392,5 +395,34 @@ describe("activeFilterCount", () => {
     expect(activeFilterCount({ category: "all", bank: "all", day: "" })).toBe(0);
     expect(activeFilterCount({ category: "Groceries", bank: "all", day: "" })).toBe(1);
     expect(activeFilterCount({ category: "Groceries", bank: "Fineco", day: "2026-11-01" })).toBe(3);
+  });
+});
+
+describe("transactions deep-link params", () => {
+  it("keeps a trimmed category and a YYYY-MM month", () => {
+    expect(parseTransactionsSearch({ category: " Housing ", month: "2026-10" })).toEqual({
+      category: "Housing",
+      month: "2026-10",
+    });
+  });
+
+  it("drops blank, non-string and malformed values", () => {
+    expect(parseTransactionsSearch({ category: "  ", month: "2026-1" })).toEqual({});
+    expect(parseTransactionsSearch({ category: 3, month: 202610 })).toEqual({});
+  });
+
+  it("formats a month as YYYY-MM", () => {
+    expect(monthParam(new Date(2026, 0, 15))).toBe("2026-01");
+  });
+
+  const now = new Date(2026, 10, 10);
+  it("reads a month param as the first of that month", () => {
+    expect(monthFromParam("2026-03", now)).toEqual(new Date(2026, 2, 1));
+  });
+
+  it("falls back to this month when absent, malformed or in the future", () => {
+    expect(monthFromParam(undefined, now)).toEqual(new Date(2026, 10, 1));
+    expect(monthFromParam("nope", now)).toEqual(new Date(2026, 10, 1));
+    expect(monthFromParam("2027-01", now)).toEqual(new Date(2026, 10, 1));
   });
 });

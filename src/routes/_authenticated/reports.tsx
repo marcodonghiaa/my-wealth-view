@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { formatISODate } from "@/lib/date";
 import { estimatedMonthlyEur, splitSubscriptions } from "@/lib/subscriptions";
 import { formatEur, personalAmountEur, startOfMonth } from "@/lib/transactions";
+import { biggestMover, categorySpend, type MonthlySpendRow } from "@/lib/spending";
 import { monthNetWorth, withHistory } from "@/lib/net-worth";
 import { fetchHistory, fetchNetWorth, fetchReconstructed } from "@/lib/net-worth-queries";
 import { TONE_TEXT, toneOf, type Tone } from "@/lib/tone";
@@ -57,18 +58,13 @@ async function fetchIncomeExpenses(monthISO: string): Promise<IncomeExpenseRow |
   return data as IncomeExpenseRow | null;
 }
 
-interface SpendRow {
-  category: string | null;
-  spend_eur: number | null;
-}
-
-async function fetchSpendByCategory(monthISO: string): Promise<Array<SpendRow>> {
+async function fetchSpendByCategory(monthISO: string): Promise<Array<MonthlySpendRow>> {
   const { data, error } = await supabase
     .from("v_spend_by_category_monthly")
     .select("category,spend_eur")
     .eq("month", monthISO);
   if (error) throw error;
-  return (data ?? []) as Array<SpendRow>;
+  return (data ?? []) as Array<MonthlySpendRow>;
 }
 
 interface SubscriptionTotalRow {
@@ -191,31 +187,14 @@ function ReportsPage() {
   );
 
   const topCategories = useMemo(
-    () =>
-      (spendQuery.data ?? [])
-        .filter((r) => r.spend_eur != null && r.spend_eur > 0)
-        .map((r) => ({ category: r.category ?? "Uncategorized", spend_eur: r.spend_eur as number }))
-        .sort((a, b) => b.spend_eur - a.spend_eur)
-        .slice(0, 5),
+    () => categorySpend(spendQuery.data ?? []).slice(0, 5),
     [spendQuery.data],
   );
 
-  const biggestMover = useMemo(() => {
-    if (!prevSpendQuery.data) return null;
-    const prevByCategory = new Map<string, number>();
-    for (const r of prevSpendQuery.data) {
-      prevByCategory.set(r.category ?? "Uncategorized", r.spend_eur ?? 0);
-    }
-    let mover: { category: string; delta: number } | null = null;
-    for (const r of spendQuery.data ?? []) {
-      const category = r.category ?? "Uncategorized";
-      const delta = (r.spend_eur ?? 0) - (prevByCategory.get(category) ?? 0);
-      if (delta > 0 && (!mover || delta > mover.delta)) {
-        mover = { category, delta };
-      }
-    }
-    return mover;
-  }, [spendQuery.data, prevSpendQuery.data]);
+  const biggestMoverRow = useMemo(
+    () => (prevSpendQuery.data ? biggestMover(spendQuery.data ?? [], prevSpendQuery.data) : null),
+    [spendQuery.data, prevSpendQuery.data],
+  );
 
   const monthLabel = month.toLocaleDateString("en-GB", { month: "long", year: "numeric" });
   const canGoNext =
@@ -326,9 +305,10 @@ function ReportsPage() {
 
       <section className="mt-6">
         <SectionTitle>Top spending categories</SectionTitle>
-        {biggestMover && (
+        {biggestMoverRow && (
           <p className="px-4 pb-1.5 text-xs text-muted-foreground">
-            Biggest jump: {biggestMover.category} (+{formatEur(biggestMover.delta)} vs last month)
+            Biggest jump: {biggestMoverRow.category} (+{formatEur(biggestMoverRow.delta)} vs last
+            month)
           </p>
         )}
         <GroupedList>
