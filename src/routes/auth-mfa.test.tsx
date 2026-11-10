@@ -86,7 +86,8 @@ describe("sign-in with two-step", () => {
     await screen.findByLabelText("Authenticator code");
     expect(screen.queryByLabelText("Email")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Use a different account" }));
-    expect(auth.signOut).toHaveBeenCalled();
+    // This browser only: switching account here must not sign the user out on other devices.
+    expect(auth.signOut).toHaveBeenCalledWith({ scope: "local" });
     expect(await screen.findByLabelText("Email")).toBeInTheDocument();
   });
 });

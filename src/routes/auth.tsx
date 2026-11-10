@@ -273,7 +273,7 @@ export function AuthPage() {
                 <button
                   type="button"
                   onClick={() => {
-                    void supabase.auth.signOut();
+                    void supabase.auth.signOut({ scope: "local" });
                     setMode("signin");
                     setCode("");
                     setError(null);
