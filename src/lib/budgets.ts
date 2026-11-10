@@ -3,6 +3,7 @@
 // With rollover on, a month's leftover (or overspend) moves into the next month:
 // carried into next = carried in + budget − spent. Turning rollover on or off in a month changes
 // what that month passes on to the next; what it received stays.
+import { ALWAYS_SHOWN } from "@/lib/categories";
 import { parseAmount as parseTypedAmount } from "@/lib/trades";
 
 export interface BudgetRow {
@@ -129,8 +130,12 @@ export function budgetLines(
 
 /** Months of history a starting budget averages over, at most. */
 export const AVERAGE_MONTHS = 6;
-// Never budgeted: transfers and income aren't spending, and Uncategorized has no budget to keep.
-const NEVER_SUGGESTED = new Set(["Transfer", "Income", "Uncategorized"]);
+/** Transfers and income aren't spending: never shown as spend to budget. */
+export const NOT_SPENDING: ReadonlySet<string> = new Set(ALWAYS_SHOWN);
+
+/** Whether a category can have a budget: real spending, and not the Uncategorized leftovers. */
+export const canBudget = (category: string): boolean =>
+  !NOT_SPENDING.has(category) && category !== "Uncategorized";
 
 /**
  * A starting budget per category: the average monthly spend over those of the 6 months before
@@ -151,7 +156,7 @@ export function suggestedBudgets(
   const inWindow = new Set(months);
   const totals = new Map<string, number>();
   for (const s of spend) {
-    if (!inWindow.has(s.month) || NEVER_SUGGESTED.has(s.category)) continue;
+    if (!inWindow.has(s.month) || !canBudget(s.category)) continue;
     totals.set(s.category, (totals.get(s.category) ?? 0) + s.spend_eur);
   }
   for (const [category, total] of totals) {

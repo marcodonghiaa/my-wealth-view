@@ -523,9 +523,12 @@ describe("Budgets page", () => {
     db["v_spend_by_category_monthly"]!.push(
       { month: "2026-11-01", category: "Pets", spend_eur: 43 },
       { month: "2026-11-01", category: "Uncategorized", spend_eur: 20 },
+      { month: "2026-11-01", category: "Transfer", spend_eur: 500 },
     );
     renderPage();
     expect(await screen.findByText("Uncategorized")).toBeTruthy();
+    // Transfers aren't spending: not listed, and not offered in the add form.
+    expect(screen.queryByText("Transfer")).toBeNull();
     const add = screen.getAllByRole("button", { name: "Add budget" });
     expect(add).toHaveLength(1);
     fireEvent.click(add[0]!);

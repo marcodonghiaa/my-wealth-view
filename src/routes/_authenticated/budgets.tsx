@@ -9,14 +9,15 @@ import {
   AVERAGE_MONTHS,
   addMonths,
   budgetLines,
+  canBudget,
   monthIncome,
+  NOT_SPENDING,
   parseAmount,
   suggestedBudgets,
   type BudgetLine,
   type BudgetRow,
   type MonthSpend,
 } from "@/lib/budgets";
-import { ALWAYS_SHOWN } from "@/lib/categories";
 import { useCategories } from "@/lib/use-categories";
 import { MonthSwitcher } from "@/components/month-switcher";
 import { HeadlineFigure } from "@/components/headline-figure";
@@ -40,8 +41,6 @@ export const Route = createFileRoute("/_authenticated/budgets")({
 
 const BUDGETS_KEY = ["category-budgets"];
 const SPREAD_KEY = "alopex.budgets.spreadIncome";
-// Never budgeted: they aren't spending.
-const NOT_BUDGETED = new Set(ALWAYS_SHOWN);
 // Spend history read for averages and unbudgeted spend: this many months back, every category.
 const HISTORY_MONTHS = AVERAGE_MONTHS;
 
@@ -177,10 +176,10 @@ function BudgetsPage() {
         s.month === monthIso &&
         s.spend_eur > 0 &&
         !budgeted.has(s.category) &&
-        !NOT_BUDGETED.has(s.category),
+        !NOT_SPENDING.has(s.category),
     )
     .sort((a, b) => b.spend_eur - a.spend_eur);
-  const addable = categories.filter((c) => !budgeted.has(c) && !NOT_BUDGETED.has(c));
+  const addable = categories.filter((c) => !budgeted.has(c) && canBudget(c));
 
   const save = useMutation({
     mutationFn: async (next: Array<Omit<BudgetRow, "month">>) => {
@@ -317,7 +316,7 @@ function BudgetsPage() {
                         <span className="font-figure text-foreground">
                           {formatEur(s.spend_eur)}
                         </span>
-                        {s.category !== "Uncategorized" && (
+                        {canBudget(s.category) && (
                           <Button
                             variant="quiet"
                             size="sm"
