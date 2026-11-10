@@ -81,6 +81,16 @@ function renderPage() {
   );
 }
 
+// Matches the smallest element whose whole visible text is `t`: an amount (figures font) and
+// its word ("left", "over") are separate nodes.
+const whole = (t: string | RegExp) => (_: string, el: Element | null) => {
+  const is = (e: Element) => {
+    const text = (e.textContent ?? "").replace(/\s+/g, " ").trim();
+    return typeof t === "string" ? text === t : t.test(text);
+  };
+  return !!el && is(el) && ![...el.children].some(is);
+};
+
 beforeEach(() => {
   vi.useFakeTimers({ shouldAdvanceTime: true });
   vi.setSystemTime(new Date("2026-11-20T12:00:00"));
@@ -123,7 +133,7 @@ describe("Budgets page", () => {
       ].map(([c, a]) => [c, a, "2026-11-01"]),
     );
     expect(upserts[0]!.opts).toEqual({ onConflict: "user_id,category,month" });
-    expect(await screen.findByText("€190.00 left")).toBeTruthy();
+    expect(await screen.findByText(whole("€190.00 left"))).toBeTruthy();
   });
 
   it("shows what is left, what is over and what was rolled over", async () => {
@@ -133,9 +143,9 @@ describe("Budgets page", () => {
     ];
     renderPage();
     // Groceries: Oct 300 − 320 = −20 carried; Nov 280 − 120 = 160 left.
-    expect(await screen.findByText("€160.00 left")).toBeTruthy();
-    expect(screen.getByText(/− €20.00 rolled over/)).toBeTruthy();
-    expect(screen.getByText("€10.00 over")).toBeTruthy();
+    expect(await screen.findByText(whole("€160.00 left"))).toBeTruthy();
+    expect(screen.getByText(whole(/− €20.00 rolled over$/))).toBeTruthy();
+    expect(screen.getByText(whole("€10.00 over"))).toBeTruthy();
   });
 
   it("changes a budget from the selected month", async () => {
@@ -221,7 +231,7 @@ describe("Budgets page", () => {
     }));
     renderPage();
     // Groceries: 47 earlier months each leave 10 → 470 carried; 100 + 470 − 90 = 480 left.
-    expect(await screen.findByText("€480.00 left")).toBeTruthy();
+    expect(await screen.findByText(whole("€480.00 left"))).toBeTruthy();
   });
 
   // protects=P2-1 a save counts as running until the saved budgets are back on screen;
@@ -251,7 +261,7 @@ describe("Budgets page", () => {
       { category: "Groceries", month: "2025-01-01", amount: 300, rollover: false },
     ];
     renderPage();
-    expect(await screen.findByText("€180.00 left")).toBeTruthy();
+    expect(await screen.findByText(whole("€180.00 left"))).toBeTruthy();
     expect(spendReads.most).toBe(2);
   });
 
@@ -290,7 +300,7 @@ describe("Budgets page", () => {
       { category: "Groceries", month: "2026-11-01", amount: 300, rollover: false },
     ];
     renderPage();
-    await screen.findByText("€180.00 left");
+    await screen.findByText(whole("€180.00 left"));
     expect(
       screen.getByText("Roll over: what's left, or overspent, carries into next month."),
     ).toBeTruthy();
@@ -368,6 +378,24 @@ describe("Budgets page", () => {
     for (const name of ["Save", "Cancel", "Remove"]) tall(screen.getByRole("button", { name }));
   });
 
+  // protects=P4 P2-1 DESIGN.md Mono Figure Rule: amounts in mono, words in the text face;
+  // fails_when="left", "over" or "rolled over" sit inside a font-figure element
+  it("sets only the amounts in the figures font", async () => {
+    db["category_budgets"] = [
+      { category: "Groceries", month: "2026-10-01", amount: 300, rollover: true },
+      { category: "Dine Out", month: "2026-11-01", amount: 50, rollover: false },
+    ];
+    renderPage();
+    await screen.findByText(whole(/rolled over$/));
+    const mono = [...document.querySelectorAll("main .font-figure, .font-figure")].map(
+      (e) => e.textContent ?? "",
+    );
+    expect(mono).toContain("€160.00");
+    expect(mono).toContain("€10.00");
+    expect(mono).toContain("€20.00");
+    for (const text of mono) expect(text).not.toMatch(/[a-z]{3,}/i);
+  });
+
   // P1-4: visible behaviour that had no test.
   it("says Left to spend or Over budget above the total", async () => {
     db["category_budgets"] = [
@@ -430,7 +458,7 @@ describe("Budgets page", () => {
     watch.observe(container, { childList: true, subtree: true });
     fireEvent.click(add);
     // Dine Out: budget 50, spent 60.
-    expect(await screen.findByText("€10.00 over")).toBeTruthy();
+    expect(await screen.findByText(whole("€10.00 over"))).toBeTruthy();
     watch.disconnect();
     expect(blinked).toBe(false);
   });
@@ -440,11 +468,11 @@ describe("Budgets page", () => {
       { category: "Groceries", month: "2026-09-01", amount: 300, rollover: false },
     ];
     const { container } = renderPage();
-    expect(await screen.findByText("€180.00 left")).toBeTruthy();
+    expect(await screen.findByText(whole("€180.00 left"))).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Previous month" }));
     // October's figures, never September-to-November's under October's name.
     expect(container.querySelector(".animate-pulse")).not.toBeNull();
-    expect(await screen.findByText("€20.00 over")).toBeTruthy();
+    expect(await screen.findByText(whole("€20.00 over"))).toBeTruthy();
   });
 
   // protects=P1-2 budgets past the 1000-row cap are all read;
@@ -464,7 +492,7 @@ describe("Budgets page", () => {
       { month: "2026-11-01", category: "Zz Groceries", spend_eur: 120 },
     ];
     renderPage();
-    expect(await screen.findByText("€180.00 left")).toBeTruthy();
+    expect(await screen.findByText(whole("€180.00 left"))).toBeTruthy();
   });
 
   // protects=clearing the field and pressing Save keeps the budget (P1-4);
@@ -487,7 +515,7 @@ describe("Budgets page", () => {
       { category: "Groceries", month: "2026-09-01", amount: 300, rollover: false },
     ];
     renderPage();
-    await screen.findByText(/left$/);
+    await screen.findByText(whole(/^€[0-9.,]+ left$/));
     expect(screen.queryByText(/apply from/)).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: /previous/i }));
     expect(

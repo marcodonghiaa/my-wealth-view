@@ -361,17 +361,15 @@ function BudgetsPage() {
                 <span className="font-medium text-foreground">
                   {spread ? "Income, spread over the year" : "Income this month"}
                 </span>
-                <span className="font-figure text-foreground">
-                  {incomeQuery.isError ? (
-                    <span className="text-negative">
-                      Couldn't load income: {incomeQuery.error.message}
-                    </span>
-                  ) : income == null ? (
-                    "—"
-                  ) : (
-                    formatEur(income)
-                  )}
-                </span>
+                {incomeQuery.isError ? (
+                  <span className="text-negative">
+                    Couldn't load income: {incomeQuery.error.message}
+                  </span>
+                ) : (
+                  <span className="font-figure text-foreground">
+                    {income == null ? "—" : formatEur(income)}
+                  </span>
+                )}
               </div>
               {lines.length > 0 && income != null && (
                 <div className="flex items-center justify-between gap-3 px-4 py-3 text-sm sm:px-5">
@@ -456,8 +454,9 @@ function BudgetLineRow({
           <CategoryAvatar category={line.category} />
           <span className="truncate">{line.category}</span>
         </span>
-        <span className={`font-figure shrink-0 ${over ? "text-negative" : "text-foreground"}`}>
-          {over ? `${formatEur(-line.left)} over` : `${formatEur(line.left)} left`}
+        <span className={`shrink-0 ${over ? "text-negative" : "text-foreground"}`}>
+          <span className="font-figure">{formatEur(Math.abs(line.left))}</span>{" "}
+          {over ? "over" : "left"}
         </span>
       </div>
       <div
@@ -539,9 +538,11 @@ function BudgetLineRow({
               <Pencil aria-hidden className="size-3.5 text-muted-foreground" />
             </button>
             {line.carriedIn !== 0 && (
-              <span className="font-figure">
+              <span>
                 {" "}
-                {line.carriedIn > 0 ? "+" : "−"} {formatEur(Math.abs(line.carriedIn))} rolled over
+                {line.carriedIn > 0 ? "+" : "−"}{" "}
+                <span className="font-figure">{formatEur(Math.abs(line.carriedIn))}</span> rolled
+                over
               </span>
             )}
           </span>
