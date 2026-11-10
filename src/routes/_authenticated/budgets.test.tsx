@@ -8,6 +8,8 @@ const upsertCalls: Array<{ rows: Array<Row>; opts: unknown }> = [];
 const upserts = upsertCalls;
 let failTable: string | null = null;
 let failUpsert: string | null = null;
+// When set, reads of category_budgets wait for it: holds a refetch open.
+let holdBudgets: Promise<void> | null = null;
 const toast = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }));
 vi.mock("sonner", () => ({ toast }));
 
@@ -47,9 +49,13 @@ vi.mock("@/integrations/supabase/client", () => ({
       q["then"] = (resolve: (v: unknown) => void) => {
         if (table === failTable)
           return resolve({ data: null, error: { message: "relation does not exist" } });
-        let rows = (db[table] ?? []).filter((r) => filters.every((f) => f(r)));
-        for (const c of [...sorts].reverse()) rows = [...rows].sort((a, b) => cmp(a[c], b[c]));
-        resolve({ data: rows.slice(from, Math.min(to + 1, from + CAP)), error: null });
+        const answer = () => {
+          let rows = (db[table] ?? []).filter((r) => filters.every((f) => f(r)));
+          for (const c of [...sorts].reverse()) rows = [...rows].sort((a, b) => cmp(a[c], b[c]));
+          resolve({ data: rows.slice(from, Math.min(to + 1, from + CAP)), error: null });
+        };
+        if (table === "category_budgets" && holdBudgets) void holdBudgets.then(answer);
+        else answer();
       };
       return q;
     },
@@ -77,6 +83,7 @@ beforeEach(() => {
   upserts.length = 0;
   failTable = null;
   failUpsert = null;
+  holdBudgets = null;
   toast.error.mockClear();
   window.localStorage.clear();
   db["v_spend_by_category_monthly"] = [
@@ -232,6 +239,26 @@ describe("Budgets page", () => {
     renderPage();
     // Groceries: 47 earlier months each leave 10 → 470 carried; 100 + 470 − 90 = 480 left.
     expect(await screen.findByText("€480.00 left")).toBeTruthy();
+  });
+
+  // protects=P2-1 a save counts as running until the saved budgets are back on screen;
+  // fails_when=the controls unlock while the refetch is still on its way
+  it("keeps the controls locked until the saved budget is shown", async () => {
+    db["category_budgets"] = [
+      { category: "Groceries", month: "2026-11-01", amount: 300, rollover: false },
+    ];
+    renderPage();
+    const box = (await screen.findByRole("checkbox", { name: "Roll over" })) as HTMLInputElement;
+    let release = () => {};
+    holdBudgets = new Promise((r) => (release = r));
+    fireEvent.click(box);
+    await waitFor(() => expect(upserts).toHaveLength(1));
+    // Saved, but the fresh rows aren't here yet: give the mutation time to settle.
+    await new Promise((r) => setTimeout(r, 50));
+    expect(box.disabled).toBe(true);
+    release();
+    await waitFor(() => expect(box.disabled).toBe(false));
+    expect(box.checked).toBe(true);
   });
 
   // P1-4: visible behaviour that had no test.

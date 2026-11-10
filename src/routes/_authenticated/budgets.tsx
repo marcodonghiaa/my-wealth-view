@@ -187,7 +187,8 @@ function BudgetsPage() {
       );
       if (error) throw new Error(error.message);
     },
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: BUDGETS_KEY }),
+    // Returned, so the save stays pending until the saved budgets are back on screen.
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: BUDGETS_KEY }),
     onError: (err: Error) => toast.error("Couldn't save the budget", { description: err.message }),
   });
 
