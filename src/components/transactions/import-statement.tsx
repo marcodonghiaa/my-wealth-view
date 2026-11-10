@@ -27,7 +27,7 @@ import { decodeCsv, parseCsv, MAX_CHARS } from "@/lib/import/parse-csv";
 import { formatDay } from "@/lib/date";
 import { importStatement, newRows, type StatementClient } from "@/lib/import/statement-commit";
 import { readStatementPdf } from "@/lib/import/statement-pdf";
-import { formatMoney } from "@/lib/transactions";
+import { ADDED_TRANSACTION_QUERIES, formatMoney } from "@/lib/transactions";
 
 const client = supabase as unknown as StatementClient;
 
@@ -175,25 +175,18 @@ export function ImportStatement() {
     try {
       const added = await importStatement(client, fresh, source.trim() || null, setProgress);
       toast.success(`${added} transaction${added === 1 ? "" : "s"} imported`);
-      for (const k of [
-        "transactions",
-        "transfers",
-        "income",
-        "spend-by-category",
-        "category-transactions",
-        "accounts",
-      ]) {
-        void queryClient.invalidateQueries({ queryKey: [k] });
-      }
       setOpen(false);
       reset();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Import failed.");
       setProgress(null);
-      void queryClient.invalidateQueries({ queryKey: ["transactions"] });
       // Some rows were saved before the error: check again so a retry adds only the rest.
       setFresh(null);
       if (statement) setFresh(await newRows(client, statement.rows).catch(() => null));
+    } finally {
+      // Rows saved before an error are in the app too, maybe on a new account.
+      for (const k of ADDED_TRANSACTION_QUERIES)
+        void queryClient.invalidateQueries({ queryKey: [k] });
     }
   }
 

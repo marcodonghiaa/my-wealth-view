@@ -247,3 +247,13 @@ export function selectedOnly(
 ): Array<TransactionRow> {
   return shown.filter((tx) => !isSplitwiseShare(tx) && selected.has(txId(tx)));
 }
+
+/** Queries to refresh after adding transactions: a new source is also a new account. */
+export const ADDED_TRANSACTION_QUERIES = [
+  "transactions",
+  "transfers",
+  "income",
+  "spend-by-category",
+  "category-transactions",
+  "accounts",
+] as const;

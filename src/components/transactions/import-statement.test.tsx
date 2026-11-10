@@ -202,6 +202,16 @@ describe("ImportStatement", () => {
     expect(await screen.findByRole("button", { name: "Import 1" })).toBeTruthy();
   });
 
+  it("polish-3 #12 refreshes accounts too when an import stops partway", async () => {
+    rpc
+      .mockResolvedValueOnce({ data: [], error: null })
+      .mockResolvedValueOnce({ data: null, error: { message: "boom" } });
+    const { invalidate } = upload("Fineco.csv", CSV);
+    fireEvent.click(await screen.findByRole("button", { name: "Import 2" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(/1 of 2 added/);
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ["accounts"] });
+  });
+
   it("shows only the latest read when an older duplicate check answers last", async () => {
     upload("card.csv", "Date,Description,Amount\n01/02/2026,Shop,-5");
     expect(await screen.findByText(/1 Feb 2026/)).toBeTruthy();
