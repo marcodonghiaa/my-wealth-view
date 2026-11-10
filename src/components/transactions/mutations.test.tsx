@@ -670,6 +670,18 @@ describe("settling a To review group", () => {
     expect(calls.map((c) => c.table)).toEqual(["transactions"]);
   });
 
+  // Polish pass 3 #5: the boundary itself, so ">" can't silently become ">=".
+  it("still adds a rule for a name of exactly 200 characters", async () => {
+    const result = setupGroup();
+    await act(() =>
+      result.current.mutateAsync({
+        group: group([rr("a1", "r1", "DBIT")], "x".repeat(200)),
+        choice: "count",
+      }),
+    );
+    expect(calls.find((c) => c.insert)?.insert).toMatchObject({ match_text: "x".repeat(200) });
+  });
+
   it("fails when signed out", async () => {
     getUser.mockResolvedValueOnce({ data: { user: null } });
     const result = setupGroup();
