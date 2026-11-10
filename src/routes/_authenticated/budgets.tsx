@@ -402,7 +402,7 @@ function BudgetsPage() {
               <label className="flex cursor-pointer items-start gap-3 px-4 py-3 text-sm sm:px-5">
                 <input
                   type="checkbox"
-                  className="mt-0.5 size-4 accent-[var(--color-primary)]"
+                  className="mt-0.5 size-4 shrink-0 accent-[var(--color-primary)]"
                   checked={spread}
                   onChange={(e) => {
                     setSpread(e.target.checked);
@@ -476,12 +476,13 @@ function BudgetLineRow({
         </span>
       </div>
       <div
-        className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted"
+        className="mt-2 h-1.5 overflow-hidden rounded-full bg-rule"
         role="progressbar"
         aria-label={`${line.category}: spent of budget`}
         aria-valuemin={0}
         aria-valuemax={100}
         aria-valuenow={Math.round(used * 100)}
+        aria-valuetext={`${formatEur(line.spent)} of ${formatEur(line.available)}${over ? ", over" : ""}`}
       >
         <div
           className={`h-full rounded-full ${over ? "bg-negative" : "bg-primary"}`}
@@ -640,6 +641,7 @@ function AddBudget({
             placeholder="€ per month"
             value={amount}
             aria-invalid={invalid}
+            aria-describedby={invalid ? "add-budget-error" : undefined}
             onChange={(e) => {
               setAmount(e.target.value);
               setInvalid(false);
@@ -650,7 +652,7 @@ function AddBudget({
             Add
           </Button>
           {invalid && (
-            <p role="alert" className="basis-full text-sm text-negative">
+            <p id="add-budget-error" role="alert" className="basis-full text-sm text-negative">
               Type an amount above 0 and below 10 million, like 250.
             </p>
           )}

@@ -446,6 +446,27 @@ describe("Budgets page", () => {
     expect(message.parentElement).toBe(screen.getByLabelText("Category").closest("form"));
   });
 
+  // protects=P4 P2-5 screen readers get the same facts; fails_when=the add-form message isn't
+  // tied to its field, or an overspent bar only says "100"
+  it("ties messages to fields and puts the amounts on the progress bar", async () => {
+    db["category_budgets"] = [
+      { category: "Dine Out", month: "2026-11-01", amount: 50, rollover: false },
+    ];
+    renderPage();
+    const bar = await screen.findByRole("progressbar");
+    expect(bar.getAttribute("aria-valuetext")).toBe("€60.00 of €50.00, over");
+    expect(screen.getByRole("checkbox", { name: /Spread yearly income/ }).className).toMatch(
+      /\bshrink-0\b/,
+    );
+    fireEvent.change(screen.getByLabelText("Category"), { target: { value: "Groceries" } });
+    const field = screen.getByLabelText("Monthly budget in euros");
+    fireEvent.change(field, { target: { value: "0" } });
+    fireEvent.click(screen.getByRole("button", { name: "Add" }));
+    const message = await screen.findByRole("alert");
+    expect(message.id).not.toBe("");
+    expect(field.getAttribute("aria-describedby")).toBe(message.id);
+  });
+
   // P1-4: visible behaviour that had no test.
   it("says Left to spend or Over budget above the total", async () => {
     db["category_budgets"] = [
