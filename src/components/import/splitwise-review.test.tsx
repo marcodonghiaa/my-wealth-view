@@ -120,7 +120,7 @@ describe("SplitwiseReview", () => {
     expect(screen.getByText(/Yellow Cab/)).toBeTruthy();
     // 1 share paid by the friend (Dinner) + the taxi share linked to the bank
     expect(screen.getByRole("heading", { name: "2 expenses" })).toBeTruthy();
-    expect(screen.getByText(/Your share 25.00 USD/)).toBeTruthy();
+    expect(screen.getByText(/Your share US\$25.00/)).toBeTruthy();
     expect(((await importButton()) as HTMLButtonElement).textContent).toBe("Import 2 expenses");
   });
 
@@ -137,7 +137,7 @@ describe("SplitwiseReview", () => {
     expect(blocked.disabled).toBe(true);
     fireEvent.click(screen.getByRole("button", { name: "Skip" }));
     expect(screen.getByText(/Skipped: not counted/)).toBeTruthy();
-    expect(screen.getByText(/Your share 15.00 USD/)).toBeTruthy();
+    expect(screen.getByText(/Your share US\$15.00/)).toBeTruthy();
     expect(((await importButton()) as HTMLButtonElement).disabled).toBe(false);
   });
 
@@ -180,8 +180,8 @@ describe("SplitwiseReview", () => {
     const link = screen.getByRole("button", { name: "Link payment" }) as HTMLButtonElement;
     expect(link.disabled).toBe(true);
     fireEvent.click(screen.getByRole("radio", { name: /Yellow Cab/ }));
-    expect(screen.getByText("−9.20 EUR")).toBeTruthy();
-    expect(screen.getByText("40.80 EUR")).toBeTruthy();
+    expect(screen.getByText("−€9.20")).toBeTruthy();
+    expect(screen.getByText("€40.80")).toBeTruthy();
     fireEvent.click(link);
     expect(await screen.findByText(/Linked to Yellow Cab/)).toBeTruthy();
     await clickImport();
@@ -489,8 +489,8 @@ describe("SplitwiseReview", () => {
       show();
       await openChanges();
       const section = await screen.findByRole("region", { name: /Edited in Splitwise/ });
-      expect(section.textContent).toMatch(/was 40.00 USD total/);
-      expect(section.textContent).toMatch(/now 30.00 USD total/);
+      expect(section.textContent).toMatch(/was US\$40.00 total/);
+      expect(section.textContent).toMatch(/now US\$30.00 total/);
     });
 
     // protects=corrections take their own confirmation, and say Undo does not cover them;

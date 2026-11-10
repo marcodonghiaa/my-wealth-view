@@ -3,6 +3,7 @@ import { formatDay } from "./date";
 import {
   appLocale,
   dateLocale,
+  formatNumber,
   formatPercent,
   localeOverride,
   monthFirst,
@@ -78,5 +79,13 @@ describe("dateLocale", () => {
     expect(dateLocale("en-US")).toBe("en-US");
     expect(dateLocale("de-DE")).toBe("en-GB");
     expect(dateLocale("it-IT")).toBe("en-GB");
+  });
+});
+
+describe("formatNumber", () => {
+  it("writes fixed decimals the locale's way", () => {
+    expect(formatNumber(1.08424, 4)).toBe("1.0842");
+    setBrowser("it-IT");
+    expect(formatNumber(1.08424, 4)).toBe("1,0842");
   });
 });

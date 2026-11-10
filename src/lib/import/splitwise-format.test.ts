@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { money, shortDate } from "./splitwise-format";
+import { money, moneyAmount, shortDate } from "./splitwise-format";
 
 describe("shortDate", () => {
   const today = new Date("2026-11-09T12:00:00Z");
@@ -16,6 +16,12 @@ describe("shortDate", () => {
 
 describe("money", () => {
   it("shows cents with two decimals and the currency", () => {
-    expect(money(2730, "USD")).toBe("27.30 USD");
+    expect(money(2730, "USD")).toBe("US$27.30");
+  });
+});
+
+describe("moneyAmount", () => {
+  it("keeps a code Intl rejects as plain text instead of crashing", () => {
+    expect(moneyAmount(1.5, "EURO")).toBe("1.50 EURO");
   });
 });

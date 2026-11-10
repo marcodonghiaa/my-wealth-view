@@ -1,4 +1,4 @@
-import { appLocale, dateLocale, formatPercent } from "@/lib/locale";
+import { appLocale, dateLocale, formatNumber, formatPercent } from "@/lib/locale";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
@@ -215,7 +215,7 @@ function NetWorthPage() {
           )}
           {currency !== "EUR" && headline != null && rateToEur != null && (
             <p className="mt-2 text-xs text-muted-foreground">
-              Rate: 1 {currency} = {rateToEur.toFixed(4)} EUR · ECB,{" "}
+              Rate: 1 {currency} = {formatNumber(rateToEur, 4)} EUR · ECB,{" "}
               {formatFxDate(fxQuery.data?.[currency]?.date)}
             </p>
           )}

@@ -52,6 +52,14 @@ export function appLocale(): string {
 /** Whether people in this locale write the month before the day (03/25/2026). */
 export const monthFirst = (locale: string = appLocale()): boolean => /^en-US\b/.test(locale);
 
+/** A plain number with fixed decimals in the chosen locale: 1.0842 → "1.0842" / "1,0842". */
+export function formatNumber(value: number, digits: number): string {
+  return new Intl.NumberFormat(appLocale(), {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  }).format(value);
+}
+
 /**
  * A share or change as a percent in the chosen locale: 0.2548 → "25.5%" (en), "25,5 %" (de).
  * signed: "+" above zero and a real minus "−" below, nothing on zero.
