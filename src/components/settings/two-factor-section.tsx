@@ -3,6 +3,7 @@ import { Loader2, ShieldCheck, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CodeInput, Input } from "@/components/ui/field";
 import {
+  defaultAuthenticatorName,
   finishEnrollment,
   listAuthenticators,
   removeAuthenticator,
@@ -54,7 +55,7 @@ export function TwoFactorSection() {
 
   const start = () =>
     run(async () => {
-      setEnrollment(await startEnrollment(name || `Authenticator ${(list?.length ?? 0) + 1}`));
+      setEnrollment(await startEnrollment(name));
       setCode("");
     }, "Couldn't start the setup.");
 
@@ -174,7 +175,7 @@ export function TwoFactorSection() {
                   value={name}
                   maxLength={60}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder={`Authenticator ${(list.length ?? 0) + 1}`}
+                  placeholder={defaultAuthenticatorName(list.length)}
                 />
               </div>
               <Button

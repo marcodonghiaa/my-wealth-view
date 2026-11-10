@@ -7,7 +7,10 @@ const lib = vi.hoisted(() => ({
   finishEnrollment: vi.fn(),
   removeAuthenticator: vi.fn(),
 }));
-vi.mock("@/lib/mfa", () => lib);
+vi.mock("@/lib/mfa", () => ({
+  ...lib,
+  defaultAuthenticatorName: (n: number) => `Authenticator ${n + 1}`,
+}));
 
 import { TwoFactorSection } from "./two-factor-section";
 

@@ -65,9 +65,12 @@ export interface Enrollment {
   secret: string;
 }
 
+/** The name an authenticator gets when none is typed: "Authenticator 1", "Authenticator 2"… */
+export const defaultAuthenticatorName = (existing: number) => `Authenticator ${existing + 1}`;
+
 /**
- * Start adding an authenticator. Leftover unfinished ones (a closed tab mid-setup) are removed
- * first: they hold a name and count against the factor limit.
+ * Start adding an authenticator. Leftover unfinished ones (a closed tab or Cancel mid-setup) are
+ * removed first, best effort: they hold a name and count against the factor limit.
  */
 export async function startEnrollment(name: string): Promise<Enrollment> {
   const { data: list } = await supabase.auth.mfa.listFactors();
@@ -78,7 +81,7 @@ export async function startEnrollment(name: string): Promise<Enrollment> {
   }
   const { data, error } = await supabase.auth.mfa.enroll({
     factorType: "totp",
-    friendlyName: name.trim() || `Authenticator ${new Date().toISOString().slice(0, 10)}`,
+    friendlyName: name.trim() || defaultAuthenticatorName(list?.totp?.length ?? 0),
     issuer: "Alopex",
   });
   if (error) throw error;

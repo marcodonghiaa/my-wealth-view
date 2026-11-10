@@ -12,6 +12,7 @@ vi.mock("@/integrations/supabase/client", () => ({ supabase: { auth: { mfa, refr
 
 import {
   cleanCode,
+  defaultAuthenticatorName,
   finishEnrollment,
   isMfaRequired,
   listAuthenticators,
@@ -123,6 +124,23 @@ describe("enrollment", () => {
       friendlyName: "Phone",
       issuer: "Alopex",
     });
+  });
+  // protects=an unnamed authenticator gets the next number shown in the name field's placeholder;
+  // fails_when=the default counts unfinished factors or differs from the placeholder
+  it("names an unnamed one after the verified count", async () => {
+    mfa.listFactors.mockResolvedValue({
+      data: { all: [totp("a"), totp("b", { status: "unverified" })], totp: [totp("a")] },
+      error: null,
+    });
+    mfa.enroll.mockResolvedValue({
+      data: { id: "n", totp: { qr_code: "q", secret: "s" } },
+      error: null,
+    });
+    expect(defaultAuthenticatorName(0)).toBe("Authenticator 1");
+    await startEnrollment("  ");
+    expect(mfa.enroll).toHaveBeenCalledWith(
+      expect.objectContaining({ friendlyName: "Authenticator 2" }),
+    );
   });
   it("surfaces an enroll error", async () => {
     mfa.listFactors.mockResolvedValue({ data: { all: [] }, error: null });
