@@ -294,7 +294,8 @@ export function parseDay(raw: string, order: DateOrder = "DMY"): string | null {
     // Mar 4, 2026
     [y, m, d] = [Number(match[3]), monthNumber(match[1]!) ?? 0, Number(match[2])];
   } else return null;
-  if (m < 1) return null;
+  // A bank row from before 1900 or after next year is a typo or a crafted file.
+  if (m < 1 || y < 1900 || y > new Date().getFullYear() + 1) return null;
   const check = new Date(Date.UTC(y, m - 1, d));
   if (check.getUTCMonth() !== m - 1 || check.getUTCDate() !== d) return null;
   return `${y}-${pad(m)}-${pad(d)}`;

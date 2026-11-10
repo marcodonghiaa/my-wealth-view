@@ -139,7 +139,8 @@ describe("parseDay, more formats", () => {
 
   it("puts two-digit years from 70 in the 1900s", () => {
     expect(parseDay("31/12/99")).toBe("1999-12-31");
-    expect(parseDay("31/12/69")).toBe("2069-12-31");
+    // 69 means 2069, which #2 now rejects as a future year.
+    expect(parseDay("31/12/69")).toBeNull();
     expect(parseDay("01/02/26")).toBe("2026-02-01");
   });
 
@@ -230,5 +231,15 @@ describe("untrusted values in a file", () => {
     const s = readStatement(csv);
     expect(s.rows.map((r) => r.description)).toEqual(["Shop"]);
     expect(s.skipped).toBe(2);
+  });
+
+  it("#2 rejects years before 1900 or after next year", () => {
+    const next = new Date().getFullYear() + 1;
+    expect(parseDay("0001-01-01")).toBeNull();
+    expect(parseDay("1899-12-31")).toBeNull();
+    expect(parseDay("9999-12-31")).toBeNull();
+    expect(parseDay(`${next + 1}-01-01`)).toBeNull();
+    expect(parseDay("1900-01-01")).toBe("1900-01-01");
+    expect(parseDay(`${next}-12-31`)).toBe(`${next}-12-31`);
   });
 });
