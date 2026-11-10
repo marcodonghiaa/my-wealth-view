@@ -135,12 +135,17 @@ export function startOfMonth(date: Date): Date {
 }
 
 export function formatMoney(value: number, currency: string): string {
-  return numberFormat({
-    style: "currency",
-    currency,
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value);
+  try {
+    return numberFormat({
+      style: "currency",
+      currency,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(value);
+  } catch {
+    // A code Intl rejects ("", "EURO") stays as text instead of blanking the page.
+    return `${numberFormat({ minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value)} ${currency}`.trim();
+  }
 }
 
 export const formatEur = (value: number): string => formatMoney(value, "EUR");

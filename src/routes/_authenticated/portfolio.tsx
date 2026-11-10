@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { shortHoldingName } from "@/lib/holding-name";
 import { supabase } from "@/integrations/supabase/client";
-import { formatEur } from "@/lib/transactions";
+import { formatEur, formatMoney } from "@/lib/transactions";
 import { currentValueEur } from "@/lib/holdings";
 import { AddHoldingPanel } from "@/components/holdings/add-holding-panel";
 import { SoldHoldings } from "@/components/holdings/sold-holdings";
@@ -96,24 +96,6 @@ async function fetchPortfolio(): Promise<Array<PortfolioRow>> {
     .order("value_eur", { ascending: false });
   if (error) throw error;
   return (data ?? []) as Array<PortfolioRow>;
-}
-
-function formatMoney(value: number, currency: string): string {
-  try {
-    return numberFormat({
-      style: "currency",
-      currency,
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(value);
-  } catch {
-    // Intl.NumberFormat throws on a malformed ISO 4217 code -- fall back to
-    // a plain number rather than crashing the whole page during render.
-    return `${numberFormat({
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(value)} ${currency}`;
-  }
 }
 
 function formatShares(value: number): string {

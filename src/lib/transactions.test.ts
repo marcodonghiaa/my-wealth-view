@@ -84,6 +84,11 @@ describe("money formatting", () => {
     expect(formatMoney(1234.5, "EUR")).toBe("€1,234.50");
   });
 
+  it("#7 writes a bad currency code as text instead of throwing", () => {
+    expect(formatMoney(12.5, "EURO")).toBe("12.50 EURO");
+    expect(formatMoney(-3, "")).toBe("-3.00");
+  });
+
   it("formats a plain amount without sign or symbol", () => {
     expect(formatAmountPlain(-12.5)).toBe("12.50");
     expect(formatAmountPlain(3)).toBe("3.00");
