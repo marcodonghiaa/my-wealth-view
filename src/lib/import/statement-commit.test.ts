@@ -54,6 +54,14 @@ const inApp = (row: StatementRow, description = row.description) => ({
 });
 
 describe("newRows", () => {
+  it("polish-3 #13 asks the app once per date range when given a cache", async () => {
+    const { c, requests } = client([inApp(coffee)]);
+    const cache = new Map();
+    expect(await newRows(c, [coffee, salary], cache)).toEqual([salary]);
+    expect(await newRows(c, [salary, coffee], cache)).toEqual([salary]);
+    expect(requests).toHaveLength(1);
+  });
+
   it("only treats a row as already there when the currency matches too", async () => {
     const usd = { ...inApp(coffee), currency: "USD" };
     expect(await newRows(client([usd]).c, [coffee])).toEqual([coffee]);

@@ -62,10 +62,15 @@ export function ImportStatement() {
   const [readingPdf, setReadingPdf] = useState(false);
   // Each read checks the app for duplicates over the network; only the latest may show.
   const readId = useRef(0);
+  // What the app already has per date range, so picking columns or options doesn't ask again.
+  const inApp = useRef(new Map<string, Map<string, number>>());
+  const [checking, setChecking] = useState(false);
 
   function reset() {
     // A new file (or closing) makes any read still in flight stale.
     readId.current++;
+    inApp.current.clear();
+    setChecking(false);
     setText(null);
     setStatement(null);
     setHeaders([]);
@@ -85,7 +90,8 @@ export function ImportStatement() {
     setFresh(null);
     try {
       const result = readStatement(csv, cols, opts);
-      const rows = await newRows(client, result.rows);
+      setChecking(true);
+      const rows = await newRows(client, result.rows, inApp.current);
       if (id !== readId.current) return;
       setStatement(result);
       setHeaders(result.headers);
@@ -95,6 +101,8 @@ export function ImportStatement() {
       if (id !== readId.current) return;
       setStatement(null);
       setError(err instanceof Error ? err.message : "Couldn't read the file.");
+    } finally {
+      if (id === readId.current) setChecking(false);
     }
   }
 
@@ -182,6 +190,8 @@ export function ImportStatement() {
       setProgress(null);
       // Some rows were saved before the error: check again so a retry adds only the rest.
       setFresh(null);
+      // The app changed: check again from scratch.
+      inApp.current.clear();
       if (statement) setFresh(await newRows(client, statement.rows).catch(() => null));
     } finally {
       // Rows saved before an error are in the app too, maybe on a new account.
@@ -292,6 +302,7 @@ export function ImportStatement() {
             </div>
           )}
 
+          {checking && <p className="text-xs text-muted-foreground">Checking for duplicates…</p>}
           {statement && fresh && (
             <>
               <p className="text-sm text-foreground">

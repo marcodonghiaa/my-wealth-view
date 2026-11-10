@@ -33,25 +33,20 @@ export interface StatementClient {
 
 const PAGE = 1000; // PostgREST returns at most 1000 rows per request
 
-/**
- * Rows not in the app yet (same day, direction, amount and description). Repeats are counted,
- * not collapsed: two identical coffees in the file stay two, and importing the file again adds
- * nothing because both are then in the app. Compares the bank's own description, not a rename.
- */
-export async function newRows(
+/** How many transactions the app has per dedupe key between two days. */
+async function keysInApp(
   client: StatementClient,
-  rows: Array<StatementRow>,
-): Promise<Array<StatementRow>> {
-  if (rows.length === 0) return [];
-  const dates = rows.map((r) => r.date).sort();
+  first: string,
+  last: string,
+): Promise<Map<string, number>> {
   const inApp = new Map<string, number>();
   for (let from = 0; ; from += PAGE) {
     const { data, error } = await client
       .from("transactions")
       .select("booking_date,amount,currency,credit_debit_indicator,creditor_name")
       .is("deleted_at", null)
-      .gte("booking_date", dates[0]!)
-      .lte("booking_date", dates.at(-1)!)
+      .gte("booking_date", first)
+      .lte("booking_date", last)
       .order("entry_reference")
       .range(from, from + PAGE - 1);
     if (error) throw new Error(error.message);
@@ -67,6 +62,31 @@ export async function newRows(
     }
     if (!data || data.length < PAGE) break;
   }
+  return inApp;
+}
+
+/**
+ * Rows not in the app yet (same day, direction, amount and description). Repeats are counted,
+ * not collapsed: two identical coffees in the file stay two, and importing the file again adds
+ * nothing because both are then in the app. Compares the bank's own description, not a rename.
+ */
+export async function newRows(
+  client: StatementClient,
+  rows: Array<StatementRow>,
+  cache?: Map<string, Map<string, number>>,
+): Promise<Array<StatementRow>> {
+  if (rows.length === 0) return [];
+  const dates = rows.map((r) => r.date).sort();
+  const [first, last] = [dates[0]!, dates.at(-1)!];
+  // Re-reading the same file with other columns or options covers the same days: ask once.
+  const range = `${first}|${last}`;
+  // Only answers already in are reused: a newer read never waits behind an older one.
+  let known = cache?.get(range);
+  if (!known) {
+    known = await keysInApp(client, first, last);
+    cache?.set(range, known);
+  }
+  const inApp = new Map(known);
   return rows.filter((r) => {
     const key = dedupeKey(r);
     const left = inApp.get(key) ?? 0;

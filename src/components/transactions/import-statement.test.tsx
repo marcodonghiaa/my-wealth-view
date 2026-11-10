@@ -212,6 +212,19 @@ describe("ImportStatement", () => {
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ["accounts"] });
   });
 
+  it("polish-3 #13 says it is checking for duplicates while it does", async () => {
+    let release: () => void = () => {};
+    range = () =>
+      new Promise((resolve) => {
+        release = () => resolve({ data: existing, error: null });
+      });
+    upload("card.csv", "Date,Description,Amount\n2026-02-01,Shop,-5");
+    expect(await screen.findByText("Checking for duplicates…")).toBeInTheDocument();
+    await act(async () => release());
+    expect(await screen.findByText(/1 new transaction/)).toBeInTheDocument();
+    expect(screen.queryByText("Checking for duplicates…")).toBeNull();
+  });
+
   it("shows only the latest read when an older duplicate check answers last", async () => {
     upload("card.csv", "Date,Description,Amount\n01/02/2026,Shop,-5");
     expect(await screen.findByText(/1 Feb 2026/)).toBeTruthy();
