@@ -20,6 +20,7 @@ import {
   MATCH_MODES,
   fieldPhrase,
   isLooseMatch,
+  MAX_MATCH_TEXT,
   modeHint,
   modeLabel,
   type MatchField,
@@ -45,7 +46,7 @@ export const Route = createFileRoute("/_authenticated/rules")({
     ],
   }),
   validateSearch: (s: Record<string, unknown>): RulesSearch => ({
-    text: typeof s["text"] === "string" ? s["text"] : undefined,
+    text: typeof s["text"] === "string" ? s["text"].slice(0, MAX_MATCH_TEXT) : undefined,
     category: typeof s["category"] === "string" ? s["category"] : undefined,
   }),
   component: RulesPage,
@@ -260,6 +261,7 @@ function RuleForm({
             type="text"
             autoComplete="off"
             value={matchText}
+            maxLength={MAX_MATCH_TEXT}
             onChange={(e) => setMatchText(e.target.value)}
             placeholder="e.g. Spotify"
             autoFocus

@@ -38,6 +38,9 @@ export type MatchField = (typeof MATCH_FIELDS)[number]["value"];
 export const fieldPhrase = (field: string) =>
   MATCH_FIELDS.find((f) => f.value === field)?.phrase ?? field;
 
+// The database caps rule text at this many characters (category_rules_match_text_length).
+export const MAX_MATCH_TEXT = 200;
+
 // Short text matched anywhere hits unrelated names ("bar" in "Barclays").
 const SHORT_MATCH_TEXT = 4;
 export const isLooseMatch = (text: string, mode: string) =>

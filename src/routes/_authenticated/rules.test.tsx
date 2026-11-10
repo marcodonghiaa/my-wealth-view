@@ -189,6 +189,17 @@ describe("match modes", () => {
     });
   });
 
+  // Polish pass 2 #2: rule text had no limit; the database now caps it at 200 characters.
+  it("caps rule text at 200 characters, typed or from a link", async () => {
+    const validate = Route.options.validateSearch as (s: Record<string, unknown>) => {
+      text?: string;
+    };
+    expect(validate({ text: "a".repeat(300) }).text).toHaveLength(200);
+    renderPage();
+    await openForm();
+    expect(screen.getByLabelText("Text")).toHaveAttribute("maxLength", "200");
+  });
+
   it("opens the form filled in when coming from a transaction", async () => {
     search = { text: "BAR ROMA", category: "Dine Out" };
     renderPage();
