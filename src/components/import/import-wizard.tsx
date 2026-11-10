@@ -29,7 +29,7 @@ const ROLES_BY_KIND: Record<ImportKind, Array<{ role: Role; label: string; requi
   net_worth: [
     { role: "month", label: "Month", required: true },
     { role: "total", label: "Total", required: false },
-    { role: "stocks", label: "Stocks", required: false },
+    { role: "stocks", label: "Stocks & ETFs", required: false },
     { role: "bonds", label: "Bonds", required: false },
     { role: "crypto", label: "Crypto", required: false },
     { role: "cash", label: "Cash", required: false },
@@ -47,7 +47,7 @@ const PREVIEW_COLUMNS: Record<ImportKind, Array<[string, string]>> = {
   net_worth: [
     ["snapshot_date", "Month end"],
     ["total_eur", "Total"],
-    ["stocks_eur", "Stocks"],
+    ["stocks_eur", "Stocks & ETFs"],
     ["bonds_eur", "Bonds"],
     ["crypto_eur", "Crypto"],
     ["cash_eur", "Cash"],
