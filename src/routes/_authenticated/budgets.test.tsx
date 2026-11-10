@@ -233,6 +233,38 @@ describe("Budgets page", () => {
     expect(await screen.findByText("€480.00 left")).toBeTruthy();
   });
 
+  // protects=P1-3 adding a budget keeps the page on screen;
+  // fails_when=the new category's spend read swaps the page for the loading block
+  it("keeps the page on screen while a new budget's history loads", async () => {
+    db["category_budgets"] = [
+      { category: "Groceries", month: "2026-11-01", amount: 300, rollover: false },
+    ];
+    const { container } = renderPage();
+    const add = await screen.findByRole("button", { name: "Add budget" });
+    let blinked = false;
+    const watch = new MutationObserver(() => {
+      if (container.querySelector(".animate-pulse")) blinked = true;
+    });
+    watch.observe(container, { childList: true, subtree: true });
+    fireEvent.click(add);
+    // Dine Out: budget 50, spent 60.
+    expect(await screen.findByText("€10.00 over")).toBeTruthy();
+    watch.disconnect();
+    expect(blinked).toBe(false);
+  });
+
+  it("still shows the loading block when the month changes", async () => {
+    db["category_budgets"] = [
+      { category: "Groceries", month: "2026-09-01", amount: 300, rollover: false },
+    ];
+    const { container } = renderPage();
+    expect(await screen.findByText("€180.00 left")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Previous month" }));
+    // October's figures, never September-to-November's under October's name.
+    expect(container.querySelector(".animate-pulse")).not.toBeNull();
+    expect(await screen.findByText("€20.00 over")).toBeTruthy();
+  });
+
   // protects=P1-2 budgets past the 1000-row cap are all read;
   // fails_when=fetchBudgets stops after one request
   it("reads every budget row past 1000", async () => {

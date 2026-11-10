@@ -150,6 +150,10 @@ function BudgetsPage() {
       ...(await fetchSpend(recentFrom, monthIso)),
     ],
     enabled: budgetsQuery.isSuccess,
+    // A new budget changes the categories in the key: keep this month's page on screen while
+    // its history loads. Another month always starts from its own data.
+    placeholderData: (previous, previousQuery) =>
+      previousQuery?.queryKey[2] === monthIso ? previous : undefined,
   });
   const incomeQuery = useQuery({
     queryKey: ["budget-income", monthIso],
