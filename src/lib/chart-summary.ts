@@ -1,3 +1,5 @@
+import { formatPercent } from "@/lib/locale";
+
 // Text alternatives for charts: screen readers get the numbers the picture shows.
 export function shareSummary(
   title: string,
@@ -7,7 +9,7 @@ export function shareSummary(
   if (total === 0) return `${title}: no data.`;
   const parts = [...items]
     .sort((a, b) => Math.abs(b.value) - Math.abs(a.value))
-    .map((i) => `${i.label} ${Math.round((Math.abs(i.value) / total) * 100)}%`);
+    .map((i) => `${i.label} ${formatPercent(Math.abs(i.value) / total, { digits: 0 })}`);
   return `${title}: ${parts.join(", ")}.`;
 }
 

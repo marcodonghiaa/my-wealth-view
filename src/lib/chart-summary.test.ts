@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
+import { setLocaleOverride } from "@/lib/locale";
 import { shareSummary, trendSummary } from "./chart-summary";
 
 describe("shareSummary", () => {
@@ -28,5 +29,14 @@ describe("trendSummary", () => {
     expect(trendSummary("Net worth", 1000, 1000, (v) => `€${v}`)).toBe(
       "Net worth: unchanged at €1000.",
     );
+  });
+});
+
+afterEach(() => setLocaleOverride(""));
+
+describe("shareSummary in another format", () => {
+  it("polish-3 #9 writes the percent the chosen locale's way", () => {
+    setLocaleOverride("de-DE");
+    expect(shareSummary("Mix", [{ label: "A", value: 1 }])).toBe("Mix: A 100\u00a0%.");
   });
 });
