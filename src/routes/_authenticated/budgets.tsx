@@ -181,7 +181,9 @@ function BudgetsPage() {
   const totalAvailable = lines.reduce((s, l) => s + l.available, 0);
   const totalSpent = lines.reduce((s, l) => s + l.spent, 0);
   const totalBudget = lines.reduce((s, l) => s + l.budget, 0);
-  const income = incomeQuery.data ? monthIncome(incomeQuery.data, monthIso, spread) : null;
+  const income = incomeQuery.data
+    ? monthIncome(incomeQuery.data, monthIso, spread, formatISODate(startOfMonth(new Date())))
+    : null;
 
   const monthLabel = month.toLocaleDateString("en-GB", { month: "long", year: "numeric" });
   const canGoNext =

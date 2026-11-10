@@ -160,19 +160,20 @@ export function suggestedBudgets(
 
 /**
  * Income for a month. Spread: 12 months divided evenly, so a 13th or 14th salary in June or
- * December counts a bit in every month instead of as a windfall. The 12 months end with this one
- * once it has income; before payday they end with the month before, so an unfinished month
- * doesn't pull the average down. Fewer than 12 months of history divide by the months since the
- * first income.
+ * December counts a bit in every month instead of as a windfall. The 12 months end with this one,
+ * except the current month (`current`) before payday: then they end with the month before, so an
+ * unfinished month doesn't pull the average down. A past month without income keeps its window.
+ * Fewer than 12 months of history divide by the months since the first income.
  */
 export function monthIncome(
   incomeByMonth: ReadonlyMap<string, number>,
   month: string,
   spread: boolean,
+  current: string = month,
 ): number {
   const own = incomeByMonth.get(month) ?? 0;
   if (!spread) return cents(own);
-  const last = own > 0 ? month : addMonths(month, -1);
+  const last = own > 0 || month < current ? month : addMonths(month, -1);
   const window = monthsBetween(addMonths(last, -11), last);
   const firstWithIncome = window.findIndex((m) => (incomeByMonth.get(m) ?? 0) > 0);
   if (firstWithIncome < 0) return 0;

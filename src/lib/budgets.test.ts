@@ -262,6 +262,14 @@ describe("monthIncome", () => {
     // Dec before payday: Dec 2025 has none, so Jan–Nov 2026 (11 months, incl. the June 14th) = 24000 / 11.
     expect(monthIncome(year, "2026-12-01", true)).toBe(2181.82);
   });
+  // protects=a past month without income (between jobs) keeps its own 12 months;
+  // fails_when=the before-payday shift also applies to finished months
+  it("keeps the window on a past month that had no income", () => {
+    const gap = new Map(income);
+    gap.delete("2026-12-01");
+    // Dec is over and had none: Jan–Dec 2026 = 24000 / 12, not Dec 2025–Nov 2026 = 24000 / 11.
+    expect(monthIncome(gap, "2026-12-01", true, "2027-02-01")).toBe(2000);
+  });
   it("is 0 without any income", () => {
     expect(monthIncome(new Map(), "2026-03-01", true)).toBe(0);
   });
