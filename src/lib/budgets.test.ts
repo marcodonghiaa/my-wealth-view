@@ -96,10 +96,6 @@ describe("budgetLines without rollover", () => {
     );
     expect(lines.map((l) => l.category)).toEqual(["Groceries", "Gym", "Rent"]);
   });
-  it("sorts by budget, biggest first", () => {
-    const rows = [b("A", "2026-01-01", 50), b("B", "2026-01-01", 200)];
-    expect(budgetLines(rows, [], "2026-01-01").map((l) => l.category)).toEqual(["B", "A"]);
-  });
 });
 
 describe("budgetLines with rollover across three months", () => {

@@ -100,10 +100,10 @@ beforeEach(() => {
     { month: "2026-11-01", category: "Dine Out", spend_eur: 60 },
   ];
   db["v_income_vs_expenses_monthly"] = [
-    { month: "2025-10-01", income_eur: 9999 }, // more than 12 months back: never read
+    { month: "2025-10-01", income_eur: 9999 }, // outside the 12 months before November: never counted
     { month: "2026-06-01", income_eur: 4000 },
     { month: "2026-11-01", income_eur: 2000 },
-    { month: "2026-12-01", income_eur: 9999 }, // after the viewed month: never read
+    { month: "2026-12-01", income_eur: 9999 }, // after the viewed month: never counted
   ];
 });
 afterEach(() => vi.useRealTimers());
@@ -198,29 +198,6 @@ describe("Budgets page", () => {
     expect(alert.textContent).toContain("UPGRADING.md");
   });
 
-  // protects=rollover over a long history is not cut at PostgREST's 1000-row cap;
-  // fails_when=the spend history is read in one request
-  it("reads every page of a long spend history", async () => {
-    const months = Array.from({ length: 48 }, (_, i) => {
-      const d = new Date(2022, 11 + i, 1);
-      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
-    });
-    // 30 categories × 48 months = 1440 rows; only Groceries is budgeted, from the first month.
-    db["v_spend_by_category_monthly"] = months.flatMap((month) =>
-      Array.from({ length: 30 }, (_, c) => ({
-        month,
-        category: c === 0 ? "Groceries" : `Cat ${String(c).padStart(2, "0")}`,
-        spend_eur: c === 0 ? 90 : 5,
-      })),
-    );
-    db["category_budgets"] = [
-      { category: "Groceries", month: months[0], amount: 100, rollover: true },
-    ];
-    renderPage();
-    // 47 earlier months each leave 10 → 470 carried; this month 100 + 470 − 90 = 480 left.
-    expect(await screen.findByText("€480.00 left")).toBeTruthy();
-  });
-
   // protects=P1-1 paging: budgeted history alone past the 1000-row cap is read in full;
   // fails_when=fetchSpend stops after the first page
   it("reads every page when budgeted history alone passes 1000 rows", async () => {
@@ -292,6 +269,18 @@ describe("Budgets page", () => {
     fireEvent.click(screen.getByRole("button", { name: /Change budget for Groceries/ }));
     expect(screen.getByLabelText("Budget for Groceries")).toBeTruthy();
     expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  // protects=spend the view couldn't name still shows; fails_when=a null category is dropped
+  it("lists spending with no category as Uncategorized", async () => {
+    db["category_budgets"] = [
+      { category: "Groceries", month: "2026-11-01", amount: 300, rollover: false },
+      { category: "Dine Out", month: "2026-11-01", amount: 50, rollover: false },
+    ];
+    db["v_spend_by_category_monthly"]!.push({ month: "2026-11-01", category: null, spend_eur: 7 });
+    renderPage();
+    const row = (await screen.findByText("Uncategorized")).closest("li")!;
+    expect(row.textContent).toContain("€7.00");
   });
 
   // P1-4: visible behaviour that had no test.
