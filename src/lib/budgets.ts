@@ -1,7 +1,8 @@
 // Monthly budgets per category (table category_budgets). A row holds from its month onward
 // until a later row for the same category changes it; amount 0 means no budget from then on.
 // With rollover on, a month's leftover (or overspend) moves into the next month:
-// carried into next = carried in + budget − spent. Turning rollover off starts the next month at 0.
+// carried into next = carried in + budget − spent. Turning rollover on or off in a month changes
+// what that month passes on to the next; what it received stays.
 
 export interface BudgetRow {
   category: string;
@@ -95,7 +96,9 @@ export function budgetLines(
     for (const m of monthsBetween(first, month)) {
       const row = effectiveBudget(rows, category, m)!;
       const budget = Number(row.amount);
-      const carriedIn = row.rollover ? carry : 0;
+      // What last month passed on (0 unless its rollover was on): the switch takes effect from
+      // the next month, both ways.
+      const carriedIn = carry;
       const available = budget + carriedIn;
       const s = spent.get(spendKey(m, category)) ?? 0;
       carry = row.rollover ? available - s : 0;
