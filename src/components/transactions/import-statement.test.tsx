@@ -34,7 +34,7 @@ const CSV = [
   "24/04/2026;5.000,00;;Bonifico papà",
 ].join("\n");
 
-function upload(name: string, content: string | Uint8Array) {
+function upload(name: string, content: string | Uint8Array, size?: number) {
   const queryClient = new QueryClient();
   const invalidate = vi.spyOn(queryClient, "invalidateQueries");
   render(
@@ -44,6 +44,7 @@ function upload(name: string, content: string | Uint8Array) {
   );
   fireEvent.click(screen.getByRole("button", { name: "Import statement" }));
   const file = new File([content as BlobPart], name, { type: "text/csv" });
+  if (size != null) Object.defineProperty(file, "size", { value: size });
   fireEvent.change(screen.getByLabelText("Statement file"), { target: { files: [file] } });
   return { invalidate };
 }
@@ -85,6 +86,14 @@ describe("ImportStatement", () => {
     ];
     upload("statement.csv", CSV);
     expect(await screen.findByText(/1 new transaction, 1 already here/)).toBeTruthy();
+  });
+
+  it("#4 refuses a huge file before reading it into memory", async () => {
+    const read = vi.spyOn(File.prototype, "arrayBuffer");
+    upload("huge.csv", "Date,Description,Amount", 5_000_000_000);
+    expect(await screen.findByRole("alert")).toHaveTextContent(/too large/i);
+    expect(read).not.toHaveBeenCalled();
+    read.mockRestore();
   });
 
   it("asks for a CSV when given an Excel file", async () => {
