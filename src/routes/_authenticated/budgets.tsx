@@ -503,6 +503,7 @@ function BudgetLineRow({
               aria-label={`Change budget for ${line.category}, now ${formatEur(line.budget)}`}
               onClick={() => {
                 setDraft(String(line.budget));
+                setInvalid(false);
                 setEditing(true);
               }}
             >

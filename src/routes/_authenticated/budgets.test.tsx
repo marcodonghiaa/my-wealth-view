@@ -278,6 +278,22 @@ describe("Budgets page", () => {
     expect(spendReads.most).toBe(2);
   });
 
+  // protects=P2-3 the amount message belongs to one attempt; fails_when=it's still there on reopen
+  it("clears the amount message when the editor is opened again", async () => {
+    db["category_budgets"] = [
+      { category: "Groceries", month: "2026-11-01", amount: 300, rollover: false },
+    ];
+    renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: /Change budget for Groceries/ }));
+    fireEvent.change(screen.getByLabelText("Budget for Groceries"), { target: { value: "" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    await screen.findByRole("alert");
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    fireEvent.click(screen.getByRole("button", { name: /Change budget for Groceries/ }));
+    expect(screen.getByLabelText("Budget for Groceries")).toBeTruthy();
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
   // P1-4: visible behaviour that had no test.
   it("says Left to spend or Over budget above the total", async () => {
     db["category_budgets"] = [
