@@ -45,6 +45,12 @@ describe("appLocale", () => {
     expect(appLocale()).toBe("en-GB");
   });
 
+  it("polish-3 #18 falls back to en-GB when the browser reports a broken locale", () => {
+    setBrowser("not a locale!!");
+    expect(appLocale()).toBe("en-GB");
+    expect(formatNumber(1.5, 1)).toBe("1.5");
+  });
+
   it("falls back to en-GB on a broken value", () => {
     setBrowser("");
     expect(appLocale()).toBe("en-GB");
