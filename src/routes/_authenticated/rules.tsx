@@ -135,7 +135,12 @@ function RulesPage() {
           ))}
         </div>
       ) : rulesQuery.isError ? (
-        <Alert>Failed to load rules.</Alert>
+        <div className="flex flex-wrap items-center gap-3">
+          <Alert>Failed to load rules.</Alert>
+          <Button variant="quiet" size="sm" onClick={() => void rulesQuery.refetch()}>
+            Try again
+          </Button>
+        </div>
       ) : rules.length === 0 ? (
         <GroupedList>
           <EmptyState

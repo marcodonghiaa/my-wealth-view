@@ -349,6 +349,16 @@ describe("rules list states", () => {
     expect(await screen.findByText("Failed to load rules.")).toBeTruthy();
   });
 
+  // Polish pass 3 #9: the error had no way to try again.
+  it("loads the rules again from Try again", async () => {
+    db.rules = "error";
+    renderPage();
+    await screen.findByText("Failed to load rules.");
+    db.rules = "ok";
+    fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+    expect(await screen.findByText("“Netflix”")).toBeTruthy();
+  });
+
   it("explains how to make a first rule when there are none", async () => {
     db.rules = "empty";
     renderPage();
