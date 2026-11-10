@@ -17,12 +17,6 @@ export function shortDate(iso: string, today = new Date()): string {
 }
 
 /** An amount in the chosen locale's format: "€12.34", "12,34 €". A code Intl rejects stays as text. */
-export function moneyAmount(amount: number, currency: string): string {
-  try {
-    return formatMoney(amount, currency);
-  } catch {
-    return `${amount.toFixed(2)} ${currency}`;
-  }
-}
+export const moneyAmount = formatMoney;
 
 export const money = (cents: number, currency: string) => moneyAmount(cents / 100, currency);
