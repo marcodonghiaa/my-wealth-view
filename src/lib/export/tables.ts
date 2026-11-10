@@ -3,6 +3,7 @@ export const EXPORT_TABLES = [
   { name: "accounts", order: ["uid"] },
   { name: "transactions", order: ["account_uid", "entry_reference"] },
   { name: "category_rules", order: ["id"] },
+  { name: "cd_holdings", order: ["id"] },
   { name: "crypto_holdings", order: ["source", "asset_symbol"] },
   { name: "portfolio_holdings", order: ["broker_label", "isin"] },
   { name: "holding_trades", order: ["id"] },

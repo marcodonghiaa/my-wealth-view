@@ -96,6 +96,39 @@ describe("AccountMenu", () => {
   });
 });
 
+describe("AccountMenu delete", () => {
+  it("asks to confirm inline, then deletes the manual debt", async () => {
+    rpc.mockResolvedValue({ data: null, error: null });
+    const { invalidate } = setup(<AccountMenu title="Car loan" accounts={[manual]} />);
+    fireEvent.click(screen.getByRole("button", { name: "Edit Car loan" }));
+    fireEvent.click(screen.getByRole("button", { name: "Delete" }));
+    expect(rpc).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Delete for good" }));
+    await waitFor(() =>
+      expect(rpc).toHaveBeenCalledWith("delete_manual_debt", { p_account: "u2" }),
+    );
+    await waitFor(() => expect(invalidate).toHaveBeenCalledWith({ queryKey: ["net-worth-daily"] }));
+  });
+
+  it("can be cancelled, and shows the server's error", async () => {
+    rpc.mockResolvedValue({ data: null, error: { message: "not a manual debt" } });
+    setup(<AccountMenu title="Car loan" accounts={[manual]} />);
+    fireEvent.click(screen.getByRole("button", { name: "Edit Car loan" }));
+    fireEvent.click(screen.getByRole("button", { name: "Delete" }));
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(screen.queryByRole("button", { name: "Delete for good" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Delete" }));
+    fireEvent.click(screen.getByRole("button", { name: "Delete for good" }));
+    expect(await screen.findByText("not a manual debt")).toBeInTheDocument();
+  });
+
+  it("is not offered on a bank account", () => {
+    setup(<AccountMenu title="Demo Bank" accounts={[bank]} />);
+    fireEvent.click(screen.getByRole("button", { name: "Edit Demo Bank" }));
+    expect(screen.queryByRole("button", { name: "Delete" })).not.toBeInTheDocument();
+  });
+});
+
 describe("AddDebt", () => {
   const open = () => fireEvent.click(screen.getByRole("button", { name: "Add a debt" }));
 

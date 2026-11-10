@@ -338,6 +338,22 @@ class Store {
     return { data: uid, error: null };
   }
   /** Mirror of the database function set_manual_balance: today's balance of a manual account. */
+  /** Mirror of the database function delete_manual_debt: the debt leaves net worth, past days too. */
+  deleteManualDebt(uid: unknown): Result {
+    const account = this.db["accounts"]!.find((a) => a["uid"] === uid);
+    if (!account) return { data: null, error: { message: "account not found" } };
+    if (!account["manual"] || !isDebt(account["account_type"] as string | null))
+      return { data: null, error: { message: "not a manual debt" } };
+    const mine = (r: Row) => r["account_uid"] === uid;
+    for (const s of this.db["net_worth_snapshots"]!.filter(mine))
+      this.moveNetWorth(s["snapshot_date"], [Number(s["eur_equivalent"] ?? 0), true], [0, true]);
+    this.db["net_worth_snapshots"] = this.db["net_worth_snapshots"]!.filter((r) => !mine(r));
+    this.db["accounts"] = this.db["accounts"]!.filter((a) => a !== account);
+    this.db["v_bank_accounts_latest"] = this.db["v_bank_accounts_latest"]!.filter(
+      (r) => r["uid"] !== uid,
+    );
+    return { data: null, error: null };
+  }
   setManualBalance(uid: unknown, value: unknown): Result {
     const account = this.db["accounts"]!.find((a) => a["uid"] === uid);
     if (!account) return { data: null, error: { message: "account not found" } };
@@ -811,26 +827,28 @@ export function createFakeClient(now: Date = new Date()): SupabaseClient<Databas
                     ? store.addManualDebt(args)
                     : fn === "set_manual_balance"
                       ? store.setManualBalance(args["p_account"], args["p_amount"])
-                      : fn === "set_holding_quantity"
-                        ? {
-                            data: store.setHoldingQuantity(
-                              args["p_kind"],
-                              args["p_key"],
-                              args["p_quantity"],
-                              args["p_source"],
-                            ),
-                            error: null,
-                          }
-                        : fn === "delete_holding"
+                      : fn === "delete_manual_debt"
+                        ? store.deleteManualDebt(args["p_account"])
+                        : fn === "set_holding_quantity"
                           ? {
-                              data: store.deleteHolding(
+                              data: store.setHoldingQuantity(
                                 args["p_kind"],
                                 args["p_key"],
+                                args["p_quantity"],
                                 args["p_source"],
                               ),
                               error: null,
                             }
-                          : { data: null, error: DISABLED },
+                          : fn === "delete_holding"
+                            ? {
+                                data: store.deleteHolding(
+                                  args["p_kind"],
+                                  args["p_key"],
+                                  args["p_source"],
+                                ),
+                                error: null,
+                              }
+                            : { data: null, error: DISABLED },
     functions: {
       invoke: async (name: string, opts?: { body?: Record<string, unknown> }) =>
         name === "add-holding"

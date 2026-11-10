@@ -478,6 +478,26 @@ describe("fake client: account types and debts", () => {
     expect(after.total_eur).toBeCloseTo(before.total_eur! - 400, 1);
   });
 
+  // protects=a deleted debt leaves the list and net worth
+  it("delete_manual_debt removes the debt and its effect on net worth", async () => {
+    const c = fresh();
+    const before = await today(c);
+    const { data: uid } = await rpc(c, "add_manual_debt", { p_name: "Loan", p_amount: 500 });
+    expect((await rpc(c, "delete_manual_debt", { p_account: uid })).error).toBeNull();
+    const { data } = await c
+      .from("v_bank_accounts_latest")
+      .select("*")
+      .eq("uid", uid as string);
+    expect(data).toHaveLength(0);
+    expect((await today(c)).total_eur).toBeCloseTo(before.total_eur!, 1);
+    expect((await rpc(c, "delete_manual_debt", { p_account: uid })).error?.message).toBe(
+      "account not found",
+    );
+    expect(
+      (await rpc(c, "delete_manual_debt", { p_account: "demo-acc-card" })).error?.message,
+    ).toBe("not a manual debt");
+  });
+
   it("add_manual_debt converts another currency at the demo rate", async () => {
     const c = fresh();
     const { data: uid } = await rpc(c, "add_manual_debt", {

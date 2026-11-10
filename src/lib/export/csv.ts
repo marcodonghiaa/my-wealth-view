@@ -22,9 +22,20 @@ export function toCsv(columns: ReadonlyArray<string>, rows: ReadonlyArray<Export
 const columnsOf = (rows: ReadonlyArray<ExportRow>, skip: ReadonlyArray<string>) =>
   [...new Set(rows.flatMap((r) => Object.keys(r)))].filter((c) => !skip.includes(c));
 
-const HOLDING_COLUMNS = ["kind", "name", "identifier", "type", "source", "amount"] as const;
+const HOLDING_COLUMNS = [
+  "kind",
+  "name",
+  "identifier",
+  "type",
+  "source",
+  "amount",
+  "currency",
+  "annual_rate",
+  "start_date",
+  "maturity_date",
+] as const;
 
-// amount is shares for portfolio, coins for crypto.
+// amount is shares for portfolio, coins for crypto, principal for a deposit.
 function holdingRows(d: ExportData): Array<ExportRow> {
   return [
     ...d.portfolio_holdings.map((h) => ({
@@ -41,6 +52,16 @@ function holdingRows(d: ExportData): Array<ExportRow> {
       identifier: h["asset_symbol"],
       source: h["source"],
       amount: h["amount"],
+    })),
+    ...d.cd_holdings.map((h) => ({
+      kind: "cd",
+      name: h["label"],
+      source: h["bank_label"],
+      amount: h["principal"],
+      currency: h["currency"],
+      annual_rate: h["annual_rate"],
+      start_date: h["start_date"],
+      maturity_date: h["maturity_date"],
     })),
   ];
 }

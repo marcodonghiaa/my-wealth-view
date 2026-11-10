@@ -103,6 +103,63 @@ function OwedForm({ account, onDone }: { account: MenuAccount; onDone: () => voi
   );
 }
 
+// For a debt added by mistake or paid off: gone from the list and from net worth.
+function DeleteDebt({ account, onDone }: { account: MenuAccount; onDone: () => void }) {
+  const queryClient = useQueryClient();
+  const [confirm, setConfirm] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const remove = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.rpc("delete_manual_debt", { p_account: account.uid });
+      if (error) throw rpcError(error);
+    },
+    onSuccess: () => {
+      toast.success(`${account.name} deleted`);
+      refresh(queryClient);
+      onDone();
+    },
+    onError: (err) => setError(err instanceof Error ? err.message : "Couldn't delete"),
+  });
+  if (!confirm)
+    return (
+      <button
+        type="button"
+        onClick={() => setConfirm(true)}
+        className="min-h-11 w-full rounded-lg px-3 text-sm text-muted-foreground hover:bg-muted"
+      >
+        Delete
+      </button>
+    );
+  return (
+    <div className="space-y-2 rounded-lg bg-negative/10 p-3">
+      <p className="text-xs text-foreground">Deletes {account.name}. It also leaves net worth.</p>
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={() => setConfirm(false)}
+          className="min-h-11 flex-1 rounded-lg border px-3 text-sm font-medium"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          onClick={() => remove.mutate()}
+          disabled={remove.isPending}
+          className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-lg bg-negative px-3 text-sm font-medium text-white disabled:opacity-50"
+        >
+          {remove.isPending && <Loader2 className="size-4 animate-spin" />}
+          Delete for good
+        </button>
+      </div>
+      {error && (
+        <p role="alert" className="text-sm text-negative">
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
+
 // The account's menu: its type (for when the bank got it wrong) and, for a debt typed in by
 // hand, what is owed now. One menu per bank row covers that bank's accounts.
 export function AccountMenu({ title, accounts }: { title: string; accounts: Array<MenuAccount> }) {
@@ -153,7 +210,12 @@ export function AccountMenu({ title, accounts }: { title: string; accounts: Arra
                 ))}
               </select>
             </label>
-            {a.manual && <OwedForm account={a} onDone={() => setOpen(false)} />}
+            {a.manual && (
+              <>
+                <OwedForm account={a} onDone={() => setOpen(false)} />
+                <DeleteDebt account={a} onDone={() => setOpen(false)} />
+              </>
+            )}
           </div>
         ))}
         {error && (

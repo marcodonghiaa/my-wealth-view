@@ -1133,6 +1133,10 @@ export type Database = {
         Args: { p_account: string; p_amount: number };
         Returns: undefined;
       };
+      delete_manual_debt: {
+        Args: { p_account: string };
+        Returns: undefined;
+      };
       resolve_transfer_pair: {
         Args: { p_pair: string; p_keep: boolean };
         Returns: undefined;
