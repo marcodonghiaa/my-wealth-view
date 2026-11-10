@@ -1,5 +1,5 @@
 import { BROKERS } from "@/lib/brokers";
-import type { CsvResult, ParseContext } from "@/lib/brokers";
+import type { BrokerParser, CsvResult, ParseContext } from "@/lib/brokers";
 import { parseDate, splitLine } from "@/lib/brokers/csv";
 import { netShares, parseAmount } from "@/lib/trades";
 import type { Trade } from "@/lib/trades";
@@ -11,8 +11,11 @@ import type { Trade } from "@/lib/trades";
 
 export type { CsvResult } from "@/lib/brokers";
 
-/** All or nothing: any error means nothing is saved, so a half-imported holding can't look right. */
-export function parseTradesCsv(text: string, ctx: ParseContext): CsvResult {
+/**
+ * All or nothing: any error means nothing is saved, so a half-imported holding can't look right.
+ * `from` is the broker you said the file comes from: then only that broker's format is accepted.
+ */
+export function parseTradesCsv(text: string, ctx: ParseContext, from?: BrokerParser): CsvResult {
   const { kind, knownKeys, today } = ctx;
   const lines = text.split(/\r?\n/).filter((l) => l.trim() !== "");
   if (lines.length === 0) return { trades: [], errors: ["The file is empty."], notes: [] };
@@ -20,7 +23,17 @@ export function parseTradesCsv(text: string, ctx: ParseContext): CsvResult {
   const headerLine = lines[0]!.replace(/^\uFEFF/, "");
   const separator = [";", "\t", ","].find((s) => headerLine.includes(s)) ?? ",";
   const header = splitLine(headerLine, separator).map((h) => h.toLowerCase());
-  const broker = BROKERS.find((b) => b.detect(header));
+  if (from && !from.detect(header)) {
+    return {
+      trades: [],
+      errors: [
+        `This doesn't look like a ${from.name} export. If ${from.name} changed its file, tell us and we'll fix it. Nothing was imported.`,
+      ],
+      notes: [],
+      unknownFormat: true,
+    };
+  }
+  const broker = from ?? BROKERS.find((b) => b.detect(header));
   if (broker) return broker.parse(lines, separator, header, ctx);
 
   const keyName = kind === "stock" ? "isin" : "symbol";

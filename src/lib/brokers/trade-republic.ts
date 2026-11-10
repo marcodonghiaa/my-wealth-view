@@ -16,7 +16,10 @@ export const tradeRepublic: BrokerParser = {
   id: "trade_republic",
   name: "Trade Republic",
   country: "DE, IT, FR, ES and more",
-  verifiedAt: "2026-11-01",
+  kind: "stock",
+  howToExport:
+    "In the Trade Republic app: Profile > Documents > export your transactions as CSV. Upload the file as it comes.",
+  verifiedAt: "2026-11-10",
   detect: (header) => COLUMNS.every((c) => header.includes(c)),
   parse(lines, separator, header, { kind, knownKeys, today }) {
     if (kind !== "stock") {

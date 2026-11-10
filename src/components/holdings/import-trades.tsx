@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2 } from "lucide-react";
+import { ChevronLeft, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -31,11 +31,15 @@ async function fetchHoldings(kind: "stock" | "crypto"): Promise<Map<string, numb
   return new Map(data.map((r) => [r.asset_symbol.toUpperCase(), r.amount]));
 }
 
-/** Paste or upload a CSV of trades; shows what it found and saves only on your say-so. */
+/** Pick where the trades come from, upload the file; shows what it found and saves only on your say-so. */
 export function ImportTrades({ kind, saved }: { kind: "stock" | "crypto"; saved: Array<Trade> }) {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [text, setText] = useState("");
+  // Where the file comes from: a broker's id, "spreadsheet" for your own columns, or "other".
+  const [from, setFrom] = useState<string | null>(null);
+  const brokers = BROKERS.filter((b) => b.kind === kind);
+  const broker = brokers.find((b) => b.id === from);
   const keyColumn = kind === "stock" ? "isin" : "symbol";
 
   const keys = useQuery({
@@ -47,9 +51,13 @@ export function ImportTrades({ kind, saved }: { kind: "stock" | "crypto"; saved:
   const parsed = useMemo(
     () =>
       text.trim() && keys.data
-        ? parseTradesCsv(text, { kind, knownKeys: new Set(keys.data.keys()), today: localToday() })
+        ? parseTradesCsv(
+            text,
+            { kind, knownKeys: new Set(keys.data.keys()), today: localToday() },
+            broker,
+          )
         : null,
-    [text, keys.data, kind],
+    [text, keys.data, kind, broker],
   );
   const fresh = useMemo(() => (parsed ? newTrades(parsed.trades, saved) : []), [parsed, saved]);
   const updates = useMemo(
@@ -81,6 +89,7 @@ export function ImportTrades({ kind, saved }: { kind: "stock" | "crypto"; saved:
     onSuccess: () => {
       toast.success(`${fresh.length} trade${fresh.length === 1 ? "" : "s"} imported`);
       setText("");
+      setFrom(null);
       setOpen(false);
     },
     onSettled: () => {
@@ -93,7 +102,16 @@ export function ImportTrades({ kind, saved }: { kind: "stock" | "crypto"; saved:
   });
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        if (!next) {
+          setText("");
+          setFrom(null);
+        }
+      }}
+    >
       <DialogTrigger className="-my-2.5 inline-flex min-h-11 items-center text-xs text-primary underline-offset-2 hover:underline">
         Import trades from CSV
       </DialogTrigger>
@@ -101,29 +119,87 @@ export function ImportTrades({ kind, saved }: { kind: "stock" | "crypto"; saved:
         <DialogHeader>
           <DialogTitle>Import trades</DialogTitle>
           <DialogDescription>
-            Needs a header row with <code>date, side, {keyColumn}, shares, price</code>, and
-            optionally <code>fee</code>. Side is buy or sell; price is per share in EUR.
-            {kind === "stock" &&
-              ` Or upload a ${BROKERS.map((b) => b.name).join(", ")} export as it comes.`}
+            {from === null
+              ? "Where are these trades from?"
+              : broker
+                ? broker.howToExport
+                : from === "spreadsheet"
+                  ? `A header row with date, side, ${keyColumn}, shares, price and optionally fee. Side is buy or sell; price is per share in EUR.`
+                  : "Alopex doesn't read this broker's export yet."}
           </DialogDescription>
         </DialogHeader>
-        <input
-          type="file"
-          accept=".csv,.tsv,.txt,text/csv"
-          aria-label="CSV file"
-          onChange={(e) => {
-            void e.target.files?.[0]?.text().then(setText);
-          }}
-          className="text-sm"
-        />
-        <textarea
-          aria-label="CSV text"
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          rows={6}
-          placeholder={`date,side,${keyColumn},shares,price,fee`}
-          className={cn(fieldClass(), "h-auto py-2 font-mono md:text-sm")}
-        />
+        {from === null ? (
+          <div className="flex flex-col gap-2">
+            {[
+              ...brokers.map((b) => ({ id: b.id, label: b.name, hint: b.country })),
+              { id: "spreadsheet", label: "My own spreadsheet", hint: "Any CSV with our columns" },
+              { id: "other", label: "Another broker", hint: "Not listed here" },
+            ].map((o) => (
+              <button
+                key={o.id}
+                type="button"
+                onClick={() => setFrom(o.id)}
+                className="flex min-h-11 items-center justify-between rounded-md border px-3 py-2 text-left text-sm hover:bg-muted"
+              >
+                <span className="font-medium">{o.label}</span>
+                <span className="text-xs text-muted-foreground">{o.hint}</span>
+              </button>
+            ))}
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => {
+              setFrom(null);
+              setText("");
+            }}
+            className="-my-2 inline-flex min-h-11 items-center gap-1 self-start text-xs text-muted-foreground hover:text-foreground"
+          >
+            <ChevronLeft className="size-3" /> Choose another source
+          </button>
+        )}
+        {from === "other" && (
+          <div className="flex flex-col gap-2 text-sm">
+            <p>
+              <a
+                href={NEW_BROKER_URL}
+                target="_blank"
+                rel="noreferrer"
+                className="text-primary underline-offset-2 hover:underline"
+              >
+                Ask for your broker
+              </a>{" "}
+              with a sample of its export, personal details removed. Until then, put your trades in
+              a spreadsheet with our columns.
+            </p>
+            <Button variant="quiet" onClick={() => setFrom("spreadsheet")}>
+              Use a spreadsheet
+            </Button>
+          </div>
+        )}
+        {from !== null && from !== "other" && (
+          <>
+            <input
+              type="file"
+              accept=".csv,.tsv,.txt,text/csv"
+              aria-label="CSV file"
+              onChange={(e) => {
+                void e.target.files?.[0]?.text().then(setText);
+              }}
+              className="text-sm"
+            />
+            {from === "spreadsheet" && (
+              <textarea
+                aria-label="CSV text"
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                rows={6}
+                placeholder={`date,side,${keyColumn},shares,price,fee`}
+                className={cn(fieldClass(), "h-auto py-2 font-mono md:text-sm")}
+              />
+            )}
+          </>
+        )}
         {keys.isError && (
           <p role="alert" className="text-sm text-negative">
             Couldn't load your holdings: {keys.error.message}
@@ -174,18 +250,20 @@ export function ImportTrades({ kind, saved }: { kind: "stock" | "crypto"; saved:
             {save.error.message}
           </p>
         )}
-        <Button
-          disabled={
-            !parsed ||
-            parsed.errors.length > 0 ||
-            (fresh.length === 0 && updates.length === 0) ||
-            save.isPending
-          }
-          onClick={() => save.mutate()}
-        >
-          {save.isPending && <Loader2 className="size-4 animate-spin" />}
-          Save trades
-        </Button>
+        {from !== null && from !== "other" && (
+          <Button
+            disabled={
+              !parsed ||
+              parsed.errors.length > 0 ||
+              (fresh.length === 0 && updates.length === 0) ||
+              save.isPending
+            }
+            onClick={() => save.mutate()}
+          >
+            {save.isPending && <Loader2 className="size-4 animate-spin" />}
+            Save trades
+          </Button>
+        )}
       </DialogContent>
     </Dialog>
   );

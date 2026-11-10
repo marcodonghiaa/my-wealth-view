@@ -7,7 +7,7 @@ imported as a plain CSV with the columns `date, side, isin, shares, price, fee`.
 
 | Broker         | Accounts in             | File | Last checked with a real export |
 | -------------- | ----------------------- | ---- | ------------------------------- |
-| Trade Republic | DE, IT, FR, ES and more | CSV  | 2026-11-01                      |
+| Trade Republic | DE, IT, FR, ES and more | CSV  | 2026-11-10                      |
 
 ## Your broker isn't here, or stopped working?
 

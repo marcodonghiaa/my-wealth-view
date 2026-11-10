@@ -81,4 +81,24 @@ describe("Trade Republic sample", () => {
     expect(result.trades).toEqual([]);
     expect(result.unknownFormat).toBe(true);
   });
+
+  it("when you say it's from Trade Republic, it reads it as Trade Republic", () => {
+    const { trades, errors } = parseTradesCsv(fixture("trade_republic"), ctx, BROKERS[0]);
+    expect(errors).toEqual([]);
+    expect(trades).toHaveLength(4);
+  });
+
+  it("when you say it's from Trade Republic but it isn't, it says so and imports nothing", () => {
+    const plain = "date,side,isin,shares,price\n2026-01-02,buy,XX0000000001,1,100";
+    const result = parseTradesCsv(plain, ctx, BROKERS[0]);
+    expect(result.trades).toEqual([]);
+    expect(result.unknownFormat).toBe(true);
+    expect(result.errors[0]).toMatch(/doesn't look like a Trade Republic export/);
+  });
+});
+
+describe("every broker", () => {
+  it.each(BROKERS.map((b) => [b.name, b] as const))("%s says how to export its file", (_, b) => {
+    expect(b.howToExport.length).toBeGreaterThan(20);
+  });
 });

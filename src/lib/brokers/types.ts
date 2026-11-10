@@ -26,6 +26,10 @@ export interface BrokerParser {
   id: string;
   name: string;
   country: string;
+  /** Which page imports it: stock trades on Portfolio, coins on Crypto. */
+  kind: "stock" | "crypto";
+  /** Where to find the file in the broker's app, shown before you upload. */
+  howToExport: string;
   /** Last day a real export was imported without problems, or null if only the sample was tested. */
   verifiedAt: string | null;
   /** Lowercased header cells. Must be strict: two parsers may never accept the same file. */
