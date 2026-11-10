@@ -118,6 +118,29 @@ describe("Rules list", () => {
   });
 });
 
+describe("form focus and keys", () => {
+  it("focuses Text on open; Escape closes and focus returns to New rule", async () => {
+    renderPage();
+    await openForm();
+    expect(screen.getByLabelText("Text")).toHaveFocus();
+    fireEvent.keyDown(screen.getByLabelText("Text"), { key: "Escape" });
+    expect(screen.queryByLabelText("Text")).toBeNull();
+    expect(screen.getByRole("button", { name: "New rule" })).toHaveFocus();
+  });
+
+  // A category from a link that isn't in your list (renamed since) must not be saved unseen.
+  it("ignores a prefilled category that isn't in your list", async () => {
+    inserted.length = 0;
+    search = { text: "BAR ROMA", category: "Gone category" };
+    renderPage();
+    expect(await screen.findByLabelText("Set category")).toHaveValue("");
+    fireEvent.click(screen.getByRole("button", { name: "Add rule" }));
+    expect(screen.getByRole("alert")).toHaveTextContent("Pick a category, a type, or both.");
+    expect(inserted).toHaveLength(0);
+    search = {};
+  });
+});
+
 describe("flow rules", () => {
   // Regression risk: a rule from To review has no category or type and looked empty.
   it("shows a flow-only rule's effect", async () => {

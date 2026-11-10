@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowRight, Loader2, Plus, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
@@ -85,6 +85,13 @@ const CHIP = "rounded-sm bg-muted px-2 py-0.5 text-xs font-medium";
 function RulesPage() {
   const prefill = Route.useSearch();
   const [showForm, setShowForm] = useState(!!prefill.text);
+  // Focus goes back to "New rule" when the form closes, not to the top of the page.
+  const newRuleButton = useRef<HTMLButtonElement>(null);
+  const wasOpen = useRef(showForm);
+  useEffect(() => {
+    if (wasOpen.current && !showForm) newRuleButton.current?.focus();
+    wasOpen.current = showForm;
+  }, [showForm]);
   const rulesQuery = useQuery({ queryKey: ["category-rules"], queryFn: fetchRules });
   const rules = rulesQuery.data ?? [];
 
@@ -99,7 +106,7 @@ function RulesPage() {
           </p>
         </div>
         {!showForm && (
-          <Button onClick={() => setShowForm(true)}>
+          <Button ref={newRuleButton} onClick={() => setShowForm(true)}>
             <Plus />
             New rule
           </Button>
@@ -151,6 +158,8 @@ function RuleForm({
   const [matchMode, setMatchMode] = useState<MatchMode>("word");
   const [matchText, setMatchText] = useState(initialText);
   const [category, setCategory] = useState(initialCategory);
+  // A category the picker can't show (renamed since) must not be saved unseen.
+  const shownCategory = categories.includes(category) ? category : "";
   const [type, setType] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -182,13 +191,13 @@ function RuleForm({
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!matchText.trim()) return setFormError("Type the text to look for.");
-    if (!category && !type) return setFormError("Pick a category, a type, or both.");
+    if (!shownCategory && !type) return setFormError("Pick a category, a type, or both.");
     setFormError(null);
     addRule.mutate({
       match_field: matchField,
       match_mode: matchMode,
       match_text: matchText.trim(),
-      set_category: category || null,
+      set_category: shownCategory || null,
       set_transaction_type: type || null,
     });
   }
@@ -198,6 +207,7 @@ function RuleForm({
   return (
     <form
       onSubmit={handleSubmit}
+      onKeyDown={(e) => e.key === "Escape" && onClose()}
       aria-labelledby="rule-form-title"
       className="mb-8 rounded-lg bg-card p-5 sm:p-6"
     >
@@ -251,6 +261,7 @@ function RuleForm({
             value={matchText}
             onChange={(e) => setMatchText(e.target.value)}
             placeholder="e.g. Spotify"
+            autoFocus
             aria-describedby="rule-match-hint"
           />
           <p
@@ -270,7 +281,7 @@ function RuleForm({
             </label>
             <Select
               id="rule-category"
-              value={category}
+              value={shownCategory}
               onChange={(e) => setCategory(e.target.value)}
             >
               <option value="">Leave as is</option>
@@ -442,7 +453,7 @@ function ApplyToPast({ onDone }: { onDone: () => void }) {
   const changes = preview.data?.changes ?? 0;
 
   return (
-    <div className="mb-4 rounded-lg bg-card p-5" aria-live="polite">
+    <div className="mb-4 rounded-lg bg-card p-5">
       <div className="flex items-start justify-between gap-3">
         <div>
           <h3 className="text-[0.9375rem] font-medium">Apply to past transactions</h3>
@@ -463,7 +474,7 @@ function ApplyToPast({ onDone }: { onDone: () => void }) {
       </div>
 
       {preview.isPending ? (
-        <p className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
+        <p role="status" className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
           <Loader2 className="size-4 animate-spin" />
           Checking your transactions…
         </p>
@@ -477,12 +488,12 @@ function ApplyToPast({ onDone }: { onDone: () => void }) {
           </Button>
         </div>
       ) : changes === 0 ? (
-        <p className="mt-4 text-sm">
+        <p role="status" className="mt-4 text-sm">
           Nothing to change: your past transactions already follow your rules.
         </p>
       ) : (
         <>
-          <p className="mt-4 text-sm">
+          <p role="status" className="mt-4 text-sm">
             <span className="font-medium">{plural(changes)}</span> would change
             {preview.data.sample.length < changes ? ", for example:" : ":"}
           </p>
