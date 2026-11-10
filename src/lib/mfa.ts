@@ -38,6 +38,10 @@ export async function verifyMfaCode(input: string): Promise<void> {
       code,
     });
     if (!verifyError) return;
+    // Supabase allows about 15 code checks a minute per IP: stop instead of spending more.
+    if ((verifyError as { status?: unknown }).status === 429) {
+      throw new Error("Too many tries. Please wait a minute, then type the newest code.");
+    }
     last = verifyError;
   }
   throw last instanceof Error ? last : new Error("That code didn't work. Try the next one.");

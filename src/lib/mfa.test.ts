@@ -99,6 +99,16 @@ describe("verifyMfaCode", () => {
     mfa.challengeAndVerify.mockResolvedValue({ error: new Error("Invalid TOTP code entered") });
     await expect(verifyMfaCode("123456")).rejects.toThrow(/Invalid TOTP/);
   });
+  // protects=a user who hit Supabase's MFA limit (15/min per IP) is told to wait, and no more
+  // attempts are spent; fails_when=the raw 429 shows or the next authenticator is still tried
+  it("stops at the rate limit and says to wait", async () => {
+    mfa.listFactors.mockResolvedValue({ data: { totp: [totp("a"), totp("b")] }, error: null });
+    mfa.challengeAndVerify.mockResolvedValue({
+      error: Object.assign(new Error("Request rate limit reached"), { status: 429 }),
+    });
+    await expect(verifyMfaCode("123456")).rejects.toThrow(/Too many tries.*wait a minute/);
+    expect(mfa.challengeAndVerify).toHaveBeenCalledTimes(1);
+  });
   it("says when there is no authenticator", async () => {
     mfa.listFactors.mockResolvedValue({ data: { totp: [] }, error: null });
     await expect(verifyMfaCode("123456")).rejects.toThrow(/no authenticator/);
