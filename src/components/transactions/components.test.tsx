@@ -108,7 +108,7 @@ describe("SplitEditor", () => {
     const onSave = vi.fn();
     render(<SplitEditor tx={tx()} onSave={onSave} saving={false} />);
     await open();
-    const share = await screen.findByRole("spinbutton");
+    const share = await screen.findByLabelText(/Your share/);
     await userEvent.clear(share);
     await userEvent.type(share, "5");
     await userEvent.click(screen.getByRole("button", { name: "+ New" }));
@@ -117,13 +117,29 @@ describe("SplitEditor", () => {
     expect(onSave).toHaveBeenCalledWith(5, "Anna");
   });
 
+  it("polish-3 #4 takes a share typed with a decimal comma and says when it can't", async () => {
+    const onSave = vi.fn();
+    render(<SplitEditor tx={tx()} onSave={onSave} saving={false} />);
+    await open();
+    const share = await screen.findByLabelText(/Your share/);
+    await userEvent.clear(share);
+    await userEvent.type(share, "abc");
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(onSave).not.toHaveBeenCalled();
+    expect(screen.getByRole("alert")).toHaveTextContent(/between 0 and/);
+    await userEvent.clear(share);
+    await userEvent.type(share, "6,25");
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(onSave).toHaveBeenCalledWith(6.25, null);
+  });
+
   // protects=quick ÷2/÷3 splits; fails_when=the preset share is wrong or not saved
   it("fills the share from a quick split", async () => {
     const onSave = vi.fn();
     render(<SplitEditor tx={tx()} onSave={onSave} saving={false} />);
     await open();
     await userEvent.click(await screen.findByRole("button", { name: "Split in 3" }));
-    expect(screen.getByRole("spinbutton")).toHaveValue(6.67);
+    expect(screen.getByLabelText(/Your share/)).toHaveValue("6.67");
     await userEvent.click(screen.getByRole("button", { name: "Split in 2" }));
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
     expect(onSave).toHaveBeenCalledWith(10, null);
@@ -174,7 +190,7 @@ describe("SplitEditor", () => {
     const onSave = vi.fn();
     render(<SplitEditor tx={tx()} onSave={onSave} saving={false} />);
     await open();
-    const share = await screen.findByRole("spinbutton");
+    const share = await screen.findByLabelText(/Your share/);
     await userEvent.clear(share);
     await userEvent.type(share, "99");
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
@@ -185,7 +201,7 @@ describe("SplitEditor", () => {
     const onSave = vi.fn();
     render(<SplitEditor tx={tx()} onSave={onSave} saving={false} />);
     await open();
-    await userEvent.clear(await screen.findByRole("spinbutton"));
+    await userEvent.clear(await screen.findByLabelText(/Your share/));
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
     expect(onSave).not.toHaveBeenCalled();
   });
