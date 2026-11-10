@@ -28,6 +28,9 @@ vi.mock("@/integrations/supabase/client", () => ({
   },
 }));
 
+const mfa = vi.hoisted(() => ({ needsMfaCode: vi.fn(), verifyMfaCode: vi.fn() }));
+vi.mock("@/lib/mfa", () => mfa);
+
 import { ResetPasswordPage, resetPasswordUrl } from "./reset-password";
 
 describe("ResetPasswordPage", () => {
@@ -36,6 +39,53 @@ describe("ResetPasswordPage", () => {
     updateUser.mockClear();
     updateError = null;
     fromRecoveryLink = true;
+    mfa.needsMfaCode.mockReset().mockResolvedValue(false);
+    mfa.verifyMfaCode.mockReset().mockResolvedValue(undefined);
+  });
+
+  // protects=a user with two-step sign-in can still reset a forgotten password;
+  // fails_when=the new password is sent on the password-only session Supabase refuses
+  it("asks for the authenticator code and verifies it before saving", async () => {
+    session = { user: { id: "u" } };
+    mfa.needsMfaCode.mockResolvedValue(true);
+    const order: string[] = [];
+    mfa.verifyMfaCode.mockImplementation(async () => void order.push("verify"));
+    updateUser.mockImplementationOnce(async () => (order.push("update"), { error: null }));
+    render(<ResetPasswordPage />);
+    fireEvent.change(await screen.findByLabelText("New password"), {
+      target: { value: "correct horse" },
+    });
+    fireEvent.change(await screen.findByLabelText("Authenticator code"), {
+      target: { value: "123456" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save and sign in" }));
+    await waitFor(() => expect(navigate).toHaveBeenCalledWith({ to: "/", replace: true }));
+    expect(mfa.verifyMfaCode).toHaveBeenCalledWith("123456");
+    expect(order).toEqual(["verify", "update"]);
+  });
+
+  it("keeps the form and saves nothing when the code is wrong", async () => {
+    session = { user: { id: "u" } };
+    mfa.needsMfaCode.mockResolvedValue(true);
+    mfa.verifyMfaCode.mockRejectedValue(new Error("Invalid TOTP code entered"));
+    render(<ResetPasswordPage />);
+    fireEvent.change(await screen.findByLabelText("New password"), {
+      target: { value: "correct horse" },
+    });
+    fireEvent.change(await screen.findByLabelText("Authenticator code"), {
+      target: { value: "000000" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save and sign in" }));
+    expect((await screen.findByRole("alert")).textContent).toBe("Invalid TOTP code entered");
+    expect(updateUser).not.toHaveBeenCalled();
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it("asks for no code when the account has no authenticator", async () => {
+    session = { user: { id: "u" } };
+    render(<ResetPasswordPage />);
+    await screen.findByLabelText("New password");
+    expect(screen.queryByLabelText("Authenticator code")).toBeNull();
   });
 
   // protects=a locked-out user can set a new password from the recovery email;
