@@ -26,11 +26,6 @@ describe("toCsv", () => {
     );
   });
 
-  it("writes tags as a readable list, and an empty list as empty", () => {
-    expect(body(toCsv(["t"], [{ t: ["trip", "work"] }]))[1]).toBe('"trip, work"');
-    expect(body(toCsv(["t"], [{ t: [] }]))[1]).toBe("");
-  });
-
   it("starts with a byte order mark and the header row", () => {
     const csv = toCsv(["a", "b"], []);
     expect(csv.startsWith("﻿")).toBe(true);

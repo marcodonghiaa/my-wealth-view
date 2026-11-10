@@ -51,9 +51,7 @@ function forTx<Q extends { eq: (c: string, v: string) => Q; is: (c: string, v: n
 // Shared shape behind updateCategory/updateType/answerWorthIt: update one column
 // on one transaction, with optimistic cache update + rollback. (Renames go through
 // useRenameMerchantMutation, which renames the merchant's other rows too.)
-export function useTransactionFieldMutation<
-  K extends "category" | "transaction_type" | "worth_it" | "note" | "tags",
->(
+export function useTransactionFieldMutation<K extends "category" | "transaction_type" | "worth_it">(
   queryClient: QueryClient,
   monthKey: string,
   column: K,

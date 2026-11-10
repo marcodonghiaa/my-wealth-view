@@ -82,8 +82,6 @@ function tx(
     import_batch_id: null,
     deleted_at: null,
     refund_of: null,
-    note: null,
-    tags: [],
     flow_type: "spend",
     flow_source: "default",
     own_counterparty: null,

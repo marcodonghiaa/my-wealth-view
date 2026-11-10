@@ -797,8 +797,6 @@ export type Database = {
           import_batch_id: string | null;
           deleted_at: string | null;
           refund_of: string | null;
-          note: string | null;
-          tags: string[];
           flow_type: string | null;
           flow_source: string | null;
           own_counterparty: boolean | null;
@@ -831,8 +829,6 @@ export type Database = {
           import_batch_id?: string | null;
           deleted_at?: string | null;
           refund_of?: string | null;
-          note?: string | null;
-          tags?: string[];
           flow_type?: string | null;
           flow_source?: string | null;
           own_counterparty?: boolean | null;
@@ -865,8 +861,6 @@ export type Database = {
           import_batch_id?: string | null;
           deleted_at?: string | null;
           refund_of?: string | null;
-          note?: string | null;
-          tags?: string[];
           flow_type?: string | null;
           flow_source?: string | null;
           own_counterparty?: boolean | null;
@@ -1108,8 +1102,6 @@ export type Database = {
           personal_amount: number | null;
           personal_signed_amount_eur: number | null;
           refund_of: string | null;
-          note: string | null;
-          tags: string[] | null;
           settled_at: string | null;
           signed_amount_eur: number | null;
           transaction_type: string | null;
@@ -1135,10 +1127,6 @@ export type Database = {
       };
     };
     Functions: {
-      my_transaction_tags: {
-        Args: Record<PropertyKey, never>;
-        Returns: Array<{ tag: string; uses: number }>;
-      };
       set_account_type: {
         Args: { p_account: string; p_type: string | null };
         Returns: undefined;

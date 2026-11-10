@@ -50,8 +50,6 @@ export function deriveViews(db: DemoDb): Derived {
     transaction_type: t.transaction_type,
     user_id: DEMO_USER_ID,
     worth_it: t.worth_it,
-    note: t.note,
-    tags: t.tags,
   }));
 
   const v_splitwise_eur: DemoDb["v_splitwise_eur"] = db.splitwise_expenses.map((e) => ({
