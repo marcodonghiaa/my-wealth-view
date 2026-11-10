@@ -130,17 +130,19 @@ export const AVERAGE_MONTHS = 6;
 const NEVER_SUGGESTED = new Set(["Transfer", "Income", "Uncategorized"]);
 
 /**
- * A starting budget per category: the average monthly spend over the last months before `month`
- * that have any spending (up to 6; a new user with 1 or 2 months gets those), rounded up to the
+ * A starting budget per category: the average monthly spend over those of the 6 months before
+ * `month` that have any spending (a new user with 1 or 2 months gets those), rounded up to the
  * next 10. Also returns how many months the average covers.
  */
 export function suggestedBudgets(
   spend: ReadonlyArray<MonthSpend>,
   month: string,
 ): { amounts: Map<string, number>; months: number } {
-  const months = [...new Set(spend.filter((s) => s.month < month).map((s) => s.month))]
-    .sort()
-    .slice(-AVERAGE_MONTHS);
+  // Only the last six calendar months: older months are loaded for budgeted categories alone.
+  const from = addMonths(month, -AVERAGE_MONTHS);
+  const months = [
+    ...new Set(spend.filter((s) => s.month >= from && s.month < month).map((s) => s.month)),
+  ].sort();
   const amounts = new Map<string, number>();
   if (months.length === 0) return { amounts, months: 0 };
   const inWindow = new Set(months);

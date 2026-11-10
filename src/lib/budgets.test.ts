@@ -206,6 +206,19 @@ describe("suggestedBudgets", () => {
     );
     expect(suggestedBudgets(spend, "2026-08-01").amounts.get("Gym")).toBe(60);
   });
+  // protects=averages only over the last six calendar months, which hold every category;
+  // fails_when=empty recent months pull in older months loaded only for budgeted categories
+  it("ignores months older than six calendar months", () => {
+    const spend = [
+      s("Rent", "2026-03-01", 900), // older: loaded only because Rent has a budget
+      s("Rent", "2026-04-01", 900),
+      s("Rent", "2026-10-01", 900),
+      s("Gym", "2026-10-01", 60), // no budget: its older months were never loaded
+    ];
+    const out = suggestedBudgets(spend, "2026-11-01");
+    expect(Object.fromEntries(out.amounts)).toEqual({ Rent: 900, Gym: 60 });
+    expect(out.months).toBe(1);
+  });
   it("is empty with no history", () => {
     expect(suggestedBudgets([], "2026-11-01")).toEqual({ amounts: new Map(), months: 0 });
   });
