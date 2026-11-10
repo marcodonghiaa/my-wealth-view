@@ -474,7 +474,7 @@ function AccountsPage() {
                         <div className="text-xs text-muted-foreground">
                           {group.main.snapshot_date
                             ? [
-                                formatPercent(percent),
+                                formatPercent(percent / 100),
                                 asOf(group.main.snapshot_date, formatISODate(new Date())),
                               ]
                                 .filter(Boolean)

@@ -282,7 +282,7 @@ function PortfolioPage() {
                       </span>
                       <span className="block text-xs text-muted-foreground">
                         {group.holdings.length} holding
-                        {group.holdings.length === 1 ? "" : "s"} · {formatPercent(percent)}
+                        {group.holdings.length === 1 ? "" : "s"} · {formatPercent(percent / 100)}
                       </span>
                     </span>
                     <span className="font-figure text-[0.9375rem] text-foreground">
@@ -351,7 +351,7 @@ function PortfolioPage() {
                                     {formatEur(valueEur)}
                                   </td>
                                   <td className="px-4 py-3 text-right font-figure text-foreground sm:px-5">
-                                    {formatPercent(rowPercent)}
+                                    {formatPercent(rowPercent / 100)}
                                   </td>
                                   <td className="px-2 py-1 text-right">
                                     {row.isin && (
@@ -431,7 +431,7 @@ function PortfolioPage() {
                                 <div>
                                   <div className="text-xs text-muted-foreground">% of total</div>
                                   <div className="font-figure text-foreground">
-                                    {formatPercent(rowPercent)}
+                                    {formatPercent(rowPercent / 100)}
                                   </div>
                                 </div>
                               </div>

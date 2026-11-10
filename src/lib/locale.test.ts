@@ -59,11 +59,17 @@ describe("monthFirst", () => {
 });
 
 describe("formatPercent", () => {
-  it("writes a percent the locale's way", () => {
-    expect(formatPercent(25.48)).toBe("25.5%");
-    expect(formatPercent(25.48, 2)).toBe("25.48%");
+  it("writes a fraction as a percent the locale's way", () => {
+    expect(formatPercent(0.2548)).toBe("25.5%");
+    expect(formatPercent(0.2548, { digits: 2 })).toBe("25.48%");
     setBrowser("de-DE");
-    expect(formatPercent(25.48)).toBe("25,5\u00a0%");
+    expect(formatPercent(0.2548)).toBe("25,5\u00a0%");
+  });
+
+  it("signs a change with + and a real minus, nothing on zero", () => {
+    expect(formatPercent(0.012, { signed: true })).toBe("+1.2%");
+    expect(formatPercent(-0.012, { signed: true })).toBe("−1.2%");
+    expect(formatPercent(0, { signed: true })).toBe("0.0%");
   });
 });
 

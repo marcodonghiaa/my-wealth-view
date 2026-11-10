@@ -1,8 +1,6 @@
 import { appLocale, formatPercent } from "@/lib/locale";
 import { formatMoney } from "@/lib/transactions";
 
-const pct = (v: number) => `${v > 0 ? "+" : v < 0 ? "−" : ""}${formatPercent(Math.abs(v * 100))}`;
-
 export type HeadlineDelta = {
   /** Change over the period, in `currency`. Sign decides the colour. */
   value: number;
@@ -60,7 +58,7 @@ export function HeadlineFigure({
           >
             {delta.value > 0 ? "+" : delta.value < 0 ? "−" : ""}
             {formatMoney(Math.abs(delta.value), currency)}
-            {delta.percent != null && ` (${pct(delta.percent)})`}
+            {delta.percent != null && ` (${formatPercent(delta.percent, { signed: true })})`}
           </span>
           <span className="text-muted-foreground">{delta.label}</span>
         </p>

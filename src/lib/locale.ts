@@ -52,13 +52,21 @@ export function appLocale(): string {
 /** Whether people in this locale write the month before the day (03/25/2026). */
 export const monthFirst = (locale: string = appLocale()): boolean => /^en-US\b/.test(locale);
 
-/** 25.48 → "25.5%" (en) or "25,5 %" (de): a number already in percent, in the chosen locale. */
-export function formatPercent(percent: number, digits = 1): string {
-  return new Intl.NumberFormat(appLocale(), {
+/**
+ * A share or change as a percent in the chosen locale: 0.2548 → "25.5%" (en), "25,5 %" (de).
+ * signed: "+" above zero and a real minus "−" below, nothing on zero.
+ */
+export function formatPercent(
+  fraction: number,
+  { digits = 1, signed = false }: { digits?: number; signed?: boolean } = {},
+): string {
+  const text = new Intl.NumberFormat(appLocale(), {
     style: "percent",
     minimumFractionDigits: digits,
     maximumFractionDigits: digits,
-  }).format(percent / 100);
+  }).format(signed ? Math.abs(fraction) : fraction);
+  if (!signed) return text;
+  return `${fraction > 0 ? "+" : fraction < 0 ? "−" : ""}${text}`;
 }
 
 /**

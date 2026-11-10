@@ -104,7 +104,7 @@ export function AllocationChart({
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium text-foreground">{label}</p>
                 <p className="font-figure text-xs text-muted-foreground">
-                  {formatPercent((value / gross) * 100)}
+                  {formatPercent(value / gross)}
                 </p>
               </div>
               <p className="font-figure text-sm text-foreground">{format(value)}</p>

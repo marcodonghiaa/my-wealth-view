@@ -1,4 +1,4 @@
-import { appLocale, dateLocale, formatPercent as percentText } from "@/lib/locale";
+import { appLocale, dateLocale, formatPercent } from "@/lib/locale";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
@@ -193,7 +193,7 @@ function NetWorthPage() {
             <span className={`font-figure ${TONE_TEXT[toneOf(rangeChange, NOISE_BAND)]}`}>
               {rangeDeltaEur >= 0 ? "+" : "−"}
               {formatMoney(Math.abs(rangeDeltaEur) / rateToEur, currency)} (
-              {formatPercent(rangeChange)})
+              {formatPercent(rangeChange, { digits: 2, signed: true })})
             </span>
             <span className="text-muted-foreground">
               {scrubbed && chartFirst
@@ -209,7 +209,7 @@ function NetWorthPage() {
             <p className="mt-2 flex items-baseline gap-1.5 text-sm">
               <span className="text-muted-foreground">Today</span>
               <span className={`font-figure ${TONE_TEXT[toneOf(dayChange, NOISE_BAND)]}`}>
-                {formatPercent(dayChange)}
+                {formatPercent(dayChange, { digits: 2, signed: true })}
               </span>
             </p>
           )}
@@ -289,11 +289,6 @@ function NetWorthPage() {
       />
     </div>
   );
-}
-
-function formatPercent(value: number, signed = true): string {
-  const sign = signed ? (value > 0 ? "+" : value < 0 ? "−" : "") : "";
-  return `${sign}${percentText(Math.abs(value * 100), 2)}`;
 }
 
 function LegendDot({ color, label, dashed }: { color: string; label: string; dashed?: boolean }) {

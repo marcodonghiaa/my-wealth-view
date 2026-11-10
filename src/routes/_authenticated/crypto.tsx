@@ -276,7 +276,7 @@ function CryptoPage() {
                           {formatEur(asset.valueEur)}
                         </td>
                         <td className="px-4 py-3 text-right font-figure text-foreground sm:px-5">
-                          {formatPercent(percent)}
+                          {formatPercent(percent / 100)}
                         </td>
                         <td className="px-2 py-1 text-right">
                           <AssetEdits asset={asset} />
@@ -347,7 +347,9 @@ function CryptoPage() {
                     </div>
                     <div>
                       <div className="text-xs text-muted-foreground">% of total</div>
-                      <div className="font-figure text-foreground">{formatPercent(percent)}</div>
+                      <div className="font-figure text-foreground">
+                        {formatPercent(percent / 100)}
+                      </div>
                     </div>
                   </div>
                 </div>
