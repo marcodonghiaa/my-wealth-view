@@ -70,11 +70,11 @@ export function TwoFactorSection() {
     }, "That code didn't work. Try the next one.");
   };
 
-  const cancel = () =>
-    run(async () => {
-      if (enrollment) await removeAuthenticator(enrollment.factorId);
-      setEnrollment(null);
-    }, "Couldn't cancel the setup.");
+  // The unfinished factor stays until the next setup, which clears it first.
+  const cancel = () => {
+    setError(null);
+    setEnrollment(null);
+  };
 
   const remove = (id: string) =>
     run(async () => {
@@ -158,7 +158,7 @@ export function TwoFactorSection() {
                 {pending && <Loader2 className="animate-spin" />}
                 Turn on
               </Button>
-              <Button variant="quiet" disabled={pending} onClick={() => void cancel()}>
+              <Button variant="quiet" disabled={pending} onClick={cancel}>
                 Cancel
               </Button>
             </div>

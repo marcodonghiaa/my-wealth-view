@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const lib = vi.hoisted(() => ({
@@ -15,7 +15,7 @@ vi.mock("@/lib/mfa", () => ({
 import { TwoFactorSection } from "./two-factor-section";
 
 // protects=a user can turn on two-step sign-in and remove an authenticator from Settings;
-// fails_when=the QR step is skipped, the code isn't sent, or Cancel leaves a pending factor
+// fails_when=the QR step is skipped, the code isn't sent, or a failure is swallowed
 describe("TwoFactorSection", () => {
   beforeEach(() => {
     for (const fn of Object.values(lib)) fn.mockReset();
@@ -59,12 +59,25 @@ describe("TwoFactorSection", () => {
     expect(screen.getByAltText(/QR code/)).toBeInTheDocument();
   });
 
-  it("cancel removes the unfinished authenticator", async () => {
+  // The next setup clears the unfinished factor (startEnrollment), so Cancel needs no request.
+  it("cancel closes the setup without a request", async () => {
     lib.listAuthenticators.mockResolvedValue([]);
     render(<TwoFactorSection />);
     fireEvent.click(await screen.findByRole("button", { name: "Set up two-step sign-in" }));
     fireEvent.click(await screen.findByRole("button", { name: "Cancel" }));
-    await waitFor(() => expect(lib.removeAuthenticator).toHaveBeenCalledWith("f1"));
+    expect(screen.queryByAltText(/QR code/)).not.toBeInTheDocument();
+    expect(lib.removeAuthenticator).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "Set up two-step sign-in" })).toBeInTheDocument();
+  });
+
+  // protects=a failed setup start says why instead of doing nothing;
+  // fails_when=the startEnrollment error is swallowed
+  it("shows why the setup couldn't start", async () => {
+    lib.listAuthenticators.mockResolvedValue([]);
+    lib.startEnrollment.mockRejectedValue(new Error("MFA enroll is disabled"));
+    render(<TwoFactorSection />);
+    fireEvent.click(await screen.findByRole("button", { name: "Set up two-step sign-in" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("MFA enroll is disabled");
     expect(screen.queryByAltText(/QR code/)).not.toBeInTheDocument();
   });
 
