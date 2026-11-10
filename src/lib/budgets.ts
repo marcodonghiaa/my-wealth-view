@@ -40,12 +40,14 @@ const MAX_BUDGET = 10_000_000;
 
 /**
  * A typed budget amount ("250", "250,5", "1.250", "1,250.50"), rounded to cents; null when blank,
- * not a number, negative or not below MAX_BUDGET. A lone separator before exactly 3 digits is a
- * thousands separator: budgets are never typed to the tenth of a cent.
+ * not a number, negative or not below MAX_BUDGET. One kind of separator before groups of exactly
+ * 3 digits is a thousands separator: budgets are never typed to the tenth of a cent.
  */
 export function parseAmount(text: string): number | null {
   const t = text.trim();
-  const v = parseTypedAmount(/^\d{1,3}[.,]\d{3}$/.test(t) ? t.replace(/[.,]/, "") : t);
+  // "1.250", "1,000,000": groups of 3 after one kind of separator, not starting with 0.
+  const grouped = /^[1-9]\d{0,2}([.,])\d{3}(\1\d{3})*$/.test(t);
+  const v = parseTypedAmount(grouped ? t.replace(/[.,]/g, "") : t);
   if (v == null) return null;
   const cents = Math.round(v * 100) / 100;
   return cents < MAX_BUDGET ? cents : null;

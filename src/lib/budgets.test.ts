@@ -286,6 +286,11 @@ describe("parseAmount", () => {
     expect(parseAmount("1,250.50")).toBe(1250.5);
     expect(parseAmount("12.34")).toBe(12.34);
     expect(parseAmount("12,345")).toBe(12345);
+    // Re-audit: grouped millions read too, and a leading 0 is a decimal, never thousands.
+    expect(parseAmount("1.000.000")).toBe(1000000);
+    expect(parseAmount("1,000,000")).toBe(1000000);
+    expect(parseAmount("0.125")).toBe(0.13);
+    expect(parseAmount("0,500")).toBe(0.5);
     expect(parseAmount("1e3")).toBeNull();
     expect(parseAmount("0x10")).toBeNull();
   });
