@@ -1,12 +1,15 @@
 // Writes a read statement: leaves out what is already in the app, then adds the rest one by one
 // with the database function add_manual_transaction.
+import type { Database } from "@/integrations/supabase/types";
 import { dedupeKey, type StatementRow } from "./statement";
+
+type ManualTransactionArgs = Database["public"]["Functions"]["add_manual_transaction"]["Args"];
 
 type Result<T> = PromiseLike<{ data: T | null; error: { message: string; code?: string } | null }>;
 
 /** The slice of the Supabase client the import uses; keeps the logic testable without a network. */
 export interface StatementClient {
-  rpc(fn: "add_manual_transaction", args: Record<string, unknown>): Result<unknown>;
+  rpc(fn: "add_manual_transaction", args: ManualTransactionArgs): Result<unknown>;
   from(table: "transactions"): {
     select(cols: string): {
       is(

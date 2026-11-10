@@ -132,3 +132,17 @@ describe("importStatement", () => {
     );
   });
 });
+
+describe("RPC types", () => {
+  it("polish-3 #16 the import client only takes add_manual_transaction's real arguments", () => {
+    const typed = (c: StatementClient) =>
+      c.rpc("add_manual_transaction", {
+        p_booking_date: "2026-01-01",
+        p_description: "x",
+        // @ts-expect-error p_amount is a number in the database function
+        p_amount: "1",
+        p_direction: "DBIT",
+      });
+    expect(typeof typed).toBe("function");
+  });
+});
