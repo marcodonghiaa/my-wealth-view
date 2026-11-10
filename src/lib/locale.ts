@@ -30,12 +30,14 @@ export function localeOverride(): string {
   }
 }
 
-export function setLocaleOverride(locale: string): void {
+/** Saves the choice on this device. False when the browser blocks storage. */
+export function setLocaleOverride(locale: string): boolean {
   try {
     if (locale) localStorage.setItem(KEY, locale);
     else localStorage.removeItem(KEY);
+    return true;
   } catch {
-    // Private mode: the browser locale is used.
+    return false;
   }
 }
 

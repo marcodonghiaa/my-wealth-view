@@ -29,4 +29,16 @@ describe("FormatsSection", () => {
     fireEvent.change(screen.getByLabelText("Format"), { target: { value: "" } });
     expect(localeOverride()).toBe("");
   });
+
+  it("says so and does not reload when the browser blocks storage", () => {
+    const setItem = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new DOMException("blocked", "SecurityError");
+    });
+    const reload = vi.fn();
+    render(<FormatsSection reload={reload} />);
+    fireEvent.change(screen.getByLabelText("Format"), { target: { value: "de-DE" } });
+    expect(screen.getByRole("alert")).toHaveTextContent(/Couldn't save/);
+    expect(reload).not.toHaveBeenCalled();
+    setItem.mockRestore();
+  });
 });

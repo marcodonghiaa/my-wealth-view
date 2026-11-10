@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { formatDay } from "./date";
 import {
   appLocale,
@@ -9,7 +9,7 @@ import {
   monthFirst,
   setLocaleOverride,
 } from "./locale";
-import { formatMoney } from "./transactions";
+import { formatBookingDate, formatMoney } from "./transactions";
 
 const setBrowser = (language: string) =>
   Object.defineProperty(navigator, "language", { value: language, configurable: true });
@@ -87,5 +87,29 @@ describe("formatNumber", () => {
     expect(formatNumber(1.08424, 4)).toBe("1.0842");
     setBrowser("it-IT");
     expect(formatNumber(1.08424, 4)).toBe("1,0842");
+  });
+});
+
+describe("when the browser blocks storage", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("follows the browser and reports that the choice was not saved", () => {
+    vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+      throw new DOMException("blocked", "SecurityError");
+    });
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new DOMException("blocked", "SecurityError");
+    });
+    setBrowser("de-DE");
+    expect(appLocale()).toBe("de-DE");
+    expect(setLocaleOverride("it-IT")).toBe(false);
+  });
+});
+
+describe("US English dates", () => {
+  it("put the month first, in English", () => {
+    setBrowser("en-US");
+    expect(formatDay("2026-03-03")).toBe("Mar 3, 2026");
+    expect(formatBookingDate("2026-03-03")).toBe("Mar 3, 2026");
   });
 });
