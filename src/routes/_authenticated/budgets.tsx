@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { formatISODate } from "@/lib/date";
 import { formatEur, startOfMonth } from "@/lib/transactions";
 import {
+  AVERAGE_MONTHS,
   addMonths,
   budgetLines,
   monthIncome,
@@ -40,8 +41,8 @@ const BUDGETS_KEY = ["category-budgets"];
 const SPREAD_KEY = "alopex.budgets.spreadIncome";
 // Never budgeted: they aren't spending.
 const NOT_BUDGETED = new Set(["Transfer", "Income"]);
-// Spend history read for averages and rollover: at least this many months back.
-const HISTORY_MONTHS = 6;
+// Spend history read for averages and unbudgeted spend: this many months back, every category.
+const HISTORY_MONTHS = AVERAGE_MONTHS;
 
 async function fetchBudgets(): Promise<Array<BudgetRow>> {
   const { data, error } = await supabase
@@ -148,7 +149,10 @@ function BudgetsPage() {
 
   const spend = useMemo(() => spendQuery.data ?? [], [spendQuery.data]);
   const lines = useMemo(() => budgetLines(rows, spend, monthIso), [rows, spend, monthIso]);
-  const suggestions = useMemo(() => suggestedBudgets(spend, monthIso), [spend, monthIso]);
+  const { amounts: suggestions, months: averageMonths } = useMemo(
+    () => suggestedBudgets(spend, monthIso),
+    [spend, monthIso],
+  );
   const budgeted = new Set(lines.map((l) => l.category));
   const unbudgeted = spend
     .filter(
@@ -217,10 +221,9 @@ function BudgetsPage() {
             title={`No budgets for ${monthLabel}`}
             hint={
               suggestions.size > 0
-                ? `Start from what you usually spend: the average of your last ${Math.min(
-                    HISTORY_MONTHS,
-                    new Set(spend.filter((s) => s.month < monthIso).map((s) => s.month)).size,
-                  )} months, per category. You can change each one after.`
+                ? `Start from what you usually spend: your average of the last ${
+                    averageMonths === 1 ? "month" : `${averageMonths} months`
+                  }, per category. You can change each one after.`
                 : "Add a budget for a category below."
             }
             action={

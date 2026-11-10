@@ -118,31 +118,36 @@ export function budgetLines(
   return lines.sort((a, b) => b.budget - a.budget || a.category.localeCompare(b.category));
 }
 
+/** Months of history a starting budget averages over, at most. */
+export const AVERAGE_MONTHS = 6;
+// Never budgeted: transfers and income aren't spending, and Uncategorized has no budget to keep.
+const NEVER_SUGGESTED = new Set(["Transfer", "Income", "Uncategorized"]);
+
 /**
- * A starting budget per category: the average monthly spend over the last 3 to 6 months before
- * `month` that have any spending, rounded up to the next 10. Uncategorized is left out.
+ * A starting budget per category: the average monthly spend over the last months before `month`
+ * that have any spending (up to 6; a new user with 1 or 2 months gets those), rounded up to the
+ * next 10. Also returns how many months the average covers.
  */
 export function suggestedBudgets(
   spend: ReadonlyArray<MonthSpend>,
   month: string,
-  maxMonths = 6,
-): Map<string, number> {
+): { amounts: Map<string, number>; months: number } {
   const months = [...new Set(spend.filter((s) => s.month < month).map((s) => s.month))]
     .sort()
-    .slice(-maxMonths);
-  const out = new Map<string, number>();
-  if (months.length === 0) return out;
+    .slice(-AVERAGE_MONTHS);
+  const amounts = new Map<string, number>();
+  if (months.length === 0) return { amounts, months: 0 };
   const inWindow = new Set(months);
   const totals = new Map<string, number>();
   for (const s of spend) {
-    if (!inWindow.has(s.month) || s.category === "Uncategorized") continue;
-    totals.set(s.category, (totals.get(s.category) ?? 0) + Number(s.spend_eur ?? 0));
+    if (!inWindow.has(s.month) || NEVER_SUGGESTED.has(s.category)) continue;
+    totals.set(s.category, (totals.get(s.category) ?? 0) + s.spend_eur);
   }
   for (const [category, total] of totals) {
     const avg = total / months.length;
-    if (avg > 0) out.set(category, Math.ceil(avg / 10) * 10);
+    if (avg > 0) amounts.set(category, Math.ceil(avg / 10) * 10);
   }
-  return out;
+  return { amounts, months: months.length };
 }
 
 /**

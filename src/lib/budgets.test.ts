@@ -177,16 +177,28 @@ describe("suggestedBudgets", () => {
       s("Groceries", "2026-11-01", 999), // the month itself doesn't count
     ];
     const out = suggestedBudgets(spend, "2026-11-01");
-    expect(Object.fromEntries(out)).toEqual({ Groceries: 310, "Dine Out": 30 });
+    expect(Object.fromEntries(out.amounts)).toEqual({ Groceries: 310, "Dine Out": 30 });
+    expect(out.months).toBe(3);
+  });
+  // protects=no budget is ever suggested for transfers or income (P2-2)
+  it("never suggests Transfer or Income", () => {
+    const spend = [s("Transfer", "2026-10-01", 500), s("Income", "2026-10-01", 40)];
+    expect(suggestedBudgets(spend, "2026-11-01").amounts.size).toBe(0);
+  });
+  // protects=rounding goes up, never to nearest; fails_when=Math.round replaces Math.ceil
+  it("rounds up to the next 10", () => {
+    expect(suggestedBudgets([s("Gym", "2026-10-01", 301)], "2026-11-01").amounts.get("Gym")).toBe(
+      310,
+    );
   });
   it("uses at most six months", () => {
     const spend = ["01", "02", "03", "04", "05", "06", "07"].map((m, i) =>
       s("Gym", `2026-${m}-01`, i === 0 ? 7000 : 60),
     );
-    expect(suggestedBudgets(spend, "2026-08-01").get("Gym")).toBe(60);
+    expect(suggestedBudgets(spend, "2026-08-01").amounts.get("Gym")).toBe(60);
   });
   it("is empty with no history", () => {
-    expect(suggestedBudgets([], "2026-11-01").size).toBe(0);
+    expect(suggestedBudgets([], "2026-11-01")).toEqual({ amounts: new Map(), months: 0 });
   });
 });
 
