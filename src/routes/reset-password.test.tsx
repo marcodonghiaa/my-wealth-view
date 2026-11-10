@@ -104,6 +104,20 @@ describe("ResetPasswordPage", () => {
     expect(mfa.verifyMfaCode).toHaveBeenCalledTimes(1);
   });
 
+  // protects=a user with an authenticator always gets the code step before saving;
+  // fails_when=Save works before the check answers and Supabase's raw aal2 error shows
+  it("waits for the authenticator check before allowing Save", async () => {
+    session = { user: { id: "u" } };
+    let answer: (needed: boolean) => void = () => {};
+    mfa.needsMfaCode.mockReturnValue(new Promise<boolean>((resolve) => (answer = resolve)));
+    render(<ResetPasswordPage />);
+    await screen.findByLabelText("New password");
+    expect(screen.getByRole("button", { name: "Save and sign in" })).toBeDisabled();
+    act(() => answer(true));
+    expect(await screen.findByLabelText("Authenticator code")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Save and sign in" })).toBeEnabled();
+  });
+
   it("asks for no code when the account has no authenticator", async () => {
     session = { user: { id: "u" } };
     render(<ResetPasswordPage />);

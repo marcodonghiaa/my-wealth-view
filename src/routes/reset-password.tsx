@@ -34,8 +34,8 @@ export function ResetPasswordPage() {
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   // The recovery link signs in with the password level only; with an authenticator, Supabase
-  // takes the new password only after its code.
-  const [needsCode, setNeedsCode] = useState(false);
+  // takes the new password only after its code. Null until checked: Save waits for it.
+  const [needsCode, setNeedsCode] = useState<boolean | null>(null);
   const [code, setCode] = useState("");
 
   useEffect(() => {
@@ -153,7 +153,7 @@ export function ResetPasswordPage() {
 
               <button
                 type="submit"
-                disabled={pending}
+                disabled={pending || needsCode === null}
                 className="flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-primary px-4 text-sm font-semibold text-primary-foreground transition-colors hover:brightness-110 disabled:opacity-50"
               >
                 {pending ? (
