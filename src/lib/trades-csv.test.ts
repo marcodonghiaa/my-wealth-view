@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { newTrades, parseTradesCsv, shareUpdates } from "./trades-csv";
+import { newTrades, parseTradesCsv, shareUpdates, summarizeImport } from "./trades-csv";
 
 const opts = { kind: "stock" as const, knownKeys: new Set(["IE00B4L5Y983"]), today: "2026-10-31" };
 
@@ -57,6 +57,30 @@ describe("parseTradesCsv", () => {
     );
     expect(errors).toEqual([]);
     expect(trades[0]).toMatchObject({ kind: "crypto", key: "BTC" });
+  });
+
+  it("refuses a file in a format it doesn't know, and says so instead of guessing", () => {
+    const result = parseTradesCsv("Datum;Produkt;ISIN;Anzahl\n01-01-2026;X;IE00B4L5Y983;1\n", opts);
+    expect(result.trades).toEqual([]);
+    expect(result.unknownFormat).toBe(true);
+    expect(result.errors[0]).toMatch(
+      /isn't one Alopex knows.*Trade Republic.*Nothing was imported/,
+    );
+  });
+
+  it("a trailing separator in a plain file still names the missing column", () => {
+    expect(parseTradesCsv("date,side,isin,shares,\n", opts).errors).toEqual([
+      "Missing column: price.",
+    ]);
+  });
+
+  it("extra columns are fine when nothing is missing", () => {
+    const { errors, trades } = parseTradesCsv(
+      "date,side,isin,shares,price,note\n2026-01-15,buy,IE00B4L5Y983,1,90,x\n",
+      opts,
+    );
+    expect(errors).toEqual([]);
+    expect(trades).toHaveLength(1);
   });
 
   it("names missing columns", () => {
@@ -119,6 +143,8 @@ describe("parseTradesCsv, Trade Republic export", () => {
         shares: 2.5,
         price_eur: 10,
         fee_eur: 0,
+        source: "trade_republic",
+        external_id: "id",
       },
       {
         kind: "stock",
@@ -128,6 +154,8 @@ describe("parseTradesCsv, Trade Republic export", () => {
         shares: 1,
         price_eur: 12,
         fee_eur: 1,
+        source: "trade_republic",
+        external_id: "id",
       },
     ]);
   });
@@ -153,6 +181,21 @@ describe("parseTradesCsv, Trade Republic export", () => {
     );
     expect(errors).toEqual([]);
     expect(trades).toEqual([]);
+  });
+
+  it("says how many rows weren't trades, so nothing goes missing silently", () => {
+    const one = parseTradesCsv(
+      file(line("2026-01-02", "CASH", "DIVIDEND", "A", "AA", "7.0", "")),
+      known,
+    );
+    expect(one.notes).toEqual([
+      "1 row that isn't a trade was skipped (dividends, interest, card payments, transfers).",
+    ]);
+    const none = parseTradesCsv(
+      file(line("2026-01-02", "TRADING", "BUY", "A", "AA", "1.0", "10")),
+      known,
+    );
+    expect(none.notes).toEqual([]);
   });
 
   it("keeps something fully sold that isn't in your holdings, so its profit counts", () => {
@@ -228,6 +271,43 @@ describe("newTrades", () => {
     const other = { ...trade, shares: 2 };
     expect(newTrades([trade, other], [trade])).toEqual([other]);
   });
+
+  // Regression: two identical buys on one day were merged into one, losing a trade.
+  it("keeps two identical buys on the same day when the broker gave them different ids", () => {
+    const a = { ...trade, source: "trade_republic", external_id: "a" };
+    const b = { ...trade, source: "trade_republic", external_id: "b" };
+    expect(newTrades([a, b], [])).toEqual([a, b]);
+    expect(newTrades([a, b], [a])).toEqual([b]);
+    expect(newTrades([a, b], [a, b])).toEqual([]);
+  });
+
+  it("the same id from another broker is a different trade", () => {
+    const tr = { ...trade, source: "trade_republic", external_id: "a" };
+    expect(newTrades([{ ...tr, source: "degiro" }], [tr])).toHaveLength(1);
+  });
+
+  it("without ids, one saved row covers one incoming row, not every identical copy", () => {
+    expect(newTrades([trade, trade], [trade])).toEqual([trade]);
+    expect(newTrades([trade, trade], [trade, trade])).toEqual([]);
+  });
+
+  it("a broker id repeated in one file is imported once", () => {
+    const a = { ...trade, source: "trade_republic", external_id: "a" };
+    expect(newTrades([a, a], [])).toEqual([a]);
+  });
+
+  it("a plain CSV of trades already imported from a broker isn't saved again", () => {
+    const tr = { ...trade, source: "trade_republic", external_id: "a" };
+    expect(newTrades([trade], [tr])).toEqual([]);
+    expect(newTrades([trade, trade], [tr])).toEqual([trade]);
+  });
+
+  it("trades saved before ids were kept still count once when the file is imported again", () => {
+    const legacy = { ...trade };
+    const withId = { ...trade, source: "trade_republic", external_id: "a" };
+    const twin = { ...trade, source: "trade_republic", external_id: "b" };
+    expect(newTrades([withId, twin], [legacy])).toEqual([twin]);
+  });
 });
 
 describe("shareUpdates", () => {
@@ -270,5 +350,40 @@ describe("shareUpdates", () => {
   it("rounds away floating-point dust", () => {
     const out = shareUpdates([trade("A", 0.1), trade("A", 0.2)], [], new Map([["A", 1]]));
     expect(out).toEqual([{ key: "A", shares: 0.3 }]);
+  });
+});
+
+describe("summarizeImport", () => {
+  const t = (key: string, side: string, trade_date: string) => ({
+    kind: "stock",
+    key,
+    side,
+    trade_date,
+    shares: 1,
+    price_eur: 1,
+    fee_eur: 0,
+  });
+
+  it("is null when there's nothing to save", () => {
+    expect(summarizeImport([])).toBeNull();
+  });
+
+  it("counts buys and sells, the date range, and groups by holding, busiest first", () => {
+    const s = summarizeImport([
+      t("B", "buy", "2026-03-01"),
+      t("A", "buy", "2026-01-05"),
+      t("A", "sell", "2026-06-01"),
+      t("A", "buy", "2026-02-01"),
+    ]);
+    expect(s).toEqual({
+      buys: 3,
+      sells: 1,
+      from: "2026-01-05",
+      to: "2026-06-01",
+      byKey: [
+        { key: "A", buys: 2, sells: 1 },
+        { key: "B", buys: 1, sells: 0 },
+      ],
+    });
   });
 });

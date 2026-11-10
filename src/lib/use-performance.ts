@@ -46,7 +46,9 @@ export async function fetchTrades(client: SupabaseClient<Database>): Promise<Tra
   const rows = await fetchAllRows("holding_trades", async (from, to) => {
     const { data, error, count } = await client
       .from("holding_trades")
-      .select("id,kind,key,side,trade_date,shares,price_eur,fee_eur", { count: "exact" })
+      .select("id,kind,key,side,trade_date,shares,price_eur,fee_eur,source,external_id", {
+        count: "exact",
+      })
       .order("id")
       .range(from, to);
     if (error && isMissingTable(error)) {

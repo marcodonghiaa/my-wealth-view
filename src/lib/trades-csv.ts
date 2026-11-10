@@ -1,140 +1,58 @@
+import { BROKERS } from "@/lib/brokers";
+import type { BrokerParser, CsvResult, ParseContext } from "@/lib/brokers";
+import { parseDate, splitLine } from "@/lib/brokers/csv";
 import { netShares, parseAmount } from "@/lib/trades";
 import type { Trade } from "@/lib/trades";
 
 // Your trades as a spreadsheet export. Header row required, in any order and either case:
 //   date, side, isin (or symbol for coins), shares, price, fee (optional)
 // Separated by comma, semicolon or tab. Prices are per share in EUR. Dates are 2026-10-30 or 30/10/2026.
-// A Trade Republic transaction export is recognised by its columns and read as it comes.
+// A broker export Alopex knows (src/lib/brokers) is recognised by its columns and read as it comes.
 
-export interface CsvResult {
-  trades: Array<Trade>;
-  errors: Array<string>;
-  /** Left out on purpose, but you should know. */
-  notes: Array<string>;
-  /** The file is your broker's full record, so it can correct how many shares you hold. */
-  setsShares?: boolean;
-}
-
-function splitLine(line: string, separator: string): Array<string> {
-  const cells: Array<string> = [];
-  let cell = "";
-  let quoted = false;
-  for (const ch of line) {
-    if (ch === '"') quoted = !quoted;
-    else if (ch === separator && !quoted) {
-      cells.push(cell.trim());
-      cell = "";
-    } else cell += ch;
-  }
-  cells.push(cell.trim());
-  return cells;
-}
-
-function parseDate(text: string): string | null {
-  const dayFirst = /^(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})$/.exec(text);
-  const iso = dayFirst
-    ? `${dayFirst[3]}-${dayFirst[2]!.padStart(2, "0")}-${dayFirst[1]!.padStart(2, "0")}`
-    : text;
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return null;
-  const parsed = new Date(`${iso}T00:00:00Z`);
-  // Rejects 31/02/2026, which Date would roll into March.
-  return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === iso ? iso : null;
-}
+export type { CsvResult } from "@/lib/brokers";
 
 /**
- * Trade Republic: BUY and SELL rows are trades, a split adds shares at no cost. Dividends, card
- * payments and MIGRATION rows (a move in and straight out again) are not trades, so they're skipped.
- * Things you sold that aren't in your holdings are kept, so their profit counts.
+ * All or nothing: any error means nothing is saved, so a half-imported holding can't look right.
+ * `from` is the broker you said the file comes from: then only that broker's format is accepted.
  */
-function parseTradeRepublic(
-  lines: Array<string>,
-  separator: string,
-  header: Array<string>,
-  { kind, knownKeys, today }: { kind: "stock" | "crypto"; knownKeys: Set<string>; today: string },
-): CsvResult {
-  if (kind !== "stock") {
-    return {
-      trades: [],
-      errors: ["This is a Trade Republic export: import it on the Portfolio page."],
-      notes: [],
-    };
-  }
-  const trades: Array<Trade> = [];
-  const errors: Array<string> = [];
-  const notes: Array<string> = [];
-  const names = new Map<string, string>();
-  lines.slice(1).forEach((line, i) => {
-    const cells = splitLine(line, separator);
-    const get = (name: string) => cells[header.indexOf(name)] ?? "";
-    const type = get("type");
-    const key = get("symbol").toUpperCase();
-    const date = get("date");
-    const shares = Math.abs(Number(get("shares")));
-    if (type !== "BUY" && type !== "SELL" && type !== "SPLIT") return;
-    names.set(key, get("name"));
-    if (type === "SPLIT" && Number(get("shares")) < 0) {
-      notes.push(`${get("name")}: a reverse split on ${date} wasn't imported. Add it by hand.`);
-      return;
-    }
-    // A blank price read as 0 and saved a buy at no cost, inflating the return.
-    if (type !== "SPLIT" && get("price").trim() === "") {
-      errors.push(`Line ${i + 2}: this ${type} row has no price.`);
-      return;
-    }
-    if (date > today) {
-      errors.push(`Line ${i + 2}: the date is in the future.`);
-      return;
-    }
-    const price = type === "SPLIT" ? 0 : Number(get("price"));
-    const fee = type === "SPLIT" ? 0 : Math.abs(Number(get("fee")));
-    if (!key || parseDate(date) == null || !(shares > 0) || !(price >= 0) || !(fee >= 0)) {
-      errors.push(`Line ${i + 2}: couldn't read this ${type} row.`);
-      return;
-    }
-    if (type !== "SPLIT" && get("currency") !== "EUR") {
-      errors.push(`Line ${i + 2}: the price isn't in EUR.`);
-      return;
-    }
-    trades.push({
-      kind,
-      key,
-      side: type === "SELL" ? "sell" : "buy",
-      trade_date: date,
-      shares,
-      price_eur: price,
-      fee_eur: fee,
-    });
-  });
-
-  // Not in your holdings and not fully sold: there's no price to value what's left.
-  const open = [...new Set(trades.map((t) => t.key))].filter(
-    (key) =>
-      !knownKeys.has(key) && Math.abs(netShares(trades.filter((t) => t.key === key))) > 0.000001,
-  );
-  for (const key of open)
-    notes.push(
-      `${names.get(key)} isn't in your holdings, so it was left out. Add it, then import again.`,
-    );
-  return { trades: trades.filter((t) => !open.includes(t.key)), errors, notes, setsShares: true };
-}
-
-/** All or nothing: any error means nothing is saved, so a half-imported holding can't look right. */
-export function parseTradesCsv(
-  text: string,
-  { kind, knownKeys, today }: { kind: "stock" | "crypto"; knownKeys: Set<string>; today: string },
-): CsvResult {
+export function parseTradesCsv(text: string, ctx: ParseContext, from?: BrokerParser): CsvResult {
+  const { kind, knownKeys, today } = ctx;
   const lines = text.split(/\r?\n/).filter((l) => l.trim() !== "");
   if (lines.length === 0) return { trades: [], errors: ["The file is empty."], notes: [] };
 
   const headerLine = lines[0]!.replace(/^\uFEFF/, "");
   const separator = [";", "\t", ","].find((s) => headerLine.includes(s)) ?? ",";
   const header = splitLine(headerLine, separator).map((h) => h.toLowerCase());
-  if (header.includes("transaction_id") && header.includes("category")) {
-    return parseTradeRepublic(lines, separator, header, { kind, knownKeys, today });
+  if (from && !from.detect(header)) {
+    return {
+      trades: [],
+      errors: [
+        `This doesn't look like a ${from.name} export. If ${from.name} changed its file, tell us and we'll fix it. Nothing was imported.`,
+      ],
+      notes: [],
+      unknownFormat: true,
+    };
   }
+  const broker = from ?? BROKERS.find((b) => b.detect(header));
+  if (broker) return broker.parse(lines, separator, header, ctx);
+
   const keyName = kind === "stock" ? "isin" : "symbol";
   const at = (name: string) => header.indexOf(name);
-  const missing = ["date", "side", keyName, "shares", "price"].filter((n) => at(n) < 0);
+  const required = ["date", "side", keyName, "shares", "price"];
+  const missing = required.filter((n) => at(n) < 0);
+  // Columns missing and others we don't know: not a half-made file but some broker's export, or
+  // one whose format changed. Say so, never guess.
+  const ours = new Set([...required, "symbol", "isin", "fee"]);
+  if (missing.length > 0 && header.some((h) => h !== "" && !ours.has(h))) {
+    return {
+      trades: [],
+      errors: [
+        `This file's format isn't one Alopex knows. It reads ${BROKERS.map((b) => b.name).join(", ")} exports, or a file with the columns ${required.join(", ")}. Nothing was imported.`,
+      ],
+      notes: [],
+      unknownFormat: true,
+    };
+  }
   if (missing.length > 0) {
     return {
       trades: [],
@@ -181,10 +99,39 @@ const signature = (t: Trade) =>
     Number(t.fee_eur),
   ].join("|");
 
-/** Importing the same file twice must not double your holdings: leave out what's already saved. */
+/**
+ * Importing the same file twice must not double your holdings: leave out what's already saved.
+ * A trade with the broker's own id matches by that id, so two identical buys on one day stay two.
+ * Without one (plain CSV, or trades saved before ids were kept) it matches by its contents, one
+ * saved row per incoming row: two identical saved buys cover two incoming ones, not every copy.
+ */
 export function newTrades(incoming: Array<Trade>, saved: Array<Trade>): Array<Trade> {
-  const known = new Set(saved.map(signature));
-  return incoming.filter((t) => !known.has(signature(t)));
+  const idOf = (t: Trade) => (t.external_id ? `${t.source}|${t.external_id}` : null);
+  const savedIds = new Set(saved.map(idOf).filter((k) => k != null));
+  const claimed = new Set(incoming.map(idOf).filter((k) => k != null && savedIds.has(k)));
+  // Saved rows not already matched by id, counted by contents: without an id, and with one.
+  const plain = new Map<string, number>();
+  const withId = new Map<string, number>();
+  for (const t of saved) {
+    const k = idOf(t);
+    if (k && claimed.has(k)) continue;
+    const pool = k ? withId : plain;
+    pool.set(signature(t), (pool.get(signature(t)) ?? 0) + 1);
+  }
+  const take = (pool: Map<string, number>, t: Trade) => {
+    const left = pool.get(signature(t)) ?? 0;
+    if (left > 0) pool.set(signature(t), left - 1);
+    return left > 0;
+  };
+  const seen = new Set<string>();
+  return incoming.filter((t) => {
+    const k = idOf(t);
+    if (k == null) return !take(plain, t) && !take(withId, t);
+    if (savedIds.has(k) || seen.has(k)) return false;
+    seen.add(k);
+    // The same trade saved before ids were kept. A saved row with another id is another trade.
+    return !take(plain, t);
+  });
 }
 
 /**
@@ -205,4 +152,43 @@ export function shareUpdates(
     const shares = Math.max(0, Math.round(netShares(all.filter((t) => t.key === key)) * 1e8) / 1e8);
     return Math.abs(shares - current) > 0.000001 ? [{ key, shares }] : [];
   });
+}
+
+export interface ImportSummary {
+  buys: number;
+  sells: number;
+  /** First and last trade date, ISO. */
+  from: string;
+  to: string;
+  /** Per holding, most trades first. */
+  byKey: Array<{ key: string; buys: number; sells: number }>;
+}
+
+/** What a batch of trades adds up to, for the screen before you save. Null when there are none. */
+export function summarizeImport(trades: Array<Trade>): ImportSummary | null {
+  if (trades.length === 0) return null;
+  const byKey = new Map<string, { key: string; buys: number; sells: number }>();
+  let buys = 0;
+  let from = trades[0]!.trade_date;
+  let to = from;
+  for (const t of trades) {
+    const row = byKey.get(t.key) ?? { key: t.key, buys: 0, sells: 0 };
+    if (t.side === "sell") row.sells++;
+    else {
+      row.buys++;
+      buys++;
+    }
+    byKey.set(t.key, row);
+    if (t.trade_date < from) from = t.trade_date;
+    if (t.trade_date > to) to = t.trade_date;
+  }
+  return {
+    buys,
+    sells: trades.length - buys,
+    from,
+    to,
+    byKey: [...byKey.values()].sort(
+      (a, b) => b.buys + b.sells - (a.buys + a.sells) || a.key.localeCompare(b.key),
+    ),
+  };
 }

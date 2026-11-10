@@ -371,6 +371,7 @@ export type Database = {
       holding_trades: {
         Row: {
           created_at: string;
+          external_id: string | null;
           fee_eur: number;
           id: string;
           key: string;
@@ -378,11 +379,13 @@ export type Database = {
           price_eur: number;
           shares: number;
           side: string;
+          source: string | null;
           trade_date: string;
           user_id: string;
         };
         Insert: {
           created_at?: string;
+          external_id?: string | null;
           fee_eur?: number;
           id?: string;
           key: string;
@@ -390,11 +393,13 @@ export type Database = {
           price_eur: number;
           shares: number;
           side: string;
+          source?: string | null;
           trade_date: string;
           user_id: string;
         };
         Update: {
           created_at?: string;
+          external_id?: string | null;
           fee_eur?: number;
           id?: string;
           key?: string;
@@ -402,6 +407,7 @@ export type Database = {
           price_eur?: number;
           shares?: number;
           side?: string;
+          source?: string | null;
           trade_date?: string;
           user_id?: string;
         };

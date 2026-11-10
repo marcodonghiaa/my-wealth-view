@@ -16,6 +16,9 @@ export interface Trade {
   shares: number;
   price_eur: number;
   fee_eur: number;
+  /** The broker parser that imported it (src/lib/brokers), and the broker's own id for the trade. */
+  source?: string | null;
+  external_id?: string | null;
 }
 
 // Trades and holdings are typed and synced apart; rounding dust is not a disagreement.
