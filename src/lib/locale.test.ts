@@ -148,3 +148,15 @@ describe("formatQuantity", () => {
     expect(formatQuantity(1.5, 8)).toBe("1,5");
   });
 });
+
+describe("appLocale on a busy page", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("polish-3 #17 reads storage once, not on every figure", () => {
+    setLocaleOverride("de-DE");
+    const getItem = vi.spyOn(Storage.prototype, "getItem");
+    for (let i = 0; i < 100; i++) formatNumber(i, 2);
+    expect(getItem.mock.calls.length).toBeLessThanOrEqual(1);
+    expect(formatNumber(1.5, 2)).toBe("1,50");
+  });
+});

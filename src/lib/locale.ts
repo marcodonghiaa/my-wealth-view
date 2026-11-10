@@ -21,15 +21,21 @@ export const LOCALE_CHOICES: Array<[string, string]> = [
   ["pl-PL", "Polski"],
 ];
 
+// Storage is read once: every figure on a page asks for the locale, and a change reloads it.
+let saved: string | undefined;
+
 /** The locale picked in Settings, or "" to follow the browser. */
 export function localeOverride(): string {
-  try {
-    const saved = localStorage.getItem(KEY) ?? "";
-    // Only a Settings choice counts, whatever else ends up in storage.
-    return LOCALE_CHOICES.some(([value]) => value === saved) ? saved : "";
-  } catch {
-    return "";
+  if (saved === undefined) {
+    try {
+      const stored = localStorage.getItem(KEY) ?? "";
+      // Only a Settings choice counts, whatever else ends up in storage.
+      saved = LOCALE_CHOICES.some(([value]) => value === stored) ? stored : "";
+    } catch {
+      saved = "";
+    }
   }
+  return saved;
 }
 
 /** Saves the choice on this device. False when the browser blocks storage. */
@@ -37,21 +43,28 @@ export function setLocaleOverride(locale: string): boolean {
   try {
     if (locale) localStorage.setItem(KEY, locale);
     else localStorage.removeItem(KEY);
+    saved = undefined;
     return true;
   } catch {
     return false;
   }
 }
 
+let last: { wanted: string; locale: string } | undefined;
+
 /** The locale to format with. Never throws: a bad value falls back to en-GB. */
 export function appLocale(): string {
   const wanted = localeOverride() || (typeof navigator === "undefined" ? "" : navigator.language);
+  if (last?.wanted === wanted) return last.locale;
+  let locale = FALLBACK;
   try {
     // baseName drops extensions such as -u-nu-arab, which would swap every digit.
-    return new Intl.Locale(wanted || FALLBACK).baseName;
+    locale = new Intl.Locale(wanted || FALLBACK).baseName;
   } catch {
-    return FALLBACK;
+    // A broken value falls back to en-GB.
   }
+  last = { wanted, locale };
+  return locale;
 }
 
 const formats = new Map<string, Intl.NumberFormat>();
