@@ -1,5 +1,24 @@
-import { describe, expect, it } from "vitest";
-import { needsReview, pairIdByTx, reviewGroups, type ReviewRow } from "./transfer-review";
+import { describe, expect, it, vi } from "vitest";
+
+const pages: Array<{ data: unknown[] | null; error: Error | null }> = [];
+const ranges: Array<[number, number]> = [];
+vi.mock("@/integrations/supabase/client", () => {
+  const q: Record<string, unknown> = {};
+  for (const m of ["select", "in", "is", "order"]) q[m] = () => q;
+  q["range"] = (from: number, to: number) => {
+    ranges.push([from, to]);
+    return Promise.resolve(pages.shift());
+  };
+  return { supabase: { from: () => q } };
+});
+
+import {
+  fetchReviewRows,
+  needsReview,
+  pairIdByTx,
+  reviewGroups,
+  type ReviewRow,
+} from "./transfer-review";
 
 const row = (over: Partial<ReviewRow>): ReviewRow => ({
   entry_reference: "r1",
@@ -45,6 +64,13 @@ describe("needsReview", () => {
     expect(needsReview(row({ category: "Groceries" }))).toBe(false);
     expect(needsReview(row({ flow_source: "user" }))).toBe(false);
   });
+  // protects=decisions made on purpose (user, rule, pairing, own account) are never asked again
+  it("asks only about guesses: no source, legacy, default or bank", () => {
+    for (const s of [null, "legacy", "default", "bank"])
+      expect(needsReview(row({ flow_source: s }))).toBe(true);
+    for (const s of ["user", "rule", "pair", "own_account"])
+      expect(needsReview(row({ flow_source: s }))).toBe(false);
+  });
 });
 
 describe("reviewGroups", () => {
@@ -78,5 +104,24 @@ describe("reviewGroups", () => {
       }),
     ]);
     expect(g).toMatchObject({ key: "", name: null, direction: "income" });
+  });
+});
+
+describe("fetchReviewRows", () => {
+  // Regression: .limit(2000) was silently cut to the server's 1000-row page.
+  it("reads page after page until a short one", async () => {
+    ranges.length = 0;
+    pages.push({ data: Array(1000).fill(row({})), error: null });
+    pages.push({ data: [row({})], error: null });
+    expect(await fetchReviewRows()).toHaveLength(1001);
+    expect(ranges).toEqual([
+      [0, 999],
+      [1000, 1999],
+    ]);
+  });
+
+  it("throws the query's error", async () => {
+    pages.push({ data: null, error: new Error("boom") });
+    await expect(fetchReviewRows()).rejects.toThrow("boom");
   });
 });

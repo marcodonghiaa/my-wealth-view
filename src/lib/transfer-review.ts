@@ -1,4 +1,9 @@
+import { supabase } from "@/integrations/supabase/client";
 import { restoredFlow, txId, type TxKey } from "@/lib/transactions";
+
+// Who decided a row's flow_type. "user", "rule", "pair" and "own_account" are decisions to keep;
+// "legacy" is history from before flow_source, which automation also leaves alone.
+export type FlowSource = "user" | "rule" | "own_account" | "pair" | "bank" | "default" | "legacy";
 
 // A pair of rows the bank sync guessed is one move between your own accounts.
 export interface TransferPair {
@@ -35,9 +40,12 @@ export interface ReviewRow extends TxKey {
 // Like the views: a row with no flow yet counts by its direction.
 const flowOf = (r: ReviewRow) => r.flow_type ?? restoredFlow(r);
 
-/** The category says one thing and the flow another, and the user hasn't decided yet. */
+// Flows only a guess made: a row decided by the user, a rule or a pairing is not asked about.
+const REVIEWABLE = new Set<string | null>([null, "legacy", "default", "bank"]);
+
+/** The category says one thing and the flow another, and nobody decided the flow on purpose. */
 export function needsReview(r: ReviewRow): boolean {
-  if (r.flow_source === "user") return false;
+  if (!REVIEWABLE.has(r.flow_source)) return false;
   const flow = flowOf(r);
   if (r.category === "Transfer") return flow === "spend" || flow === "income";
   if (r.category === "Income") return flow === "transfer";
@@ -76,4 +84,29 @@ export function reviewGroups(rows: Array<ReviewRow>): Array<ReviewGroup> {
       };
     })
     .sort((a, b) => b.rows.length - a.rows.length || a.key.localeCompare(b.key));
+}
+
+// PostgREST returns at most this many rows per request.
+const PAGE = 1000;
+
+/** Every row whose category could disagree with how it counts (reviewGroups filters further).
+ * The table, not the view: rules match the bank's name and rows group by merchant_key. */
+export async function fetchReviewRows(): Promise<Array<ReviewRow>> {
+  const rows: Array<ReviewRow> = [];
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await supabase
+      .from("transactions")
+      .select(
+        "entry_reference,account_uid,booking_date,category,creditor_name,merchant_key,currency,amount,credit_debit_indicator,flow_type,flow_source",
+      )
+      .in("category", ["Transfer", "Income"])
+      .is("deleted_at", null)
+      .order("booking_date", { ascending: false })
+      .order("account_uid", { ascending: true })
+      .order("entry_reference", { ascending: true })
+      .range(from, from + PAGE - 1);
+    if (error) throw error;
+    rows.push(...(data ?? []));
+    if ((data ?? []).length < PAGE) return rows;
+  }
 }

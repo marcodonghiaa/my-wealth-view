@@ -26,7 +26,12 @@ import {
 import { BulkCategoryPicker } from "@/components/transactions/pickers";
 import { TransfersSection } from "@/components/transactions/transfers-section";
 import { ReviewSection } from "@/components/transactions/review-section";
-import { pairIdByTx, reviewGroups, type ReviewRow, type TransferPair } from "@/lib/transfer-review";
+import {
+  fetchReviewRows,
+  pairIdByTx,
+  reviewGroups,
+  type TransferPair,
+} from "@/lib/transfer-review";
 import { AddTransaction } from "@/components/transactions/add-transaction";
 import { ImportStatement } from "@/components/transactions/import-statement";
 import {
@@ -112,24 +117,6 @@ async function fetchSuggestedPairs(): Promise<Array<TransferPair>> {
     .from("transfer_pairs")
     .select("id,out_account_uid,out_ref,in_account_uid,in_ref")
     .eq("status", "suggested");
-  if (error) throw error;
-  return data ?? [];
-}
-
-// Last year's rows whose category could disagree with how they count (filtered in reviewGroups).
-// The table, not the view: rules match the bank's name and rows group by merchant_key.
-async function fetchReviewRows(): Promise<Array<ReviewRow>> {
-  const now = new Date();
-  const { data, error } = await supabase
-    .from("transactions")
-    .select(
-      "entry_reference,account_uid,booking_date,category,creditor_name,merchant_key,currency,amount,credit_debit_indicator,flow_type,flow_source",
-    )
-    .in("category", ["Transfer", "Income"])
-    .is("deleted_at", null)
-    .gte("booking_date", formatISODate(new Date(now.getFullYear() - 1, now.getMonth(), 1)))
-    .order("booking_date", { ascending: false })
-    .limit(2000);
   if (error) throw error;
   return data ?? [];
 }

@@ -7,6 +7,7 @@ import type { SplitwiseShare, TransactionRow } from "@/lib/transactions";
 type Call = {
   table?: string;
   insert?: unknown;
+  select?: boolean;
   update: unknown;
   eq: Record<string, unknown>;
   is: Record<string, unknown>;
@@ -16,6 +17,7 @@ const calls: Call[] = [];
 const rpc = vi.fn();
 const getUser = vi.fn(async () => ({ data: { user: { id: "u1" } as { id: string } | null } }));
 let insertError: Error | null = null;
+let existingRule: Array<{ id: string }> = [];
 
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
@@ -24,6 +26,16 @@ vi.mock("@/integrations/supabase/client", () => ({
     from: (table: string) => {
       const call: Call = { table, update: null, eq: {}, is: {}, in: {} };
       const q = {
+        select() {
+          call.select = true;
+          return q;
+        },
+        not() {
+          return q;
+        },
+        limit() {
+          return q;
+        },
         insert(row: unknown) {
           call.insert = row;
           return q;
@@ -44,9 +56,10 @@ vi.mock("@/integrations/supabase/client", () => ({
           call.in[col] = vals;
           return q;
         },
-        then(resolve: (v: { error: Error | null }) => void) {
+        then(resolve: (v: { data?: unknown; error: Error | null }) => void) {
           calls.push(call);
-          resolve({ error: call.insert ? insertError : null });
+          if (call.select) resolve({ data: existingRule, error: null });
+          else resolve({ error: call.insert ? insertError : null });
         },
       };
       return q;
@@ -104,6 +117,7 @@ function setup() {
 beforeEach(() => {
   calls.length = 0;
   insertError = null;
+  existingRule = [];
 });
 
 describe("transaction mutations are scoped to one account", () => {
@@ -202,8 +216,9 @@ describe("transaction mutations are scoped to one account", () => {
     expect(cached().map((r) => r.account_uid)).toEqual(["a2"]);
   });
 
-  it("picking another category leaves flow_type alone", async () => {
+  it("picking another category leaves flow_type alone but refetches To review", async () => {
     const { queryClient, wrapper } = setup();
+    const invalidate = vi.spyOn(queryClient, "invalidateQueries");
     const { result } = renderHook(
       () => useTransactionFieldMutation(queryClient, MONTH, "category", { errorMessage: "fail" }),
       { wrapper },
@@ -215,6 +230,23 @@ describe("transaction mutations are scoped to one account", () => {
       }),
     );
     expect(calls[0]?.update).toEqual({ category: "Health" });
+    await waitFor(() => expect(invalidate).toHaveBeenCalledWith({ queryKey: ["transfer-review"] }));
+  });
+
+  it("bulk: another category refetches To review", async () => {
+    const { queryClient, wrapper } = setup();
+    const invalidate = vi.spyOn(queryClient, "invalidateQueries");
+    const { result } = renderHook(() => useBulkCategoryMutation(queryClient, MONTH, vi.fn()), {
+      wrapper,
+    });
+    act(() =>
+      result.current.mutate({
+        txs: [{ account_uid: "a2", entry_reference: "r1" }],
+        category: "Health",
+      }),
+    );
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ["transfer-review"] });
   });
 
   it("bulk Transfer marks every chosen row as a transfer and takes them off the list", async () => {
@@ -464,12 +496,15 @@ describe("auto-paired transfers", () => {
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ["transfer-pairs"] });
   });
 
-  it("surfaces an rpc error", async () => {
-    rpc.mockResolvedValue({ data: null, error: new Error("nope") });
-    const { result } = setupPair();
+  // protects=Keep on a pair the sync changed meanwhile: an error toast and a fresh list, no crash
+  it("surfaces an rpc error and still refetches", async () => {
+    rpc.mockResolvedValue({ data: null, error: new Error("pair is stale") });
+    const { result, invalidate } = setupPair();
     await expect(
       act(() => result.current.mutateAsync({ pairId: "p1", keep: true })),
-    ).rejects.toThrow("nope");
+    ).rejects.toThrow("pair is stale");
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ["transfer-pairs"] });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ["transfers"] });
   });
 });
 
@@ -509,8 +544,12 @@ describe("settling a To review group", () => {
     );
     expect(calls[0]?.update).toEqual({ flow_type: "transfer", flow_source: "user" });
     expect(calls[0]?.eq).toEqual({ account_uid: "a1" });
-    expect(calls[1]?.table).toBe("category_rules");
-    expect(calls[1]?.insert).toEqual({
+    expect(calls[1]).toMatchObject({
+      table: "category_rules",
+      select: true,
+      eq: { match_field: "creditor_name", match_text: "Revolut" },
+    });
+    expect(calls[2]?.insert).toEqual({
       user_id: "u1",
       match_field: "creditor_name",
       match_text: "Revolut",
@@ -536,7 +575,22 @@ describe("settling a To review group", () => {
       update: { flow_type: "income", flow_source: "user" },
       in: { entry_reference: ["r2"] },
     });
-    expect(calls[2]?.insert).toMatchObject({ set_flow_type: "spend" });
+    expect(calls[3]?.insert).toMatchObject({ set_flow_type: "spend" });
+  });
+
+  // protects=answering the same name twice changes its rule instead of piling up rules
+  it("updates the name's existing flow rule instead of adding one", async () => {
+    existingRule = [{ id: "rule1" }];
+    const result = setupGroup();
+    await act(() =>
+      result.current.mutateAsync({ group: group([rr("a1", "r1", "DBIT")]), choice: "transfer" }),
+    );
+    expect(calls[2]).toMatchObject({
+      table: "category_rules",
+      update: { set_flow_type: "transfer" },
+      eq: { id: "rule1" },
+    });
+    expect(calls.some((c) => c.insert)).toBe(false);
   });
 
   it("adds no rule when the rows have no name to match", async () => {

@@ -256,14 +256,21 @@ class Store {
     const pair = this.db["transfer_pairs"]!.find((p) => p["id"] === id);
     if (!pair || pair["status"] !== "suggested")
       return { data: null, error: { message: "pair not found" } };
-    pair["status"] = keep ? "confirmed" : "rejected";
     const sides = [
       [pair["out_account_uid"], pair["out_ref"]],
       [pair["in_account_uid"], pair["in_ref"]],
     ];
-    for (const r of this.db["transactions"]!) {
-      if (!sides.some(([a, ref]) => r["account_uid"] === a && r["entry_reference"] === ref))
-        continue;
+    const rows = this.db["transactions"]!.filter((r) =>
+      sides.some(([a, ref]) => r["account_uid"] === a && r["entry_reference"] === ref),
+    );
+    // Like the database: Keep is refused once a side was changed since the pairing.
+    if (
+      keep &&
+      (rows.length < 2 || rows.some((r) => !["pair", "bank"].includes(String(r["flow_source"]))))
+    )
+      return { data: null, error: { message: "pair is stale" } };
+    pair["status"] = keep ? "confirmed" : "rejected";
+    for (const r of rows) {
       r["flow_source"] = "user";
       if (!keep) r["flow_type"] = r["credit_debit_indicator"] === "DBIT" ? "spend" : "income";
     }

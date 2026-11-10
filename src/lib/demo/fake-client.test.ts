@@ -621,4 +621,14 @@ describe("fake client: resolve_transfer_pair", () => {
     const again = await c.rpc("resolve_transfer_pair", { p_pair: pair.id, p_keep: true });
     expect(again.error).toBeTruthy();
   });
+
+  it("refuses Keep once a side changed since the pairing", async () => {
+    const c = fresh();
+    const { pair } = await sides(c);
+    await c.from("transactions").update({ flow_source: "user" }).eq("entry_reference", pair.in_ref);
+    const res = await c.rpc("resolve_transfer_pair", { p_pair: pair.id, p_keep: true });
+    expect(res.error).toBeTruthy();
+    const { data } = await c.from("transfer_pairs").select("status").eq("id", pair.id);
+    expect(data).toMatchObject([{ status: "suggested" }]);
+  });
 });

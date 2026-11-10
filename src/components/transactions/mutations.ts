@@ -34,6 +34,9 @@ const FLOW_KEYS = [
 function refetchFlows(queryClient: QueryClient) {
   for (const k of FLOW_KEYS) void queryClient.invalidateQueries({ queryKey: [k] });
 }
+// A new category can put a row on the "To review" list or take it off.
+const refetchReview = (queryClient: QueryClient) =>
+  void queryClient.invalidateQueries({ queryKey: ["transfer-review"] });
 
 // account_uid is part of the primary key; filtering on the reference alone would also
 // touch the same reference in another account.
@@ -88,7 +91,9 @@ export function useTransactionFieldMutation<K extends "category" | "transaction_
       if (opts.successMessage) toast.success(opts.successMessage(vars.value));
     },
     onSettled: (_data, _error, vars) => {
-      if (column === "category" && vars.value === TRANSFER_CATEGORY) refetchFlows(queryClient);
+      if (column !== "category") return;
+      if (vars.value === TRANSFER_CATEGORY) refetchFlows(queryClient);
+      else refetchReview(queryClient);
     },
   });
 }
@@ -208,6 +213,7 @@ export function useBulkCategoryMutation(
           : old,
       );
       if (toTransfer) refetchFlows(queryClient);
+      else refetchReview(queryClient);
       toast.success(
         `Set ${vars.txs.length} transaction${vars.txs.length === 1 ? "" : "s"} to ${vars.category}`,
       );
@@ -385,7 +391,10 @@ export function useResolvePairMutation(queryClient: QueryClient) {
       });
       if (error) throw error;
     },
-    onError: (error) => toast.error("Couldn't save", { description: error.message }),
+    // The sync may have changed a side since the list loaded (then Keep is refused): the
+    // refetch below shows what is true now.
+    onError: (error) =>
+      toast.error("Couldn't save. List refreshed.", { description: error.message }),
     onSuccess: (_data, { keep }) => toast.success(keep ? "Kept as transfer" : "Counted again"),
     onSettled: () => {
       refetchFlows(queryClient);
@@ -413,13 +422,26 @@ export function useReviewGroupMutation(queryClient: QueryClient) {
       const { data } = await supabase.auth.getUser();
       if (!data.user) throw new Error("You are signed out. Sign in again.");
       // The sync reads "spend" and "income" alike as "not a transfer: count by direction".
-      const { error } = await supabase.from("category_rules").insert({
-        user_id: data.user.id,
-        match_field: "creditor_name",
-        match_text: group.name,
-        set_category: null,
-        set_flow_type: choice === "transfer" ? "transfer" : restoredFlow(group.rows[0]!),
-      });
+      const setFlowType = choice === "transfer" ? "transfer" : restoredFlow(group.rows[0]!);
+      // A second answer for the same name changes its rule instead of adding another.
+      const { data: existing, error: findError } = await supabase
+        .from("category_rules")
+        .select("id")
+        .eq("match_field", "creditor_name")
+        .eq("match_text", group.name)
+        .not("set_flow_type", "is", null)
+        .limit(1);
+      if (findError) throw findError;
+      const id = existing?.[0]?.id;
+      const { error } = id
+        ? await supabase.from("category_rules").update({ set_flow_type: setFlowType }).eq("id", id)
+        : await supabase.from("category_rules").insert({
+            user_id: data.user.id,
+            match_field: "creditor_name",
+            match_text: group.name,
+            set_category: null,
+            set_flow_type: setFlowType,
+          });
       if (error) throw error;
     },
     onError: (error) => toast.error("Couldn't save", { description: error.message }),
