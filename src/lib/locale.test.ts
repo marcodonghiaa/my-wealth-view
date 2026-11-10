@@ -1,6 +1,13 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { formatDay } from "./date";
-import { appLocale, formatPercent, localeOverride, monthFirst, setLocaleOverride } from "./locale";
+import {
+  appLocale,
+  dateLocale,
+  formatPercent,
+  localeOverride,
+  monthFirst,
+  setLocaleOverride,
+} from "./locale";
 import { formatMoney } from "./transactions";
 
 const setBrowser = (language: string) =>
@@ -16,7 +23,8 @@ describe("appLocale", () => {
     setBrowser("de-DE");
     expect(appLocale()).toBe("de-DE");
     expect(formatMoney(1234.5, "EUR")).toBe("1.234,50\u00a0€");
-    expect(formatDay("2026-03-03")).toBe("3. März 2026");
+    // Month names stay English: the UI is English.
+    expect(formatDay("2026-03-03")).toBe("3 Mar 2026");
   });
 
   it("prefers the Settings choice over the browser", () => {
@@ -24,7 +32,7 @@ describe("appLocale", () => {
     setLocaleOverride("it-IT");
     expect(localeOverride()).toBe("it-IT");
     expect(formatMoney(1234.5, "EUR")).toBe("1234,50\u00a0€");
-    expect(formatDay("2026-03-03")).toBe("3 mar 2026");
+    expect(formatDay("2026-03-03")).toBe("3 Mar 2026");
   });
 
   it("goes back to the browser when the choice is cleared", () => {
@@ -56,5 +64,13 @@ describe("formatPercent", () => {
     expect(formatPercent(25.48, 2)).toBe("25.48%");
     setBrowser("de-DE");
     expect(formatPercent(25.48)).toBe("25,5\u00a0%");
+  });
+});
+
+describe("dateLocale", () => {
+  it("keeps month names English in the reader's order", () => {
+    expect(dateLocale("en-US")).toBe("en-US");
+    expect(dateLocale("de-DE")).toBe("en-GB");
+    expect(dateLocale("it-IT")).toBe("en-GB");
   });
 });

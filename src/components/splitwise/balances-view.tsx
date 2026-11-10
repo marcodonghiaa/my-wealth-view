@@ -1,4 +1,4 @@
-import { appLocale } from "@/lib/locale";
+import { dateLocale } from "@/lib/locale";
 import { ChevronDown, Users } from "lucide-react";
 import { useId, useState } from "react";
 import type { GroupSummary } from "@/lib/import/splitwise-balances";
@@ -7,7 +7,7 @@ import { Initial } from "./owed-view";
 import { GroupedList } from "@/components/ui/grouped-list";
 
 const day = (iso: string) =>
-  new Date(iso).toLocaleDateString(appLocale(), {
+  new Date(iso).toLocaleDateString(dateLocale(), {
     day: "numeric",
     month: "short",
     year: "numeric",

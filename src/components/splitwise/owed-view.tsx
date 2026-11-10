@@ -1,4 +1,4 @@
-import { appLocale } from "@/lib/locale";
+import { dateLocale } from "@/lib/locale";
 import { ChevronDown } from "lucide-react";
 import {
   money,
@@ -15,7 +15,7 @@ import { GroupedList } from "@/components/ui/grouped-list";
 const eur = (value: number) => money(value, "EUR");
 
 const day = (iso: string | null) =>
-  iso ? new Date(iso).toLocaleDateString(appLocale(), { day: "numeric", month: "short" }) : "—";
+  iso ? new Date(iso).toLocaleDateString(dateLocale(), { day: "numeric", month: "short" }) : "—";
 
 const bills = (n: number) => `${n} open ${n === 1 ? "bill" : "bills"}`;
 

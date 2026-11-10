@@ -1,4 +1,4 @@
-import { appLocale } from "@/lib/locale";
+import { appLocale, dateLocale } from "@/lib/locale";
 
 export interface TransactionRow {
   entry_reference: string;
@@ -177,7 +177,7 @@ export const personalAmountEur = (
 export function formatBookingDateShort(bookingDate: string | null, now: Date = new Date()): string {
   if (!bookingDate) return "—";
   const date = new Date(`${bookingDate}T00:00:00`);
-  return date.toLocaleDateString(appLocale(), {
+  return date.toLocaleDateString(dateLocale(), {
     day: "numeric",
     month: "short",
     ...(date.getFullYear() === now.getFullYear() ? {} : { year: "numeric" }),
@@ -186,7 +186,7 @@ export function formatBookingDateShort(bookingDate: string | null, now: Date = n
 
 export function formatBookingDate(bookingDate: string | null): string {
   return bookingDate
-    ? new Date(`${bookingDate}T00:00:00`).toLocaleDateString(appLocale(), {
+    ? new Date(`${bookingDate}T00:00:00`).toLocaleDateString(dateLocale(), {
         day: "numeric",
         month: "short",
         year: "numeric",

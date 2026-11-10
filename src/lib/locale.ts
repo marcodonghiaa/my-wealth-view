@@ -1,5 +1,5 @@
-// The locale numbers and dates are written in: the one picked in Settings, else the browser's.
-// UI text stays English; only formats follow the locale.
+// The locale numbers are written in: the one picked in Settings, else the browser's.
+// UI text and month names stay English; numbers and day/month order follow the locale.
 
 const KEY = "alopex.locale";
 const FALLBACK = "en-GB";
@@ -60,3 +60,10 @@ export function formatPercent(percent: number, digits = 1): string {
     maximumFractionDigits: digits,
   }).format(percent / 100);
 }
+
+/**
+ * The locale for dates that spell the month: English, since the UI is English, in the
+ * reader's order (Nov 10, 2026 for US English, 10 Nov 2026 for everyone else).
+ */
+export const dateLocale = (locale: string = appLocale()): string =>
+  monthFirst(locale) ? "en-US" : "en-GB";

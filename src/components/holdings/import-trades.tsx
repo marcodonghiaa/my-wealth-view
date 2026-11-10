@@ -1,4 +1,4 @@
-import { appLocale } from "@/lib/locale";
+import { dateLocale } from "@/lib/locale";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, ChevronLeft, ChevronRight, FileUp, Info, Lock, Loader2 } from "lucide-react";
@@ -46,7 +46,7 @@ async function fetchHoldings(kind: "stock" | "crypto"): Promise<Holdings> {
   };
 }
 
-const dateFormat = new Intl.DateTimeFormat(appLocale(), {
+const dateFormat = new Intl.DateTimeFormat(dateLocale(), {
   day: "numeric",
   month: "short",
   year: "numeric",

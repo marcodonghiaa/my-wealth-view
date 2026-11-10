@@ -1,4 +1,4 @@
-import { appLocale, formatPercent as percentText } from "@/lib/locale";
+import { appLocale, dateLocale, formatPercent as percentText } from "@/lib/locale";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
@@ -65,7 +65,7 @@ async function fetchLatestFxRates(): Promise<Record<string, FxRate>> {
 
 function formatFxDate(iso: string | undefined): string {
   if (!iso) return "latest";
-  return new Date(`${iso}T00:00:00`).toLocaleDateString(appLocale(), {
+  return new Date(`${iso}T00:00:00`).toLocaleDateString(dateLocale(), {
     day: "numeric",
     month: "short",
   });

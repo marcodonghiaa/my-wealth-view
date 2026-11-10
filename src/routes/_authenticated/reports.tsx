@@ -1,4 +1,4 @@
-import { appLocale } from "@/lib/locale";
+import { dateLocale } from "@/lib/locale";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState, type ReactNode } from "react";
@@ -218,7 +218,7 @@ function ReportsPage() {
     return mover;
   }, [spendQuery.data, prevSpendQuery.data]);
 
-  const monthLabel = month.toLocaleDateString(appLocale(), { month: "long", year: "numeric" });
+  const monthLabel = month.toLocaleDateString(dateLocale(), { month: "long", year: "numeric" });
   const canGoNext =
     startOfMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1)) <=
     startOfMonth(new Date());

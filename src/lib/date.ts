@@ -1,4 +1,4 @@
-import { appLocale } from "@/lib/locale";
+import { dateLocale } from "@/lib/locale";
 
 // Format a Date's LOCAL calendar day as YYYY-MM-DD. `date.toISOString()`
 // converts to UTC first, which shifts the date across midnight in any
@@ -26,12 +26,12 @@ export function axisDateFormatter(
     spanDays > SHORT_RANGE_DAYS
       ? { month: "short", year: "2-digit" }
       : { day: "numeric", month: "short" };
-  return (iso) => new Date(`${iso}T00:00:00`).toLocaleDateString(appLocale(), options);
+  return (iso) => new Date(`${iso}T00:00:00`).toLocaleDateString(dateLocale(), options);
 }
 
 // A day as people read it: 3 Mar 2026.
 export function formatDay(iso: string): string {
-  return new Date(`${iso}T00:00:00`).toLocaleDateString(appLocale(), {
+  return new Date(`${iso}T00:00:00`).toLocaleDateString(dateLocale(), {
     day: "numeric",
     month: "short",
     year: "numeric",
@@ -42,7 +42,7 @@ export function formatDay(iso: string): string {
 export function asOf(snapshotDate: string | null, today: string): string | null {
   if (!snapshotDate || snapshotDate >= today) return null;
   const date = new Date(`${snapshotDate}T00:00:00`);
-  return `as of ${date.toLocaleDateString(appLocale(), {
+  return `as of ${date.toLocaleDateString(dateLocale(), {
     day: "numeric",
     month: "short",
     ...(snapshotDate.slice(0, 4) === today.slice(0, 4) ? {} : { year: "numeric" }),
