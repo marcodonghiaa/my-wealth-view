@@ -3,7 +3,8 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 // Regression: "Sign out" in the demo landed on /auth, which saw a real login stored in the same
-// browser and opened that account's dashboard. Leaving the demo must stop at the sign-in form.
+// browser and opened that account's dashboard. The demo now only links out to the setup steps,
+// and /auth reached from a demo tab still stops at the sign-in form.
 
 const { navigate, signOut, getSession, routeContext } = vi.hoisted(() => ({
   navigate: vi.fn(() => Promise.resolve()),
@@ -41,7 +42,7 @@ vi.mock("@/integrations/supabase/client", () => ({
   },
 }));
 
-import { Route as LayoutRoute } from "./_authenticated/route";
+import { GET_YOUR_OWN_URL, Route as LayoutRoute } from "./_authenticated/route";
 import { Route as AuthRoute } from "./auth";
 import { enterDemoMode, exitDemoMode } from "@/lib/demo/mode";
 
@@ -60,14 +61,14 @@ beforeEach(() => {
 afterEach(() => exitDemoMode());
 
 describe("leaving the demo", () => {
-  it("the demo shows Exit demo, which goes to sign-in without a sign-out", async () => {
+  it("the demo has no way into the app: only a Get your own link to the setup steps", () => {
     enterDemoMode();
     routeContext.current = { user: { email: "demo@example.com" } };
     withQuery(<Layout />);
-    const buttons = screen.getAllByRole("button", { name: "Exit demo" });
-    expect(screen.queryByRole("button", { name: "Sign out" })).toBeNull();
-    fireEvent.click(buttons[0]!);
-    await waitFor(() => expect(navigate).toHaveBeenCalledWith({ to: "/auth", replace: true }));
+    expect(screen.queryByRole("button", { name: /sign out|exit/i })).toBeNull();
+    const links = screen.getAllByRole("link", { name: /get your own/i });
+    expect(links.length).toBeGreaterThan(0); // sidebar (the mobile menu renders when opened)
+    links.forEach((l) => expect(l.getAttribute("href")).toBe(GET_YOUR_OWN_URL));
     expect(signOut).not.toHaveBeenCalled();
   });
 
