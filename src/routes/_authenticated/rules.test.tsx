@@ -148,6 +148,11 @@ describe("Rules list", () => {
     }
   });
 
+  it("counts the rules above the list", async () => {
+    renderPage();
+    expect(await screen.findByText("3 rules")).toBeTruthy();
+  });
+
   it("closes the form with Cancel", async () => {
     renderPage();
     await openForm();

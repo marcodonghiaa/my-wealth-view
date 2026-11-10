@@ -368,7 +368,7 @@ function RuleList({ rules }: { rules: RuleRow[] }) {
           ) : undefined
         }
       >
-        {rules.length} {rules.length === 1 ? "rule" : "rules"}
+        {plural(rules.length, "rule")}
       </SectionTitle>
 
       {checking && (

@@ -14,6 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { fieldClass } from "@/components/ui/field";
 import { cn } from "@/lib/utils";
+import { plural } from "@/lib/plural";
 import { GroupedList } from "@/components/ui/grouped-list";
 import { localToday } from "@/lib/trades";
 import type { Trade } from "@/lib/trades";
@@ -51,7 +52,6 @@ const dateFormat = new Intl.DateTimeFormat("en-GB", {
   year: "numeric",
 });
 const shortDate = (iso: string) => dateFormat.format(new Date(`${iso}T12:00:00`));
-const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
 
 /** Pick where the trades come from, upload the file; shows what it found and saves only on your say-so. */
 export function ImportTrades({ kind, saved }: { kind: "stock" | "crypto"; saved: Array<Trade> }) {
