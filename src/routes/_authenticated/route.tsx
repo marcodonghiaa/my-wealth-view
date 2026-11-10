@@ -9,6 +9,7 @@ import {
   Briefcase,
   Bitcoin,
   LogOut,
+  Download,
   MoreHorizontal,
   FileText,
   ArrowDownLeft,
@@ -55,6 +56,9 @@ export const Route = createFileRoute("/_authenticated")({
   },
   component: AuthenticatedLayout,
 });
+
+/** Where the demo sends visitors who want their own dashboard: the setup steps. */
+export const GET_YOUR_OWN_URL = "https://alopex.finance/#how";
 
 interface NavItem {
   label: string;
@@ -145,6 +149,9 @@ function AuthenticatedLayout() {
     return () => subscription.unsubscribe();
   }, [navigate]);
 
+  // The demo has no exit into this app: its only way out is the setup guide for your own copy.
+  const demo = isDemoMode();
+
   async function handleSignOut() {
     setSigningOut(true);
     await supabase.auth.signOut();
@@ -195,14 +202,20 @@ function AuthenticatedLayout() {
           >
             Settings
           </Link>
-          <button
-            type="button"
-            onClick={handleSignOut}
-            disabled={signingOut}
-            className={`${SIDEBAR_LINK} w-full disabled:opacity-50`}
-          >
-            {signingOut ? "Signing out…" : "Sign out"}
-          </button>
+          {demo ? (
+            <a href={GET_YOUR_OWN_URL} className={SIDEBAR_LINK}>
+              Get your own
+            </a>
+          ) : (
+            <button
+              type="button"
+              onClick={handleSignOut}
+              disabled={signingOut}
+              className={`${SIDEBAR_LINK} w-full disabled:opacity-50`}
+            >
+              {signingOut ? "Signing out…" : "Sign out"}
+            </button>
+          )}
           <MadeWith className="mt-2 px-3" />
         </div>
       </aside>
@@ -304,15 +317,25 @@ function AuthenticatedLayout() {
                   <Settings className="size-5 shrink-0" />
                   Settings
                 </Link>
-                <button
-                  type="button"
-                  onClick={handleSignOut}
-                  disabled={signingOut}
-                  className="flex min-h-11 w-full items-center gap-3 px-4 py-2.5 text-[0.9375rem] text-negative active:bg-accent disabled:opacity-50"
-                >
-                  <LogOut className="size-5" />
-                  {signingOut ? "Signing out…" : "Sign out"}
-                </button>
+                {demo ? (
+                  <a
+                    href={GET_YOUR_OWN_URL}
+                    className="flex min-h-11 w-full items-center gap-3 px-4 py-2.5 text-[0.9375rem] text-foreground active:bg-accent"
+                  >
+                    <Download className="size-5" />
+                    Get your own
+                  </a>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleSignOut}
+                    disabled={signingOut}
+                    className="flex min-h-11 w-full items-center gap-3 px-4 py-2.5 text-[0.9375rem] text-negative active:bg-accent disabled:opacity-50"
+                  >
+                    <LogOut className="size-5" />
+                    {signingOut ? "Signing out…" : "Sign out"}
+                  </button>
+                )}
               </div>
               <MadeWith className="min-h-11 px-4" />
             </div>

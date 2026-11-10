@@ -16,6 +16,12 @@ describe("demo mode flag", () => {
     expect(isDemoMode()).toBe(false);
   });
 
+  it("exit reports whether the tab was in the demo", () => {
+    expect(exitDemoMode()).toBe(false);
+    enterDemoMode();
+    expect(exitDemoMode()).toBe(true);
+  });
+
   it("survives a reload of the same tab (kept in sessionStorage)", () => {
     enterDemoMode();
     expect(window.sessionStorage.getItem("mwv-demo")).toBe("1");
