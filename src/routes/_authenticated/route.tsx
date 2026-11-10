@@ -145,9 +145,13 @@ function AuthenticatedLayout() {
     return () => subscription.unsubscribe();
   }, [navigate]);
 
+  const demo = isDemoMode();
+  const signOutLabel = demo ? "Exit demo" : "Sign out";
+
   async function handleSignOut() {
     setSigningOut(true);
-    await supabase.auth.signOut();
+    // The demo has no login to end: the sign-in page ends the demo and asks for real credentials.
+    if (!demo) await supabase.auth.signOut();
     await navigate({ to: "/auth", replace: true });
   }
 
@@ -201,7 +205,7 @@ function AuthenticatedLayout() {
             disabled={signingOut}
             className={`${SIDEBAR_LINK} w-full disabled:opacity-50`}
           >
-            {signingOut ? "Signing out…" : "Sign out"}
+            {signingOut ? "Signing out…" : signOutLabel}
           </button>
           <MadeWith className="mt-2 px-3" />
         </div>
@@ -311,7 +315,7 @@ function AuthenticatedLayout() {
                   className="flex min-h-11 w-full items-center gap-3 px-4 py-2.5 text-[0.9375rem] text-negative active:bg-accent disabled:opacity-50"
                 >
                   <LogOut className="size-5" />
-                  {signingOut ? "Signing out…" : "Sign out"}
+                  {signingOut ? "Signing out…" : signOutLabel}
                 </button>
               </div>
               <MadeWith className="min-h-11 px-4" />
