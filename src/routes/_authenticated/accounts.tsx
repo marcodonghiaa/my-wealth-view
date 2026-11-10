@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { assertHttpsUrl } from "@/lib/consent-url";
 import {
   COUNTRIES,
+  defaultCountry,
   linkErrorMessage,
   linkedMessage,
   pendingLink,
@@ -202,7 +203,9 @@ function AccountsPage() {
   // Connect-a-bank form state
   const [showConnectForm, setShowConnectForm] = useState(false);
   const [bankName, setBankName] = useState("");
-  const [bankCountry, setBankCountry] = useState("IT");
+  const [bankCountry, setBankCountry] = useState(() =>
+    defaultCountry(navigator.languages ?? [navigator.language]),
+  );
   const [connectError, setConnectError] = useState<string | null>(null);
   const connectStepsRef = useRef<HTMLOListElement>(null);
 
@@ -370,7 +373,7 @@ function AccountsPage() {
                       setBankCountry(e.target.value);
                       setBankName("");
                     }}
-                    className="sm:w-28"
+                    className="sm:w-40"
                   >
                     {COUNTRIES.map((c) => (
                       <option key={c.code} value={c.code}>

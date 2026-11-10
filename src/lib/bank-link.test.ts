@@ -1,5 +1,12 @@
 import { describe, it, expect } from "vitest";
-import { COUNTRIES, linkErrorMessage, linkedMessage, pendingLink, renewTarget } from "./bank-link";
+import {
+  COUNTRIES,
+  defaultCountry,
+  linkErrorMessage,
+  linkedMessage,
+  pendingLink,
+  renewTarget,
+} from "./bank-link";
 
 describe("linkedMessage", () => {
   it("names the bank and the currencies found", () => {
@@ -55,26 +62,28 @@ describe("renewTarget", () => {
   });
 
   it("returns null when the stored country is not in the form's list", () => {
-    expect(renewTarget("Revolut", [row("Revolut EUR", "Revolut", "LT")])).toBeNull();
+    expect(renewTarget("Revolut", [row("Revolut EUR", "Revolut", "US")])).toBeNull();
+  });
+
+  it("prefills a Lithuanian bank (Revolut)", () => {
+    expect(renewTarget("Revolut", [row("Revolut EUR", "Revolut", "LT")])).toEqual({
+      bankName: "Revolut",
+      country: "LT",
+    });
   });
 
   it("returns null when no row matches the bank", () => {
     expect(renewTarget("Wise", [row("Revolut EUR", "Revolut", "IE")])).toBeNull();
   });
 
-  it("lists the 10 form countries", () => {
-    expect(COUNTRIES.map((c) => c.code)).toEqual([
-      "IT",
-      "DE",
-      "FR",
-      "ES",
-      "GB",
-      "NL",
-      "BE",
-      "AT",
-      "PT",
-      "IE",
-    ]);
+  // protects=every country Enable Banking covers can be picked (the landing promises 31);
+  // fails_when=a country such as Lithuania (Revolut's bank) is missing from the form
+  it("lists the 31 EEA and UK countries, Lithuania included", () => {
+    expect(COUNTRIES).toHaveLength(31);
+    expect(new Set(COUNTRIES.map((c) => c.code)).size).toBe(31);
+    expect(COUNTRIES.map((c) => c.code)).toEqual(
+      expect.arrayContaining(["LT", "PL", "SE", "IT", "GB"]),
+    );
   });
 });
 
@@ -115,5 +124,16 @@ describe("linkErrorMessage for complete-bank-consent replies", () => {
     expect(linkErrorMessage(new URLSearchParams({ bank_link_error: "Not signed in" }))).toBe(
       "Not signed in",
     );
+  });
+});
+
+describe("defaultCountry", () => {
+  it("takes the region of the first browser language in the list", () => {
+    expect(defaultCountry(["en", "de-AT", "fr-FR"])).toBe("AT");
+  });
+
+  it("falls back to the first country when no region is listed", () => {
+    expect(defaultCountry(["en-US", "ja"])).toBe("AT");
+    expect(defaultCountry([])).toBe("AT");
   });
 });

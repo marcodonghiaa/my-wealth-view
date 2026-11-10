@@ -1,18 +1,50 @@
 import { bankOf } from "@/components/bank-badge";
 
-// Countries offered in the Connect a bank form, in display order.
+// Countries offered in the Connect a bank form: the EEA and the UK, where Enable Banking
+// connects banks under PSD2. Alphabetical; a country without banks just shows an empty list.
 export const COUNTRIES: Array<{ code: string; name: string }> = [
-  { code: "IT", name: "Italy" },
-  { code: "DE", name: "Germany" },
-  { code: "FR", name: "France" },
-  { code: "ES", name: "Spain" },
-  { code: "GB", name: "UK" },
-  { code: "NL", name: "Netherlands" },
-  { code: "BE", name: "Belgium" },
   { code: "AT", name: "Austria" },
-  { code: "PT", name: "Portugal" },
+  { code: "BE", name: "Belgium" },
+  { code: "BG", name: "Bulgaria" },
+  { code: "HR", name: "Croatia" },
+  { code: "CY", name: "Cyprus" },
+  { code: "CZ", name: "Czechia" },
+  { code: "DK", name: "Denmark" },
+  { code: "EE", name: "Estonia" },
+  { code: "FI", name: "Finland" },
+  { code: "FR", name: "France" },
+  { code: "DE", name: "Germany" },
+  { code: "GR", name: "Greece" },
+  { code: "HU", name: "Hungary" },
+  { code: "IS", name: "Iceland" },
   { code: "IE", name: "Ireland" },
+  { code: "IT", name: "Italy" },
+  { code: "LV", name: "Latvia" },
+  { code: "LI", name: "Liechtenstein" },
+  { code: "LT", name: "Lithuania" },
+  { code: "LU", name: "Luxembourg" },
+  { code: "MT", name: "Malta" },
+  { code: "NL", name: "Netherlands" },
+  { code: "NO", name: "Norway" },
+  { code: "PL", name: "Poland" },
+  { code: "PT", name: "Portugal" },
+  { code: "RO", name: "Romania" },
+  { code: "SK", name: "Slovakia" },
+  { code: "SI", name: "Slovenia" },
+  { code: "ES", name: "Spain" },
+  { code: "SE", name: "Sweden" },
+  { code: "GB", name: "UK" },
 ];
+
+// The form's first country: the region of the browser's language (de-AT -> AT) when it is in
+// the list, else the first one listed.
+export function defaultCountry(languages: readonly string[]): string {
+  for (const lang of languages) {
+    const region = lang.split("-")[1]?.toUpperCase();
+    if (region && COUNTRIES.some((c) => c.code === region)) return region;
+  }
+  return COUNTRIES[0]!.code;
+}
 
 // Toast text after the bank-consent-callback redirect or the complete-bank-consent reply:
 // "Revolut: EUR, GBP, USD" when it names the bank and currencies, else the account count.

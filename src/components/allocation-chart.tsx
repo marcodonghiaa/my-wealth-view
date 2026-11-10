@@ -10,8 +10,10 @@ import {
 } from "@/lib/net-worth";
 import { formatEur } from "@/lib/transactions";
 
+// stocks_eur holds every holding that is not a bond (stocks, ETFs, funds), the same holdings the
+// Portfolio page lists by type, so the label names them.
 const CLASSES = [
-  { key: "stocks_eur", label: "Stocks", color: "var(--alloc-stocks)", icon: Building2 },
+  { key: "stocks_eur", label: "Stocks & ETFs", color: "var(--alloc-stocks)", icon: Building2 },
   { key: "bonds_eur", label: "Bonds", color: "var(--alloc-bonds)", icon: ScrollText },
   { key: "crypto_eur", label: "Crypto", color: "var(--alloc-crypto)", icon: Bitcoin },
   { key: "cash_eur", label: "Cash", color: "var(--alloc-cash)", icon: Landmark },
