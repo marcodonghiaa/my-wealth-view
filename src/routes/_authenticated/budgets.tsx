@@ -289,6 +289,9 @@ function BudgetsPage() {
               ))}
             </ul>
           </GroupedList>
+          <p className="mt-2 px-4 text-[0.8125rem] text-muted-foreground sm:px-5">
+            Roll over: what's left, or overspent, carries into next month.
+          </p>
         </>
       )}
 

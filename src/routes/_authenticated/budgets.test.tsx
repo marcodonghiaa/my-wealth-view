@@ -283,6 +283,19 @@ describe("Budgets page", () => {
     expect(row.textContent).toContain("€7.00");
   });
 
+  // Polish pass 4 (UX/UI).
+  // protects=P4 P1-1 Roll over is explained where the boxes are; fails_when=the caption is gone
+  it("explains Roll over under the budgets", async () => {
+    db["category_budgets"] = [
+      { category: "Groceries", month: "2026-11-01", amount: 300, rollover: false },
+    ];
+    renderPage();
+    await screen.findByText("€180.00 left");
+    expect(
+      screen.getByText("Roll over: what's left, or overspent, carries into next month."),
+    ).toBeTruthy();
+  });
+
   // P1-4: visible behaviour that had no test.
   it("says Left to spend or Over budget above the total", async () => {
     db["category_budgets"] = [
