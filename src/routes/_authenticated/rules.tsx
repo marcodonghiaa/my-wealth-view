@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowRight, Loader2, Plus, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import type { Tables } from "@/integrations/supabase/types";
 import { Button } from "@/components/ui/button";
 import { Input, Select } from "@/components/ui/field";
 import { GroupedList, SectionTitle } from "@/components/ui/grouped-list";
@@ -52,18 +53,20 @@ export const Route = createFileRoute("/_authenticated/rules")({
   component: RulesPage,
 });
 
-type RuleRow = {
-  id: string;
-  match_field: string;
-  match_text: string;
-  match_mode: string; // "word" | "exact" | "contains"; rules made before modes are "contains"
-  set_category: string | null;
-  set_transaction_type: string | null;
-  set_flow_type: string | null;
-  priority: number;
-  created_at: string;
-};
-
+// The columns fetchRules selects, typed from the database (match_mode: "word" | "exact" |
+// "contains"; rules made before modes are "contains").
+type RuleRow = Pick<
+  Tables<"category_rules">,
+  | "id"
+  | "match_field"
+  | "match_text"
+  | "match_mode"
+  | "set_category"
+  | "set_transaction_type"
+  | "set_flow_type"
+  | "priority"
+  | "created_at"
+>;
 async function fetchRules(): Promise<RuleRow[]> {
   const { data, error } = await supabase
     .from("category_rules")
