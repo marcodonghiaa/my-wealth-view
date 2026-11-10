@@ -107,9 +107,16 @@ export async function removeAuthenticator(factorId: string): Promise<void> {
   if (error) throw error;
 }
 
+// The text the backend sends with that refusal. Many pages rethrow `new Error(error.message)`,
+// which keeps only this text, so it is recognised too.
+const MFA_REFUSAL = "Enter your authenticator code first";
+const isRewrappedRefusal = (error: unknown) =>
+  error instanceof Error && error.message === MFA_REFUSAL;
+
 /** True when the database or an Edge Function refused because this session skipped the code. */
 export async function isMfaRequired(error: unknown): Promise<boolean> {
   const e = error as { code?: unknown; hint?: unknown; context?: unknown } | null;
+  if (isRewrappedRefusal(error)) return true;
   if (e?.code === "42501" && e.hint === "mfa_required") return true;
   if (!(e?.context instanceof Response)) return false;
   try {
@@ -127,7 +134,9 @@ export async function isMfaRequired(error: unknown): Promise<boolean> {
 export function retryUnlessRefused(failureCount: number, error: unknown): boolean {
   const e = error as { code?: unknown; context?: unknown } | null;
   const status = e?.context instanceof Response ? e.context.status : 0;
-  if (e?.code === "42501" || status === 401 || status === 403) return false;
+  if (e?.code === "42501" || status === 401 || status === 403 || isRewrappedRefusal(error)) {
+    return false;
+  }
   return failureCount < 3;
 }
 

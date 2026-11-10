@@ -206,6 +206,14 @@ describe("isMfaRequired", () => {
     expect(await isMfaRequired(fnRefusal({ error: "x", code: "mfa_required" }))).toBe(true);
   });
 
+  // protects=pages that rethrow `new Error(error.message)` still open the code step;
+  // fails_when=only code/hint are checked, so a rewrapped refusal shows as a plain error
+  it("recognises a refusal rewrapped as a plain Error with the server's text", async () => {
+    const rewrapped = new Error("Enter your authenticator code first");
+    expect(await isMfaRequired(rewrapped)).toBe(true);
+    expect(retryUnlessRefused(0, rewrapped)).toBe(false);
+  });
+
   it("ignores other errors", async () => {
     expect(await isMfaRequired({ code: "42501", hint: null, message: "permission denied" })).toBe(
       false,
