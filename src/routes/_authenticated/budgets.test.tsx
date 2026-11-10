@@ -203,4 +203,18 @@ describe("Budgets page", () => {
     // 47 earlier months each leave 10 → 470 carried; this month 100 + 470 − 90 = 480 left.
     expect(await screen.findByText("€480.00 left")).toBeTruthy();
   });
+
+  // protects=clearing the field and pressing Save keeps the budget (P1-4);
+  // fails_when=a blank amount is saved as 0, which removes the budget
+  it("does not remove a budget when the amount is cleared", async () => {
+    db["category_budgets"] = [
+      { category: "Groceries", month: "2026-11-01", amount: 300, rollover: false },
+    ];
+    renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: /Change budget for Groceries/ }));
+    fireEvent.change(screen.getByLabelText("Budget for Groceries"), { target: { value: "" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect((await screen.findByRole("alert")).textContent).toContain("Type an amount");
+    expect(upserts).toHaveLength(0);
+  });
 });

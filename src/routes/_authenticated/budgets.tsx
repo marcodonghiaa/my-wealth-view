@@ -9,6 +9,7 @@ import {
   addMonths,
   budgetLines,
   monthIncome,
+  parseAmount,
   suggestedBudgets,
   type BudgetLine,
   type BudgetRow,
@@ -380,12 +381,16 @@ function BudgetLineRow({
   const over = line.left < 0;
   const used = line.available > 0 ? Math.min(1, line.spent / line.available) : over ? 1 : 0;
 
+  const [invalid, setInvalid] = useState(false);
+
   function submit(e: React.FormEvent) {
     e.preventDefault();
-    const amount = Number(draft.replace(",", "."));
-    if (!Number.isFinite(amount) || amount < 0) return;
+    // A blank or mistyped amount never removes the budget: Remove does that.
+    const amount = parseAmount(draft);
+    if (amount == null) return setInvalid(true);
+    setInvalid(false);
     setEditing(false);
-    onSave(Math.round(amount * 100) / 100, line.rollover);
+    onSave(amount, line.rollover);
   }
 
   return (
@@ -414,14 +419,19 @@ function BudgetLineRow({
       </div>
       <div className="mt-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-[0.8125rem] text-muted-foreground">
         {editing ? (
-          <form onSubmit={submit} className="flex items-center gap-2">
+          <form onSubmit={submit} className="flex flex-wrap items-center gap-2">
             <Input
               aria-label={`Budget for ${line.category}`}
+              aria-invalid={invalid}
+              aria-describedby={invalid ? `budget-error-${line.category}` : undefined}
               inputMode="decimal"
               autoFocus
               className="h-9 w-28"
               value={draft}
-              onChange={(e) => setDraft(e.target.value)}
+              onChange={(e) => {
+                setDraft(e.target.value);
+                setInvalid(false);
+              }}
             />
             <Button type="submit" size="sm" disabled={busy}>
               Save
@@ -440,6 +450,11 @@ function BudgetLineRow({
             >
               Remove
             </Button>
+            {invalid && (
+              <span id={`budget-error-${line.category}`} role="alert" className="text-negative">
+                Type an amount, like 250.
+              </span>
+            )}
           </form>
         ) : (
           <span>
@@ -495,9 +510,9 @@ function AddBudget({
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
-    const value = Number(amount.replace(",", "."));
-    if (!category || !Number.isFinite(value) || value <= 0) return;
-    onAdd(category, Math.round(value * 100) / 100);
+    const value = parseAmount(amount);
+    if (!category || value == null || value <= 0) return;
+    onAdd(category, value);
     setCategory("");
     setAmount("");
   }

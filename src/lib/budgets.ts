@@ -32,6 +32,14 @@ export interface BudgetLine {
 
 const cents = (v: number) => Math.round(v * 100) / 100;
 
+/** A typed budget amount ("250", "250,5"), rounded to cents; null when blank or not a number. */
+export function parseAmount(text: string): number | null {
+  const t = text.trim().replace(",", ".");
+  if (t === "") return null;
+  const v = Number(t);
+  return Number.isFinite(v) && v >= 0 ? Math.round(v * 100) / 100 : null;
+}
+
 /** "YYYY-MM-01" of the month `offset` months after `month`. */
 export function addMonths(month: string, offset: number): string {
   const [y, m] = month.split("-").map(Number) as [number, number];

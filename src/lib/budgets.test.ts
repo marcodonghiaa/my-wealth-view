@@ -5,6 +5,7 @@ import {
   effectiveBudget,
   monthIncome,
   monthsBetween,
+  parseAmount,
   suggestedBudgets,
   type BudgetRow,
   type MonthSpend,
@@ -221,5 +222,21 @@ describe("monthIncome", () => {
   });
   it("is 0 without any income", () => {
     expect(monthIncome(new Map(), "2026-03-01", true)).toBe(0);
+  });
+});
+
+describe("parseAmount", () => {
+  it("reads dots and commas, rounded to cents", () => {
+    expect(parseAmount(" 250 ")).toBe(250);
+    expect(parseAmount("250,5")).toBe(250.5);
+    expect(parseAmount("0")).toBe(0);
+    expect(parseAmount("12.345")).toBe(12.35);
+  });
+  // protects=a cleared field never removes a budget; fails_when=blank parses as 0
+  it("refuses blank, text and negatives", () => {
+    expect(parseAmount("")).toBeNull();
+    expect(parseAmount("   ")).toBeNull();
+    expect(parseAmount("abc")).toBeNull();
+    expect(parseAmount("-5")).toBeNull();
   });
 });
