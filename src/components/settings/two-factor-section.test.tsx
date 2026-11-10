@@ -34,12 +34,12 @@ describe("TwoFactorSection", () => {
       .mockResolvedValueOnce([{ id: "f1", name: "Phone" }]);
     render(<TwoFactorSection />);
     expect(await screen.findByText(/^Off\./)).toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText(/Name/), { target: { value: "Phone" } });
+    fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Phone" } });
     fireEvent.click(screen.getByRole("button", { name: "Set up two-step sign-in" }));
     expect(await screen.findByAltText(/QR code/)).toBeInTheDocument();
     expect(screen.getByText("JBSWY3DP")).toBeInTheDocument();
     expect(lib.startEnrollment).toHaveBeenCalledWith("Phone");
-    fireEvent.change(screen.getByLabelText("Code from the app"), { target: { value: "123456" } });
+    fireEvent.change(screen.getByLabelText("Authenticator code"), { target: { value: "123456" } });
     fireEvent.click(screen.getByRole("button", { name: "Turn on" }));
     expect(await screen.findByText(/^On\./)).toBeInTheDocument();
     expect(lib.finishEnrollment).toHaveBeenCalledWith("f1", "123456");
@@ -65,7 +65,7 @@ describe("TwoFactorSection", () => {
     lib.finishEnrollment.mockRejectedValue(new Error("Invalid TOTP code entered"));
     render(<TwoFactorSection />);
     fireEvent.click(await screen.findByRole("button", { name: "Set up two-step sign-in" }));
-    fireEvent.change(await screen.findByLabelText("Code from the app"), {
+    fireEvent.change(await screen.findByLabelText("Authenticator code"), {
       target: { value: "000000" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Turn on" }));

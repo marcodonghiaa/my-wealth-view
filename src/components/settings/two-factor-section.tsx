@@ -155,7 +155,7 @@ export function TwoFactorSection() {
             </p>
             <div className="space-y-1.5">
               <label htmlFor="enroll-code" className="text-xs font-medium text-muted-foreground">
-                Code from the app
+                Authenticator code
               </label>
               <CodeInput id="enroll-code" value={code} onChange={(e) => setCode(e.target.value)} />
             </div>
@@ -174,7 +174,7 @@ export function TwoFactorSection() {
             <div className="space-y-3">
               <div className="space-y-1.5">
                 <label htmlFor="enroll-name" className="text-xs font-medium text-muted-foreground">
-                  Name {on ? "of the new one" : ""}
+                  {on ? "Name of the new one" : "Name"}
                 </label>
                 <Input
                   id="enroll-name"

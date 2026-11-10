@@ -69,7 +69,7 @@ export async function listAuthenticators(): Promise<Array<Authenticator>> {
   if (error) throw error;
   return data.totp.map((f) => ({
     id: f.id,
-    name: f.friendly_name || "Authenticator app",
+    name: f.friendly_name || "Authenticator",
   }));
 }
 

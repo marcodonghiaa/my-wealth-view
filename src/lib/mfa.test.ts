@@ -202,7 +202,7 @@ describe("enrollment", () => {
       data: { totp: [totp("a", { friendly_name: "" })] },
       error: null,
     });
-    expect(await listAuthenticators()).toEqual([{ id: "a", name: "Authenticator app" }]);
+    expect(await listAuthenticators()).toEqual([{ id: "a", name: "Authenticator" }]);
     await removeAuthenticator("a");
     expect(mfa.unenroll).toHaveBeenCalledWith({ factorId: "a" });
     mfa.unenroll.mockResolvedValue({ error: new Error("AAL2 required") });
