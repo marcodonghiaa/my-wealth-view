@@ -51,6 +51,13 @@ describe("appLocale", () => {
     expect(formatNumber(1.5, 1)).toBe("1.5");
   });
 
+  it("polish-3 #17 doesn't throw on its first call when the runtime has no navigator.language", async () => {
+    Object.defineProperty(navigator, "language", { value: undefined, configurable: true });
+    vi.resetModules();
+    const fresh = await import("./locale");
+    expect(fresh.appLocale()).toBe("en-GB");
+  });
+
   it("falls back to en-GB on a broken value", () => {
     setBrowser("");
     expect(appLocale()).toBe("en-GB");

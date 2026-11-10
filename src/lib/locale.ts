@@ -54,7 +54,8 @@ let last: { wanted: string; locale: string } | undefined;
 
 /** The locale to format with. Never throws: a bad value falls back to en-GB. */
 export function appLocale(): string {
-  const wanted = localeOverride() || (typeof navigator === "undefined" ? "" : navigator.language);
+  const wanted =
+    localeOverride() || (typeof navigator === "undefined" ? "" : (navigator.language ?? ""));
   if (last?.wanted === wanted) return last.locale;
   let locale = FALLBACK;
   try {
