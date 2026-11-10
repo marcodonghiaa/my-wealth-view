@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { detectDecimal, monthNumber, parseAmount, parseMonth } from "./normalize";
+import { detectDecimal, excelDay, monthNumber, parseAmount, parseMonth } from "./normalize";
 
 describe("parseMonth", () => {
   // protects=a month typed in any common way becomes YYYY-MM; fails_when=a format is misread
@@ -111,5 +111,18 @@ describe("monthNumber", () => {
     expect(monthNumber("Sept.")).toBe(9);
     expect(monthNumber("mei")).toBe(5);
     expect(monthNumber("foo")).toBeNull();
+  });
+});
+
+describe("excelDay (polish-3 #22)", () => {
+  it("reads a five-digit Excel day number as a UTC date", () => {
+    expect(excelDay("46137")?.toISOString().slice(0, 10)).toBe("2026-04-25");
+  });
+
+  it("refuses anything that is not a plausible day number", () => {
+    expect(excelDay("4613")).toBeNull();
+    expect(excelDay("12345")).toBeNull();
+    expect(excelDay("99999")).toBeNull();
+    expect(excelDay("46137.5")).toBeNull();
   });
 });
