@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
@@ -68,6 +68,13 @@ vi.mock("@/integrations/supabase/client", () => {
 import { Route } from "./rules";
 vi.spyOn(Route, "useSearch").mockImplementation((() => search) as never);
 
+// Shared mock state goes back to defaults after every test, even one that fails half-way.
+afterEach(() => {
+  search = {};
+  inserted.length = 0;
+  onlyFlowRules.current = false;
+});
+
 const Page = Route.options.component as () => React.JSX.Element;
 
 const renderPage = () =>
@@ -109,7 +116,6 @@ describe("Rules list", () => {
   });
 
   it("asks for text, then for something to set, before saving", async () => {
-    inserted.length = 0;
     renderPage();
     await openForm();
     fireEvent.click(screen.getByRole("button", { name: "Add rule" }));
@@ -133,14 +139,12 @@ describe("form focus and keys", () => {
 
   // A category from a link that isn't in your list (renamed since) must not be saved unseen.
   it("ignores a prefilled category that isn't in your list", async () => {
-    inserted.length = 0;
     search = { text: "BAR ROMA", category: "Gone category" };
     renderPage();
     expect(await screen.findByLabelText("Set category")).toHaveValue("");
     fireEvent.click(screen.getByRole("button", { name: "Add rule" }));
     expect(screen.getByRole("alert")).toHaveTextContent("Pick a category, a type, or both.");
     expect(inserted).toHaveLength(0);
-    search = {};
   });
 });
 
@@ -165,7 +169,6 @@ describe("match modes", () => {
   });
 
   it("saves new rules as whole-word matches by default", async () => {
-    inserted.length = 0;
     renderPage();
     await openForm();
     expect(screen.getByRole("radio", { name: "Whole word" })).toHaveAttribute(
@@ -205,7 +208,6 @@ describe("match modes", () => {
     renderPage();
     expect(await screen.findByLabelText("Text")).toHaveValue("BAR ROMA");
     expect(screen.getByLabelText("Set category")).toHaveValue("Dine Out");
-    search = {};
   });
 });
 
@@ -283,6 +285,5 @@ describe("apply to past transactions", () => {
     renderPage();
     await screen.findByText("“Revolut”");
     expect(screen.queryByRole("button", { name: "Apply to past transactions" })).toBeNull();
-    onlyFlowRules.current = false;
   });
 });
