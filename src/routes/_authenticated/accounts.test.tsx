@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 const rows = vi.hoisted(() => ({
@@ -94,6 +94,24 @@ describe("debts", () => {
     // Bank accounts keep only the cash account.
     expect(screen.getAllByText("€1,000.00").length).toBeGreaterThan(0);
     expect(screen.getByRole("button", { name: "Add a debt" })).toBeInTheDocument();
+  });
+});
+
+describe("connect a bank", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  // protects=the country picker opens on the browser's country; fails_when=the form ignores
+  // navigator.languages and always starts on the first country
+  it("starts on the country of the browser language", async () => {
+    vi.spyOn(navigator, "languages", "get").mockReturnValue(["pl-PL", "en"]);
+    invoke.mockResolvedValue({ data: { banks: [] }, error: null });
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <Page />
+      </QueryClientProvider>,
+    );
+    fireEvent.click(await screen.findByRole("button", { name: "Connect a bank" }));
+    expect(screen.getByLabelText("Country")).toHaveValue("PL");
   });
 });
 
