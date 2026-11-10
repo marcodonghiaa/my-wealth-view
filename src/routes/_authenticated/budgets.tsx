@@ -208,10 +208,23 @@ function BudgetsPage() {
   const loading = budgetsQuery.isPending || (budgetsQuery.isSuccess && spendQuery.isPending);
   const error = budgetsQuery.error ?? spendQuery.error;
 
-  const startFromAverages = () =>
+  // The button vanishes once budgets exist, so hand focus to the first row.
+  const list = useRef<HTMLUListElement>(null);
+  const focusFirstRow = useRef(false);
+  useEffect(() => {
+    const first = focusFirstRow.current && list.current?.querySelector("button");
+    if (!first) return;
+    focusFirstRow.current = false;
+    first.focus();
+  });
+
+  const startFromAverages = () => {
+    focusFirstRow.current = true;
     save.mutate(
       [...suggestions].map(([category, amount]) => ({ category, amount, rollover: false })),
+      { onError: () => void (focusFirstRow.current = false) },
     );
+  };
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-8 md:py-12">
@@ -288,7 +301,7 @@ function BudgetsPage() {
           </section>
 
           <GroupedList>
-            <ul className="divide-y divide-hairline">
+            <ul ref={list} className="divide-y divide-hairline">
               {lines.map((line) => (
                 <BudgetLineRow
                   key={line.category}

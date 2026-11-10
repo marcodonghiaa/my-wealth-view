@@ -629,6 +629,15 @@ describe("Budgets page", () => {
     expect(alert.textContent).not.toContain("UPGRADING.md");
   });
 
+  // protects=P4 P2-7 keyboard users keep their place after the one-click start;
+  // fails_when=focus is left on the vanished button's page body
+  it("moves focus to the first budget after starting from the averages", async () => {
+    renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: "Start from my averages" }));
+    const first = await screen.findByRole("button", { name: /^Change budget for Groceries/ });
+    await waitFor(() => expect(document.activeElement).toBe(first));
+  });
+
   it("says when a budget couldn't be saved", async () => {
     failUpsert = "permission denied";
     renderPage();
