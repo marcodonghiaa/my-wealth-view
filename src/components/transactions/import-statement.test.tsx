@@ -254,8 +254,7 @@ describe("ImportStatement", () => {
     fireEvent.click(screen.getByLabelText("Spending is written as positive"));
     expect(await screen.findByText(/2 Jan 2026/)).toBeTruthy();
     expect(screen.getByText("+€5.00")).toBeTruthy();
-    releaseSlow();
-    await new Promise((r) => setTimeout(r, 20));
+    await act(async () => releaseSlow());
     // The slow, older read (not flipped) must not replace the newer preview.
     expect(screen.getByText("+€5.00")).toBeTruthy();
   });
