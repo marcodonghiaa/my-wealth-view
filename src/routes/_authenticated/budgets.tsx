@@ -213,6 +213,13 @@ function BudgetsPage() {
         canGoNext={canGoNext}
       />
 
+      {/* Option A from polish pass 1: a past-month change holds onward, so say so up front. */}
+      {canGoNext && !loading && !error && (
+        <p className="-mt-3 mb-6 text-sm text-muted-foreground">
+          Changes here apply from {monthLabel} onward, until a later month has its own budget.
+        </p>
+      )}
+
       {loading ? (
         <Skeleton className="h-80" />
       ) : error ? null : lines.length === 0 ? (

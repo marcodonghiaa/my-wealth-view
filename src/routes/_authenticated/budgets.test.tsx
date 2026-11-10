@@ -217,4 +217,25 @@ describe("Budgets page", () => {
     expect((await screen.findByRole("alert")).textContent).toContain("Type an amount");
     expect(upserts).toHaveLength(0);
   });
+
+  // protects=a change made in a past month says it applies onward (P2-4, option A)
+  it("says past-month changes apply onward, and only in past months", async () => {
+    db["category_budgets"] = [
+      { category: "Groceries", month: "2026-09-01", amount: 300, rollover: false },
+    ];
+    renderPage();
+    await screen.findByText(/left$/);
+    expect(screen.queryByText(/apply from/)).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: /previous/i }));
+    expect(
+      await screen.findByText(
+        "Changes here apply from October 2026 onward, until a later month has its own budget.",
+      ),
+    ).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /Change budget for Groceries/ }));
+    fireEvent.change(screen.getByLabelText("Budget for Groceries"), { target: { value: "280" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(upserts).toHaveLength(1));
+    expect(upserts[0]!.rows[0]).toMatchObject({ month: "2026-10-01", amount: 280 });
+  });
 });
