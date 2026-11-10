@@ -20,12 +20,25 @@ describe("presets", () => {
   it("Revolut: completed date, fee added to the charge, pending and declined left out", () => {
     const s = readStatement(fixture("revolut.csv"));
     expect(s.preset).toBe("Revolut");
-    expect(s.rows).toEqual([
+    expect(s.rows.slice(0, 3)).toEqual([
       row("2026-03-03", "Coffee Corner", 3.2, "DBIT"),
       row("2026-03-01", "Top-up by *1234", 1000, "CRDT"),
       row("2026-03-04", "To Example Person", 50.5, "DBIT"),
     ]);
     expect(s.skipped).toBe(2);
+  });
+
+  it("Revolut: keeps each row's currency, exchanges and pocket moves are transfers", () => {
+    expect(readStatement(fixture("revolut.csv")).rows.slice(3)).toEqual([
+      { ...row("2026-03-06", "Exchanged to USD", 100, "DBIT"), category: "Transfer" },
+      {
+        ...row("2026-03-06", "Exchanged from EUR", 108, "CRDT"),
+        currency: "USD",
+        category: "Transfer",
+      },
+      { ...row("2026-03-07", "Book Shop", 30, "DBIT"), currency: "USD" },
+      { ...row("2026-03-08", "To EUR Savings", 500, "CRDT"), category: "Transfer" },
+    ]);
   });
 
   it("Spiir: day-first dates, decimal comma, Spiir's own duplicates left out", () => {
@@ -34,8 +47,8 @@ describe("presets", () => {
     expect(s.dateOrder).toBe("DMY");
     expect(s.decimal).toBe(",");
     expect(s.rows).toEqual([
-      row("2026-02-28", "Netto", 245.5, "DBIT"),
-      row("2026-02-27", "LØN FEBRUAR", 25000, "CRDT"),
+      { ...row("2026-02-28", "Netto", 245.5, "DBIT"), currency: "DKK" },
+      { ...row("2026-02-27", "LØN FEBRUAR", 25000, "CRDT"), currency: "DKK" },
     ]);
   });
 
@@ -63,13 +76,26 @@ describe("presets", () => {
     const auto = readStatement(fixture("revolut.csv"));
     const picked = readStatement(fixture("revolut.csv"), { ...auto.columns, description: 0 });
     expect(picked.preset).toBe("Revolut");
-    expect(picked.rows.map((r) => [r.description, r.amount])).toEqual([
+    expect(picked.rows.slice(0, 3).map((r) => [r.description, r.amount])).toEqual([
       ["CARD_PAYMENT", 3.2],
       ["TOPUP", 1000],
       ["TRANSFER", 50.5],
     ]);
+    expect(picked.rows).toHaveLength(7);
     const firefly = readStatement(fixture("firefly.csv"));
     expect(readStatement(fixture("firefly.csv"), firefly.columns).rows).toEqual(firefly.rows);
+  });
+
+  it("reads a generic currency column; EUR or a non-code stays the default", () => {
+    const csv =
+      "Date;Description;Amount;Währung\n2026-01-02;Shop;-5,00;chf\n2026-01-03;Bar;-2,00;EUR\n2026-01-04;Odd;-1,00;?";
+    expect(readStatement(csv).rows.map((r) => r.currency)).toEqual(["CHF", undefined, undefined]);
+  });
+
+  it("reads a Type column of DEBIT/CREDIT next to an unsigned amount", () => {
+    const csv =
+      "Date,Description,Amount,Type\n2026-01-02,Shop,12.50,DEBIT\n2026-01-03,Pay,100,CREDIT";
+    expect(readStatement(csv).rows.map((r) => r.direction)).toEqual(["DBIT", "CRDT"]);
   });
 
   it("never lets two presets claim the same file", () => {

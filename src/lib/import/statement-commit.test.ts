@@ -54,6 +54,12 @@ const inApp = (row: StatementRow, description = row.description) => ({
 });
 
 describe("newRows", () => {
+  it("only treats a row as already there when the currency matches too", async () => {
+    const usd = { ...inApp(coffee), currency: "USD" };
+    expect(await newRows(client([usd]).c, [coffee])).toEqual([coffee]);
+    expect(await newRows(client([usd]).c, [{ ...coffee, currency: "USD" }])).toEqual([]);
+  });
+
   it("leaves out rows already in the app, over the file's date range, deleted rows excluded", async () => {
     const { c, requests } = client([inApp(coffee, "COFFEE")]);
     expect(await newRows(c, [coffee, salary])).toEqual([salary]);
@@ -90,10 +96,25 @@ describe("importStatement", () => {
       p_description: "Coffee",
       p_amount: 2.5,
       p_direction: "DBIT",
+      p_currency: "EUR",
       p_category: null,
       p_source: "Fineco",
     });
     expect(progress).toHaveBeenLastCalledWith(2);
+  });
+
+  it("sends the row's currency and a Transfer category", async () => {
+    const { c, rpc } = client([]);
+    await importStatement(
+      c,
+      [{ ...coffee, currency: "USD", category: "Transfer" }],
+      null,
+      () => {},
+    );
+    expect(rpc).toHaveBeenCalledWith(
+      "add_manual_transaction",
+      expect.objectContaining({ p_currency: "USD", p_category: "Transfer" }),
+    );
   });
 
   it("stops at the first error and says how many were added", async () => {

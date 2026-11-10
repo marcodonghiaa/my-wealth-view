@@ -16,9 +16,20 @@ export interface StatementPreset {
   direction?: string;
   /** A fee charged on top of the amount, as a positive number. */
   fee?: string;
-  /** Rows to leave out, by a column's lower-cased value. A missing column skips nothing. */
-  skip?: { column: string; when?: Array<string>; unless?: Array<string> };
+  /** Currency code column; rows without one are in EUR. */
+  currency?: string;
+  /** Rows to leave out. A missing column skips nothing. */
+  skip?: RowRule;
+  /** Rows that move money between your own accounts: imported as Transfer, not spending. */
+  transfer?: Array<RowRule>;
   decimal?: DecimalMark;
+}
+
+/** Matches a row by a column's lower-cased value: one of `when`, or anything but `unless`. */
+export interface RowRule {
+  column: string;
+  when?: Array<string>;
+  unless?: Array<string>;
 }
 
 export const PRESETS: Array<StatementPreset> = [
@@ -40,7 +51,13 @@ export const PRESETS: Array<StatementPreset> = [
     description: ["description"],
     amount: "amount",
     fee: "fee",
+    currency: "currency",
     skip: { column: "state", unless: ["completed"] },
+    // Currency exchanges and moves to Savings or other pockets stay your money.
+    transfer: [
+      { column: "type", when: ["exchange"] },
+      { column: "product", unless: ["current"] },
+    ],
     decimal: ".",
   },
   {
@@ -50,6 +67,7 @@ export const PRESETS: Array<StatementPreset> = [
     date: "date",
     description: ["description", "originaldescription"],
     amount: "amount",
+    currency: "currency",
     skip: { column: "duplicate", when: ["true", "1", "yes", "ja"] },
   },
   {
@@ -69,6 +87,7 @@ export const PRESETS: Array<StatementPreset> = [
     description: ["description", "destination_name"],
     amount: "amount",
     direction: "type",
+    currency: "currency_code",
     skip: { column: "type", unless: ["withdrawal", "deposit"] },
     decimal: ".",
   },
@@ -101,17 +120,21 @@ export function presetColumns(preset: StatementPreset, headers: Array<string>) {
     in: null,
     out: null,
   };
-  const skipAt = at(preset.skip?.column);
-  const skip = (row: Array<string>) => {
-    if (!preset.skip || skipAt == null) return false;
-    const value = (row[skipAt] ?? "").trim().toLowerCase();
-    if (preset.skip.when?.includes(value)) return true;
-    return preset.skip.unless != null && !preset.skip.unless.includes(value);
+  const rule = (r: RowRule | undefined) => {
+    const i = at(r?.column);
+    return (row: Array<string>) => {
+      if (!r || i == null) return false;
+      const value = (row[i] ?? "").trim().toLowerCase();
+      return r.when ? r.when.includes(value) : r.unless != null && !r.unless.includes(value);
+    };
   };
+  const transferRules = (preset.transfer ?? []).map(rule);
   return {
     columns,
     descriptionAlt: alt.filter((i): i is number => i != null),
     fee: at(preset.fee),
-    skip,
+    currency: at(preset.currency),
+    skip: rule(preset.skip),
+    transfer: (row: Array<string>) => transferRules.some((matches) => matches(row)),
   };
 }

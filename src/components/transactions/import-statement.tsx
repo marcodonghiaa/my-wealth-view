@@ -303,7 +303,7 @@ export function ImportStatement() {
                         className={`font-figure whitespace-nowrap ${r.direction === "CRDT" ? "text-positive" : ""}`}
                       >
                         {r.direction === "CRDT" ? "+" : "−"}
-                        {formatMoney(r.amount, "EUR")}
+                        {formatMoney(r.amount, r.currency ?? "EUR")}
                       </span>
                     </li>
                   ))}

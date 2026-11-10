@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  currencyCode,
   dedupeKey,
   detectDateOrder,
   guessStatementColumns,
@@ -88,7 +89,28 @@ describe("readStatement", () => {
   });
 });
 
+describe("currencyCode", () => {
+  it("reads codes and the two unambiguous symbols", () => {
+    expect(currencyCode(" dkk ")).toBe("DKK");
+    expect(currencyCode("€")).toBe("EUR");
+    expect(currencyCode("£")).toBe("GBP");
+    expect(currencyCode("$")).toBeUndefined();
+    expect(currencyCode("25/04/2026")).toBeUndefined();
+  });
+});
+
 describe("dedupeKey", () => {
+  it("tells the same amount in two currencies apart", () => {
+    const base = {
+      date: "2026-04-25",
+      description: "Shop",
+      amount: 10,
+      direction: "DBIT" as const,
+    };
+    expect(dedupeKey(base)).toBe(dedupeKey({ ...base, currency: "EUR" }));
+    expect(dedupeKey(base)).not.toBe(dedupeKey({ ...base, currency: "USD" }));
+  });
+
   it("matches the same transaction whatever the case, spacing or amount format", () => {
     expect(
       dedupeKey({

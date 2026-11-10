@@ -48,7 +48,7 @@ export async function newRows(
   for (let from = 0; ; from += PAGE) {
     const { data, error } = await client
       .from("transactions")
-      .select("booking_date,amount,credit_debit_indicator,creditor_name")
+      .select("booking_date,amount,currency,credit_debit_indicator,creditor_name")
       .is("deleted_at", null)
       .gte("booking_date", dates[0]!)
       .lte("booking_date", dates.at(-1)!)
@@ -61,6 +61,7 @@ export async function newRows(
         description: String(t["creditor_name"] ?? ""),
         amount: Math.abs(Number(t["amount"])),
         direction: t["credit_debit_indicator"] === "DBIT" ? "DBIT" : "CRDT",
+        currency: String(t["currency"] ?? "EUR"),
       });
       inApp.set(key, (inApp.get(key) ?? 0) + 1);
     }
@@ -95,7 +96,8 @@ export async function importStatement(
           p_description: r.description,
           p_amount: r.amount,
           p_direction: r.direction,
-          p_category: null,
+          p_currency: r.currency ?? "EUR",
+          p_category: r.category ?? null,
           p_source: source,
         }),
       ),

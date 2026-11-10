@@ -13,6 +13,10 @@ export interface StatementRow {
   description: string;
   amount: number; // above zero
   direction: Direction;
+  /** ISO code; EUR when the file has no currency column. */
+  currency?: string;
+  /** Money between your own accounts (a known export said so): not spending or income. */
+  category?: "Transfer";
 }
 
 /**
@@ -118,6 +122,8 @@ const SYNONYMS: Record<(typeof FIELDS)[number], Array<string>> = {
     "d c",
     "segno",
     "direction",
+    "type",
+    "transaction type",
   ],
   in: [
     "entrate",
@@ -198,6 +204,24 @@ const clean = (header: string) =>
 // A direction cell as a word: "Débit" → "debit", "+" stays "+".
 const word = (text: string) =>
   text.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[.:]$/, "").trim();
+
+const CURRENCY_HEADERS = [
+  "currency",
+  "valuta",
+  "wahrung",
+  "waehrung",
+  "devise",
+  "moneda",
+  "munt",
+  "ccy",
+];
+const SYMBOLS: Record<string, string> = { "€": "EUR", "£": "GBP" };
+
+/** "eur", "€" → "EUR". Anything that is not a currency code gives undefined (EUR). */
+export function currencyCode(text: string): string | undefined {
+  const code = SYMBOLS[text.trim()] ?? text.trim().toUpperCase();
+  return /^[A-Z]{3}$/.test(code) ? code : undefined;
+}
 
 const NO_COLUMNS = (): StatementColumns => ({
   date: null,
@@ -303,7 +327,9 @@ interface Recipe {
   /** Description columns to fall back on when the main one is empty. */
   descriptionAlt: Array<number>;
   fee: number | null;
+  currency: number | null;
   skip: (row: Array<string>) => boolean;
+  transfer: (row: Array<string>) => boolean;
   dateOrder: DateOrder;
   decimal: DecimalMark | undefined;
   invert: boolean;
@@ -331,11 +357,14 @@ function readRow(row: Array<string>, r: Recipe): StatementRow | null {
   }
   if (signed == null || Math.abs(signed) < 0.005) return null;
   if (r.invert) signed = -signed;
+  const currency = currencyCode(cell(row, r.currency));
   return {
     date,
     description,
     amount: Math.round(Math.abs(signed) * 100) / 100,
     direction: signed < 0 ? "DBIT" : "CRDT",
+    ...(currency && currency !== "EUR" ? { currency } : {}),
+    ...(r.transfer(row) ? { category: "Transfer" as const } : {}),
   };
 }
 
@@ -349,7 +378,17 @@ function genericRecipe(headers: Array<string>, columns: StatementColumns): Base 
       ? [i]
       : [],
   );
-  return { columns, descriptionAlt, fee: null, skip: () => false };
+  const currency = names.findIndex(
+    (n, i) => !Object.values(columns).includes(i) && CURRENCY_HEADERS.includes(n),
+  );
+  return {
+    columns,
+    descriptionAlt,
+    fee: null,
+    currency: currency === -1 ? null : currency,
+    skip: () => false,
+    transfer: () => false,
+  };
 }
 
 /** The header line (title lines above it are skipped) and how to read the rows under it. */
@@ -413,5 +452,6 @@ export function readStatement(
 /** Same transaction whatever the case, spacing or amount format. */
 export function dedupeKey(row: StatementRow): string {
   const text = row.description.toLowerCase().replace(/\s+/g, " ").trim();
-  return `${row.date}|${row.direction}|${row.amount.toFixed(2)}|${text}`;
+  const currency = row.currency ?? "EUR";
+  return `${row.date}|${row.direction}|${row.amount.toFixed(2)}|${currency}|${text}`;
 }
