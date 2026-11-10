@@ -2,7 +2,7 @@ import { MutationCache, QueryCache, QueryClient } from "@tanstack/react-query";
 import { createRouter } from "@tanstack/react-router";
 import { routeTree } from "./routeTree.gen";
 import { onMfaRequired, retryUnlessRefused } from "@/lib/mfa";
-import { backHereSearch } from "./routes/auth";
+import { backHereSearch } from "@/lib/next-url";
 
 export const getRouter = () => {
   // The database refuses a session that skipped the authenticator code: send it to the code step,

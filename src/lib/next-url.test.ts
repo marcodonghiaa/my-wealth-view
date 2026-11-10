@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { backHereSearch, safeNext } from "./auth";
+import { backHereSearch, safeNext } from "./next-url";
 
 describe("safeNext", () => {
   it("accepts a same-origin relative path", () => {

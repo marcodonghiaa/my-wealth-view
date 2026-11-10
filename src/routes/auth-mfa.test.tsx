@@ -26,7 +26,10 @@ vi.mock("@/integrations/supabase/client", () => ({
 const mfa = vi.hoisted(() => ({ needsMfaCode: vi.fn(), verifyMfaCode: vi.fn() }));
 vi.mock("@/lib/mfa", () => mfa);
 
-import { AuthPage } from "./auth";
+import { Route } from "./auth";
+
+const AuthPage = (Route as unknown as { options: { component: () => React.JSX.Element } }).options
+  .component;
 
 function signIn() {
   fireEvent.change(screen.getByLabelText("Email"), { target: { value: "me@example.com" } });

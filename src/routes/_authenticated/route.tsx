@@ -21,7 +21,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { loadDemoClient, supabase } from "@/integrations/supabase/client";
 import { isDemoMode } from "@/lib/demo/mode";
 import { needsMfaCode } from "@/lib/mfa";
-import { backHereSearch } from "@/routes/auth";
+import { backHereSearch } from "@/lib/next-url";
 import { registerDashboardOrigin } from "@/lib/register-origin";
 import { MadeWith } from "@/components/made-with";
 import { GroupedList } from "@/components/ui/grouped-list";
