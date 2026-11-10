@@ -1,6 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   UNCATEGORIZED,
+  activeFilterCount,
+  formatDayHeading,
+  groupByDay,
   filterTransactions,
   formatAmountPlain,
   formatBookingDate,
@@ -348,5 +351,46 @@ describe("selectedOnly", () => {
     const hidden = tx({ entry_reference: "c", account_uid: "acc" });
     const selected = new Set([txId(a), txId(hidden)]);
     expect(selectedOnly([a, b], selected).map((r) => r.entry_reference)).toEqual(["a"]);
+  });
+});
+
+describe("groupByDay", () => {
+  it("cuts rows into runs of one booking date, keeping their order", () => {
+    const rows = [
+      tx({ entry_reference: "a", booking_date: "2026-10-05" }),
+      tx({ entry_reference: "b", booking_date: "2026-10-05" }),
+      tx({ entry_reference: "c", booking_date: "2026-10-04" }),
+    ];
+    expect(groupByDay(rows).map((g) => [g.day, g.rows.map((r) => r.entry_reference)])).toEqual([
+      ["2026-10-05", ["a", "b"]],
+      ["2026-10-04", ["c"]],
+    ]);
+  });
+
+  it("returns no groups for no rows", () => {
+    expect(groupByDay([])).toEqual([]);
+  });
+});
+
+describe("formatDayHeading", () => {
+  const now = new Date(2026, 10, 10, 15, 0);
+  it("names today and yesterday", () => {
+    expect(formatDayHeading("2026-11-10", now)).toBe("Today");
+    expect(formatDayHeading("2026-11-09", now)).toBe("Yesterday");
+  });
+  it("gives weekday, day and month for older days, and the year only when it differs", () => {
+    expect(formatDayHeading("2026-11-06", now)).toBe("Fri 6 Nov");
+    expect(formatDayHeading("2025-12-31", now)).toBe("Wed 31 Dec 2025");
+  });
+  it("handles a missing date", () => {
+    expect(formatDayHeading(null, now)).toBe("No date");
+  });
+});
+
+describe("activeFilterCount", () => {
+  it("counts each filter that narrows the list", () => {
+    expect(activeFilterCount({ category: "all", bank: "all", day: "" })).toBe(0);
+    expect(activeFilterCount({ category: "Groceries", bank: "all", day: "" })).toBe(1);
+    expect(activeFilterCount({ category: "Groceries", bank: "Fineco", day: "2026-11-01" })).toBe(3);
   });
 });

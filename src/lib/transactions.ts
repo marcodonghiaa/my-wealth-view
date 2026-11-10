@@ -240,3 +240,47 @@ export function selectedOnly(
 ): Array<TransactionRow> {
   return shown.filter((tx) => !isSplitwiseShare(tx) && selected.has(txId(tx)));
 }
+
+/** Rows in their given order, cut into runs that share a booking date (the phone list's day groups). */
+export function groupByDay(
+  rows: Array<TransactionRow>,
+): Array<{ day: string | null; rows: Array<TransactionRow> }> {
+  const groups: Array<{ day: string | null; rows: Array<TransactionRow> }> = [];
+  for (const row of rows) {
+    const last = groups.at(-1);
+    if (last && last.day === row.booking_date) last.rows.push(row);
+    else groups.push({ day: row.booking_date, rows: [row] });
+  }
+  return groups;
+}
+
+/** A day group's heading: "Today", "Yesterday", else "Mon 9 Nov" (with the year when not this one). */
+export function formatDayHeading(bookingDate: string | null, now: Date = new Date()): string {
+  if (!bookingDate) return "No date";
+  const date = new Date(`${bookingDate}T00:00:00`);
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const days = Math.round((today.getTime() - date.getTime()) / 86_400_000);
+  if (days === 0) return "Today";
+  if (days === 1) return "Yesterday";
+  return date
+    .toLocaleDateString("en-GB", {
+      weekday: "short",
+      day: "numeric",
+      month: "short",
+      ...(date.getFullYear() === now.getFullYear() ? {} : { year: "numeric" }),
+    })
+    .replace(",", "");
+}
+
+/** How many of the sheet's filters (category, bank, day) narrow the list; search is counted apart. */
+export function activeFilterCount({
+  category,
+  bank,
+  day,
+}: {
+  category: string;
+  bank: string;
+  day: string;
+}): number {
+  return [category !== "all", bank !== "all", day !== ""].filter(Boolean).length;
+}
