@@ -169,7 +169,7 @@ function AuthPage() {
                     autoFocus
                     value={code}
                     onChange={(e) => setCode(e.target.value)}
-                    className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-center font-mono text-lg tracking-[0.3em] text-foreground outline-none transition-colors placeholder:text-muted-foreground/60 focus:border-primary/60 focus:ring-2 focus:ring-ring"
+                    large
                   />
                   <p className="text-xs text-muted-foreground">
                     Open your authenticator app and type the 6-digit code for Alopex.

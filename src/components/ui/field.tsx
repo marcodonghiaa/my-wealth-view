@@ -26,20 +26,28 @@ export const Select = forwardRef<
   return <select ref={ref} className={cn(fieldClass(onGround), className)} {...props} />;
 });
 
-/** A code from an authenticator app: 6 digits, spaces or a dash allowed while typing. */
-export const CodeInput = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(
-  function CodeInput({ className, ...props }, ref) {
-    return (
-      <input
-        ref={ref}
-        required
-        inputMode="numeric"
-        autoComplete="one-time-code"
-        maxLength={9}
-        placeholder="123456"
-        className={className ?? fieldClass()}
-        {...props}
-      />
-    );
-  },
-);
+// The sign-in pages' larger field, spaced out for a 6-digit code.
+const LARGE_CODE_CLASS =
+  "w-full rounded-lg border border-input bg-background px-3 py-2.5 text-center font-mono text-lg tracking-[0.3em] text-foreground outline-none transition-colors placeholder:text-muted-foreground/60 focus:border-primary/60 focus:ring-2 focus:ring-ring";
+
+/**
+ * A code from an authenticator app: 6 digits, spaces or a dash allowed while typing.
+ * `large` is the sign-in pages' look; the default is the form look.
+ */
+export const CodeInput = forwardRef<
+  HTMLInputElement,
+  InputHTMLAttributes<HTMLInputElement> & { large?: boolean }
+>(function CodeInput({ className, large, ...props }, ref) {
+  return (
+    <input
+      ref={ref}
+      required
+      inputMode="numeric"
+      autoComplete="one-time-code"
+      maxLength={9}
+      placeholder="123456"
+      className={cn(large ? LARGE_CODE_CLASS : fieldClass(), className)}
+      {...props}
+    />
+  );
+});

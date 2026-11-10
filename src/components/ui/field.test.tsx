@@ -15,8 +15,11 @@ describe("CodeInput", () => {
     expect(input).toHaveAttribute("class", fieldClass());
   });
 
-  it("takes a page's own look when given one", () => {
-    render(<CodeInput aria-label="Code" className="big" />);
-    expect(screen.getByLabelText("Code")).toHaveAttribute("class", "big");
+  // fails_when=the sign-in pages paste their own copy of the large look, or a class drops the base
+  it("has the sign-in pages' large look, and adds a page's classes to the base", () => {
+    render(<CodeInput aria-label="Large" large />);
+    expect(screen.getByLabelText("Large").className).toMatch(/text-center font-mono/);
+    render(<CodeInput aria-label="Extra" className="mt-2" />);
+    expect(screen.getByLabelText("Extra").className).toBe(`${fieldClass()} mt-2`);
   });
 });
