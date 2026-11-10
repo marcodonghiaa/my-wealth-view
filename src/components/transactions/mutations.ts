@@ -51,6 +51,9 @@ function forTx<Q extends { eq: (c: string, v: string) => Q; is: (c: string, v: n
 // Shared shape behind updateCategory/updateType/answerWorthIt: update one column
 // on one transaction, with optimistic cache update + rollback. (Renames go through
 // useRenameMerchantMutation, which renames the merchant's other rows too.)
+// The row being edited; its name feeds a success action such as "Make a rule".
+type MutatedTx = TxKey & Partial<Pick<TransactionRow, "creditor_name">>;
+
 export function useTransactionFieldMutation<K extends "category" | "transaction_type" | "worth_it">(
   queryClient: QueryClient,
   monthKey: string,
@@ -60,15 +63,12 @@ export function useTransactionFieldMutation<K extends "category" | "transaction_
     successMessage?: (value: TransactionRow[K]) => string;
     // A button on the success toast, e.g. "Make a rule" after a category change.
     successAction?: (vars: {
-      tx: TxKey & Partial<Pick<TransactionRow, "creditor_name">>;
+      tx: MutatedTx;
       value: TransactionRow[K];
     }) => { label: string; onClick: () => void } | undefined;
   },
 ) {
-  type Vars = {
-    tx: TxKey & Partial<Pick<TransactionRow, "creditor_name">>;
-    value: TransactionRow[K];
-  };
+  type Vars = { tx: MutatedTx; value: TransactionRow[K] };
   type Context = { previous: Array<TransactionRow> | undefined };
 
   return useMutation<void, Error, Vars, Context>({
