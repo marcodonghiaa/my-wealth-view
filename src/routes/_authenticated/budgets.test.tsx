@@ -205,7 +205,7 @@ describe("Budgets page", () => {
     renderPage();
     const alert = await screen.findByRole("alert");
     expect(alert.textContent).toContain("relation does not exist");
-    expect(alert.textContent).toContain("UPGRADING.md");
+    expect(alert.textContent).toContain("UPGRADING.md in the Alopex backend repository");
   });
 
   // protects=P1-1 paging: budgeted history alone past the 1000-row cap is read in full;

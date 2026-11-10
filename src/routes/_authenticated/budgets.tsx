@@ -220,7 +220,7 @@ function BudgetsPage() {
       {error && (
         <Alert className="mb-6">
           {budgetsQuery.error
-            ? `Couldn't load budgets: ${error.message}. If this is a new install or an update, apply the latest database migration (see UPGRADING.md).`
+            ? `Couldn't load budgets: ${error.message}. If this is a new install or an update, apply the latest database migration (see UPGRADING.md in the Alopex backend repository).`
             : `Couldn't load spending: ${error.message}.`}
         </Alert>
       )}
