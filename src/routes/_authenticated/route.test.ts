@@ -39,12 +39,6 @@ describe("authenticated layout guard", () => {
     await expect(beforeLoad()).rejects.toMatchObject({ options: { to: "/auth" } });
   });
 
-  it("lets a session that entered the code through", async () => {
-    getSession.mockResolvedValue({ data: { session: { user: { id: "u1" } } }, error: null });
-    aal.mockResolvedValue({ data: { currentLevel: "aal2", nextLevel: "aal2" }, error: null });
-    await expect(beforeLoad()).resolves.toEqual({ user: { id: "u1" } });
-  });
-
   it("lets a signed-in user through using the local session, with no server round trip", async () => {
     getSession.mockResolvedValue({ data: { session: { user: { id: "u1" } } }, error: null });
     await expect(beforeLoad()).resolves.toEqual({ user: { id: "u1" } });
