@@ -87,11 +87,11 @@ describe("sidebar icons", () => {
 
 describe("nav links", () => {
   // Regression: the Rules page existed but no link led to it.
-  it("links to Rules in the sidebar and the menu", async () => {
+  it("links to Rules from the sidebar", async () => {
     rows.current = [];
     renderLayout();
     const links = await screen.findAllByRole("link", { name: /Rules/ });
-    expect(links.length).toBeGreaterThanOrEqual(1);
+    expect(links).toHaveLength(1);
     links.forEach((l) => expect(l).toHaveAttribute("href", "/rules"));
   });
 });

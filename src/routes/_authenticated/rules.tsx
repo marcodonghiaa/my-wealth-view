@@ -14,6 +14,7 @@ import { Alert } from "@/components/ui/alert";
 import { TRANSACTION_TYPES } from "@/lib/categories";
 import { useCategories } from "@/lib/use-categories";
 import { functionErrorMessage } from "@/lib/function-error";
+import { plural } from "@/lib/plural";
 import {
   MATCH_FIELDS,
   MATCH_MODES,
@@ -54,7 +55,7 @@ type RuleRow = {
   id: string;
   match_field: string;
   match_text: string;
-  match_mode: string | null; // null on a backend without the match_mode migration: "contains"
+  match_mode: string; // "word" | "exact" | "contains"; rules made before modes are "contains"
   set_category: string | null;
   set_transaction_type: string | null;
   set_flow_type: string | null;
@@ -427,8 +428,6 @@ async function reapply(apply: boolean): Promise<ReapplyResult> {
   }
   return data;
 }
-
-const plural = (n: number) => `${n} transaction${n === 1 ? "" : "s"}`;
 
 // Rules run on new transactions only; this re-runs them on the past ones, after a preview that
 // starts as soon as the panel opens. Remounted (key) whenever the rules change.

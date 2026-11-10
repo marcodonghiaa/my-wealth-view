@@ -3,8 +3,12 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 const invoke = vi.fn();
+const toastError = vi.fn();
 const inserted: Array<Record<string, unknown>> = [];
+const onlyFlowRules = { current: false };
 let search: Record<string, string> = {};
+
+vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: (m: string) => toastError(m) } }));
 
 vi.mock("@/integrations/supabase/client", () => {
   const q: Record<string, unknown> = {};
@@ -16,7 +20,7 @@ vi.mock("@/integrations/supabase/client", () => {
           id: "r1",
           match_field: "creditor_name",
           match_text: "Netflix",
-          match_mode: null,
+          match_mode: "contains",
           set_category: "Entertainment",
           set_transaction_type: null,
           set_flow_type: null,
@@ -45,7 +49,7 @@ vi.mock("@/integrations/supabase/client", () => {
           priority: 100,
           created_at: "2026-10-03T00:00:00Z",
         },
-      ],
+      ].filter((r) => !onlyFlowRules.current || r.set_category === null),
       error: null,
     });
   q["insert"] = (row: Record<string, unknown>) => (
@@ -62,7 +66,6 @@ vi.mock("@/integrations/supabase/client", () => {
 });
 
 import { Route } from "./rules";
-import { isLooseMatch } from "@/lib/rules";
 vi.spyOn(Route, "useSearch").mockImplementation((() => search) as never);
 
 const Page = Route.options.component as () => React.JSX.Element;
@@ -151,7 +154,7 @@ describe("flow rules", () => {
 });
 
 describe("match modes", () => {
-  it("shows how each rule matches; older rules without a mode match anywhere", async () => {
+  it("shows how each rule matches", async () => {
     renderPage();
     await screen.findByText("“Netflix”");
     expect(screen.getByText("“Netflix”").parentElement).toHaveTextContent(
@@ -161,17 +164,14 @@ describe("match modes", () => {
     expect(screen.getByText("“Mum”").parentElement).toHaveTextContent("has the word “Mum”");
   });
 
-  it("warns about short text only when it can match inside other words", () => {
-    expect(isLooseMatch("bar", "contains")).toBe(true);
-    expect(isLooseMatch("bar", "word")).toBe(false);
-    expect(isLooseMatch("netflix", "contains")).toBe(false);
-    expect(isLooseMatch("  ", "contains")).toBe(false);
-  });
-
   it("saves new rules as whole-word matches by default", async () => {
     inserted.length = 0;
     renderPage();
     await openForm();
+    expect(screen.getByRole("radio", { name: "Whole word" })).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
     fireEvent.change(screen.getByLabelText("Text"), { target: { value: "bar" } });
     expect(screen.queryByText(/is in “Barclays”/)).toBeNull();
     fireEvent.click(screen.getByRole("radio", { name: "Anywhere" }));
@@ -239,5 +239,39 @@ describe("apply to past transactions", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("Couldn't apply your rules");
     fireEvent.click(screen.getByRole("button", { name: "Try again" }));
     expect(await screen.findByText(/Nothing to change/)).toBeTruthy();
+  });
+
+  it("lists every change with a colon when the sample is all of them", async () => {
+    invoke.mockReset();
+    invoke.mockResolvedValueOnce({
+      data: { changes: 1, sample: [{ name: "Bar Roma", from: null, to: "Dine Out" }] },
+      error: null,
+    });
+    await open();
+    expect(await screen.findByText(/would change/)).toHaveTextContent(
+      "1 transaction would change:",
+    );
+    expect(screen.getByText("Uncategorized")).toBeTruthy();
+  });
+
+  it("keeps the panel open and shows the error when applying fails", async () => {
+    invoke.mockReset();
+    toastError.mockReset();
+    invoke.mockResolvedValueOnce({ data: { changes: 2, sample: [] }, error: null });
+    invoke.mockResolvedValueOnce({ data: null, error: new Error("boom") });
+    await open();
+    fireEvent.click(await screen.findByRole("button", { name: "Update 2 transactions" }));
+    await waitFor(() =>
+      expect(toastError).toHaveBeenCalledWith(expect.stringMatching(/Couldn't apply/)),
+    );
+    expect(screen.getByRole("button", { name: "Update 2 transactions" })).toBeTruthy();
+  });
+
+  it("is not offered when no rule sets a category", async () => {
+    onlyFlowRules.current = true;
+    renderPage();
+    await screen.findByText("“Revolut”");
+    expect(screen.queryByRole("button", { name: "Apply to past transactions" })).toBeNull();
+    onlyFlowRules.current = false;
   });
 });
