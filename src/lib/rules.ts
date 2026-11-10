@@ -39,9 +39,27 @@ export const fieldPhrase = (field: string) =>
   MATCH_FIELDS.find((f) => f.value === field)?.phrase ?? field;
 
 // Short text matched anywhere hits unrelated names ("bar" in "Barclays").
-export const SHORT_MATCH_TEXT = 4;
+const SHORT_MATCH_TEXT = 4;
 export const isLooseMatch = (text: string, mode: string) =>
   mode === "contains" && text.trim().length > 0 && text.trim().length < SHORT_MATCH_TEXT;
+
+// Same matching as the sync (rules.js / _shared/rules.ts), for rules run in the browser.
+// Callers fold case and accents first. 'word': the text on its own, a boundary checked only on
+// a letter or digit edge; 'exact': the whole field; both ignore outer spaces. Anything else
+// (older rules) matches anywhere, text as typed.
+const WORD_CHAR = "[\\p{L}\\p{N}\\p{M}]";
+const isWordChar = (c: string | undefined) => c !== undefined && new RegExp(WORD_CHAR, "u").test(c);
+const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+export function textMatches(field: string, text: string, mode: string | null | undefined): boolean {
+  if (!text.trim()) return false;
+  if (mode === "exact") return field.trim() === text.trim();
+  if (mode !== "word") return field.includes(text);
+  const t = text.trim();
+  const chars = [...t];
+  const before = isWordChar(chars[0]) ? `(?<!${WORD_CHAR})` : "";
+  const after = isWordChar(chars[chars.length - 1]) ? `(?!${WORD_CHAR})` : "";
+  return new RegExp(before + escapeRegExp(t) + after, "u").test(field);
+}
 
 // "Make a rule" on the toast after a category change: opens Rules with the form filled in, so
 // the next transactions from this name get the same category.

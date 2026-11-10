@@ -1,5 +1,6 @@
 import type { AppCategory } from "./suggest-category";
 import { suggestCategory } from "./suggest-category";
+import { textMatches } from "@/lib/rules";
 
 // Picks an app category for one Splitwise row from its description: the user's own rules first,
 // then keywords, then the Splitwise category. When nothing recognises it the result is null, so
@@ -7,6 +8,7 @@ import { suggestCategory } from "./suggest-category";
 
 export interface UserRule {
   match_text: string;
+  match_mode?: string | null; // 'word' | 'exact' | 'contains' (older rules: anywhere)
   set_category: string | null;
   priority: number;
 }
@@ -61,8 +63,7 @@ export function categorizeRow(
   const text = norm(row.description);
 
   for (const r of rules) {
-    const wanted = norm(r.match_text).trim();
-    if (wanted !== "" && isAppCategory(r.set_category) && text.includes(wanted)) {
+    if (isAppCategory(r.set_category) && textMatches(text, norm(r.match_text), r.match_mode)) {
       return { category: r.set_category, source: "rule" };
     }
   }
