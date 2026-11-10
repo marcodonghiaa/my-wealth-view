@@ -351,6 +351,23 @@ describe("Budgets page", () => {
     expect(document.activeElement).toBe(screen.getByLabelText("Category"));
   });
 
+  // protects=P4 P1-5 every control on a budget row is at least 44px tall (min-h-11);
+  // fails_when=a small control comes back (measured for real in the polish-pass screenshots)
+  it("keeps row controls at the 44px touch height", async () => {
+    db["category_budgets"] = [
+      { category: "Groceries", month: "2026-11-01", amount: 300, rollover: false },
+    ];
+    renderPage();
+    const tall = (el: Element | null) => expect(el?.className).toMatch(/\bmin-h-11\b/);
+    const amount = await screen.findByRole("button", { name: /Change budget for Groceries/ });
+    tall(amount);
+    tall(screen.getByRole("checkbox", { name: "Roll over" }).closest("label"));
+    tall(screen.getByRole("button", { name: "Add budget" }));
+    fireEvent.click(amount);
+    tall(screen.getByLabelText("Budget for Groceries"));
+    for (const name of ["Save", "Cancel", "Remove"]) tall(screen.getByRole("button", { name }));
+  });
+
   // P1-4: visible behaviour that had no test.
   it("says Left to spend or Over budget above the total", async () => {
     db["category_budgets"] = [

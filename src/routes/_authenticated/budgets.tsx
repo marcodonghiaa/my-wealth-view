@@ -323,6 +323,7 @@ function BudgetsPage() {
                           <Button
                             variant="quiet"
                             size="sm"
+                            className="min-h-11"
                             disabled={save.isPending}
                             onClick={() =>
                               save.mutate([
@@ -485,22 +486,23 @@ function BudgetLineRow({
               aria-describedby={invalid ? `budget-error-${line.category}` : undefined}
               inputMode="decimal"
               autoFocus
-              className="h-9 w-28"
+              className="min-h-11 w-28"
               value={draft}
               onChange={(e) => {
                 setDraft(e.target.value);
                 setInvalid(false);
               }}
             />
-            <Button type="submit" size="sm" disabled={busy}>
+            <Button type="submit" size="sm" className="min-h-11" disabled={busy}>
               Save
             </Button>
-            <Button variant="ghost" size="sm" onClick={close}>
+            <Button variant="ghost" size="sm" className="min-h-11" onClick={close}>
               Cancel
             </Button>
             <Button
               variant="destructive"
               size="sm"
+              className="min-h-11"
               disabled={busy}
               onClick={() => {
                 // The row goes away: move on to the add form (or stay if there is none).
@@ -525,7 +527,7 @@ function BudgetLineRow({
             <button
               ref={amountButton}
               type="button"
-              className="inline-flex items-center gap-1.5 font-figure text-foreground underline decoration-rule underline-offset-4 hover:decoration-foreground"
+              className="inline-flex min-h-11 items-center gap-1.5 font-figure text-foreground underline decoration-rule underline-offset-4 hover:decoration-foreground"
               aria-label={`Change budget for ${line.category}, now ${formatEur(line.budget)}`}
               onClick={() => {
                 setDraft(String(line.budget));
@@ -544,7 +546,7 @@ function BudgetLineRow({
             )}
           </span>
         )}
-        <label className="flex cursor-pointer items-center gap-2">
+        <label className="flex min-h-11 cursor-pointer items-center gap-2">
           <input
             type="checkbox"
             className="size-4 accent-[var(--color-primary)]"
