@@ -22,11 +22,11 @@ const inOwnWords = (error: unknown): unknown => {
 
 /** True when the user has an authenticator but this session hasn't entered its code yet. */
 export async function needsMfaCode(): Promise<boolean> {
-  // A client without MFA (the demo) or a broken stored session: no code to ask for here. The
-  // database still refuses an aal1 session of a user with an authenticator.
+  // Never throws: on any failure there is no code to ask for here, and the database still
+  // refuses an aal1 session of a user with an authenticator. (The demo never calls this.)
   try {
     const { data, error } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-    if (error || !data) return false;
+    if (error) return false;
     return data.nextLevel === "aal2" && data.currentLevel !== "aal2";
   } catch {
     return false;

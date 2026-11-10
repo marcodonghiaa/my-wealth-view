@@ -75,7 +75,7 @@ describe("needsMfaCode", () => {
     });
     expect(await needsMfaCode()).toBe(false);
   });
-  it("is false on an error or a client without MFA", async () => {
+  it("is false on an error, and never throws", async () => {
     mfa.getAuthenticatorAssuranceLevel.mockResolvedValue({ data: null, error: new Error("x") });
     expect(await needsMfaCode()).toBe(false);
     mfa.getAuthenticatorAssuranceLevel.mockImplementation(() => {
