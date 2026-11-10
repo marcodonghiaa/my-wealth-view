@@ -1,19 +1,31 @@
 // Turns the messy text people have in spreadsheets into clean values for the import.
 
+// Lower-case, accents removed. English, Italian, German, French, Spanish, Dutch.
 export const MONTH_NAMES: Array<Array<string>> = [
-  ["jan", "january", "gen", "gennaio"],
-  ["feb", "february", "febbraio"],
-  ["mar", "march", "marzo"],
-  ["apr", "april", "aprile"],
-  ["may", "mag", "maggio"],
-  ["jun", "june", "giu", "giugno"],
-  ["jul", "july", "lug", "luglio"],
-  ["aug", "august", "ago", "agosto"],
-  ["sep", "sept", "september", "set", "settembre"],
-  ["oct", "october", "ott", "ottobre"],
-  ["nov", "november", "novembre"],
-  ["dec", "december", "dic", "dicembre"],
+  ["jan", "january", "gen", "gennaio", "januar", "janv", "janvier", "ene", "enero", "januari"],
+  ["feb", "february", "febbraio", "februar", "fevr", "fevrier", "febrero", "februari"],
+  ["mar", "march", "marzo", "marz", "mrz", "mars", "maart", "mrt"],
+  ["apr", "april", "aprile", "avr", "avril", "abr", "abril"],
+  ["may", "mag", "maggio", "mai", "mayo", "mei"],
+  ["jun", "june", "giu", "giugno", "juni", "juin", "junio"],
+  ["jul", "july", "lug", "luglio", "juli", "juil", "juillet", "julio"],
+  ["aug", "august", "ago", "agosto", "aout", "augustus"],
+  ["sep", "sept", "september", "set", "settembre", "septembre", "septiembre", "setiembre"],
+  ["oct", "october", "ott", "ottobre", "okt", "oktober", "octobre", "octubre"],
+  ["nov", "november", "novembre", "noviembre"],
+  ["dec", "december", "dic", "dicembre", "dez", "dezember", "decembre", "diciembre"],
 ];
+
+/** The month (1-12) a name means in any of MONTH_NAMES' languages, or null. "März", "déc." work. */
+export function monthNumber(name: string): number | null {
+  const key = name
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/\.$/, "");
+  const index = MONTH_NAMES.findIndex((names) => names.includes(key));
+  return index === -1 ? null : index + 1;
+}
 
 const EXCEL_EPOCH_MS = Date.UTC(1899, 11, 30);
 const DAY_MS = 86_400_000;

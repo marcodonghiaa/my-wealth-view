@@ -2,7 +2,7 @@
 // Works out the layout by itself: separator, decimal mark, day/month order, which columns hold
 // what, and how money out is told apart from money in. Known exports go through a preset.
 import { appLocale, monthFirst } from "@/lib/locale";
-import { detectDecimal, MONTH_NAMES, parseAmount, type DecimalMark } from "./normalize";
+import { detectDecimal, monthNumber, parseAmount, type DecimalMark } from "./normalize";
 import { parseCsv } from "./parse-csv";
 import { findPreset, presetColumns, type StatementPreset } from "./statement-presets";
 
@@ -240,33 +240,16 @@ const usable = (c: StatementColumns) =>
 const EXCEL_EPOCH_MS = Date.UTC(1899, 11, 30);
 const pad = (n: number) => String(n).padStart(2, "0");
 const SHORT_DATE = /^(\d{1,2})[/.-](\d{1,2})[/.-](\d{2}|\d{4})$/;
-const EXTRA_MONTHS: Array<Array<string>> = [
-  ["januar", "janv", "ene", "enero", "jan."],
-  ["februar", "févr", "fevr", "feb."],
-  ["mär", "märz", "mrz", "mars", "marzo"],
-  ["avr", "abr", "abril"],
-  ["mai", "mayo"],
-  ["juni", "juin"],
-  ["juli", "juil"],
-  ["aout", "août"],
-  ["sept."],
-  ["okt", "oktober"],
-  ["nov."],
-  ["dez", "dezember", "déc", "dec."],
-];
-const monthIndex = (name: string) => {
-  const n = name.toLowerCase().replace(/\.$/, "");
-  return MONTH_NAMES.findIndex(
-    (names, i) => names.includes(n) || (EXTRA_MONTHS[i] ?? []).includes(n),
-  );
-};
+// Two-digit years: 70-99 are the 1900s, the rest the 2000s.
+const fullYear = (year: number) => (year >= 100 ? year : year >= 70 ? 1900 + year : 2000 + year);
+const TIME = /[ T]\d{1,2}:\d{2}(:\d{2})?.*$/;
 
 /**
  * A day from common statement formats, as YYYY-MM-DD, or null. For 03/04/2026 the order says
  * which number is the day; ISO, 20260304, "4 Mar 2026" and Excel day numbers need no order.
  */
 export function parseDay(raw: string, order: DateOrder = "DMY"): string | null {
-  const text = raw.trim();
+  const text = raw.trim().replace(TIME, "");
   const s = text.split(/[ T]/)[0] ?? "";
   let y: number, m: number, d: number;
   let match = /^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})$/.exec(s);
@@ -274,7 +257,7 @@ export function parseDay(raw: string, order: DateOrder = "DMY"): string | null {
   else if ((match = SHORT_DATE.exec(s))) {
     const year = Number(match[3]);
     const [a, b] = [Number(match[1]), Number(match[2])];
-    [y, m, d] = [year < 100 ? 2000 + year : year, order === "MDY" ? a : b, order === "MDY" ? b : a];
+    [y, m, d] = [fullYear(year), order === "MDY" ? a : b, order === "MDY" ? b : a];
   } else if ((match = /^((?:19|20)\d{2})(\d{2})(\d{2})$/.exec(s))) {
     [y, m, d] = [Number(match[1]), Number(match[2]), Number(match[3])];
   } else if (/^\d{5}$/.test(s) && Number(s) >= 20_000 && Number(s) <= 80_000) {
@@ -283,10 +266,10 @@ export function parseDay(raw: string, order: DateOrder = "DMY"): string | null {
   } else if ((match = /^(\d{1,2})\.?[\s-]([^\s\d,-]+)[\s-](\d{2}|\d{4})$/.exec(text))) {
     // 4 Mar 2026, 04-Mar-26, 4. März 2026
     const year = Number(match[3]);
-    [y, m, d] = [year < 100 ? 2000 + year : year, monthIndex(match[2]!) + 1, Number(match[1])];
+    [y, m, d] = [fullYear(year), monthNumber(match[2]!) ?? 0, Number(match[1])];
   } else if ((match = /^([^\s\d,]+)\s+(\d{1,2}),?\s+(\d{4})$/.exec(text))) {
     // Mar 4, 2026
-    [y, m, d] = [Number(match[3]), monthIndex(match[1]!) + 1, Number(match[2])];
+    [y, m, d] = [Number(match[3]), monthNumber(match[1]!) ?? 0, Number(match[2])];
   } else return null;
   if (m < 1) return null;
   const check = new Date(Date.UTC(y, m - 1, d));
@@ -300,8 +283,11 @@ export function parseDay(raw: string, order: DateOrder = "DMY"): string | null {
  */
 export function detectDateOrder(cells: Array<string>, locale: string = appLocale()): DateOrder {
   for (const raw of cells) {
-    const match = SHORT_DATE.exec(raw.trim().split(/[ T]/)[0] ?? "");
+    const date = raw.trim().split(/[ T]/)[0] ?? "";
+    const match = SHORT_DATE.exec(date);
     if (!match) continue;
+    // 01.03.2026: dots are only ever written day first.
+    if (date.includes(".")) return "DMY";
     if (Number(match[1]) > 12) return "DMY";
     if (Number(match[2]) > 12) return "MDY";
   }

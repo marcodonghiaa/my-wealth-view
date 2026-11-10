@@ -115,6 +115,12 @@ describe("parseDay, more formats", () => {
     expect(parseDay("13/04/2026", "MDY")).toBeNull();
   });
 
+  it("puts two-digit years from 70 in the 1900s", () => {
+    expect(parseDay("31/12/99")).toBe("1999-12-31");
+    expect(parseDay("31/12/69")).toBe("2069-12-31");
+    expect(parseDay("01/02/26")).toBe("2026-02-01");
+  });
+
   it("reads compact, slashed-ISO and named-month dates", () => {
     expect(parseDay("20260304")).toBe("2026-03-04");
     expect(parseDay("2026/03/04")).toBe("2026-03-04");
@@ -123,6 +129,16 @@ describe("parseDay, more formats", () => {
     expect(parseDay("4. März 2026")).toBe("2026-03-04");
     expect(parseDay("Mar 4, 2026")).toBe("2026-03-04");
     expect(parseDay("4 Foo 2026")).toBeNull();
+    expect(parseDay("4 Mar 2026 10:15")).toBe("2026-03-04");
+    expect(parseDay("4 février 2026")).toBe("2026-02-04");
+    expect(parseDay("4 juillet 2026")).toBe("2026-07-04");
+    expect(parseDay("4 décembre 2026")).toBe("2026-12-04");
+    expect(parseDay("4 septiembre 2026")).toBe("2026-09-04");
+    expect(parseDay("4 maart 2026")).toBe("2026-03-04");
+    expect(parseDay("4 januari 2026")).toBe("2026-01-04");
+    // macOS can write "ä" as "a" + a combining mark.
+    expect(parseDay("4. Ma\u0308rz 2026")).toBe("2026-03-04");
+    expect(parseDay("4 déc. 2026")).toBe("2026-12-04");
     expect(parseDay("20261340")).toBeNull();
   });
 });
@@ -136,6 +152,10 @@ describe("detectDateOrder", () => {
   it("lets the locale decide when every date fits both", () => {
     expect(detectDateOrder(["01/02/2026", "2026-02-03", ""], "en-US")).toBe("MDY");
     expect(detectDateOrder(["01/02/2026"], "it-IT")).toBe("DMY");
+  });
+
+  it("reads dotted dates day first even in a US browser", () => {
+    expect(detectDateOrder(["01.03.2026", "05.03.2026"], "en-US")).toBe("DMY");
   });
 });
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { detectDecimal, parseAmount, parseMonth } from "./normalize";
+import { detectDecimal, monthNumber, parseAmount, parseMonth } from "./normalize";
 
 describe("parseMonth", () => {
   // protects=a month typed in any common way becomes YYYY-MM; fails_when=a format is misread
@@ -98,5 +98,16 @@ describe("detectDecimal", () => {
   it("is undefined when no cell tells", () => {
     expect(detectDecimal(["1,234", "12", ""])).toBeUndefined();
     expect(detectDecimal([])).toBeUndefined();
+  });
+});
+
+describe("monthNumber", () => {
+  it("reads month names in six languages, with or without accents and dots", () => {
+    expect(monthNumber("März")).toBe(3);
+    expect(monthNumber("Ma\u0308rz")).toBe(3);
+    expect(monthNumber("déc.")).toBe(12);
+    expect(monthNumber("Sept.")).toBe(9);
+    expect(monthNumber("mei")).toBe(5);
+    expect(monthNumber("foo")).toBeNull();
   });
 });
