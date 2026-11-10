@@ -1,7 +1,7 @@
 import { Button, buttonVariants } from "@/components/ui/button";
 import { fieldClass } from "@/components/ui/field";
 import { cn } from "@/lib/utils";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { FileUp, Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -22,7 +22,7 @@ import {
   type StatementOptions,
   type StatementRow,
 } from "@/lib/import/statement";
-import { decodeCsv } from "@/lib/import/parse-csv";
+import { decodeCsv, parseCsv } from "@/lib/import/parse-csv";
 import { formatDay } from "@/lib/date";
 import { importStatement, newRows, type StatementClient } from "@/lib/import/statement-commit";
 import { readStatementPdf } from "@/lib/import/statement-pdf";
@@ -70,6 +70,8 @@ export function ImportStatement() {
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState<number | null>(null);
   const [readingPdf, setReadingPdf] = useState(false);
+  // Each read checks the app for duplicates over the network; only the latest may show.
+  const readId = useRef(0);
 
   function reset() {
     setText(null);
@@ -85,15 +87,19 @@ export function ImportStatement() {
   }
 
   async function read(csv: string, cols?: StatementColumns, opts: StatementOptions = {}) {
+    const id = ++readId.current;
     setError(null);
     setFresh(null);
     try {
       const result = readStatement(csv, cols, opts);
+      const rows = await newRows(client, result.rows);
+      if (id !== readId.current) return;
       setStatement(result);
       setHeaders(result.headers);
       setColumns(result.columns);
-      setFresh(await newRows(client, result.rows));
+      setFresh(rows);
     } catch (err) {
+      if (id !== readId.current) return;
       setStatement(null);
       setError(err instanceof Error ? err.message : "Couldn't read the file.");
     }
@@ -134,8 +140,11 @@ export function ImportStatement() {
     const csv = decodeCsv(await file.arrayBuffer());
     setText(csv);
     // Headers for the column pickers, even when the columns can't be guessed.
-    const firstLine = csv.replace(/^\uFEFF/, "").split(/\r?\n/)[0] ?? "";
-    setHeaders(firstLine.split(/[;,\t]/).map((h) => h.trim()));
+    try {
+      setHeaders(parseCsv(csv).headers);
+    } catch {
+      // The read below shows why the file can't be used.
+    }
     await read(csv);
   }
 
@@ -180,6 +189,9 @@ export function ImportStatement() {
       setError(err instanceof Error ? err.message : "Import failed.");
       setProgress(null);
       void queryClient.invalidateQueries({ queryKey: ["transactions"] });
+      // Some rows were saved before the error: check again so a retry adds only the rest.
+      setFresh(null);
+      if (statement) setFresh(await newRows(client, statement.rows).catch(() => null));
     }
   }
 
@@ -255,7 +267,8 @@ export function ImportStatement() {
             <div className="space-y-2 rounded-lg bg-card p-3 text-xs text-muted-foreground">
               <p>
                 {statement.preset ? `Read as a ${statement.preset} export. ` : ""}
-                Amounts use {statement.decimal === "," ? "a decimal comma" : "a decimal point"}.
+                {statement.decimal &&
+                  `Amounts use ${statement.decimal === "," ? "a decimal comma" : "a decimal point"}.`}
               </p>
               <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
                 <label className="flex items-center gap-2">

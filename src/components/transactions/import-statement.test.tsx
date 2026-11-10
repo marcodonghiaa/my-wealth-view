@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 const rpc = vi.fn();
 const invoke = vi.fn();
 let existing: Array<object> = [];
+let range = async () => ({ data: existing, error: null });
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
     rpc: (...args: unknown[]) => rpc(...args),
@@ -14,7 +15,7 @@ vi.mock("@/integrations/supabase/client", () => ({
         is: () => ({
           gte: () => ({
             lte: () => ({
-              order: () => ({ range: async () => ({ data: existing, error: null }) }),
+              order: () => ({ range: () => range() }),
             }),
           }),
         }),
@@ -51,6 +52,7 @@ beforeEach(() => {
   rpc.mockReset();
   rpc.mockResolvedValue({ data: [], error: null });
   existing = [];
+  range = async () => ({ data: existing, error: null });
 });
 
 describe("ImportStatement", () => {
@@ -156,5 +158,56 @@ describe("ImportStatement", () => {
     expect(await screen.findByText(/1 Feb 2026/)).toBeTruthy();
     fireEvent.change(screen.getByLabelText("Date order"), { target: { value: "MDY" } });
     expect(await screen.findByText(/2 Jan 2026/)).toBeTruthy();
+  });
+
+  it("after a partial failure, offers only the rows that were not saved", async () => {
+    rpc
+      .mockResolvedValueOnce({ data: [], error: null })
+      .mockResolvedValueOnce({ data: null, error: { message: "boom" } });
+    upload("Fineco.csv", CSV);
+    fireEvent.click(await screen.findByRole("button", { name: "Import 2" }));
+    // The first row is now in the app.
+    existing = [
+      {
+        booking_date: "2026-04-25",
+        amount: 45.5,
+        credit_debit_indicator: "DBIT",
+        creditor_name: "Ristorante Mario",
+      },
+    ];
+    expect(await screen.findByRole("alert")).toHaveTextContent(/1 of 2 added/);
+    expect(await screen.findByRole("button", { name: "Import 1" })).toBeTruthy();
+  });
+
+  it("shows only the latest read when an older duplicate check answers last", async () => {
+    upload("card.csv", "Date,Description,Amount\n01/02/2026,Shop,-5");
+    expect(await screen.findByText(/1 Feb 2026/)).toBeTruthy();
+    let releaseSlow: () => void = () => {};
+    range = () =>
+      new Promise((resolve) => {
+        releaseSlow = () => resolve({ data: existing, error: null });
+      });
+    fireEvent.change(screen.getByLabelText("Date order"), { target: { value: "MDY" } });
+    range = async () => ({ data: existing, error: null });
+    fireEvent.click(screen.getByLabelText("Spending is written as positive"));
+    expect(await screen.findByText(/2 Jan 2026/)).toBeTruthy();
+    expect(screen.getByText("+€5.00")).toBeTruthy();
+    releaseSlow();
+    await new Promise((r) => setTimeout(r, 20));
+    // The slow, older read (not flipped) must not replace the newer preview.
+    expect(screen.getByText("+€5.00")).toBeTruthy();
+  });
+
+  it("does not claim a decimal mark it could not tell", async () => {
+    upload("bank.csv", "Date,Description,Amount\n2026-01-02,Shop,-5");
+    expect(await screen.findByText(/1 new transaction/)).toBeTruthy();
+    expect(screen.queryByText(/decimal/)).toBeNull();
+  });
+
+  it("lists the real header names for the pickers, even with quotes and pipes", async () => {
+    upload("odd.csv", '"Quando"|"Cosa, breve"|"Quanto"\n2026-01-02|Shop|-5');
+    expect((await screen.findAllByRole("option", { name: "Cosa, breve" })).length).toBeGreaterThan(
+      0,
+    );
   });
 });
