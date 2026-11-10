@@ -78,6 +78,7 @@ beforeEach(() => {
   failTable = null;
   failUpsert = null;
   toast.error.mockClear();
+  window.localStorage.clear();
   db["v_spend_by_category_monthly"] = [
     { month: "2026-09-01", category: "Groceries", spend_eur: 300 },
     { month: "2026-10-01", category: "Groceries", spend_eur: 320 },
@@ -231,6 +232,53 @@ describe("Budgets page", () => {
     renderPage();
     // Groceries: 47 earlier months each leave 10 → 470 carried; 100 + 470 − 90 = 480 left.
     expect(await screen.findByText("€480.00 left")).toBeTruthy();
+  });
+
+  // P1-4: visible behaviour that had no test.
+  it("says Left to spend or Over budget above the total", async () => {
+    db["category_budgets"] = [
+      { category: "Dine Out", month: "2026-11-01", amount: 50, rollover: false },
+    ];
+    renderPage();
+    // Dine Out: 50 budgeted, 60 spent.
+    expect(await screen.findByText("Over budget")).toBeTruthy();
+    expect(screen.queryByText("Left to spend")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: /Change budget for Dine Out/ }));
+    fireEvent.change(screen.getByLabelText("Budget for Dine Out"), { target: { value: "100" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(await screen.findByText("Left to spend")).toBeTruthy();
+    expect(screen.queryByText("Over budget")).toBeNull();
+  });
+
+  it("shows income minus all budgets as Not yet budgeted", async () => {
+    db["category_budgets"] = [
+      { category: "Groceries", month: "2026-11-01", amount: 300, rollover: false },
+      { category: "Dine Out", month: "2026-11-01", amount: 50, rollover: false },
+    ];
+    renderPage();
+    const label = await screen.findByText("Not yet budgeted");
+    // November income 2000 − (300 + 50).
+    expect(label.parentElement!.textContent).toContain("€1,650.00");
+  });
+
+  it("remembers the spread-income choice in this browser", async () => {
+    const first = renderPage();
+    fireEvent.click(await screen.findByRole("checkbox", { name: /Spread yearly income evenly/ }));
+    expect(window.localStorage.getItem("alopex.budgets.spreadIncome")).toBe("1");
+    first.unmount();
+    renderPage();
+    const box = await screen.findByRole("checkbox", { name: /Spread yearly income evenly/ });
+    expect((box as HTMLInputElement).checked).toBe(true);
+    expect(await screen.findByText("€1,000.00")).toBeTruthy();
+  });
+
+  it("refuses 0 in the add form", async () => {
+    renderPage();
+    fireEvent.change(await screen.findByLabelText("Category"), { target: { value: "Groceries" } });
+    fireEvent.change(screen.getByLabelText("Monthly budget in euros"), { target: { value: "0" } });
+    fireEvent.click(screen.getByRole("button", { name: "Add" }));
+    expect((await screen.findByRole("alert")).textContent).toContain("above 0");
+    expect(upserts).toHaveLength(0);
   });
 
   // protects=P1-3 adding a budget keeps the page on screen;
