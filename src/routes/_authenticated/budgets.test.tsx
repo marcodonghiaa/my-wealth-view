@@ -660,6 +660,32 @@ describe("Budgets page", () => {
     );
   });
 
+  // protects=P4 P2-7 a failed one-click start doesn't steal focus later;
+  // fails_when=the pending focus move survives the failed save
+  it("leaves focus alone after a failed start from the averages", async () => {
+    failUpsert = "permission denied";
+    renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: "Start from my averages" }));
+    await waitFor(() => expect(toast.error).toHaveBeenCalled());
+    failUpsert = null;
+    fireEvent.change(screen.getByLabelText("Category"), { target: { value: "Groceries" } });
+    fireEvent.change(screen.getByLabelText("Monthly budget in euros"), {
+      target: { value: "200" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Add" }));
+    const row = await screen.findByRole("button", { name: /^Change budget for Groceries/ });
+    await new Promise((r) => setTimeout(r, 50));
+    expect(document.activeElement).not.toBe(row);
+  });
+
+  // protects=P4 P2-1 the income error sentence is words, so not in the figures font
+  it("sets the income error in the text font", async () => {
+    failTable = "v_income_vs_expenses_monthly";
+    renderPage();
+    const message = await screen.findByText(/Couldn't load income/);
+    expect(message.closest(".font-figure")).toBeNull();
+  });
+
   it("removes a budget with Remove, and Cancel saves nothing", async () => {
     db["category_budgets"] = [
       { category: "Groceries", month: "2026-10-01", amount: 300, rollover: true },
