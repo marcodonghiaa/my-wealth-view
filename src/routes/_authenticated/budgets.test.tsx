@@ -396,6 +396,15 @@ describe("Budgets page", () => {
     for (const text of mono) expect(text).not.toMatch(/[a-z]{3,}/i);
   });
 
+  // protects=P4 P2-2 a past month's income isn't called "this month"
+  it("names the month on the income row when it isn't the current one", async () => {
+    renderPage();
+    expect(await screen.findByText("Income this month")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Previous month" }));
+    expect(await screen.findByText("Income in October 2026")).toBeTruthy();
+    expect(screen.queryByText("Income this month")).toBeNull();
+  });
+
   // P1-4: visible behaviour that had no test.
   it("says Left to spend or Over budget above the total", async () => {
     db["category_budgets"] = [
