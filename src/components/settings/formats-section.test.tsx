@@ -41,4 +41,14 @@ describe("FormatsSection", () => {
     expect(reload).not.toHaveBeenCalled();
     setItem.mockRestore();
   });
+
+  it("polish-3 #10 keeps showing the format in use when the new one can't be saved", () => {
+    const setItem = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new DOMException("blocked", "SecurityError");
+    });
+    render(<FormatsSection reload={() => {}} />);
+    fireEvent.change(screen.getByLabelText("Format"), { target: { value: "de-DE" } });
+    expect(screen.getByLabelText("Format")).toHaveValue("");
+    setItem.mockRestore();
+  });
 });
