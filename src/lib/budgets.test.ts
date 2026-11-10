@@ -1,0 +1,213 @@
+import { describe, expect, it } from "vitest";
+import {
+  addMonths,
+  budgetLines,
+  effectiveBudget,
+  monthIncome,
+  monthsBetween,
+  suggestedBudgets,
+  type BudgetRow,
+  type MonthSpend,
+} from "./budgets";
+
+const b = (category: string, month: string, amount: number, rollover = false): BudgetRow => ({
+  category,
+  month,
+  amount,
+  rollover,
+});
+const s = (category: string, month: string, spend_eur: number): MonthSpend => ({
+  category,
+  month,
+  spend_eur,
+});
+
+describe("months", () => {
+  it("steps across a year end both ways", () => {
+    expect(addMonths("2026-12-01", 1)).toBe("2027-01-01");
+    expect(addMonths("2026-01-01", -1)).toBe("2025-12-01");
+    expect(addMonths("2026-11-01", -11)).toBe("2025-12-01");
+  });
+  it("lists both ends", () => {
+    expect(monthsBetween("2026-11-01", "2027-01-01")).toEqual([
+      "2026-11-01",
+      "2026-12-01",
+      "2027-01-01",
+    ]);
+    expect(monthsBetween("2026-02-01", "2026-01-01")).toEqual([]);
+  });
+});
+
+describe("effectiveBudget", () => {
+  const rows = [b("Groceries", "2026-01-01", 300), b("Groceries", "2026-04-01", 350)];
+  // protects=a budget set once holds for later months; fails_when=only exact-month rows count
+  it("takes the latest row at or before the month", () => {
+    expect(effectiveBudget(rows, "Groceries", "2026-03-01")?.amount).toBe(300);
+    expect(effectiveBudget(rows, "Groceries", "2026-04-01")?.amount).toBe(350);
+    expect(effectiveBudget(rows, "Groceries", "2026-09-01")?.amount).toBe(350);
+  });
+  it("has none before the first row or for another category", () => {
+    expect(effectiveBudget(rows, "Groceries", "2025-12-01")).toBeUndefined();
+    expect(effectiveBudget(rows, "Dine Out", "2026-04-01")).toBeUndefined();
+  });
+});
+
+describe("budgetLines without rollover", () => {
+  it("shows budget, spent and left; over budget is negative", () => {
+    const [line] = budgetLines(
+      [b("Dine Out", "2026-01-01", 100)],
+      [s("Dine Out", "2026-01-01", 130)],
+      "2026-01-01",
+    );
+    expect(line).toEqual({
+      category: "Dine Out",
+      budget: 100,
+      rollover: false,
+      carriedIn: 0,
+      available: 100,
+      spent: 130,
+      left: -30,
+    });
+  });
+  it("never carries anything", () => {
+    const [line] = budgetLines(
+      [b("Dine Out", "2026-01-01", 100)],
+      [s("Dine Out", "2026-01-01", 20)],
+      "2026-02-01",
+    );
+    expect(line!.carriedIn).toBe(0);
+    expect(line!.left).toBe(100);
+  });
+  it("skips categories whose budget starts later, and removed budgets", () => {
+    const rows = [
+      b("Travel", "2026-05-01", 200),
+      b("Gym", "2026-01-01", 40),
+      b("Gym", "2026-03-01", 0),
+    ];
+    expect(budgetLines(rows, [], "2026-04-01")).toEqual([]);
+  });
+  it("sorts by budget, biggest first", () => {
+    const rows = [b("A", "2026-01-01", 50), b("B", "2026-01-01", 200)];
+    expect(budgetLines(rows, [], "2026-01-01").map((l) => l.category)).toEqual(["B", "A"]);
+  });
+});
+
+describe("budgetLines with rollover across three months", () => {
+  // protects=rollover math: next = previous leftover + budget − actual, overspend carries too;
+  // fails_when=carry ignores overspend, resets each month, or double counts
+  const rows = [b("Groceries", "2026-01-01", 300, true)];
+  const spend = [
+    s("Groceries", "2026-01-01", 250), // 50 left
+    s("Groceries", "2026-02-01", 400), // 300 + 50 = 350 available, 50 over
+    s("Groceries", "2026-03-01", 100), // 300 − 50 = 250 available, 150 left
+  ];
+  it("month 1: nothing carried", () => {
+    expect(budgetLines(rows, spend, "2026-01-01")[0]).toMatchObject({
+      carriedIn: 0,
+      available: 300,
+      left: 50,
+    });
+  });
+  it("month 2: the leftover adds to the budget", () => {
+    expect(budgetLines(rows, spend, "2026-02-01")[0]).toMatchObject({
+      carriedIn: 50,
+      available: 350,
+      left: -50,
+    });
+  });
+  it("month 3: the overspend comes off the budget", () => {
+    expect(budgetLines(rows, spend, "2026-03-01")[0]).toMatchObject({
+      carriedIn: -50,
+      available: 250,
+      spent: 100,
+      left: 150,
+    });
+  });
+  it("follows a budget change in the middle", () => {
+    const changed = [...rows, b("Groceries", "2026-02-01", 200, true)];
+    // Jan 50 left; Feb 200 + 50 − 400 = −150; Mar 200 − 150 = 50 available.
+    expect(budgetLines(changed, spend, "2026-03-01")[0]).toMatchObject({
+      budget: 200,
+      carriedIn: -150,
+      available: 50,
+      left: -50,
+    });
+  });
+  it("starts clean the month after rollover is turned off", () => {
+    const off = [...rows, b("Groceries", "2026-02-01", 300, false)];
+    expect(budgetLines(off, spend, "2026-02-01")[0]).toMatchObject({ carriedIn: 0 });
+    expect(budgetLines(off, spend, "2026-03-01")[0]).toMatchObject({ carriedIn: 0, left: 200 });
+  });
+  it("keeps a category whose budget was removed while something is still carried", () => {
+    const removed = [...rows, b("Groceries", "2026-02-01", 0, true)];
+    // Jan leftover 50, Feb budget 0 → 50 available, 400 spent.
+    expect(budgetLines(removed, spend, "2026-02-01")[0]).toMatchObject({
+      budget: 0,
+      carriedIn: 50,
+      left: -350,
+    });
+  });
+  it("adds up several spend rows for the same month and category, to the cent", () => {
+    const [line] = budgetLines(
+      [b("Shopping", "2026-01-01", 100, true)],
+      [s("Shopping", "2026-01-01", 10.1), s("Shopping", "2026-01-01", 20.2)],
+      "2026-02-01",
+    );
+    expect(line!.carriedIn).toBe(69.7);
+  });
+});
+
+describe("suggestedBudgets", () => {
+  it("averages the last months with spending, rounded up to 10, without Uncategorized", () => {
+    const spend = [
+      s("Groceries", "2026-08-01", 300),
+      s("Groceries", "2026-09-01", 320),
+      s("Groceries", "2026-10-01", 301),
+      s("Dine Out", "2026-10-01", 90), // only one month: averaged over all three
+      s("Uncategorized", "2026-10-01", 50),
+      s("Groceries", "2026-11-01", 999), // the month itself doesn't count
+    ];
+    const out = suggestedBudgets(spend, "2026-11-01");
+    expect(Object.fromEntries(out)).toEqual({ Groceries: 310, "Dine Out": 30 });
+  });
+  it("uses at most six months", () => {
+    const spend = ["01", "02", "03", "04", "05", "06", "07"].map((m, i) =>
+      s("Gym", `2026-${m}-01`, i === 0 ? 7000 : 60),
+    );
+    expect(suggestedBudgets(spend, "2026-08-01").get("Gym")).toBe(60);
+  });
+  it("is empty with no history", () => {
+    expect(suggestedBudgets([], "2026-11-01").size).toBe(0);
+  });
+});
+
+describe("monthIncome", () => {
+  const income = new Map([
+    ["2026-01-01", 2000],
+    ["2026-02-01", 2000],
+    ["2026-03-01", 2000],
+    ["2026-04-01", 2000],
+    ["2026-05-01", 2000],
+    ["2026-06-01", 4000], // 14th month salary
+    ["2026-07-01", 2000],
+    ["2026-08-01", 2000],
+    ["2026-09-01", 2000],
+    ["2026-10-01", 2000],
+    ["2026-11-01", 2000],
+    ["2026-12-01", 4000], // 13th month salary
+  ]);
+  it("is the month's own income when not spread", () => {
+    expect(monthIncome(income, "2026-06-01", false)).toBe(4000);
+    expect(monthIncome(income, "2027-01-01", false)).toBe(0);
+  });
+  // protects=13th/14th salary spread evenly (annual ÷ 12); fails_when=June/December spike
+  it("spreads 12 months evenly", () => {
+    expect(monthIncome(income, "2026-12-01", true)).toBe(2333.33);
+  });
+  it("divides by the months since the first income when history is shorter", () => {
+    expect(monthIncome(income, "2026-03-01", true)).toBe(2000);
+  });
+  it("is 0 without any income", () => {
+    expect(monthIncome(new Map(), "2026-03-01", true)).toBe(0);
+  });
+});
