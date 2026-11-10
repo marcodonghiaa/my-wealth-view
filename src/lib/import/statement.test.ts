@@ -189,6 +189,18 @@ describe("readStatement options", () => {
     expect(rows.map((r) => r.direction)).toEqual(["DBIT", "CRDT"]);
   });
 
+  it("lets a D/C marker or in/out columns win over the flip", () => {
+    const marked = "Date;Description;Amount;D/C\n2026-01-02;Shop;10,00;D\n2026-01-03;Pay;5,00;C";
+    expect(readStatement(marked, undefined, { invert: true }).rows.map((r) => r.direction)).toEqual(
+      ["DBIT", "CRDT"],
+    );
+    const split = "Date,Description,Paid out,Paid in\n2026-01-02,Shop,10.00,\n2026-01-03,Pay,,5.00";
+    expect(readStatement(split, undefined, { invert: true }).rows.map((r) => r.direction)).toEqual([
+      "DBIT",
+      "CRDT",
+    ]);
+  });
+
   it("uses the date order picked by hand over the guess", () => {
     expect(readStatement(csv).rows[0]!.date).toBe("2026-02-01");
     expect(readStatement(csv, undefined, { dateOrder: "MDY" }).rows[0]!.date).toBe("2026-01-02");

@@ -18,6 +18,10 @@ describe("parseCsv", () => {
     expect(parseCsv("mese;totale\n2024-03;1.234,56\n").rows).toEqual([["2024-03", "1.234,56"]]);
   });
 
+  it("reads a pipe separated file", () => {
+    expect(parseCsv("date|amount\n2026-01-02|1,50\n").rows).toEqual([["2026-01-02", "1,50"]]);
+  });
+
   it("keeps commas inside quotes", () => {
     expect(parseCsv('category,amount\n"Food, drink",10\n').rows).toEqual([["Food, drink", "10"]]);
   });

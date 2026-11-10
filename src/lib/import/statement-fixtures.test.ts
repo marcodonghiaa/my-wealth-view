@@ -147,3 +147,14 @@ describe("messy generic statements", () => {
     ]);
   });
 });
+
+describe("a preset's skip column missing from the file", () => {
+  it("keeps every row instead of dropping them", () => {
+    const csv =
+      "Date,Description,Amount,MainCategoryName\n2026-01-02,Shop,-10.00,Food\n2026-01-03,Pay,5.00,Income";
+    const s = readStatement(csv);
+    expect(s.preset).toBe("Spiir");
+    expect(s.rows).toHaveLength(2);
+    expect(s.skipped).toBe(0);
+  });
+});

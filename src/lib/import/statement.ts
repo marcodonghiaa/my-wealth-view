@@ -347,6 +347,8 @@ function readRow(row: Array<string>, r: Recipe): StatementRow | null {
   if (c.amount != null) {
     signed = amount(c.amount);
     if (signed != null && r.fee != null) signed -= Math.abs(amount(r.fee) ?? 0);
+    // "Spending is written as positive" flips the bare sign; a D/C word still wins.
+    if (signed != null && r.invert) signed = -signed;
     const said = word(cell(row, c.direction));
     if (signed != null && OUT_WORDS.has(said)) signed = -Math.abs(signed);
     else if (signed != null && IN_WORDS.has(said)) signed = Math.abs(signed);
@@ -355,7 +357,6 @@ function readRow(row: Array<string>, r: Recipe): StatementRow | null {
     signed = money(c.in) - money(c.out);
   }
   if (signed == null || Math.abs(signed) < 0.005) return null;
-  if (r.invert) signed = -signed;
   const currency = currencyCode(cell(row, r.currency));
   return {
     date,

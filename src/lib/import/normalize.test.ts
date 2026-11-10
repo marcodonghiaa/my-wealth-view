@@ -98,6 +98,8 @@ describe("detectDecimal", () => {
   it("is undefined when no cell tells", () => {
     expect(detectDecimal(["1,234", "12", ""])).toBeUndefined();
     expect(detectDecimal([])).toBeUndefined();
+    // A tie leaves the choice to the caller.
+    expect(detectDecimal(["12,50", "3.99"])).toBeUndefined();
   });
 });
 
