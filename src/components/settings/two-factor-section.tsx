@@ -93,7 +93,7 @@ export function TwoFactorSection() {
           </h3>
           <p className="mt-1 text-sm text-muted-foreground">
             {list === null
-              ? loadFailed && !authenticators.isFetching
+              ? loadFailed
                 ? "Couldn't check right now."
                 : "Checking…"
               : on

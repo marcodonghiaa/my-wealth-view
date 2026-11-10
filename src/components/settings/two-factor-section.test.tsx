@@ -152,6 +152,7 @@ describe("TwoFactorSection", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("Failed to fetch");
   });
 
+  // Behaviour check (react-query resets a data-less query to pending on refetch), not a regression test.
   it("shows the retry is running", async () => {
     lib.listAuthenticators
       .mockRejectedValueOnce(new Error("Failed to fetch"))
