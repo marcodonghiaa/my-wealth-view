@@ -68,6 +68,21 @@ describe("parseTradesCsv", () => {
     );
   });
 
+  it("a trailing separator in a plain file still names the missing column", () => {
+    expect(parseTradesCsv("date,side,isin,shares,\n", opts).errors).toEqual([
+      "Missing column: price.",
+    ]);
+  });
+
+  it("extra columns are fine when nothing is missing", () => {
+    const { errors, trades } = parseTradesCsv(
+      "date,side,isin,shares,price,note\n2026-01-15,buy,IE00B4L5Y983,1,90,x\n",
+      opts,
+    );
+    expect(errors).toEqual([]);
+    expect(trades).toHaveLength(1);
+  });
+
   it("names missing columns", () => {
     expect(parseTradesCsv("date,isin\n", opts).errors).toEqual([
       "Missing columns: side, shares, price.",
@@ -274,6 +289,17 @@ describe("newTrades", () => {
   it("without ids, one saved row covers one incoming row, not every identical copy", () => {
     expect(newTrades([trade, trade], [trade])).toEqual([trade]);
     expect(newTrades([trade, trade], [trade, trade])).toEqual([]);
+  });
+
+  it("a broker id repeated in one file is imported once", () => {
+    const a = { ...trade, source: "trade_republic", external_id: "a" };
+    expect(newTrades([a, a], [])).toEqual([a]);
+  });
+
+  it("a plain CSV of trades already imported from a broker isn't saved again", () => {
+    const tr = { ...trade, source: "trade_republic", external_id: "a" };
+    expect(newTrades([trade], [tr])).toEqual([]);
+    expect(newTrades([trade, trade], [tr])).toEqual([trade]);
   });
 
   it("trades saved before ids were kept still count once when the file is imported again", () => {

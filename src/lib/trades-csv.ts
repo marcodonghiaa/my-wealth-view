@@ -30,7 +30,7 @@ export function parseTradesCsv(text: string, ctx: ParseContext): CsvResult {
   // Columns missing and others we don't know: not a half-made file but some broker's export, or
   // one whose format changed. Say so, never guess.
   const ours = new Set([...required, "symbol", "isin", "fee"]);
-  if (missing.length > 0 && header.some((h) => !ours.has(h))) {
+  if (missing.length > 0 && header.some((h) => h !== "" && !ours.has(h))) {
     return {
       trades: [],
       errors: [
@@ -93,20 +93,31 @@ const signature = (t: Trade) =>
  * saved row per incoming row: two identical saved buys cover two incoming ones, not every copy.
  */
 export function newTrades(incoming: Array<Trade>, saved: Array<Trade>): Array<Trade> {
-  const ids = new Set(
-    saved.filter((t) => t.external_id).map((t) => `${t.source}|${t.external_id}`),
-  );
-  const unmatched = new Map<string, number>();
+  const idOf = (t: Trade) => (t.external_id ? `${t.source}|${t.external_id}` : null);
+  const savedIds = new Set(saved.map(idOf).filter((k) => k != null));
+  const claimed = new Set(incoming.map(idOf).filter((k) => k != null && savedIds.has(k)));
+  // Saved rows not already matched by id, counted by contents: without an id, and with one.
+  const plain = new Map<string, number>();
+  const withId = new Map<string, number>();
   for (const t of saved) {
-    if (t.external_id) continue;
-    unmatched.set(signature(t), (unmatched.get(signature(t)) ?? 0) + 1);
+    const k = idOf(t);
+    if (k && claimed.has(k)) continue;
+    const pool = k ? withId : plain;
+    pool.set(signature(t), (pool.get(signature(t)) ?? 0) + 1);
   }
+  const take = (pool: Map<string, number>, t: Trade) => {
+    const left = pool.get(signature(t)) ?? 0;
+    if (left > 0) pool.set(signature(t), left - 1);
+    return left > 0;
+  };
+  const seen = new Set<string>();
   return incoming.filter((t) => {
-    if (t.external_id && ids.has(`${t.source}|${t.external_id}`)) return false;
-    const left = unmatched.get(signature(t)) ?? 0;
-    if (left === 0) return true;
-    unmatched.set(signature(t), left - 1);
-    return false;
+    const k = idOf(t);
+    if (k == null) return !take(plain, t) && !take(withId, t);
+    if (savedIds.has(k) || seen.has(k)) return false;
+    seen.add(k);
+    // The same trade saved before ids were kept. A saved row with another id is another trade.
+    return !take(plain, t);
   });
 }
 
