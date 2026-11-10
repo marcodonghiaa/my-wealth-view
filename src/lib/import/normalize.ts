@@ -66,16 +66,44 @@ const THOUSANDS_GROUPS = /^\d{1,3}([.,]\d{3})+$/;
 
 export type DecimalMark = "," | ".";
 
-/** Strips what banks put around a number and reads its sign: "(12.50)", "12,50-", "+3", "EUR 4". */
+/**
+ * Strips what banks put around a number and reads its sign: "(12.50)", "12,50-", "+3", "EUR 4",
+ * "−7" (typographic minus), "12.50 CR" / "12.50 DR". More than one sign makes it unreadable.
+ */
 function unwrap(raw: string): { body: string; negative: boolean } {
-  let s = raw.replace(/[€$£\s'’]/g, "").replace(/^[A-Z]{3}|[A-Z]{3}$/g, "");
+  let s = raw
+    .replace(/[\u2212\u2013]/g, "-")
+    .replace(/[€$£\s'’]/g, "")
+    .replace(/^[A-Za-z]{3}(?=[\d+\-(.,])/, "")
+    .replace(/(?<=[\d)-])[A-Za-z]{3}$/, "");
+  let signs = 0;
   let negative = false;
+  const flag = (minus: boolean) => {
+    signs++;
+    negative = minus;
+  };
+  const crdr = /^(.*?)(CR|DR)$/i.exec(s);
+  if (crdr) {
+    flag(crdr[2]!.toUpperCase() === "DR");
+    s = crdr[1] ?? "";
+  }
   const paren = /^\((.*)\)$/.exec(s);
-  if (paren) [negative, s] = [true, paren[1] ?? ""];
-  if (s.endsWith("-")) [negative, s] = [!negative, s.slice(0, -1)];
-  if (s.startsWith("-")) [negative, s] = [!negative, s.slice(1)];
-  else if (s.startsWith("+")) s = s.slice(1);
-  return { body: s, negative };
+  if (paren) {
+    flag(true);
+    s = paren[1] ?? "";
+  }
+  if (s.endsWith("-")) {
+    flag(true);
+    s = s.slice(0, -1);
+  }
+  if (s.startsWith("-")) {
+    flag(true);
+    s = s.slice(1);
+  } else if (s.startsWith("+")) {
+    flag(false);
+    s = s.slice(1);
+  }
+  return { body: signs > 1 ? "x" : s, negative };
 }
 
 /**
@@ -95,7 +123,13 @@ export function parseAmount(raw: string, decimal?: DecimalMark): number | null {
 function withMark(body: string, decimal: DecimalMark): number | null {
   const parts = body.split(decimal);
   if (parts.length > 2) return null;
-  const whole = (parts[0] ?? "").split(decimal === "," ? "." : ",").join("");
+  const thousands = decimal === "," ? "." : ",";
+  const raw = parts[0] ?? "";
+  // "3.99" in a decimal-comma file is not 399: thousands marks must split groups of three.
+  if (raw.includes(thousands) && !new RegExp(`^\\d{1,3}(\\${thousands}\\d{3})+$`).test(raw)) {
+    return null;
+  }
+  const whole = raw.split(thousands).join("");
   const fraction = parts[1] ?? "";
   if (!/^\d*$/.test(whole) || !/^\d*$/.test(fraction) || whole + fraction === "") return null;
   return Number(`${whole || "0"}.${fraction || "0"}`);

@@ -54,6 +54,12 @@ describe("parseAmount, as banks write it", () => {
     ["1 234,56", 1234.56],
     ["1'234.56", 1234.56],
     ["$-7.10", -7.1],
+    ["\u221212.50", -12.5],
+    ["\u201312,50", -12.5],
+    ["12.50 CR", 12.5],
+    ["12.50DR", -12.5],
+    ["eur 5", 5],
+    ["5 usd", 5],
   ])("reads %s as %s", (raw, expected) => {
     expect(parseAmount(raw)).toBe(expected);
   });
@@ -67,6 +73,17 @@ describe("parseAmount, as banks write it", () => {
     expect(parseAmount("1,2,3", ",")).toBeNull();
     expect(parseAmount(",", ",")).toBeNull();
     expect(parseAmount("12a", ",")).toBeNull();
+    // A cell in the other style is skipped, never read 100 times off.
+    expect(parseAmount("3.99", ",")).toBeNull();
+    expect(parseAmount("1,5", ".")).toBeNull();
+    expect(parseAmount("1.234.5", ",")).toBeNull();
+    expect(parseAmount("12,50 €-", ".")).toBeNull();
+  });
+});
+
+describe("parseAmount, unreadable signs", () => {
+  it.each(["-5-", "(-12)", "+-3", "-12 CR", "(5)DR"])("rejects %j", (raw) => {
+    expect(parseAmount(raw)).toBeNull();
   });
 });
 
