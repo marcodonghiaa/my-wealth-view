@@ -9,8 +9,8 @@ vi.mock("@/integrations/supabase/client", () => ({
       select: () =>
         Promise.resolve({
           data: [
-            { isin: "XX0000000001", shares: 1 },
-            { isin: "XX0000000002", shares: 1 },
+            { isin: "XX0000000001", shares: 1, name: "Example World ETF" },
+            { isin: "XX0000000002", shares: 1, name: "Example Bond ETF" },
           ],
           error: null,
         }),
@@ -83,7 +83,11 @@ describe("ImportTrades", () => {
     const file = new File([csv], "Transaction export.csv", { type: "text/csv" });
     fireEvent.change(screen.getByLabelText("CSV file"), { target: { files: [file] } });
     expect(await screen.findByText("Transaction export.csv")).toBeTruthy();
-    await waitFor(() => expect(screen.getByText("4 trades found")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("new trades to save")).toBeTruthy());
+    expect(screen.getByText("By holding")).toBeTruthy();
+    expect(screen.getByText("Example World ETF")).toBeTruthy();
+    expect(screen.getByText("Left out")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Save 4 trades" })).toBeTruthy();
     expect(screen.queryByText("How to get the file")).toBeNull();
   });
 });

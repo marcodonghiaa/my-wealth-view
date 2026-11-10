@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, ChevronLeft, ChevronRight, FileUp, Lock, Loader2 } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, FileUp, Info, Lock, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -18,19 +18,40 @@ import { GroupedList } from "@/components/ui/grouped-list";
 import { localToday } from "@/lib/trades";
 import type { Trade } from "@/lib/trades";
 import { BROKERS, NEW_BROKER_URL } from "@/lib/brokers";
-import { newTrades, parseTradesCsv, shareUpdates } from "@/lib/trades-csv";
+import { newTrades, parseTradesCsv, shareUpdates, summarizeImport } from "@/lib/trades-csv";
 
-// Every holding and its count, sold ones too: the old trades of something you sold are still yours.
-async function fetchHoldings(kind: "stock" | "crypto"): Promise<Map<string, number>> {
-  if (kind === "stock") {
-    const { data, error } = await supabase.from("portfolio_holdings").select("isin,shares");
-    if (error) throw error;
-    return new Map(data.map((r) => [r.isin.toUpperCase(), r.shares]));
-  }
-  const { data, error } = await supabase.from("crypto_holdings").select("asset_symbol,amount");
-  if (error) throw error;
-  return new Map(data.map((r) => [r.asset_symbol.toUpperCase(), r.amount]));
+interface Holdings {
+  shares: Map<string, number>;
+  names: Map<string, string>;
 }
+
+// Every holding, its count and name, sold ones too: the old trades of something you sold are still yours.
+async function fetchHoldings(kind: "stock" | "crypto"): Promise<Holdings> {
+  let list: Array<{ key: string; shares: number; name: string }>;
+  if (kind === "stock") {
+    const { data, error } = await supabase.from("portfolio_holdings").select("isin,shares,name");
+    if (error) throw error;
+    list = data.map((r) => ({ key: r.isin.toUpperCase(), shares: r.shares, name: r.name }));
+  } else {
+    const { data, error } = await supabase
+      .from("crypto_holdings")
+      .select("asset_symbol,amount,name");
+    if (error) throw error;
+    list = data.map((r) => ({ key: r.asset_symbol.toUpperCase(), shares: r.amount, name: r.name }));
+  }
+  return {
+    shares: new Map(list.map((r) => [r.key, r.shares])),
+    names: new Map(list.map((r) => [r.key, r.name || r.key])),
+  };
+}
+
+const dateFormat = new Intl.DateTimeFormat("en-GB", {
+  day: "numeric",
+  month: "short",
+  year: "numeric",
+});
+const shortDate = (iso: string) => dateFormat.format(new Date(`${iso}T12:00:00`));
+const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
 
 /** Pick where the trades come from, upload the file; shows what it found and saves only on your say-so. */
 export function ImportTrades({ kind, saved }: { kind: "stock" | "crypto"; saved: Array<Trade> }) {
@@ -56,15 +77,17 @@ export function ImportTrades({ kind, saved }: { kind: "stock" | "crypto"; saved:
       text.trim() && keys.data
         ? parseTradesCsv(
             text,
-            { kind, knownKeys: new Set(keys.data.keys()), today: localToday() },
+            { kind, knownKeys: new Set(keys.data.shares.keys()), today: localToday() },
             broker,
           )
         : null,
     [text, keys.data, kind, broker],
   );
   const fresh = useMemo(() => (parsed ? newTrades(parsed.trades, saved) : []), [parsed, saved]);
+  const summary = useMemo(() => summarizeImport(fresh), [fresh]);
   const updates = useMemo(
-    () => (parsed?.setsShares && keys.data ? shareUpdates(parsed.trades, saved, keys.data) : []),
+    () =>
+      parsed?.setsShares && keys.data ? shareUpdates(parsed.trades, saved, keys.data.shares) : [],
     [parsed, saved, keys.data],
   );
 
@@ -237,7 +260,7 @@ export function ImportTrades({ kind, saved }: { kind: "stock" | "crypto"; saved:
                     {!parsed
                       ? "Reading…"
                       : ok
-                        ? `${parsed.trades.length} trade${parsed.trades.length === 1 ? "" : "s"} found`
+                        ? "Read, check what it found below"
                         : "Can't be imported"}
                   </span>
                 </span>
@@ -347,21 +370,82 @@ export function ImportTrades({ kind, saved }: { kind: "stock" | "crypto"; saved:
             )}
           </div>
         )}
-        {parsed && parsed.errors.length === 0 && (
-          <p className="text-sm text-muted-foreground">
-            {fresh.length} new trade{fresh.length === 1 ? "" : "s"} to save
-            {parsed.trades.length > fresh.length &&
-              `, ${parsed.trades.length - fresh.length} already saved and left out`}
-            .
-            {updates.length > 0 &&
-              ` Share count${updates.length === 1 ? "" : "s"} will be updated on ${updates.length} holding${updates.length === 1 ? "" : "s"}.`}
-          </p>
+        {ok && (
+          <div className="flex flex-col gap-4">
+            <div className="px-1">
+              <p className="flex items-baseline gap-2">
+                <span className="text-3xl leading-none font-semibold tabular-nums">
+                  {fresh.length}
+                </span>
+                <span className="text-[0.9375rem] font-medium">
+                  new trade{fresh.length === 1 ? "" : "s"} to save
+                </span>
+              </p>
+              {summary && (
+                <p className="mt-0.5 text-sm text-muted-foreground">
+                  {plural(summary.buys, "buy")} · {plural(summary.sells, "sell")} ·{" "}
+                  {summary.from === summary.to
+                    ? shortDate(summary.from)
+                    : `${shortDate(summary.from)} – ${shortDate(summary.to)}`}
+                </p>
+              )}
+            </div>
+
+            {(parsed.trades.length > fresh.length || updates.length > 0) && (
+              <GroupedList className="border border-hairline">
+                {parsed.trades.length > fresh.length && (
+                  <div className={row}>
+                    <span className="flex-1">Already saved, skipped</span>
+                    <span className="tabular-nums">{parsed.trades.length - fresh.length}</span>
+                  </div>
+                )}
+                {updates.length > 0 && (
+                  <div className={row}>
+                    <span className="flex-1">Share counts corrected</span>
+                    <span className="tabular-nums">{updates.length}</span>
+                  </div>
+                )}
+              </GroupedList>
+            )}
+
+            {summary && (
+              <div>
+                <p className="px-1 pb-1.5 text-xs font-medium text-muted-foreground">By holding</p>
+                <GroupedList className="max-h-56 overflow-y-auto border border-hairline">
+                  {summary.byKey.map((h) => (
+                    <div key={h.key} className={row}>
+                      <span className="min-w-0 flex-1 truncate">
+                        {keys.data?.names.get(h.key) ?? parsed.names?.get(h.key) ?? h.key}
+                      </span>
+                      <span className="shrink-0 text-sm text-muted-foreground tabular-nums">
+                        {[
+                          h.buys > 0 && plural(h.buys, "buy"),
+                          h.sells > 0 && plural(h.sells, "sell"),
+                        ]
+                          .filter(Boolean)
+                          .join(", ")}
+                      </span>
+                    </div>
+                  ))}
+                </GroupedList>
+              </div>
+            )}
+
+            {parsed.notes.length > 0 && (
+              <div>
+                <p className="px-1 pb-1.5 text-xs font-medium text-muted-foreground">Left out</p>
+                <GroupedList className="border border-hairline">
+                  {parsed.notes.map((note) => (
+                    <div key={note} className={cn(row, "items-start text-sm")}>
+                      <Info aria-hidden className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+                      <span>{note}</span>
+                    </div>
+                  ))}
+                </GroupedList>
+              </div>
+            )}
+          </div>
         )}
-        {parsed?.notes.map((note) => (
-          <p key={note} className="text-sm text-muted-foreground">
-            {note}
-          </p>
-        ))}
         {save.isError && (
           <p role="alert" className="text-sm text-negative">
             {save.error.message}

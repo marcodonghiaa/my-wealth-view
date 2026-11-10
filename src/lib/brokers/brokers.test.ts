@@ -70,6 +70,9 @@ describe("Trade Republic sample", () => {
     expect(trades).toHaveLength(4);
     expect(new Set(trades.map((t) => t.external_id)).size).toBe(4);
     expect(trades.every((t) => t.source === "trade_republic")).toBe(true);
+    expect(parseTradesCsv(fixture("trade_republic"), ctx).names?.get("XX0000000001")).toBe(
+      "Example World ETF",
+    );
     expect(notes).toContain(
       "2 rows that aren't trades were skipped (dividends, interest, card payments, transfers).",
     );

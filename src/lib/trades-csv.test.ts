@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { newTrades, parseTradesCsv, shareUpdates } from "./trades-csv";
+import { newTrades, parseTradesCsv, shareUpdates, summarizeImport } from "./trades-csv";
 
 const opts = { kind: "stock" as const, knownKeys: new Set(["IE00B4L5Y983"]), today: "2026-10-31" };
 
@@ -350,5 +350,40 @@ describe("shareUpdates", () => {
   it("rounds away floating-point dust", () => {
     const out = shareUpdates([trade("A", 0.1), trade("A", 0.2)], [], new Map([["A", 1]]));
     expect(out).toEqual([{ key: "A", shares: 0.3 }]);
+  });
+});
+
+describe("summarizeImport", () => {
+  const t = (key: string, side: string, trade_date: string) => ({
+    kind: "stock",
+    key,
+    side,
+    trade_date,
+    shares: 1,
+    price_eur: 1,
+    fee_eur: 0,
+  });
+
+  it("is null when there's nothing to save", () => {
+    expect(summarizeImport([])).toBeNull();
+  });
+
+  it("counts buys and sells, the date range, and groups by holding, busiest first", () => {
+    const s = summarizeImport([
+      t("B", "buy", "2026-03-01"),
+      t("A", "buy", "2026-01-05"),
+      t("A", "sell", "2026-06-01"),
+      t("A", "buy", "2026-02-01"),
+    ]);
+    expect(s).toEqual({
+      buys: 3,
+      sells: 1,
+      from: "2026-01-05",
+      to: "2026-06-01",
+      byKey: [
+        { key: "A", buys: 2, sells: 1 },
+        { key: "B", buys: 1, sells: 0 },
+      ],
+    });
   });
 });

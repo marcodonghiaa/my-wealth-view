@@ -99,6 +99,12 @@ export const tradeRepublic: BrokerParser = {
       notes.push(
         `${skipped} row${skipped === 1 ? " that isn't a trade was" : "s that aren't trades were"} skipped (dividends, interest, card payments, transfers).`,
       );
-    return { trades: trades.filter((t) => !open.includes(t.key)), errors, notes, setsShares: true };
+    return {
+      trades: trades.filter((t) => !open.includes(t.key)),
+      errors,
+      notes,
+      setsShares: true,
+      names,
+    };
   },
 };

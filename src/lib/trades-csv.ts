@@ -153,3 +153,42 @@ export function shareUpdates(
     return Math.abs(shares - current) > 0.000001 ? [{ key, shares }] : [];
   });
 }
+
+export interface ImportSummary {
+  buys: number;
+  sells: number;
+  /** First and last trade date, ISO. */
+  from: string;
+  to: string;
+  /** Per holding, most trades first. */
+  byKey: Array<{ key: string; buys: number; sells: number }>;
+}
+
+/** What a batch of trades adds up to, for the screen before you save. Null when there are none. */
+export function summarizeImport(trades: Array<Trade>): ImportSummary | null {
+  if (trades.length === 0) return null;
+  const byKey = new Map<string, { key: string; buys: number; sells: number }>();
+  let buys = 0;
+  let from = trades[0]!.trade_date;
+  let to = from;
+  for (const t of trades) {
+    const row = byKey.get(t.key) ?? { key: t.key, buys: 0, sells: 0 };
+    if (t.side === "sell") row.sells++;
+    else {
+      row.buys++;
+      buys++;
+    }
+    byKey.set(t.key, row);
+    if (t.trade_date < from) from = t.trade_date;
+    if (t.trade_date > to) to = t.trade_date;
+  }
+  return {
+    buys,
+    sells: trades.length - buys,
+    from,
+    to,
+    byKey: [...byKey.values()].sort(
+      (a, b) => b.buys + b.sells - (a.buys + a.sells) || a.key.localeCompare(b.key),
+    ),
+  };
+}

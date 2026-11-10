@@ -7,6 +7,8 @@ export interface CsvResult {
   notes: Array<string>;
   /** The file is your broker's full record, so it can correct how many shares you hold. */
   setsShares?: boolean;
+  /** Names the file gives its holdings, by key, for the summary before you save. */
+  names?: Map<string, string>;
   /** No parser recognised the file: the screen offers to ask for your broker. */
   unknownFormat?: boolean;
 }
