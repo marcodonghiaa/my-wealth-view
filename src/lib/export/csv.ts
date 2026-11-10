@@ -3,12 +3,18 @@ import type { ExportData, ExportRow } from "./tables";
 
 const BOM = "﻿"; // so Excel reads the file as UTF-8
 
+// A list of words (transaction tags) reads as "trip, work" in a spreadsheet; other objects stay JSON.
+const isWordList = (v: unknown): v is Array<string> =>
+  Array.isArray(v) && v.every((x) => typeof x === "string");
+
 const cell = (v: unknown): string | number | boolean =>
   v === null || v === undefined
     ? ""
-    : typeof v === "object"
-      ? JSON.stringify(v)
-      : (v as string | number | boolean);
+    : isWordList(v)
+      ? v.join(", ")
+      : typeof v === "object"
+        ? JSON.stringify(v)
+        : (v as string | number | boolean);
 
 /**
  * One CSV. Text starting with = + - @ (or a tab/return) gets a leading quote so a spreadsheet

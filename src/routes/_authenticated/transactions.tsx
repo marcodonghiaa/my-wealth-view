@@ -18,6 +18,7 @@ import {
   isSplitwiseShare,
   shareId,
   listCategories,
+  listTags,
   mergeShares,
   nameRefunds,
   startOfMonth,
@@ -84,7 +85,7 @@ async function fetchTransactionsForMonth(month: Date): Promise<Array<Transaction
   const { data, error } = await supabase
     .from("v_transactions_eur")
     .select(
-      "entry_reference,account_uid,booking_date,category,transaction_type,creditor_name,currency,amount,signed_amount_eur,credit_debit_indicator,created_at,worth_it,personal_amount,owed_by,flow_type,refund_of",
+      "entry_reference,account_uid,booking_date,category,transaction_type,creditor_name,currency,amount,signed_amount_eur,credit_debit_indicator,created_at,worth_it,personal_amount,owed_by,flow_type,refund_of,note,tags",
     )
     .gte("booking_date", start)
     .lt("booking_date", end)
@@ -103,7 +104,7 @@ async function fetchTransfersForMonth(month: Date): Promise<Array<TransactionRow
   const { data, error } = await supabase
     .from("v_transactions_eur")
     .select(
-      "entry_reference,account_uid,booking_date,category,transaction_type,creditor_name,currency,amount,signed_amount_eur,credit_debit_indicator,created_at,worth_it,personal_amount,owed_by,flow_type,refund_of",
+      "entry_reference,account_uid,booking_date,category,transaction_type,creditor_name,currency,amount,signed_amount_eur,credit_debit_indicator,created_at,worth_it,personal_amount,owed_by,flow_type,refund_of,note,tags",
     )
     .gte("booking_date", start)
     .lt("booking_date", end)
@@ -138,6 +139,17 @@ async function fetchSharesForMonth(month: Date): Promise<Array<SplitwiseShare>> 
   return (data ?? []) as Array<SplitwiseShare>;
 }
 
+// Missing before the backend migration: then there is simply nothing to suggest.
+async function fetchTagSuggestions(): Promise<Array<string>> {
+  try {
+    const { data, error } = await supabase.rpc("my_transaction_tags");
+    if (error) return [];
+    return (data ?? []).map((r) => r.tag);
+  } catch {
+    return [];
+  }
+}
+
 async function fetchAccounts(): Promise<Record<string, AccountRow>> {
   const { data, error } = await supabase.from("accounts").select("*");
   if (error) throw error;
@@ -150,6 +162,7 @@ function TransactionsPage() {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<string>("all");
   const [bank, setBank] = useState<string>("all");
+  const [tag, setTag] = useState<string>("all");
   const [day, setDay] = useState("");
   const [month, setMonth] = useState(() => startOfMonth(new Date()));
   const monthKey = useMemo(() => formatISODate(month), [month]);
@@ -171,6 +184,19 @@ function TransactionsPage() {
   });
 
   const renameTx = useRenameMerchantMutation(queryClient);
+
+  const updateNote = useTransactionFieldMutation(queryClient, monthKey, "note", {
+    errorMessage: "Couldn't save note",
+  });
+  const updateTags = useTransactionFieldMutation(queryClient, monthKey, "tags", {
+    errorMessage: "Couldn't save tags",
+  });
+  // Every tag used before (all months), most used first, for suggestions while typing one.
+  const tagsQuery = useQuery({
+    queryKey: ["transaction-tags"],
+    queryFn: fetchTagSuggestions,
+    staleTime: 5 * 60_000,
+  });
 
   const updateSplit = useSplitMutation(queryClient, monthKey);
 
@@ -265,6 +291,8 @@ function TransactionsPage() {
   }, [highlightRef, txQuery.isPending, transactions]);
 
   const categories = useMemo(() => listCategories(transactions), [transactions]);
+  // Only tags on this month's rows, so every option matches something.
+  const tags = useMemo(() => listTags(transactions), [transactions]);
 
   const accounts = useMemo(() => accountsQuery.data ?? {}, [accountsQuery.data]);
   const bankFor = useCallback(
@@ -284,8 +312,8 @@ function TransactionsPage() {
   );
 
   const filtered = useMemo(
-    () => filterTransactions(transactions, search, category, { bank, bankFor, day }),
-    [transactions, search, category, bank, bankFor, day],
+    () => filterTransactions(transactions, search, category, { bank, bankFor, day, tag }),
+    [transactions, search, category, bank, bankFor, day, tag],
   );
 
   // Shares cannot be bulk edited or deleted: they are not rows of the transactions table.
@@ -320,6 +348,7 @@ function TransactionsPage() {
   function goToMonth(next: Date) {
     setSelected(new Set());
     setDay(""); // a day belongs to one month
+    setTag("all"); // the next month may not use it
     setMonth(next);
   }
 
@@ -357,6 +386,15 @@ function TransactionsPage() {
         ? name && updateShare.mutate({ id: shareId(tx), patch: { description: name } })
         : renameTx.mutate({ tx, name }),
     highlighted: tx.entry_reference === highlightRef,
+    onSaveNote: (note) => updateNote.mutate({ tx, value: note }),
+    savingNote: updateNote.isPending && isSameTx(updateNote.variables?.tx, tx),
+    onSaveTags: (next) =>
+      updateTags.mutate(
+        { tx, value: next },
+        { onSettled: () => void queryClient.invalidateQueries({ queryKey: ["transaction-tags"] }) },
+      ),
+    savingTags: updateTags.isPending && isSameTx(updateTags.variables?.tx, tx),
+    tagSuggestions: tagsQuery.data ?? [],
     ...(tx.account_uid && accounts[tx.account_uid]?.manual
       ? {
           onSaveAmount: (amount: number) => changeAmount.mutate({ tx, amount }),
@@ -430,7 +468,7 @@ function TransactionsPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search"
-            aria-label="Search by merchant"
+            aria-label="Search by merchant or note"
             className="pr-4 pl-10"
           />
         </div>
@@ -461,6 +499,22 @@ function TransactionsPage() {
             {banks.map((b) => (
               <option key={b} value={b}>
                 {b}
+              </option>
+            ))}
+          </Select>
+        )}
+        {tags.length > 0 && (
+          <Select
+            onGround
+            value={tag}
+            onChange={(e) => setTag(e.target.value)}
+            aria-label="Filter by tag"
+            className="w-auto px-4"
+          >
+            <option value="all">All tags</option>
+            {tags.map((t) => (
+              <option key={t} value={t}>
+                #{t}
               </option>
             ))}
           </Select>

@@ -146,3 +146,60 @@ describe("amount editing", () => {
     expect(screen.queryByRole("button", { name: "Change amount" })).toBeNull();
   });
 });
+
+// protects=a bank row's sheet has note and tags editors and the row shows its tags and note;
+// a Splitwise share has neither; fails_when=the editors vanish or appear on a share
+describe("notes and tags", () => {
+  const bankRow = (): TransactionViewProps => ({
+    ...props(),
+    tx: {
+      ...props().tx,
+      account_uid: "acc",
+      entry_reference: "bank-2",
+      creditor_name: "Hotel",
+      note: "Paid for two",
+      tags: ["trip"],
+    },
+    onSaveNote: vi.fn(),
+    onSaveTags: vi.fn(),
+    tagSuggestions: ["work"],
+  });
+
+  it("card shows the tags and opens note and tag editors", async () => {
+    const p = bankRow();
+    render(
+      <ul>
+        <TransactionCardView {...p} />
+      </ul>,
+    );
+    expect(screen.getByText(/#trip/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: /Hotel/ }));
+    expect(await screen.findByLabelText("Note")).toHaveValue("Paid for two");
+    await userEvent.type(screen.getByLabelText("Add a tag"), "work{Enter}");
+    expect(p.onSaveTags).toHaveBeenCalledWith(["trip", "work"]);
+  });
+
+  it("table row shows the note under the name", () => {
+    render(
+      <table>
+        <tbody>
+          <TransactionRowView {...bankRow()} />
+        </tbody>
+      </table>,
+    );
+    expect(screen.getByText("Paid for two")).toBeInTheDocument();
+    expect(screen.getByText(/#trip/)).toBeInTheDocument();
+  });
+
+  it("a Splitwise share gets no note or tag editor", async () => {
+    render(
+      <ul>
+        <TransactionCardView {...props()} onSaveNote={vi.fn()} onSaveTags={vi.fn()} />
+      </ul>,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /Dinner/ }));
+    await screen.findByRole("dialog");
+    expect(screen.queryByLabelText("Note")).toBeNull();
+    expect(screen.queryByLabelText("Add a tag")).toBeNull();
+  });
+});
