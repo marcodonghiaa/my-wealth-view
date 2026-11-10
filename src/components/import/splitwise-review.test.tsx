@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { classifyRows } from "@/lib/import/splitwise-classify";
 import { balancesFromFile } from "@/lib/import/splitwise-balances";
 import { parseSplitwiseCsv } from "@/lib/import/splitwise-parse";
@@ -74,6 +74,13 @@ const bankRow = {
   deleted_at: null,
   creditor_name: "Yellow Cab",
 };
+
+// polish-3 #5: dates show without a year only in the current year, so pin "today".
+beforeEach(() => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date("2026-11-10T12:00:00Z"));
+});
+afterEach(() => vi.useRealTimers());
 
 beforeEach(() => {
   localStorage.clear();
