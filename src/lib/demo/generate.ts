@@ -238,6 +238,8 @@ export function generateDemoData(now: Date = new Date()): DemoDb {
     side: "buy",
     trade_date: iso(firstDay),
     fee_eur: 1,
+    source: null,
+    external_id: null,
     created_at: stamp(iso(firstDay)),
     user_id,
   }));

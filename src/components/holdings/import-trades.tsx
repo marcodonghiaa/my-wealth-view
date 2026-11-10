@@ -16,6 +16,7 @@ import { fieldClass } from "@/components/ui/field";
 import { cn } from "@/lib/utils";
 import { localToday } from "@/lib/trades";
 import type { Trade } from "@/lib/trades";
+import { BROKERS, NEW_BROKER_URL } from "@/lib/brokers";
 import { newTrades, parseTradesCsv, shareUpdates } from "@/lib/trades-csv";
 
 // Every holding and its count, sold ones too: the old trades of something you sold are still yours.
@@ -102,7 +103,8 @@ export function ImportTrades({ kind, saved }: { kind: "stock" | "crypto"; saved:
           <DialogDescription>
             Needs a header row with <code>date, side, {keyColumn}, shares, price</code>, and
             optionally <code>fee</code>. Side is buy or sell; price is per share in EUR.
-            {kind === "stock" && " Or upload a Trade Republic transaction export as it comes."}
+            {kind === "stock" &&
+              ` Or upload a ${BROKERS.map((b) => b.name).join(", ")} export as it comes.`}
           </DialogDescription>
         </DialogHeader>
         <input
@@ -136,6 +138,20 @@ export function ImportTrades({ kind, saved }: { kind: "stock" | "crypto"; saved:
               ))}
             </ul>
             {parsed.errors.length > 20 && <p>…and {parsed.errors.length - 20} more.</p>}
+            {parsed.unknownFormat && (
+              <p className="mt-1 text-muted-foreground">
+                Want your broker supported?{" "}
+                <a
+                  href={NEW_BROKER_URL}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-primary underline-offset-2 hover:underline"
+                >
+                  Ask for it
+                </a>{" "}
+                with a sample of its export, personal details removed.
+              </p>
+            )}
           </div>
         )}
         {parsed && parsed.errors.length === 0 && (
