@@ -58,3 +58,9 @@ export function sharePercent(value: number, total: number): string {
   const pct = (value / total) * 100;
   return pct > 0 && pct < 1 ? "<1%" : `${Math.round(pct)}%`;
 }
+
+/** "1 of 8 rated purchases": how many of the month's rated purchases were not worth it. */
+export function ratedLabel({ yes, no }: { yes: number; no: number }): string {
+  const rated = yes + no;
+  return `${no} of ${rated} rated purchase${rated === 1 ? "" : "s"}`;
+}

@@ -8,18 +8,21 @@ import { isDemoMode } from "@/lib/demo/mode";
 export function SettingsPage() {
   return (
     <div className="mx-auto max-w-5xl space-y-10 px-4 py-8 sm:px-8 md:py-12">
-      <h1 className="text-[0.9375rem] font-medium text-muted-foreground">Settings</h1>
-      {/* The demo has no real account: a password change or account deletion would do nothing and an export would be fake data. */}
-      {!isDemoMode() && <ChangePasswordForm />}
-      <CategoriesSection />
-      {!isDemoMode() && (
-        <div className="space-y-4">
-          <ExportData />
-          <DeleteAccount />
-        </div>
-      )}
+      <h1 className="ios-large-title">Settings</h1>
+      {/* Health first: it answers "can I trust these numbers?" (#14). */}
       <HealthSection />
       <NotificationsSection />
+      <CategoriesSection />
+      {/* The demo has no real account: a password change or account deletion would do nothing and an export would be fake data. */}
+      {!isDemoMode() && (
+        <div className="space-y-10">
+          <ChangePasswordForm />
+          <div className="space-y-4">
+            <ExportData />
+            <DeleteAccount />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

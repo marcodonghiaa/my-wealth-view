@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 const { rows, path } = vi.hoisted(() => ({
@@ -149,5 +149,33 @@ describe("phone tabs and More", () => {
 
   it("drops a group from More when all its pages have a tab", () => {
     expect(MORE_GROUPS.map((g) => g.label)).not.toContain("Investing");
+  });
+
+  // protects=the most-used More pages sit under the thumb first; fails_when=sidebar order leaks in
+  it("leads More with Accounts, Subscriptions and Who owes you, then Tools apart", () => {
+    const [pages, ...rest] = MORE_GROUPS;
+    expect(pages!.label).toBe("");
+    expect(pages!.items.map((i) => i.label)).toEqual([
+      "Accounts",
+      "Subscriptions",
+      "Who owes you",
+      "Reports",
+      "Income",
+    ]);
+    expect(rest.map((g) => g.label)).toEqual(["Tools"]);
+  });
+
+  it("titles only the Tools group in the sheet, and ends with Settings and Sign out", () => {
+    rows.current = [];
+    path.current = "/";
+    renderLayout();
+    fireEvent.click(screen.getByRole("button", { name: "More" }));
+    const sheet = screen.getByRole("navigation", { name: "More" });
+    expect([...sheet.querySelectorAll(".ios-section-title")].map((t) => t.textContent)).toEqual([
+      "Tools",
+    ]);
+    const entries = [...sheet.querySelectorAll("a, button")].map((el) => el.textContent);
+    expect(entries.slice(-2)).toEqual(["Settings", "Sign out"]);
+    expect(sheet).toHaveTextContent("Signed in as a@example.com");
   });
 });

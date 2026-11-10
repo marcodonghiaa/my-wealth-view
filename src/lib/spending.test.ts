@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { biggestMover, categorySpend, sharePercent, spendChange } from "./spending";
+import { biggestMover, categorySpend, ratedLabel, sharePercent, spendChange } from "./spending";
 
 describe("categorySpend", () => {
   // protects=rows and percentages only show real spend; fails_when=null, zero or refund-only
@@ -77,5 +77,15 @@ describe("sharePercent", () => {
 
   it("is empty when there is no total", () => {
     expect(sharePercent(0, 0)).toBe("");
+  });
+});
+
+// protects=Reports says what "1 of 8" counts (#20); fails_when=the unit or plural is dropped
+describe("ratedLabel", () => {
+  it("counts the not-worth-it purchases out of all rated ones", () => {
+    expect(ratedLabel({ yes: 7, no: 1 })).toBe("1 of 8 rated purchases");
+  });
+  it("uses the singular for one rated purchase", () => {
+    expect(ratedLabel({ yes: 0, no: 1 })).toBe("1 of 1 rated purchase");
   });
 });

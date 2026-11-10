@@ -177,6 +177,10 @@ export function formatMoney(value: number, currency: string): string {
 
 export const formatEur = (value: number): string => formatMoney(value, "EUR");
 
+/** A change in euros with its sign spelled out: "+€1.00", "−€1.00" (true minus). */
+export const formatSignedEur = (value: number): string =>
+  `${value >= 0 ? "+" : "−"}${formatEur(Math.abs(value))}`;
+
 export const formatUsd = (value: number): string => formatMoney(value, "USD");
 
 /** Amount without a currency symbol — the Currency column states it instead. */
@@ -318,3 +322,9 @@ export function activeFilterCount({
 }): number {
   return [category !== "all", bank !== "all", day !== ""].filter(Boolean).length;
 }
+
+/** True when an income row's category only repeats its title ("Income · Income"). */
+export const categoryRepeatsTitle = (
+  tx: Pick<TransactionRow, "creditor_name" | "category">,
+): boolean =>
+  !!tx.category?.trim() && incomeTitle(tx).toLowerCase() === tx.category.trim().toLowerCase();

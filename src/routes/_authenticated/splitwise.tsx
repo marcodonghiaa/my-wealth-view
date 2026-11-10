@@ -21,9 +21,10 @@ import { OwedView } from "@/components/splitwise/owed-view";
 import { LastImportRow } from "@/components/splitwise/last-import-row";
 import { useSettleSplitMutation } from "@/components/transactions/mutations";
 import { toast } from "sonner";
-import { fetchSplits, money, peopleFrom, type SplitRow } from "@/lib/splits";
+import { fetchSplits, money, netOwed, peopleFrom, type SplitRow } from "@/lib/splits";
+import { HeadlineFigure } from "@/components/headline-figure";
+import { Upload } from "lucide-react";
 import { Alert } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
 import { GroupedList, SectionTitle } from "@/components/ui/grouped-list";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -129,6 +130,8 @@ function SplitwisePage() {
     return { owedToYou, youOwe, missingRate };
   }, [groups, rate, splits.data]);
 
+  const net = netOwed(totals.owedToYou, totals.youOwe);
+
   const settleAll = (name: string, rows: Array<SplitRow>) => {
     for (const r of rows) settle.mutate({ tx: r, settled: true });
     toast.success(`Settled ${rows.length} bills with ${name}`, {
@@ -145,27 +148,35 @@ function SplitwisePage() {
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-8 md:py-12">
-      <header className="mb-6 flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="ios-large-title">Who owes you</h1>
-          <p className="mt-0.5 text-sm text-muted-foreground">
-            And who you owe, from bills you split and your Splitwise groups.
-          </p>
-        </div>
-        <Button variant="quiet" onClick={() => setImporting(true)}>
-          Import from Splitwise
-        </Button>
-      </header>
+      {/* The net first; the two rows below explain it. */}
+      <h1 className="sr-only">Who owes you</h1>
+      <section aria-label="Net balance" className="mb-6">
+        {splits.isPending || balances.isPending ? (
+          <Skeleton
+            role="status"
+            aria-label="Loading balances"
+            aria-hidden={false}
+            className="h-24 w-64"
+          />
+        ) : (
+          <>
+            <p className="text-[0.9375rem] font-medium text-muted-foreground">{net.label}</p>
+            <div className="mt-1">
+              <HeadlineFigure value={net.amount} currency="EUR" />
+            </div>
+          </>
+        )}
+      </section>
 
       <GroupedList>
         <dl className="divide-y divide-hairline">
-          <div className="flex items-baseline justify-between gap-3 px-4 py-3 sm:px-5">
+          <div className="flex min-h-11 items-baseline justify-between gap-3 px-4 py-3 sm:px-5">
             <dt className="text-[0.9375rem]">Owed to you</dt>
-            <dd className="font-figure text-xl">{money(totals.owedToYou, "EUR")}</dd>
+            <dd className="font-figure text-[0.9375rem]">{money(totals.owedToYou, "EUR")}</dd>
           </div>
-          <div className="flex items-baseline justify-between gap-3 px-4 py-3 sm:px-5">
+          <div className="flex min-h-11 items-baseline justify-between gap-3 px-4 py-3 sm:px-5">
             <dt className="text-[0.9375rem]">You owe</dt>
-            <dd className="font-figure text-xl">{money(totals.youOwe, "EUR")}</dd>
+            <dd className="font-figure text-[0.9375rem]">{money(totals.youOwe, "EUR")}</dd>
           </div>
         </dl>
       </GroupedList>
@@ -196,6 +207,17 @@ function SplitwisePage() {
       ) : (
         <BalancesView groups={groups} />
       )}
+      {/* Setup after the balances: a quiet row, like Connect a bank on Accounts. */}
+      <GroupedList className="mt-3">
+        <button
+          type="button"
+          onClick={() => setImporting(true)}
+          className="flex min-h-11 w-full items-center gap-2 px-4 py-3 text-left text-sm text-muted-foreground transition-colors hover:bg-accent/40 sm:px-5"
+        >
+          <Upload aria-hidden className="size-4" />
+          Import from Splitwise
+        </button>
+      </GroupedList>
       {last && (
         <LastImportRow
           count={last.count}

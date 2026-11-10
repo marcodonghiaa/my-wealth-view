@@ -24,6 +24,7 @@ import {
   Settings,
   Upload,
   ListFilter,
+  ChevronRight,
   type LucideIcon,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -31,6 +32,7 @@ import { loadDemoClient, supabase } from "@/integrations/supabase/client";
 import { isDemoMode } from "@/lib/demo/mode";
 import { registerDashboardOrigin } from "@/lib/register-origin";
 import { MadeWith } from "@/components/made-with";
+import { cn } from "@/lib/utils";
 import { GroupedList } from "@/components/ui/grouped-list";
 import { BrandMark } from "@/components/brand-mark";
 import { TrustNote } from "@/components/trust-note";
@@ -133,11 +135,29 @@ export const TAB_BAR_ITEMS: Array<{
 
 const TAB_PATHS = new Set(TAB_BAR_ITEMS.flatMap((t) => t.owns));
 
-/** The More sheet lists only the pages without a tab, so nothing appears twice on a phone. */
-export const MORE_GROUPS: Array<NavGroup> = NAV_GROUPS.map((g) => ({
-  ...g,
-  items: g.items.filter((i) => !TAB_PATHS.has(i.to)),
-})).filter((g) => g.items.length > 0);
+// The pages people open most from More come first; the rest keep their sidebar order.
+const MORE_FIRST = ["/accounts", "/subscriptions", "/splitwise"];
+const moreRank = (to: string) => {
+  const i = MORE_FIRST.indexOf(to);
+  return i < 0 ? MORE_FIRST.length : i;
+};
+
+/**
+ * The More sheet lists only the pages without a tab, so nothing appears twice on a phone.
+ * Pages form one untitled list (most used first); Tools stays its own titled group.
+ */
+export const MORE_GROUPS: Array<NavGroup> = (() => {
+  const untabbed = NAV_GROUPS.map((g) => ({
+    ...g,
+    items: g.items.filter((i) => !TAB_PATHS.has(i.to)),
+  }));
+  const tools = untabbed.filter((g) => g.label === "Tools");
+  const pages = untabbed
+    .filter((g) => g.label !== "Tools")
+    .flatMap((g) => g.items)
+    .sort((a, b) => moreRank(a.to) - moreRank(b.to));
+  return [{ label: "", items: pages }, ...tools].filter((g) => g.items.length > 0);
+})();
 
 // Desktop sidebar (DESIGN.md "Navigation"): 18px line icon + label, 4px corners; hover and
 // active take the sidebar accent fill, active adds weight 500.
@@ -152,6 +172,11 @@ const TAB_LINK =
 const TAB_LINK_ACTIVE =
   "flex flex-col items-center justify-center gap-0.5 border-t-2 border-ember text-foreground transition-opacity active:opacity-60";
 const TAB_LABEL = "text-[0.6875rem] font-medium";
+
+// More sheet rows: 44px+ grouped-list rows; the current page takes the accent fill and weight 500.
+const SHEET_ROW =
+  "flex min-h-11 items-center gap-3 px-4 py-2.5 text-left text-[0.9375rem] text-foreground active:bg-accent";
+const SHEET_ROW_ACTIVE = `${SHEET_ROW} bg-accent font-medium`;
 
 function AuthenticatedLayout() {
   const { user } = Route.useRouteContext();
@@ -314,10 +339,10 @@ function AuthenticatedLayout() {
             <SheetTitle className="ios-large-title !text-2xl">More</SheetTitle>
           </SheetHeader>
 
-          <nav className="space-y-5 px-4 pt-2 pb-3">
+          <nav aria-label="More" className="space-y-5 px-4 pt-2 pb-4">
             {MORE_GROUPS.map((group) => (
-              <div key={group.label}>
-                <div className="ios-section-title">{group.label}</div>
+              <div key={group.label || "pages"}>
+                {group.label && <div className="ios-section-title">{group.label}</div>}
                 <GroupedList>
                   {group.items.map((item) => (
                     <Link
@@ -325,43 +350,41 @@ function AuthenticatedLayout() {
                       to={item.to}
                       activeOptions={{ exact: true }}
                       onClick={() => setMenuOpen(false)}
-                      className="flex min-h-11 items-center gap-3 px-4 py-2.5 text-[0.9375rem] text-foreground active:bg-accent"
-                      activeProps={{
-                        className:
-                          "flex min-h-11 items-center gap-3 px-4 py-2.5 text-[0.9375rem] font-medium text-primary active:bg-accent",
-                      }}
+                      className={SHEET_ROW}
+                      activeProps={{ className: SHEET_ROW_ACTIVE }}
                     >
                       <item.icon className="size-5 shrink-0" />
                       {item.label}
                       <NavBadge count={badges[item.label]} />
+                      <ChevronRight
+                        aria-hidden
+                        className={`size-4 shrink-0 text-muted-foreground ${badges[item.label] ? "" : "ml-auto"}`}
+                      />
                     </Link>
                   ))}
                 </GroupedList>
               </div>
             ))}
 
+            {/* Settings, then the way out last and apart; the email says whose data this is. */}
             <div>
-              <div className="ios-section-title">Account</div>
               <GroupedList>
-                <div className="truncate px-4 py-3 text-sm text-muted-foreground">{user.email}</div>
                 <Link
                   to="/settings"
                   onClick={() => setMenuOpen(false)}
-                  className="flex min-h-11 items-center gap-3 px-4 py-2.5 text-[0.9375rem] text-foreground active:bg-accent"
-                  activeProps={{
-                    className:
-                      "flex min-h-11 items-center gap-3 px-4 py-2.5 text-[0.9375rem] font-medium text-primary active:bg-accent",
-                  }}
+                  className={SHEET_ROW}
+                  activeProps={{ className: SHEET_ROW_ACTIVE }}
                 >
                   <Settings className="size-5 shrink-0" />
                   Settings
+                  <ChevronRight
+                    aria-hidden
+                    className="ml-auto size-4 shrink-0 text-muted-foreground"
+                  />
                 </Link>
                 {demo ? (
-                  <a
-                    href={GET_YOUR_OWN_URL}
-                    className="flex min-h-11 w-full items-center gap-3 px-4 py-2.5 text-[0.9375rem] text-foreground active:bg-accent"
-                  >
-                    <Download className="size-5" />
+                  <a href={GET_YOUR_OWN_URL} className={SHEET_ROW}>
+                    <Download className="size-5 shrink-0" />
                     Get your own
                   </a>
                 ) : (
@@ -369,13 +392,16 @@ function AuthenticatedLayout() {
                     type="button"
                     onClick={handleSignOut}
                     disabled={signingOut}
-                    className="flex min-h-11 w-full items-center gap-3 px-4 py-2.5 text-[0.9375rem] text-negative active:bg-accent disabled:opacity-50"
+                    className={cn(SHEET_ROW, "w-full text-negative disabled:opacity-50")}
                   >
-                    <LogOut className="size-5" />
+                    <LogOut className="size-5 shrink-0" />
                     {signingOut ? "Signing out…" : "Sign out"}
                   </button>
                 )}
               </GroupedList>
+              <p className="truncate px-4 pt-1.5 text-xs text-muted-foreground">
+                Signed in as {user.email}
+              </p>
             </div>
           </nav>
         </SheetContent>
