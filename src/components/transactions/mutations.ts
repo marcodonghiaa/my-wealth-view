@@ -55,7 +55,9 @@ function forTx<Q extends { eq: (c: string, v: string) => Q; is: (c: string, v: n
 // The row being edited; its name feeds a success action such as "Make a rule".
 type MutatedTx = TxKey & Partial<Pick<TransactionRow, "creditor_name">>;
 
-export function useTransactionFieldMutation<K extends "category" | "transaction_type" | "worth_it">(
+export function useTransactionFieldMutation<
+  K extends "category" | "transaction_type" | "worth_it" | "note" | "tags",
+>(
   queryClient: QueryClient,
   monthKey: string,
   column: K,

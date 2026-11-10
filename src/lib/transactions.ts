@@ -17,6 +17,9 @@ export interface TransactionRow {
   owed_by: string | null;
   flow_type: string | null;
   refund_of: string | null;
+  /** The user's own words and labels; absent before the backend migration, never written by the sync. */
+  note?: string | null;
+  tags?: Array<string> | null;
 }
 
 // The euro columns of v_transactions_eur; `amount` and `personal_amount` are in the card's own currency.
@@ -266,19 +269,27 @@ export type TransactionFilters = {
   bankFor?: (accountUid: string | null) => string;
   /** YYYY-MM-DD to keep only that day, or "" for every day. */
   day?: string;
+  /** Tag to keep, or "all". */
+  tag?: string;
 };
 
 export function filterTransactions(
   transactions: Array<TransactionRow>,
   search: string,
   category: string,
-  { bank = "all", bankFor, day = "" }: TransactionFilters = {},
+  { bank = "all", bankFor, day = "", tag = "all" }: TransactionFilters = {},
 ): Array<TransactionRow> {
   const q = search.trim().toLowerCase();
   return transactions.filter((tx) => {
     if (category === UNCATEGORIZED && tx.category != null) return false;
     if (category !== "all" && category !== UNCATEGORIZED && tx.category !== category) return false;
-    if (q && !(tx.creditor_name ?? "").toLowerCase().includes(q)) return false;
+    if (
+      q &&
+      !(tx.creditor_name ?? "").toLowerCase().includes(q) &&
+      !(tx.note ?? "").toLowerCase().includes(q)
+    )
+      return false;
+    if (tag !== "all" && !(tx.tags ?? []).includes(tag)) return false;
     if (bank !== "all" && bankFor?.(tx.account_uid) !== bank) return false;
     if (day && tx.booking_date !== day) return false;
     return true;
@@ -333,17 +344,19 @@ export function formatDayHeading(bookingDate: string | null, now: Date = new Dat
     .replace(",", "");
 }
 
-/** How many of the sheet's filters (category, bank, day) narrow the list; search is counted apart. */
+/** How many of the sheet's filters (category, bank, day, tag) narrow the list; search is counted apart. */
 export function activeFilterCount({
   category,
   bank,
   day,
+  tag = "all",
 }: {
   category: string;
   bank: string;
   day: string;
+  tag?: string;
 }): number {
-  return [category !== "all", bank !== "all", day !== ""].filter(Boolean).length;
+  return [category !== "all", bank !== "all", day !== "", tag !== "all"].filter(Boolean).length;
 }
 
 /** True when an income row's category only repeats its title ("Income · Income"). */
@@ -351,3 +364,36 @@ export const categoryRepeatsTitle = (
   tx: Pick<TransactionRow, "creditor_name" | "category">,
 ): boolean =>
   !!tx.category?.trim() && incomeTitle(tx).toLowerCase() === tx.category.trim().toLowerCase();
+export const MAX_TAGS = 20;
+export const MAX_TAG_LENGTH = 40;
+export const MAX_NOTE_LENGTH = 2000;
+
+/** One tag as typed: trimmed, inner spaces collapsed, cut to the length limit. */
+export const cleanTag = (raw: string): string =>
+  raw.trim().replace(/\s+/g, " ").slice(0, MAX_TAG_LENGTH).trim();
+
+/** Tags to save: cleaned, no blanks, no repeats (ignoring case, first spelling wins), at most 20. */
+export function normalizeTags(raw: Array<string>): Array<string> {
+  const seen = new Set<string>();
+  const out: Array<string> = [];
+  for (const t of raw.map(cleanTag)) {
+    const key = t.toLowerCase();
+    if (!t || seen.has(key)) continue;
+    seen.add(key);
+    out.push(t);
+  }
+  return out.slice(0, MAX_TAGS);
+}
+
+/** Note to save: trimmed, null when empty. */
+export function normalizeNote(raw: string): string | null {
+  const note = raw.trim().slice(0, MAX_NOTE_LENGTH);
+  return note === "" ? null : note;
+}
+
+/** Tags used by these rows, sorted, for the tag filter. */
+export function listTags(transactions: Array<Pick<TransactionRow, "tags">>): Array<string> {
+  const set = new Set<string>();
+  for (const tx of transactions) for (const t of tx.tags ?? []) set.add(t);
+  return [...set].sort((a, b) => a.localeCompare(b));
+}

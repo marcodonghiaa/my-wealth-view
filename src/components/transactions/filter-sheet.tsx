@@ -13,6 +13,10 @@ export interface FilterSheetProps {
   onBank: (bank: string) => void;
   /** Banks seen this month; the bank filter shows only when there are two or more. */
   banks: Array<string>;
+  tag: string;
+  onTag: (tag: string) => void;
+  /** Tags on this month's rows; the tag filter shows only when there is one. */
+  tags: Array<string>;
   day: string;
   onDay: (day: string) => void;
   minDay: string;
@@ -46,8 +50,8 @@ function Labeled({
   );
 }
 
-// Phone filters: one "Filter" button beside search opens a bottom sheet with category, day and
-// bank, so the list starts in the first viewport. Desktop keeps the inline fields.
+// Phone filters: one "Filter" button beside search opens a bottom sheet with category, day,
+// bank and tag, so the list starts in the first viewport. Desktop keeps the inline fields.
 export function FilterSheet(p: FilterSheetProps) {
   const [open, setOpen] = useState(false);
   return (
@@ -122,6 +126,24 @@ export function FilterSheet(p: FilterSheetProps) {
                   {p.banks.map((b) => (
                     <option key={b} value={b}>
                       {b}
+                    </option>
+                  ))}
+                </Select>
+              </Labeled>
+            )}
+            {p.tags.length > 0 && (
+              <Labeled label="Tag" htmlFor="filter-tag">
+                <Select
+                  id="filter-tag"
+                  onGround
+                  value={p.tag}
+                  onChange={(e) => p.onTag(e.target.value)}
+                  className="px-4"
+                >
+                  <option value="all">All tags</option>
+                  {p.tags.map((t) => (
+                    <option key={t} value={t}>
+                      #{t}
                     </option>
                   ))}
                 </Select>
