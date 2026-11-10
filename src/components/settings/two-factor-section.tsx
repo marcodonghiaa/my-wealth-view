@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 import { Loader2, ShieldCheck, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CodeInput, Input } from "@/components/ui/field";
@@ -8,9 +9,10 @@ import {
   listAuthenticators,
   removeAuthenticator,
   startEnrollment,
-  type Authenticator,
   type Enrollment,
 } from "@/lib/mfa";
+
+const AUTHENTICATORS_KEY = ["mfa-authenticators"];
 
 const message = (err: unknown, fallback: string) =>
   err instanceof Error && err.message ? err.message : fallback;
@@ -20,29 +22,21 @@ const message = (err: unknown, fallback: string) =>
  * them. With at least one, sign-in asks for a code and the database refuses sessions without it.
  */
 export function TwoFactorSection() {
-  const [list, setList] = useState<Array<Authenticator> | null>(null);
+  const queryClient = useQueryClient();
+  const authenticators = useQuery({ queryKey: AUTHENTICATORS_KEY, queryFn: listAuthenticators });
+  // On a failed load the list stays unknown: showing "Off" could mislead a user who has one.
+  const list = authenticators.data ?? null;
+  const loadFailed = authenticators.isError && list === null;
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [name, setName] = useState("");
   const [enrollment, setEnrollment] = useState<Enrollment | null>(null);
   const [code, setCode] = useState("");
   const [confirmRemove, setConfirmRemove] = useState<string | null>(null);
-  const [loadFailed, setLoadFailed] = useState(false);
-
-  // On a failed load the list stays unknown: showing "Off" could mislead a user who has one.
-  const reload = useCallback(async () => {
-    setLoadFailed(false);
-    try {
-      setList(await listAuthenticators());
-    } catch (err) {
-      setError(message(err, "Couldn't load your authenticators."));
-      setLoadFailed(true);
-    }
-  }, []);
-
-  useEffect(() => {
-    void reload();
-  }, [reload]);
+  const reload = () => queryClient.invalidateQueries({ queryKey: AUTHENTICATORS_KEY });
+  const shownError =
+    error ??
+    (loadFailed ? message(authenticators.error, "Couldn't load your authenticators.") : null);
 
   async function run(action: () => Promise<void>, fallback: string) {
     setError(null);
@@ -198,20 +192,14 @@ export function TwoFactorSection() {
         )}
 
         {loadFailed && (
-          <Button
-            variant="quiet"
-            onClick={() => {
-              setError(null);
-              void reload();
-            }}
-          >
+          <Button variant="quiet" onClick={() => void authenticators.refetch()}>
             Try again
           </Button>
         )}
 
-        {error && (
+        {shownError && (
           <p role="alert" className="text-sm text-negative">
-            {error}
+            {shownError}
           </p>
         )}
 

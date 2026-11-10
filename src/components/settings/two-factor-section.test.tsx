@@ -1,4 +1,5 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { fireEvent, render as renderPlain, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const lib = vi.hoisted(() => ({
@@ -13,6 +14,15 @@ vi.mock("@/lib/mfa", () => ({
 }));
 
 import { TwoFactorSection } from "./two-factor-section";
+
+const render = (ui: React.ReactElement) =>
+  renderPlain(
+    <QueryClientProvider
+      client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+    >
+      {ui}
+    </QueryClientProvider>,
+  );
 
 // protects=a user can turn on two-step sign-in and remove an authenticator from Settings;
 // fails_when=the QR step is skipped, the code isn't sent, or a failure is swallowed
