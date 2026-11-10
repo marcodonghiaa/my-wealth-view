@@ -27,13 +27,16 @@ export function TwoFactorSection() {
   const [enrollment, setEnrollment] = useState<Enrollment | null>(null);
   const [code, setCode] = useState("");
   const [confirmRemove, setConfirmRemove] = useState<string | null>(null);
+  const [loadFailed, setLoadFailed] = useState(false);
 
+  // On a failed load the list stays unknown: showing "Off" could mislead a user who has one.
   const reload = useCallback(async () => {
+    setLoadFailed(false);
     try {
       setList(await listAuthenticators());
     } catch (err) {
       setError(message(err, "Couldn't load your authenticators."));
-      setList([]);
+      setLoadFailed(true);
     }
   }, []);
 
@@ -94,7 +97,9 @@ export function TwoFactorSection() {
           </h3>
           <p className="mt-1 text-sm text-muted-foreground">
             {list === null
-              ? "Checking…"
+              ? loadFailed
+                ? "Couldn't check right now."
+                : "Checking…"
               : on
                 ? "On. Sign-in asks for a code from your authenticator app."
                 : "Off. Add an authenticator app (1Password, Google Authenticator, Aegis…) so a stolen password alone can't open your finances."}
@@ -189,6 +194,18 @@ export function TwoFactorSection() {
               </Button>
             </div>
           )
+        )}
+
+        {loadFailed && (
+          <Button
+            variant="quiet"
+            onClick={() => {
+              setError(null);
+              void reload();
+            }}
+          >
+            Try again
+          </Button>
         )}
 
         {error && (

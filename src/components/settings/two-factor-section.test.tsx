@@ -46,6 +46,20 @@ describe("TwoFactorSection", () => {
     expect(screen.getByText("Phone")).toBeInTheDocument();
   });
 
+  // protects=a user with authenticators is never told two-step is off because loading failed;
+  // fails_when=a load error shows "Off" and the setup button
+  it("on a load error shows the error and a retry, not Off", async () => {
+    lib.listAuthenticators
+      .mockRejectedValueOnce(new Error("Failed to fetch"))
+      .mockResolvedValueOnce([{ id: "f1", name: "Phone", createdAt: "" }]);
+    render(<TwoFactorSection />);
+    expect(await screen.findByRole("alert")).toHaveTextContent("Failed to fetch");
+    expect(screen.queryByText(/^Off\./)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Set up two-step sign-in" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+    expect(await screen.findByText(/^On\./)).toBeInTheDocument();
+  });
+
   it("shows a wrong code and stays on the QR step", async () => {
     lib.listAuthenticators.mockResolvedValue([]);
     lib.finishEnrollment.mockRejectedValue(new Error("Invalid TOTP code entered"));
