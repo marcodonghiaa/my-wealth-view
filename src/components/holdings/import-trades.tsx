@@ -367,7 +367,7 @@ export function ImportTrades({ kind, saved }: { kind: "stock" | "crypto"; saved:
             {save.error.message}
           </p>
         )}
-        {from !== null && from !== "other" && (
+        {parsed && (
           <Button
             disabled={
               !parsed ||
@@ -378,7 +378,9 @@ export function ImportTrades({ kind, saved }: { kind: "stock" | "crypto"; saved:
             onClick={() => save.mutate()}
           >
             {save.isPending && <Loader2 className="size-4 animate-spin" />}
-            Save trades
+            {fresh.length > 0
+              ? `Save ${fresh.length} trade${fresh.length === 1 ? "" : "s"}`
+              : "Save trades"}
           </Button>
         )}
       </DialogContent>
