@@ -242,4 +242,12 @@ describe("untrusted values in a file", () => {
     expect(parseDay("1900-01-01")).toBe("1900-01-01");
     expect(parseDay(`${next}-12-31`)).toBe(`${next}-12-31`);
   });
+
+  it("#3 strips control characters and caps descriptions at 500 characters", () => {
+    const long = "x".repeat(600);
+    const csv = `Date,Description,Amount\n2026-01-02,"a\u0000b\u0007c",-1.00\n2026-01-03,${long},-2.00`;
+    const rows = readStatement(csv).rows;
+    expect(rows[0]!.description).toBe("abc");
+    expect(rows[1]!.description).toHaveLength(500);
+  });
 });

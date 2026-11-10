@@ -342,7 +342,13 @@ function readRow(row: Array<string>, r: Recipe): StatementRow | null {
   const c = r.columns;
   const date = parseDay(cell(row, c.date), r.dateOrder);
   const description = [c.description, ...r.descriptionAlt]
-    .map((i) => cell(row, i).replace(/\s+/g, " "))
+    // Tabs and newlines become spaces; other control characters (Postgres rejects U+0000) go.
+    .map((i) =>
+      cell(row, i)
+        .replace(/\s+/g, " ")
+        .replace(/\p{Cc}/gu, "")
+        .slice(0, 500),
+    )
     .find((text) => text !== "");
   if (!date || !description) return null;
   const amount = (i: number | null | undefined) => parseAmount(cell(row, i), r.decimal);
