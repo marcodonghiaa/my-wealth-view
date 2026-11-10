@@ -1,5 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
-import { isLooseMatch, makeRuleAction, textMatches } from "./rules";
+import {
+  LOOSE_MATCH_HINT,
+  isLooseMatch,
+  makeRuleAction,
+  previewLine,
+  quoteText,
+  ruleCondition,
+  textMatches,
+} from "./rules";
 
 describe("textMatches (same as the sync's matcher)", () => {
   it("word: the text on its own, never inside another word", () => {
@@ -54,5 +62,29 @@ describe("Make a rule shortcut", () => {
   it("offers nothing without a name or a category", () => {
     expect(makeRuleAction("  ", "Dine Out", vi.fn())).toBeUndefined();
     expect(makeRuleAction("BAR", null, vi.fn())).toBeUndefined();
+  });
+});
+
+// Polish pass 3 #8: whole phrases live here, so a later translation edits one file.
+describe("rule wording", () => {
+  it("says each condition as one phrase", () => {
+    expect(ruleCondition("creditor_name", "word")).toBe("Name has the word");
+    expect(ruleCondition("any", "exact")).toBe("Name or description is exactly");
+    expect(ruleCondition("remittance_info", "contains")).toBe("Description contains");
+  });
+
+  it("quotes the rule text", () => {
+    expect(quoteText("Netflix")).toBe("“Netflix”");
+  });
+
+  it("says how many would change, with or without examples", () => {
+    expect(previewLine(12, 5)).toBe("12 transactions would change, for example:");
+    expect(previewLine(1, 1)).toBe("1 transaction would change:");
+  });
+
+  it("warns about short text in one sentence", () => {
+    expect(LOOSE_MATCH_HINT).toBe(
+      "Short text also matches inside other words (“bar” is in “Barclays”). Whole word avoids that.",
+    );
   });
 });

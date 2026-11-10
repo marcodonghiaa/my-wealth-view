@@ -19,11 +19,13 @@ import { plural } from "@/lib/plural";
 import {
   MATCH_FIELDS,
   MATCH_MODES,
-  fieldPhrase,
   isLooseMatch,
   MAX_MATCH_TEXT,
   modeHint,
-  modeLabel,
+  previewLine,
+  quoteText,
+  ruleCondition,
+  LOOSE_MATCH_HINT,
   type MatchField,
   type MatchMode,
 } from "@/lib/rules";
@@ -274,9 +276,7 @@ function RuleForm({
             id="rule-match-hint"
             className={`mt-1.5 text-[0.8125rem] ${loose ? "text-foreground" : "text-muted-foreground"}`}
           >
-            {loose
-              ? "Short text also matches inside other words (“bar” is in “Barclays”). Whole word avoids that."
-              : modeHint(matchMode)}
+            {loose ? LOOSE_MATCH_HINT : modeHint(matchMode)}
           </p>
         </div>
 
@@ -384,9 +384,9 @@ function RuleList({ rules }: { rules: RuleRow[] }) {
             <div className="min-w-0 flex-1">
               <p className="text-[0.9375rem] break-words">
                 <span className="text-muted-foreground">
-                  {fieldPhrase(rule.match_field)} {modeLabel(rule.match_mode)}
+                  {ruleCondition(rule.match_field, rule.match_mode)}
                 </span>{" "}
-                <span className="font-medium">“{rule.match_text}”</span>
+                <span className="font-medium">{quoteText(rule.match_text)}</span>
               </p>
               <div className="mt-1 flex flex-wrap items-center gap-1.5">
                 <ArrowRight aria-hidden className="size-3.5 text-muted-foreground" />
@@ -500,8 +500,7 @@ function ApplyToPast({ ruleIds, onDone }: { ruleIds: string; onDone: () => void 
       ) : (
         <>
           <p role="status" className="mt-4 text-sm">
-            <span className="font-medium">{plural(changes)}</span> would change
-            {preview.data.sample.length < changes ? ", for example:" : ":"}
+            {previewLine(changes, preview.data.sample.length)}
           </p>
           <GroupedList className="mt-2 bg-background">
             {preview.data.sample.map((s, i) => (
