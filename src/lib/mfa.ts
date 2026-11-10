@@ -1,3 +1,4 @@
+import type { AuthError } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
 // Two-step sign-in with an authenticator app (Supabase Auth TOTP). The database enforces it:
@@ -38,9 +39,9 @@ export async function verifyMfaCode(input: string): Promise<void> {
   if (!code) throw new Error("Enter the 6-digit code from your authenticator app.");
   const { data, error } = await supabase.auth.mfa.listFactors();
   if (error) throw error;
-  const factors = data?.totp ?? [];
+  const factors = data.totp;
   if (factors.length === 0) throw new Error("This account has no authenticator.");
-  let last: unknown = null;
+  let last: AuthError | null = null;
   // A user with two authenticators can type either one's code: try each.
   for (const factor of factors) {
     const { error: verifyError } = await supabase.auth.mfa.challengeAndVerify({
@@ -49,7 +50,7 @@ export async function verifyMfaCode(input: string): Promise<void> {
     });
     if (!verifyError) return;
     // Supabase allows about 15 code checks a minute per IP: stop instead of spending more.
-    if ((verifyError as { status?: unknown }).status === 429) {
+    if (verifyError.status === 429) {
       throw new Error("Too many tries. Please wait a minute, then type the newest code.");
     }
     last = verifyError;
@@ -66,7 +67,7 @@ export interface Authenticator {
 export async function listAuthenticators(): Promise<Array<Authenticator>> {
   const { data, error } = await supabase.auth.mfa.listFactors();
   if (error) throw error;
-  return (data?.totp ?? []).map((f) => ({
+  return data.totp.map((f) => ({
     id: f.id,
     name: f.friendly_name || "Authenticator app",
     createdAt: f.created_at,
