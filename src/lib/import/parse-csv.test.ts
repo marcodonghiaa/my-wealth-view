@@ -73,4 +73,11 @@ describe("decodeCsv", () => {
     const bytes = new Uint8Array([0x43, 0x61, 0x66, 0xe9, 0x3b, 0x80, 0x35]);
     expect(decodeCsv(bytes)).toBe("Café;€5");
   });
+
+  it("reads UTF-16 with a byte-order mark, either byte order", () => {
+    const le = new Uint8Array([0xff, 0xfe, 0x41, 0x00, 0xe9, 0x00]);
+    const be = new Uint8Array([0xfe, 0xff, 0x00, 0x41, 0x00, 0xe9]);
+    expect(decodeCsv(le)).toBe("Aé");
+    expect(decodeCsv(be)).toBe("Aé");
+  });
 });
