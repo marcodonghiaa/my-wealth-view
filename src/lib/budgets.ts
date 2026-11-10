@@ -79,7 +79,7 @@ function spendIndex(spend: ReadonlyArray<MonthSpend>): Map<string, number> {
   const out = new Map<string, number>();
   for (const s of spend) {
     const k = spendKey(s.month, s.category);
-    out.set(k, (out.get(k) ?? 0) + Number(s.spend_eur ?? 0));
+    out.set(k, (out.get(k) ?? 0) + s.spend_eur);
   }
   return out;
 }
@@ -101,7 +101,7 @@ export function budgetLines(
     let line: BudgetLine | undefined;
     for (const m of monthsBetween(first, month)) {
       const row = effectiveBudget(rows, category, m)!;
-      const budget = Number(row.amount);
+      const budget = row.amount;
       // What last month passed on (0 unless its rollover was on): the switch takes effect from
       // the next month, both ways.
       const carriedIn = carry;

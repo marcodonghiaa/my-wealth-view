@@ -16,6 +16,7 @@ import {
   type BudgetRow,
   type MonthSpend,
 } from "@/lib/budgets";
+import { ALWAYS_SHOWN } from "@/lib/categories";
 import { useCategories } from "@/lib/use-categories";
 import { MonthSwitcher } from "@/components/month-switcher";
 import { HeadlineFigure } from "@/components/headline-figure";
@@ -40,7 +41,7 @@ export const Route = createFileRoute("/_authenticated/budgets")({
 const BUDGETS_KEY = ["category-budgets"];
 const SPREAD_KEY = "alopex.budgets.spreadIncome";
 // Never budgeted: they aren't spending.
-const NOT_BUDGETED = new Set(["Transfer", "Income"]);
+const NOT_BUDGETED = new Set(ALWAYS_SHOWN);
 // Spend history read for averages and unbudgeted spend: this many months back, every category.
 const HISTORY_MONTHS = AVERAGE_MONTHS;
 

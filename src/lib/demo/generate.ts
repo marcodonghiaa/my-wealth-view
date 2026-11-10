@@ -494,8 +494,8 @@ export function generateDemoData(now: Date = new Date()): DemoDb {
     net_worth_reconstructed,
     splitwise_balances,
     splitwise_expenses,
-    // One category of the demo user's own, so Settings → Categories shows how it looks.
     category_budgets: [],
+    // One category of the demo user's own, so Settings → Categories shows how it looks.
     user_categories: [{ user_id, name: "Pets", hidden: false, created_at: stamp(today) }],
     subscription_billing_overrides: [
       {
