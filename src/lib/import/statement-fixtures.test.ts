@@ -59,6 +59,19 @@ describe("presets", () => {
     expect(s.skipped).toBe(2);
   });
 
+  it("keeps a preset's rules when a column is picked by hand", () => {
+    const auto = readStatement(fixture("revolut.csv"));
+    const picked = readStatement(fixture("revolut.csv"), { ...auto.columns, description: 0 });
+    expect(picked.preset).toBe("Revolut");
+    expect(picked.rows.map((r) => [r.description, r.amount])).toEqual([
+      ["CARD_PAYMENT", 3.2],
+      ["TOPUP", 1000],
+      ["TRANSFER", 50.5],
+    ]);
+    const firefly = readStatement(fixture("firefly.csv"));
+    expect(readStatement(fixture("firefly.csv"), firefly.columns).rows).toEqual(firefly.rows);
+  });
+
   it("never lets two presets claim the same file", () => {
     for (const p of PRESETS) {
       const others = PRESETS.filter((o) => o !== p);
@@ -78,6 +91,13 @@ describe("messy generic statements", () => {
       row("2026-02-20", "Kontoführung", 4.95, "DBIT"),
     ]);
     expect(s.skipped).toBe(1); // closing balance line
+  });
+
+  it("keeps the real header line when columns are picked on a file with title lines", () => {
+    const auto = readStatement(fixture("messy-us-card.csv"));
+    const picked = readStatement(fixture("messy-us-card.csv"), auto.columns);
+    expect(picked.headers[0]).toBe("Transaction Date");
+    expect(picked.rows).toEqual(auto.rows);
   });
 
   it("US card: month-first dates, $ and (negative) amounts, quoted commas, total line", () => {

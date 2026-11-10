@@ -4,7 +4,7 @@
 import { appLocale, monthFirst } from "@/lib/locale";
 import { detectDecimal, monthNumber, parseAmount, type DecimalMark } from "./normalize";
 import { parseCsv } from "./parse-csv";
-import { findPreset, presetColumns, type StatementPreset } from "./statement-presets";
+import { findPreset, presetColumns } from "./statement-presets";
 
 export type Direction = "DBIT" | "CRDT";
 
@@ -304,9 +304,6 @@ interface Recipe {
   descriptionAlt: Array<number>;
   fee: number | null;
   skip: (row: Array<string>) => boolean;
-  /** Direction words, when a preset has its own (Firefly's withdrawal/deposit). */
-  out: Set<string>;
-  in: Set<string>;
   dateOrder: DateOrder;
   decimal: DecimalMark | undefined;
   invert: boolean;
@@ -326,8 +323,8 @@ function readRow(row: Array<string>, r: Recipe): StatementRow | null {
     signed = amount(c.amount);
     if (signed != null && r.fee != null) signed -= Math.abs(amount(r.fee) ?? 0);
     const said = word(cell(row, c.direction));
-    if (signed != null && r.out.has(said)) signed = -Math.abs(signed);
-    else if (signed != null && r.in.has(said)) signed = Math.abs(signed);
+    if (signed != null && OUT_WORDS.has(said)) signed = -Math.abs(signed);
+    else if (signed != null && IN_WORDS.has(said)) signed = Math.abs(signed);
   } else {
     const money = (i: number | null) => Math.abs(amount(i) ?? 0);
     signed = money(c.in) - money(c.out);
@@ -342,39 +339,37 @@ function readRow(row: Array<string>, r: Recipe): StatementRow | null {
   };
 }
 
-function genericRecipe(headers: Array<string>, columns: StatementColumns) {
+type Base = Omit<Recipe, "dateOrder" | "decimal" | "invert">;
+
+function genericRecipe(headers: Array<string>, columns: StatementColumns): Base {
   const names = headers.map(clean);
   const descriptionAlt = names.flatMap((n, i) =>
-    i !== columns.description &&
     !Object.values(columns).includes(i) &&
     SYNONYMS.description.some((s) => n === s || n.startsWith(`${s} `))
       ? [i]
       : [],
   );
-  return { columns, descriptionAlt, fee: null, skip: () => false, out: OUT_WORDS, in: IN_WORDS };
+  return { columns, descriptionAlt, fee: null, skip: () => false };
 }
 
-function presetRecipe(preset: StatementPreset, headers: Array<string>) {
-  const { columns, descriptionAlt, fee, skip } = presetColumns(preset, headers);
-  const words = (list: Array<string> | undefined, fallback: Set<string>) =>
-    list ? new Set(list) : fallback;
-  return {
-    columns,
-    descriptionAlt,
-    fee,
-    skip,
-    out: words(preset.direction?.out, OUT_WORDS),
-    in: words(preset.direction?.in, IN_WORDS),
-  };
+/** The header line (title lines above it are skipped) and how to read the rows under it. */
+function findLayout(lines: Array<Array<string>>) {
+  for (let i = 0; i < Math.min(lines.length, HEADER_SEARCH_LINES); i++) {
+    const preset = findPreset(lines[i]!);
+    if (preset) return { start: i, preset, base: presetColumns(preset, lines[i]!) as Base };
+    const guess = guessStatementColumns(lines[i]!);
+    if (usable(guess)) return { start: i, preset: null, base: genericRecipe(lines[i]!, guess) };
+  }
+  return null;
 }
 
 const HEADER_SEARCH_LINES = 20;
 
 /**
  * Reads the statement. Banks put title lines above the table, so the header is the first of the
- * first lines that is a known export or whose columns can be recognised. With columns picked by
- * hand, the header is the first line. Throws a plain-language Error when it can't tell which
- * columns to use.
+ * first lines that is a known export or whose columns can be recognised. Columns picked by hand
+ * replace the found ones but keep that header line and a known export's rules (skipped rows,
+ * fees). Throws a plain-language Error when it can't tell which columns to use.
  */
 export function readStatement(
   text: string,
@@ -383,23 +378,13 @@ export function readStatement(
 ): Statement {
   const parsed = parseCsv(text);
   const lines = [parsed.headers, ...parsed.rows];
-  let start = 0;
-  let preset: StatementPreset | null = null;
-  let base: Omit<Recipe, "dateOrder" | "decimal" | "invert"> | null = picked
-    ? genericRecipe(lines[0]!, { ...NO_COLUMNS(), ...picked })
-    : null;
-  for (let i = 0; !base && i < Math.min(lines.length, HEADER_SEARCH_LINES); i++) {
-    preset = findPreset(lines[i]!);
-    if (preset) {
-      start = i;
-      base = presetRecipe(preset, lines[i]!);
-      break;
-    }
-    const guess = guessStatementColumns(lines[i]!);
-    if (usable(guess)) {
-      start = i;
-      base = genericRecipe(lines[i]!, guess);
-    }
+  const found = findLayout(lines);
+  const start = found?.start ?? 0;
+  const preset = found?.preset ?? null;
+  let base = found?.base ?? null;
+  if (picked) {
+    const columns = { ...NO_COLUMNS(), ...picked };
+    base = preset && base ? { ...base, columns } : genericRecipe(lines[start]!, columns);
   }
   if (!base || !usable(base.columns)) {
     throw new Error("Couldn't find the date, description and amount columns. Pick them below.");
@@ -409,8 +394,7 @@ export function readStatement(
   const amountCells = body.flatMap((r) => [cell(r, c.amount), cell(r, c.in), cell(r, c.out)]);
   const recipe: Recipe = {
     ...base,
-    dateOrder:
-      options.dateOrder ?? preset?.dateOrder ?? detectDateOrder(body.map((r) => cell(r, c.date))),
+    dateOrder: options.dateOrder ?? detectDateOrder(body.map((r) => cell(r, c.date))),
     decimal: preset?.decimal ?? detectDecimal(amountCells),
     invert: options.invert ?? false,
   };

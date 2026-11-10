@@ -1,10 +1,9 @@
 // Exports of apps and banks whose layout is known, read exactly instead of guessed.
 // To add one: an entry in PRESETS, a sample in fixtures/ with no personal data, and a test.
-import type { DateOrder, StatementColumns } from "./statement";
+import type { StatementColumns } from "./statement";
 import type { DecimalMark } from "./normalize";
 
 export interface StatementPreset {
-  id: string;
   name: string;
   /** Lower-cased header names that must all be there. Strict: two presets never match one file. */
   requires: Array<string>;
@@ -13,20 +12,18 @@ export interface StatementPreset {
   description: Array<string>;
   /** Signed amount, unless `direction` says the sign. */
   amount: string;
-  /** A column whose value says out or in; the amount's own sign is then ignored. */
-  direction?: { column: string; out: Array<string>; in: Array<string> };
+  /** A column whose value says out or in (withdrawal/deposit, D/C…); else the amount's sign. */
+  direction?: string;
   /** A fee charged on top of the amount, as a positive number. */
   fee?: string;
   /** Rows to leave out, by a column's lower-cased value. A missing column skips nothing. */
   skip?: { column: string; when?: Array<string>; unless?: Array<string> };
-  dateOrder?: DateOrder;
   decimal?: DecimalMark;
 }
 
 export const PRESETS: Array<StatementPreset> = [
   {
     // Revolut app: Statements → Excel/CSV. Pending, reverted and declined rows never happened.
-    id: "revolut",
     name: "Revolut",
     requires: [
       "type",
@@ -48,7 +45,6 @@ export const PRESETS: Array<StatementPreset> = [
   },
   {
     // Spiir: Export → CSV. Rows Spiir itself marked as duplicates are left out.
-    id: "spiir",
     name: "Spiir",
     requires: ["date", "description", "amount", "maincategoryname"],
     date: "date",
@@ -58,7 +54,6 @@ export const PRESETS: Array<StatementPreset> = [
   },
   {
     // Actual Budget: Account → Export. Payee is the merchant; notes when there is no payee.
-    id: "actual",
     name: "Actual Budget",
     requires: ["account", "date", "payee", "notes", "category", "amount"],
     date: "date",
@@ -68,13 +63,12 @@ export const PRESETS: Array<StatementPreset> = [
   {
     // Firefly III: Export data → transactions. Transfers between your own accounts and opening
     // balances are not spending or income, so they are left out.
-    id: "firefly",
     name: "Firefly III",
     requires: ["type", "amount", "description", "date", "source_name", "destination_name"],
     date: "date",
     description: ["description", "destination_name"],
     amount: "amount",
-    direction: { column: "type", out: ["withdrawal"], in: ["deposit"] },
+    direction: "type",
     skip: { column: "type", unless: ["withdrawal", "deposit"] },
     decimal: ".",
   },
@@ -103,7 +97,7 @@ export function presetColumns(preset: StatementPreset, headers: Array<string>) {
     date: at(preset.date),
     description: main ?? null,
     amount: at(preset.amount),
-    direction: at(preset.direction?.column),
+    direction: at(preset.direction),
     in: null,
     out: null,
   };
