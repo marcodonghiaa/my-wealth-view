@@ -7,13 +7,16 @@ const mfa = vi.hoisted(() => ({
   enroll: vi.fn(),
   unenroll: vi.fn(),
 }));
-vi.mock("@/integrations/supabase/client", () => ({ supabase: { auth: { mfa } } }));
+const refreshSession = vi.hoisted(() => vi.fn());
+vi.mock("@/integrations/supabase/client", () => ({ supabase: { auth: { mfa, refreshSession } } }));
 
 import {
   cleanCode,
   finishEnrollment,
+  isMfaRequired,
   listAuthenticators,
   needsMfaCode,
+  onMfaRequired,
   removeAuthenticator,
   startEnrollment,
   verifyMfaCode,
@@ -143,5 +146,62 @@ describe("enrollment", () => {
     expect(mfa.unenroll).toHaveBeenCalledWith({ factorId: "a" });
     mfa.unenroll.mockResolvedValue({ error: new Error("AAL2 required") });
     await expect(removeAuthenticator("a")).rejects.toThrow(/AAL2/);
+  });
+});
+
+const dbRefusal = {
+  code: "42501",
+  hint: "mfa_required",
+  message: "Enter your authenticator code first",
+};
+const fnRefusal = (body: unknown, status = 403) =>
+  Object.assign(new Error("Edge Function returned a non-2xx status code"), {
+    context: new Response(JSON.stringify(body), { status }),
+  });
+
+// protects=a refused session is recognised from the database and from Edge Functions;
+// fails_when=an unrelated permission error or a 503 is taken for a missing code
+describe("isMfaRequired", () => {
+  it("recognises the database's and the functions' refusal", async () => {
+    expect(await isMfaRequired(dbRefusal)).toBe(true);
+    expect(await isMfaRequired(fnRefusal({ error: "x", code: "mfa_required" }))).toBe(true);
+  });
+
+  it("ignores other errors", async () => {
+    expect(await isMfaRequired({ code: "42501", hint: null, message: "permission denied" })).toBe(
+      false,
+    );
+    expect(await isMfaRequired(fnRefusal({ error: "Server update incomplete" }, 503))).toBe(false);
+    expect(await isMfaRequired(new Error("boom"))).toBe(false);
+    expect(await isMfaRequired(null)).toBe(false);
+  });
+});
+
+// protects=a session the database refuses lands on the code step instead of error screens;
+// fails_when=the stale factor list is not refreshed, or every failing query navigates again
+describe("onMfaRequired", () => {
+  beforeEach(() => refreshSession.mockReset().mockResolvedValue({ error: null }));
+
+  it("refreshes the session, then goes to sign-in, once for a burst of refusals", async () => {
+    let finish: () => void = () => {};
+    const go = vi.fn(() => new Promise<void>((r) => (finish = r)));
+    const onError = onMfaRequired(go);
+    const first = onError(dbRefusal);
+    await vi.waitFor(() => expect(go).toHaveBeenCalledTimes(1));
+    await onError(dbRefusal);
+    finish();
+    await first;
+    expect(refreshSession).toHaveBeenCalledTimes(1);
+    expect(refreshSession.mock.invocationCallOrder[0]).toBeLessThan(
+      go.mock.invocationCallOrder[0]!,
+    );
+    expect(go).toHaveBeenCalledTimes(1);
+  });
+
+  it("does nothing for other errors", async () => {
+    const go = vi.fn(async () => {});
+    await onMfaRequired(go)(new Error("boom"));
+    expect(go).not.toHaveBeenCalled();
+    expect(refreshSession).not.toHaveBeenCalled();
   });
 });

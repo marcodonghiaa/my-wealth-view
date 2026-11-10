@@ -1,7 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 
 // Two-step sign-in with an authenticator app (Supabase Auth TOTP). The database enforces it:
-// once a user has a verified factor, a session without the code (aal1) sees no data.
+// once a user has a verified factor, a session without the code (aal1) gets 403 on every call.
 
 /** The 6 digits of an authenticator code, or null. Spaces and dashes are ignored ("123 456"). */
 export function cleanCode(input: string): string | null {
@@ -95,4 +95,36 @@ export async function finishEnrollment(factorId: string, input: string): Promise
 export async function removeAuthenticator(factorId: string): Promise<void> {
   const { error } = await supabase.auth.mfa.unenroll({ factorId });
   if (error) throw error;
+}
+
+/** True when the database or an Edge Function refused because this session skipped the code. */
+export async function isMfaRequired(error: unknown): Promise<boolean> {
+  const e = error as { code?: unknown; hint?: unknown; context?: unknown } | null;
+  if (e?.code === "42501" && e.hint === "mfa_required") return true;
+  if (!(e?.context instanceof Response)) return false;
+  try {
+    const body: unknown = await e.context.clone().json();
+    return (body as { code?: unknown } | null)?.code === "mfa_required";
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * A query/mutation error handler: when the server refuses a session for a missing code (signed
+ * in elsewhere before the authenticator was added, so this tab's stored factor list is stale),
+ * refresh the session so it knows about the authenticator, then open the sign-in page's code step.
+ */
+export function onMfaRequired(goToSignIn: () => Promise<unknown>) {
+  let busy = false;
+  return async (error: unknown): Promise<void> => {
+    if (busy || !(await isMfaRequired(error))) return;
+    busy = true;
+    try {
+      await supabase.auth.refreshSession();
+      await goToSignIn();
+    } finally {
+      busy = false;
+    }
+  };
 }
