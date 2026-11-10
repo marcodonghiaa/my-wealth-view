@@ -250,4 +250,12 @@ describe("untrusted values in a file", () => {
     expect(rows[0]!.description).toBe("abc");
     expect(rows[1]!.description).toHaveLength(500);
   });
+
+  it("polish-3 #15 skips a row whose currency it can't tell instead of calling it EUR", () => {
+    const csv =
+      "Date,Description,Amount,Currency\n2026-01-02,Diner,-10.00,$\n2026-01-03,Shop,-2.00,EUR\n2026-01-04,Bus,-1.00,";
+    const s = readStatement(csv);
+    expect(s.rows.map((r) => r.description)).toEqual(["Shop", "Bus"]);
+    expect(s.skipped).toBe(1);
+  });
 });

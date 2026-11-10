@@ -205,15 +205,17 @@ const IN_WORDS = new Set([
 const word = (text: string) =>
   text.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[.:]$/, "").trim();
 
+// In order of preference: "valuta" is the currency in Italian but the value date in German
+// statements, which often have a Währung column too.
 const CURRENCY_HEADERS = [
   "currency",
-  "valuta",
   "wahrung",
   "waehrung",
   "devise",
   "moneda",
   "munt",
   "ccy",
+  "valuta",
 ];
 const SYMBOLS: Record<string, string> = { "€": "EUR", "£": "GBP" };
 
@@ -367,7 +369,10 @@ function readRow(row: Array<string>, r: Recipe): StatementRow | null {
   }
   // Below a cent is no row; above a trillion is a broken or crafted file, not a payment.
   if (signed == null || Math.abs(signed) < 0.005 || !(Math.abs(signed) <= MAX_AMOUNT)) return null;
-  const currency = currencyCode(cell(row, r.currency));
+  const currencyText = cell(row, r.currency);
+  const currency = currencyCode(currencyText);
+  // "$" could be USD, CAD, AUD…: a currency it can't tell is skipped, not saved as EUR.
+  if (currencyText !== "" && !currency) return null;
   return {
     date,
     description,
@@ -387,9 +392,8 @@ function genericRecipe(headers: Array<string>, columns: StatementColumns): Base 
       ? [i]
       : [],
   );
-  const currency = names.findIndex(
-    (n, i) => !Object.values(columns).includes(i) && CURRENCY_HEADERS.includes(n),
-  );
+  const free = (i: number) => i >= 0 && !Object.values(columns).includes(i);
+  const currency = CURRENCY_HEADERS.map((h) => names.indexOf(h)).find(free) ?? -1;
   return {
     columns,
     descriptionAlt,

@@ -118,10 +118,16 @@ describe("presets", () => {
     expect(readStatement(fixture("firefly.csv"), firefly.columns).rows).toEqual(firefly.rows);
   });
 
-  it("reads a generic currency column; EUR or a non-code stays the default", () => {
+  it("reads a generic currency column; EUR is the default, a non-code row is skipped (polish-3 #15)", () => {
     const csv =
       "Date;Description;Amount;Währung\n2026-01-02;Shop;-5,00;chf\n2026-01-03;Bar;-2,00;EUR\n2026-01-04;Odd;-1,00;?";
-    expect(readStatement(csv).rows.map((r) => r.currency)).toEqual(["CHF", undefined, undefined]);
+    expect(readStatement(csv).rows.map((r) => r.currency)).toEqual(["CHF", undefined]);
+  });
+
+  it("polish-3 #15 takes Währung, not the German Valuta date, as the currency column", () => {
+    const csv =
+      "Buchungstag;Valuta;Verwendungszweck;Betrag;Währung\n03.02.2026;03.02.2026;Shop;-5,00;CHF";
+    expect(readStatement(csv).rows.map((r) => r.currency)).toEqual(["CHF"]);
   });
 
   it("reads a Type column of DEBIT/CREDIT next to an unsigned amount", () => {
