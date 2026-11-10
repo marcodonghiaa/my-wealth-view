@@ -6,15 +6,31 @@ const invoke = vi.fn();
 const toastError = vi.fn();
 const inserted: Array<Record<string, unknown>> = [];
 const onlyFlowRules = { current: false };
+// How the mocked database answers: the rules list, a delete, an insert.
+const db = {
+  rules: "ok" as "ok" | "error" | "empty" | "pending",
+  rulesReads: 0,
+  table: "",
+  deleted: [] as string[],
+  deleteError: null as Error | null,
+  insertError: null as Error | null,
+};
 let search: Record<string, string> = {};
 
-vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: (m: string) => toastError(m) } }));
+const toastSuccess = vi.fn();
+vi.mock("sonner", () => ({
+  toast: { success: (m: string) => toastSuccess(m), error: (m: string) => toastError(m) },
+}));
 
 vi.mock("@/integrations/supabase/client", () => {
   const q: Record<string, unknown> = {};
   for (const m of ["select", "order"]) q[m] = () => q;
-  q["then"] = (resolve: (v: unknown) => void) =>
-    resolve({
+  q["then"] = (resolve: (v: unknown) => void) => {
+    if (db.table === "category_rules") db.rulesReads++;
+    if (db.rules === "pending") return;
+    if (db.rules === "error") return resolve({ data: null, error: new Error("down") });
+    if (db.rules === "empty") return resolve({ data: [], error: null });
+    return resolve({
       data: [
         {
           id: "r1",
@@ -52,13 +68,20 @@ vi.mock("@/integrations/supabase/client", () => {
       ].filter((r) => !onlyFlowRules.current || r.set_category === null),
       error: null,
     });
+  };
   q["insert"] = (row: Record<string, unknown>) => (
     inserted.push(row),
-    Promise.resolve({ error: null })
+    Promise.resolve({ error: db.insertError })
   );
+  q["delete"] = () => ({
+    eq: (_col: string, id: string) => (
+      db.deleted.push(id),
+      Promise.resolve({ error: db.deleteError })
+    ),
+  });
   return {
     supabase: {
-      from: () => q,
+      from: (table: string) => ((db.table = table), q),
       functions: { invoke: (...args: unknown[]) => invoke(...args) },
       auth: { getUser: async () => ({ data: { user: { id: "u1" } }, error: null }) },
     },
@@ -73,13 +96,24 @@ afterEach(() => {
   search = {};
   inserted.length = 0;
   onlyFlowRules.current = false;
+  Object.assign(db, {
+    rules: "ok",
+    rulesReads: 0,
+    deleted: [],
+    deleteError: null,
+    insertError: null,
+  });
+  toastSuccess.mockReset();
+  toastError.mockReset();
 });
 
 const Page = Route.options.component as () => React.JSX.Element;
 
 const renderPage = () =>
   render(
-    <QueryClientProvider client={new QueryClient()}>
+    <QueryClientProvider
+      client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+    >
       <Page />
     </QueryClientProvider>,
   );
@@ -285,5 +319,89 @@ describe("apply to past transactions", () => {
     renderPage();
     await screen.findByText("“Revolut”");
     expect(screen.queryByRole("button", { name: "Apply to past transactions" })).toBeNull();
+  });
+});
+
+// Polish pass 3 #3: these branches could be removed without any test failing.
+describe("rules list states", () => {
+  it("shows placeholders while the rules load", () => {
+    db.rules = "pending";
+    const { container } = renderPage();
+    expect(container.querySelectorAll(".animate-pulse")).toHaveLength(3);
+    expect(screen.queryByText("No rules yet")).toBeNull();
+  });
+
+  it("says so when the rules can't be loaded", async () => {
+    db.rules = "error";
+    renderPage();
+    expect(await screen.findByText("Failed to load rules.")).toBeTruthy();
+  });
+
+  it("explains how to make a first rule when there are none", async () => {
+    db.rules = "empty";
+    renderPage();
+    expect(await screen.findByText("No rules yet")).toBeTruthy();
+  });
+});
+
+describe("deleting a rule", () => {
+  it("removes it and says so", async () => {
+    renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: "Delete rule for Netflix" }));
+    await waitFor(() => expect(toastSuccess).toHaveBeenCalledWith("Rule deleted"));
+    expect(db.deleted).toEqual(["r1"]);
+  });
+
+  it("puts the rule back and shows the error when the delete fails", async () => {
+    db.deleteError = new Error("Couldn't delete");
+    renderPage();
+    const remove = await screen.findByRole("button", { name: "Delete rule for Netflix" });
+    db.rules = "pending"; // the refetch after the failure never lands: only the rollback restores it
+    fireEvent.click(remove);
+    await waitFor(() => expect(toastError).toHaveBeenCalledWith("Couldn't delete"));
+    expect(screen.getByText("“Netflix”")).toBeTruthy();
+  });
+});
+
+describe("adding a rule", () => {
+  const fillAndSave = async () => {
+    await openForm();
+    fireEvent.change(screen.getByLabelText("Text"), { target: { value: "Spotify" } });
+    fireEvent.change(screen.getByLabelText("Set type"), { target: { value: "Subscription" } });
+    fireEvent.click(screen.getByRole("button", { name: "Add rule" }));
+  };
+
+  it("closes the form and reloads the list on success", async () => {
+    renderPage();
+    await screen.findByText("“Netflix”");
+    const reads = db.rulesReads;
+    await fillAndSave();
+    await waitFor(() => expect(screen.queryByLabelText("Text")).toBeNull());
+    await waitFor(() => expect(db.rulesReads).toBeGreaterThan(reads));
+  });
+
+  it("keeps the form open with the error when saving fails", async () => {
+    db.insertError = new Error("Rule text is too long");
+    renderPage();
+    await fillAndSave();
+    expect(await screen.findByRole("alert")).toHaveTextContent("Rule text is too long");
+    expect(screen.getByLabelText("Text")).toHaveValue("Spotify");
+  });
+});
+
+describe("applying twice", () => {
+  it("sends one apply while the first is still running", async () => {
+    invoke.mockReset();
+    invoke.mockResolvedValueOnce({ data: { changes: 2, sample: [] }, error: null });
+    invoke.mockReturnValueOnce(new Promise(() => {})); // apply never finishes
+    renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: "Apply to past transactions" }));
+    const update = await screen.findByRole("button", { name: "Update 2 transactions" });
+    fireEvent.click(update);
+    await waitFor(() => expect(update).toBeDisabled());
+    fireEvent.click(update);
+    expect(
+      invoke.mock.calls.filter(([, o]) => (o as { body: { apply: boolean } }).body.apply),
+    ).toHaveLength(1);
   });
 });
