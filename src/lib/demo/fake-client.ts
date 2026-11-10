@@ -865,7 +865,9 @@ export function createFakeClient(now: Date = new Date()): SupabaseClient<Databas
               }
             : name === "parse-statement"
               ? { data: { rows: demoStatementRows(now) }, error: null }
-              : { data: null, error: DISABLED },
+              : name === "reapply-rules"
+                ? { data: { changes: 0, sample: [] }, error: null } // demo rows already follow its rules
+                : { data: null, error: DISABLED },
     },
     auth: {
       getSession: async () => ({ data: { session }, error: null }),
