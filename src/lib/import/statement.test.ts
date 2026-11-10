@@ -257,6 +257,17 @@ describe("untrusted values in a file", () => {
     expect(rows[1]!.description).toHaveLength(500);
   });
 
+  it("polish-3 #15 doesn't read a German Valuta (value date) column as the currency", () => {
+    const csv =
+      "Buchungstag;Valuta;Verwendungszweck;Betrag\n02.01.2026;03.01.2026;Bäcker;-2,50\n04.01.2026;04.01.2026;Gehalt;1500,00";
+    const s = readStatement(csv);
+    expect(s.rows.map((r) => [r.description, r.currency ?? "EUR"])).toEqual([
+      ["Bäcker", "EUR"],
+      ["Gehalt", "EUR"],
+    ]);
+    expect(s.skipped).toBe(0);
+  });
+
   it("polish-3 #15 skips a row whose currency it can't tell instead of calling it EUR", () => {
     const csv =
       "Date,Description,Amount,Currency\n2026-01-02,Diner,-10.00,$\n2026-01-03,Shop,-2.00,EUR\n2026-01-04,Bus,-1.00,";

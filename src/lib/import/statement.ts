@@ -385,7 +385,11 @@ function readRow(row: Array<string>, r: Recipe): StatementRow | null {
 
 type Base = Omit<Recipe, "dateOrder" | "decimal" | "invert">;
 
-function genericRecipe(headers: Array<string>, columns: StatementColumns): Base {
+function genericRecipe(
+  headers: Array<string>,
+  columns: StatementColumns,
+  rows: Array<Array<string>>,
+): Base {
   const names = headers.map(clean);
   const descriptionAlt = names.flatMap((n, i) =>
     !Object.values(columns).includes(i) && SYNONYMS.description.some((s) => headerMatches(n, s))
@@ -393,7 +397,10 @@ function genericRecipe(headers: Array<string>, columns: StatementColumns): Base 
       : [],
   );
   const free = (i: number) => i >= 0 && !Object.values(columns).includes(i);
-  const currency = CURRENCY_HEADERS.map((h) => names.indexOf(h)).find(free) ?? -1;
+  // A column named like a currency doesn't count if it holds digits: German "Valuta" is a date.
+  const holdsCodes = (i: number) => !rows.some((r) => /\d/.test(r[i] ?? ""));
+  const currency =
+    CURRENCY_HEADERS.map((h) => names.indexOf(h)).find((i) => free(i) && holdsCodes(i)) ?? -1;
   return {
     columns,
     descriptionAlt,
@@ -410,7 +417,8 @@ function findLayout(lines: Array<Array<string>>) {
     const preset = findPreset(lines[i]!);
     if (preset) return { start: i, preset, base: presetColumns(preset, lines[i]!) as Base };
     const guess = guessStatementColumns(lines[i]!);
-    if (usable(guess)) return { start: i, preset: null, base: genericRecipe(lines[i]!, guess) };
+    if (usable(guess))
+      return { start: i, preset: null, base: genericRecipe(lines[i]!, guess, lines.slice(i + 1)) };
   }
   return null;
 }
@@ -436,7 +444,10 @@ export function readStatement(
   let base = found?.base ?? null;
   if (picked) {
     const columns = { ...NO_COLUMNS, ...picked };
-    base = preset && base ? { ...base, columns } : genericRecipe(lines[start]!, columns);
+    base =
+      preset && base
+        ? { ...base, columns }
+        : genericRecipe(lines[start]!, columns, lines.slice(start + 1));
   }
   if (!base || !usable(base.columns)) {
     throw new Error("Couldn't find the date, description and amount columns. Pick them below.");
