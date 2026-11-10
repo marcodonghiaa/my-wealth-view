@@ -42,6 +42,16 @@ describe("checkPassword", () => {
     });
   });
 
+  // protects=no "Multiple GoTrueClient instances" console warning on a second password change;
+  // fails_when=each check builds a new auth client
+  it("reuses one probe client across checks", async () => {
+    probe.signInWithPassword.mockResolvedValue({ error: null });
+    await checkPassword("me@example.com", "pw");
+    const before = probe.created.length;
+    await checkPassword("me@example.com", "pw");
+    expect(probe.created.length).toBe(before);
+  });
+
   it("returns a wrong password's error and signs nothing out", async () => {
     const error = Object.assign(new Error("Invalid login credentials"), {
       code: "invalid_credentials",

@@ -74,8 +74,10 @@ export function pauseRealClient(): void {
  * that one session out. Signing in on the main client would swap a two-step (aal2) session for a
  * password-only one, which the database refuses until the code is typed again.
  */
+let probe: ReturnType<typeof createClient> | null = null;
 export async function checkPassword(email: string, password: string): Promise<{ error: unknown }> {
-  const probe = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+  // One probe per tab: a second client on the same storage key makes auth-js warn in the console.
+  probe ??= createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
     auth: {
       persistSession: false,
       autoRefreshToken: false,
