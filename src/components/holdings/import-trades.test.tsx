@@ -1,10 +1,20 @@
 import { describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { readFileSync } from "node:fs";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
-    from: () => ({ select: () => Promise.resolve({ data: [], error: null }) }),
+    from: () => ({
+      select: () =>
+        Promise.resolve({
+          data: [
+            { isin: "XX0000000001", shares: 1 },
+            { isin: "XX0000000002", shares: 1 },
+          ],
+          error: null,
+        }),
+    }),
   },
 }));
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
@@ -31,7 +41,8 @@ describe("ImportTrades", () => {
   it("a broker shows how to export from it, then the file picker, and no text box", () => {
     open("stock");
     fireEvent.click(screen.getByRole("button", { name: /Trade Republic/ }));
-    expect(screen.getByText(/In the Trade Republic app/)).toBeTruthy();
+    expect(screen.getByText("Import from Trade Republic")).toBeTruthy();
+    expect(screen.getByText("Open the Trade Republic app")).toBeTruthy();
     expect(screen.getByLabelText("CSV file")).toBeTruthy();
     expect(screen.queryByLabelText("CSV text")).toBeNull();
   });
@@ -55,7 +66,7 @@ describe("ImportTrades", () => {
   it("you can go back and choose another source", () => {
     open("stock");
     fireEvent.click(screen.getByRole("button", { name: /Another broker/ }));
-    fireEvent.click(screen.getByRole("button", { name: /Choose another source/ }));
+    fireEvent.click(screen.getByRole("button", { name: /All sources/ }));
     expect(screen.getByText("Where are these trades from?")).toBeTruthy();
   });
 
@@ -63,5 +74,16 @@ describe("ImportTrades", () => {
     open("crypto");
     expect(screen.queryByRole("button", { name: /Trade Republic/ })).toBeNull();
     expect(screen.getByRole("button", { name: /My own spreadsheet/ })).toBeTruthy();
+  });
+
+  it("a picked file shows its name and how many trades it holds, and hides the how-to", async () => {
+    open("stock");
+    fireEvent.click(screen.getByRole("button", { name: /Trade Republic/ }));
+    const csv = readFileSync("src/lib/brokers/fixtures/trade_republic.csv", "utf8");
+    const file = new File([csv], "Transaction export.csv", { type: "text/csv" });
+    fireEvent.change(screen.getByLabelText("CSV file"), { target: { files: [file] } });
+    expect(await screen.findByText("Transaction export.csv")).toBeTruthy();
+    await waitFor(() => expect(screen.getByText("4 trades found")).toBeTruthy());
+    expect(screen.queryByText("How to get the file")).toBeNull();
   });
 });

@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronLeft, Loader2 } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, FileUp, Lock, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -14,6 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { fieldClass } from "@/components/ui/field";
 import { cn } from "@/lib/utils";
+import { GroupedList } from "@/components/ui/grouped-list";
 import { localToday } from "@/lib/trades";
 import type { Trade } from "@/lib/trades";
 import { BROKERS, NEW_BROKER_URL } from "@/lib/brokers";
@@ -36,6 +37,8 @@ export function ImportTrades({ kind, saved }: { kind: "stock" | "crypto"; saved:
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [text, setText] = useState("");
+  const [fileName, setFileName] = useState<string | null>(null);
+  const [dragging, setDragging] = useState(false);
   // Where the file comes from: a broker's id, "spreadsheet" for your own columns, or "other".
   const [from, setFrom] = useState<string | null>(null);
   const brokers = BROKERS.filter((b) => b.kind === kind);
@@ -88,8 +91,7 @@ export function ImportTrades({ kind, saved }: { kind: "stock" | "crypto"; saved:
     },
     onSuccess: () => {
       toast.success(`${fresh.length} trade${fresh.length === 1 ? "" : "s"} imported`);
-      setText("");
-      setFrom(null);
+      reset();
       setOpen(false);
     },
     onSettled: () => {
@@ -101,65 +103,99 @@ export function ImportTrades({ kind, saved }: { kind: "stock" | "crypto"; saved:
     },
   });
 
+  function reset() {
+    setText("");
+    setFileName(null);
+    setFrom(null);
+  }
+  function onFile(file: File | undefined) {
+    if (!file) return;
+    setFileName(file.name);
+    void file.text().then(setText);
+  }
+
+  const row = "flex min-h-12 items-center gap-3 px-4 py-2.5 text-[0.9375rem]";
+  const fileInput = (
+    <input
+      type="file"
+      accept=".csv,.tsv,.txt,text/csv"
+      aria-label="CSV file"
+      className="sr-only"
+      onChange={(e) => {
+        onFile(e.target.files?.[0]);
+        // The same file can be chosen again after Change.
+        e.target.value = "";
+      }}
+    />
+  );
+  const ok = parsed != null && parsed.errors.length === 0;
+  const title =
+    from === null
+      ? "Import trades"
+      : broker
+        ? `Import from ${broker.name}`
+        : from === "spreadsheet"
+          ? "Import a spreadsheet"
+          : "Another broker";
+  const sources = [
+    ...brokers.map((b) => ({ id: b.id, label: b.name, hint: b.country })),
+    { id: "spreadsheet", label: "My own spreadsheet", hint: "Any CSV with our columns" },
+    { id: "other", label: "Another broker", hint: "Not listed here" },
+  ];
+
   return (
     <Dialog
       open={open}
       onOpenChange={(next) => {
         setOpen(next);
-        if (!next) {
-          setText("");
-          setFrom(null);
-        }
+        if (!next) reset();
       }}
     >
       <DialogTrigger className="-my-2.5 inline-flex min-h-11 items-center text-xs text-primary underline-offset-2 hover:underline">
         Import trades from CSV
       </DialogTrigger>
       <DialogContent>
+        {from !== null && (
+          <button
+            type="button"
+            onClick={reset}
+            className="-my-2 inline-flex min-h-11 items-center gap-1 self-start text-xs text-muted-foreground hover:text-foreground"
+          >
+            <ChevronLeft className="size-3.5" /> All sources
+          </button>
+        )}
         <DialogHeader>
-          <DialogTitle>Import trades</DialogTitle>
+          <DialogTitle>{title}</DialogTitle>
           <DialogDescription>
             {from === null
               ? "Where are these trades from?"
               : broker
-                ? broker.howToExport
+                ? "Upload the export as it comes. Alopex reads it on your device and shows you what it found first."
                 : from === "spreadsheet"
                   ? `A header row with date, side, ${keyColumn}, shares, price and optionally fee. Side is buy or sell; price is per share in EUR.`
                   : "Alopex doesn't read this broker's export yet."}
           </DialogDescription>
         </DialogHeader>
-        {from === null ? (
-          <div className="flex flex-col gap-2">
-            {[
-              ...brokers.map((b) => ({ id: b.id, label: b.name, hint: b.country })),
-              { id: "spreadsheet", label: "My own spreadsheet", hint: "Any CSV with our columns" },
-              { id: "other", label: "Another broker", hint: "Not listed here" },
-            ].map((o) => (
+
+        {from === null && (
+          <GroupedList className="border border-hairline">
+            {sources.map((o) => (
               <button
                 key={o.id}
                 type="button"
                 onClick={() => setFrom(o.id)}
-                className="flex min-h-11 items-center justify-between rounded-md border px-3 py-2 text-left text-sm hover:bg-muted"
+                className={cn(row, "w-full text-left hover:bg-muted")}
               >
-                <span className="font-medium">{o.label}</span>
+                <span className="flex-1 font-medium">{o.label}</span>
                 <span className="text-xs text-muted-foreground">{o.hint}</span>
+                <ChevronRight aria-hidden className="size-4 text-muted-foreground" />
               </button>
             ))}
-          </div>
-        ) : (
-          <button
-            type="button"
-            onClick={() => {
-              setFrom(null);
-              setText("");
-            }}
-            className="-my-2 inline-flex min-h-11 items-center gap-1 self-start text-xs text-muted-foreground hover:text-foreground"
-          >
-            <ChevronLeft className="size-3" /> Choose another source
-          </button>
+          </GroupedList>
         )}
+
         {from === "other" && (
-          <div className="flex flex-col gap-2 text-sm">
+          <div className="flex flex-col gap-3 text-sm">
             <p>
               <a
                 href={NEW_BROKER_URL}
@@ -177,24 +213,105 @@ export function ImportTrades({ kind, saved }: { kind: "stock" | "crypto"; saved:
             </Button>
           </div>
         )}
+
         {from !== null && from !== "other" && (
           <>
-            <input
-              type="file"
-              accept=".csv,.tsv,.txt,text/csv"
-              aria-label="CSV file"
-              onChange={(e) => {
-                void e.target.files?.[0]?.text().then(setText);
-              }}
-              className="text-sm"
-            />
+            {fileName ? (
+              <div className="flex items-center gap-3 rounded-lg border border-hairline bg-card px-4 py-3">
+                <span
+                  aria-hidden
+                  className={cn(
+                    "inline-flex size-9 shrink-0 items-center justify-center rounded-full",
+                    parsed && !ok ? "bg-negative/15 text-negative" : "bg-positive/15 text-positive",
+                  )}
+                >
+                  {parsed ? (
+                    <Check className="size-4" strokeWidth={2.5} />
+                  ) : (
+                    <Loader2 className="size-4 animate-spin" />
+                  )}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-semibold">{fileName}</span>
+                  <span className="block text-xs text-muted-foreground">
+                    {!parsed
+                      ? "Reading…"
+                      : ok
+                        ? `${parsed.trades.length} trade${parsed.trades.length === 1 ? "" : "s"} found`
+                        : "Can't be imported"}
+                  </span>
+                </span>
+                <label className="cursor-pointer text-xs text-primary underline-offset-2 hover:underline">
+                  Change
+                  {fileInput}
+                </label>
+              </div>
+            ) : (
+              <label
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setDragging(true);
+                }}
+                onDragLeave={() => setDragging(false)}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setDragging(false);
+                  onFile(e.dataTransfer.files[0]);
+                }}
+                className={cn(
+                  "flex cursor-pointer flex-col items-center rounded-lg border border-dashed border-hairline bg-card px-6 py-8 text-center transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring hover:bg-muted",
+                  dragging && "ring-2 ring-primary",
+                )}
+              >
+                <span
+                  aria-hidden
+                  className="mb-3 inline-flex size-12 items-center justify-center rounded-full bg-foreground/[0.07]"
+                >
+                  <FileUp className="size-5" strokeWidth={1.8} />
+                </span>
+                <span className="text-[0.9375rem] font-semibold">Choose CSV file</span>
+                <span className="mt-0.5 text-xs text-muted-foreground">or drop it here</span>
+                {fileInput}
+              </label>
+            )}
+
+            {broker && !fileName && (
+              <div>
+                <p className="px-1 pb-1.5 text-xs font-medium text-muted-foreground">
+                  How to get the file
+                </p>
+                <GroupedList className="border border-hairline">
+                  <ol>
+                    {broker.howToExport.map((step, i) => (
+                      <li key={step} className={cn(row, "border-hairline not-first:border-t")}>
+                        <span
+                          aria-hidden
+                          className="inline-flex size-6 shrink-0 items-center justify-center rounded-full bg-foreground/10 text-xs font-semibold"
+                        >
+                          {i + 1}
+                        </span>
+                        {step}
+                      </li>
+                    ))}
+                  </ol>
+                </GroupedList>
+                <p className="flex items-center gap-1.5 px-1 pt-1.5 text-xs text-muted-foreground">
+                  <Lock aria-hidden className="size-3" />
+                  Read on your device. Nothing is saved until you press Save.
+                </p>
+              </div>
+            )}
+
             {from === "spreadsheet" && (
               <textarea
                 aria-label="CSV text"
                 value={text}
-                onChange={(e) => setText(e.target.value)}
-                rows={6}
-                placeholder={`date,side,${keyColumn},shares,price,fee`}
+                onChange={(e) => {
+                  setText(e.target.value);
+                  setFileName(null);
+                }}
+                rows={5}
+                placeholder={`Or paste it:\ndate,side,${keyColumn},shares,price,fee`}
                 className={cn(fieldClass(), "h-auto py-2 font-mono md:text-sm")}
               />
             )}

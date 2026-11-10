@@ -99,6 +99,7 @@ describe("Trade Republic sample", () => {
 
 describe("every broker", () => {
   it.each(BROKERS.map((b) => [b.name, b] as const))("%s says how to export its file", (_, b) => {
-    expect(b.howToExport.length).toBeGreaterThan(20);
+    expect(b.howToExport.length).toBeGreaterThan(0);
+    expect(b.howToExport.every((step) => step.length > 0)).toBe(true);
   });
 });
