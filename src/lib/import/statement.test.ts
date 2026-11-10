@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   currencyCode,
   dedupeKey,
@@ -234,13 +234,19 @@ describe("untrusted values in a file", () => {
   });
 
   it("#2 rejects years before 1900 or after next year", () => {
-    const next = new Date().getFullYear() + 1;
-    expect(parseDay("0001-01-01")).toBeNull();
-    expect(parseDay("1899-12-31")).toBeNull();
-    expect(parseDay("9999-12-31")).toBeNull();
-    expect(parseDay(`${next + 1}-01-01`)).toBeNull();
-    expect(parseDay("1900-01-01")).toBe("1900-01-01");
-    expect(parseDay(`${next}-12-31`)).toBe(`${next}-12-31`);
+    // polish-3 #19: a fixed "today", so the edge is a literal and New Year can't flake it.
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-06-01T12:00:00Z"));
+    try {
+      expect(parseDay("0001-01-01")).toBeNull();
+      expect(parseDay("1899-12-31")).toBeNull();
+      expect(parseDay("9999-12-31")).toBeNull();
+      expect(parseDay("2028-01-01")).toBeNull();
+      expect(parseDay("1900-01-01")).toBe("1900-01-01");
+      expect(parseDay("2027-12-31")).toBe("2027-12-31");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("#3 strips control characters and caps descriptions at 500 characters", () => {
