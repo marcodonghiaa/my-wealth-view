@@ -5,6 +5,8 @@ import type { ReactNode } from "react";
 import type { SplitwiseShare, TransactionRow } from "@/lib/transactions";
 
 type Call = {
+  table?: string;
+  insert?: unknown;
   update: unknown;
   eq: Record<string, unknown>;
   is: Record<string, unknown>;
@@ -12,13 +14,20 @@ type Call = {
 };
 const calls: Call[] = [];
 const rpc = vi.fn();
+const getUser = vi.fn(async () => ({ data: { user: { id: "u1" } as { id: string } | null } }));
+let insertError: Error | null = null;
 
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
     rpc: (...args: unknown[]) => rpc(...args),
-    from: () => {
-      const call: Call = { update: null, eq: {}, is: {}, in: {} };
+    auth: { getUser: () => getUser() },
+    from: (table: string) => {
+      const call: Call = { table, update: null, eq: {}, is: {}, in: {} };
       const q = {
+        insert(row: unknown) {
+          call.insert = row;
+          return q;
+        },
         update(u: unknown) {
           call.update = u;
           return q;
@@ -35,9 +44,9 @@ vi.mock("@/integrations/supabase/client", () => ({
           call.in[col] = vals;
           return q;
         },
-        then(resolve: (v: { error: null }) => void) {
+        then(resolve: (v: { error: Error | null }) => void) {
           calls.push(call);
-          resolve({ error: null });
+          resolve({ error: call.insert ? insertError : null });
         },
       };
       return q;
@@ -53,6 +62,8 @@ import {
   useManualAmountMutation,
   restorePatch,
   useRenameMerchantMutation,
+  useResolvePairMutation,
+  useReviewGroupMutation,
   useShareMutation,
   useSettleSplitMutation,
   useSplitMutation,
@@ -92,6 +103,7 @@ function setup() {
 
 beforeEach(() => {
   calls.length = 0;
+  insertError = null;
 });
 
 describe("transaction mutations are scoped to one account", () => {
@@ -182,7 +194,11 @@ describe("transaction mutations are scoped to one account", () => {
         value: "Transfer",
       }),
     );
-    expect(calls[0]?.update).toEqual({ category: "Transfer", flow_type: "transfer" });
+    expect(calls[0]?.update).toEqual({
+      category: "Transfer",
+      flow_type: "transfer",
+      flow_source: "user",
+    });
     expect(cached().map((r) => r.account_uid)).toEqual(["a2"]);
   });
 
@@ -213,7 +229,11 @@ describe("transaction mutations are scoped to one account", () => {
       }),
     );
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(calls[0]?.update).toEqual({ category: "Transfer", flow_type: "transfer" });
+    expect(calls[0]?.update).toEqual({
+      category: "Transfer",
+      flow_type: "transfer",
+      flow_source: "user",
+    });
     expect(cached().map((r) => r.account_uid)).toEqual(["a1"]);
   });
 
@@ -227,7 +247,11 @@ describe("transaction mutations are scoped to one account", () => {
         category: "Transfer",
       }),
     );
-    expect(calls[0]?.update).toEqual({ category: "Transfer", flow_type: "transfer" });
+    expect(calls[0]?.update).toEqual({
+      category: "Transfer",
+      flow_type: "transfer",
+      flow_source: "user",
+    });
     expect(calls[0]?.eq).toEqual({ account_uid: "a1", entry_reference: "r1" });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ["income"] });
   });
@@ -387,7 +411,7 @@ describe("Moving a transfer back to spend or income", () => {
   it("writes spend for a debit on that one account and drops it from the transfers list", async () => {
     const { result, cached } = setupTransfers();
     await act(() => result.current.mutateAsync({ tx: transfer("a1", "r1", "DBIT") }));
-    expect(calls[0]?.update).toEqual({ flow_type: "spend" });
+    expect(calls[0]?.update).toEqual({ flow_type: "spend", flow_source: "user" });
     expect(calls[0]?.eq).toEqual({ account_uid: "a1", entry_reference: "r1" });
     expect(cached().map((r) => r.entry_reference)).toEqual(["r2"]);
   });
@@ -395,7 +419,7 @@ describe("Moving a transfer back to spend or income", () => {
   it("writes income for a credit", async () => {
     const { result } = setupTransfers();
     await act(() => result.current.mutateAsync({ tx: transfer("a2", "r2", "CRDT") }));
-    expect(calls[0]?.update).toEqual({ flow_type: "income" });
+    expect(calls[0]?.update).toEqual({ flow_type: "income", flow_source: "user" });
   });
 });
 
@@ -405,6 +429,7 @@ describe("restorePatch", () => {
   it("clears the Transfer label so the next sync categorizes the row", () => {
     expect(restorePatch({ credit_debit_indicator: "DBIT", category: "Transfer" })).toEqual({
       flow_type: "spend",
+      flow_source: "user",
       category: null,
       category_source: null,
     });
@@ -413,6 +438,132 @@ describe("restorePatch", () => {
   it("keeps any other category", () => {
     expect(restorePatch({ credit_debit_indicator: "CRDT", category: "Income" })).toEqual({
       flow_type: "income",
+      flow_source: "user",
     });
+  });
+});
+
+describe("auto-paired transfers", () => {
+  function setupPair() {
+    const queryClient = new QueryClient({ defaultOptions: { mutations: { retry: false } } });
+    const invalidate = vi.spyOn(queryClient, "invalidateQueries");
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    );
+    const { result } = renderHook(() => useResolvePairMutation(queryClient), { wrapper });
+    return { result, invalidate };
+  }
+
+  // protects=Keep / Not a transfer reach the database and every list refreshes
+  it("calls resolve_transfer_pair and refetches the flows and the pairs", async () => {
+    rpc.mockResolvedValue({ data: null, error: null });
+    const { result, invalidate } = setupPair();
+    await act(() => result.current.mutateAsync({ pairId: "p1", keep: false }));
+    expect(rpc).toHaveBeenCalledWith("resolve_transfer_pair", { p_pair: "p1", p_keep: false });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ["transfers"] });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ["transfer-pairs"] });
+  });
+
+  it("surfaces an rpc error", async () => {
+    rpc.mockResolvedValue({ data: null, error: new Error("nope") });
+    const { result } = setupPair();
+    await expect(
+      act(() => result.current.mutateAsync({ pairId: "p1", keep: true })),
+    ).rejects.toThrow("nope");
+  });
+});
+
+describe("settling a To review group", () => {
+  const rr = (account_uid: string, ref: string, dir: string) => ({
+    account_uid,
+    entry_reference: ref,
+    booking_date: "2026-10-02",
+    category: "Transfer",
+    creditor_name: "Revolut",
+    merchant_key: "revolut",
+    currency: "EUR",
+    amount: 10,
+    credit_debit_indicator: dir,
+    flow_type: dir === "DBIT" ? "spend" : "income",
+    flow_source: "default",
+  });
+  const group = (rows: ReturnType<typeof rr>[], name: string | null = "Revolut") => ({
+    key: "revolut",
+    name,
+    rows,
+    totals: [],
+    direction: "mixed" as const,
+  });
+  function setupGroup() {
+    const queryClient = new QueryClient({ defaultOptions: { mutations: { retry: false } } });
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    );
+    return renderHook(() => useReviewGroupMutation(queryClient), { wrapper }).result;
+  }
+
+  it("transfer: marks every row as the user's transfer and adds a rule for the name", async () => {
+    const result = setupGroup();
+    await act(() =>
+      result.current.mutateAsync({ group: group([rr("a1", "r1", "DBIT")]), choice: "transfer" }),
+    );
+    expect(calls[0]?.update).toEqual({ flow_type: "transfer", flow_source: "user" });
+    expect(calls[0]?.eq).toEqual({ account_uid: "a1" });
+    expect(calls[1]?.table).toBe("category_rules");
+    expect(calls[1]?.insert).toEqual({
+      user_id: "u1",
+      match_field: "creditor_name",
+      match_text: "Revolut",
+      set_category: null,
+      set_flow_type: "transfer",
+    });
+  });
+
+  // protects=a mixed group counts each row by its own direction, never a credit as spend
+  it("count: debits become spend and credits income", async () => {
+    const result = setupGroup();
+    await act(() =>
+      result.current.mutateAsync({
+        group: group([rr("a1", "r1", "DBIT"), rr("a1", "r2", "CRDT")]),
+        choice: "count",
+      }),
+    );
+    expect(calls[0]).toMatchObject({
+      update: { flow_type: "spend", flow_source: "user" },
+      in: { entry_reference: ["r1"] },
+    });
+    expect(calls[1]).toMatchObject({
+      update: { flow_type: "income", flow_source: "user" },
+      in: { entry_reference: ["r2"] },
+    });
+    expect(calls[2]?.insert).toMatchObject({ set_flow_type: "spend" });
+  });
+
+  it("adds no rule when the rows have no name to match", async () => {
+    const result = setupGroup();
+    await act(() =>
+      result.current.mutateAsync({ group: group([rr("a1", "r1", "DBIT")], null), choice: "count" }),
+    );
+    expect(calls.map((c) => c.table)).toEqual(["transactions"]);
+  });
+
+  it("fails when signed out", async () => {
+    getUser.mockResolvedValueOnce({ data: { user: null } });
+    const result = setupGroup();
+    await expect(
+      act(() =>
+        result.current.mutateAsync({ group: group([rr("a1", "r1", "DBIT")]), choice: "count" }),
+      ),
+    ).rejects.toThrow("signed out");
+  });
+
+  it("surfaces a rule insert error", async () => {
+    insertError = new Error("denied");
+    const result = setupGroup();
+    await expect(
+      act(() =>
+        result.current.mutateAsync({ group: group([rr("a1", "r1", "DBIT")]), choice: "count" }),
+      ),
+    ).rejects.toThrow("denied");
   });
 });

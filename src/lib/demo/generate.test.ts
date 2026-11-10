@@ -243,7 +243,12 @@ describe("generateDemoData: the dashboard tells one story", () => {
       .filter((s) => s.account_uid === "demo-acc-savings")
       .sort((a, b) => a.snapshot_date.localeCompare(b.snapshot_date));
     const moved = db.transactions
-      .filter((t) => t.flow_type === "transfer" && t.booking_date! > first[0]!.snapshot_date)
+      .filter(
+        (t) =>
+          t.account_uid === "demo-acc-main" &&
+          t.flow_type === "transfer" &&
+          t.booking_date! > first[0]!.snapshot_date,
+      )
       .reduce((s, t) => s + t.amount, 0);
     expect(first.at(-1)!.amount - first[0]!.amount).toBeCloseTo(moved, 1);
   });

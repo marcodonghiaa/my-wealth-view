@@ -25,6 +25,8 @@ import {
 } from "@/lib/transactions";
 import { BulkCategoryPicker } from "@/components/transactions/pickers";
 import { TransfersSection } from "@/components/transactions/transfers-section";
+import { ReviewSection } from "@/components/transactions/review-section";
+import { pairIdByTx, reviewGroups, type ReviewRow, type TransferPair } from "@/lib/transfer-review";
 import { AddTransaction } from "@/components/transactions/add-transaction";
 import { ImportStatement } from "@/components/transactions/import-statement";
 import {
@@ -33,6 +35,8 @@ import {
   useFlowMutation,
   useManualAmountMutation,
   useRenameMerchantMutation,
+  useResolvePairMutation,
+  useReviewGroupMutation,
   useShareMutation,
   useSplitMutation,
   useTransactionFieldMutation,
@@ -100,6 +104,34 @@ async function fetchTransfersForMonth(month: Date): Promise<Array<TransactionRow
     .order("entry_reference", { ascending: false });
   if (error) throw error;
   return (data ?? []) as Array<TransactionRow>;
+}
+
+// Transfers the sync paired on its own, waiting for a yes or no.
+async function fetchSuggestedPairs(): Promise<Array<TransferPair>> {
+  const { data, error } = await supabase
+    .from("transfer_pairs")
+    .select("id,out_account_uid,out_ref,in_account_uid,in_ref")
+    .eq("status", "suggested");
+  if (error) throw error;
+  return data ?? [];
+}
+
+// Last year's rows whose category could disagree with how they count (filtered in reviewGroups).
+// The table, not the view: rules match the bank's name and rows group by merchant_key.
+async function fetchReviewRows(): Promise<Array<ReviewRow>> {
+  const now = new Date();
+  const { data, error } = await supabase
+    .from("transactions")
+    .select(
+      "entry_reference,account_uid,booking_date,category,creditor_name,merchant_key,currency,amount,credit_debit_indicator,flow_type,flow_source",
+    )
+    .in("category", ["Transfer", "Income"])
+    .is("deleted_at", null)
+    .gte("booking_date", formatISODate(new Date(now.getFullYear() - 1, now.getMonth(), 1)))
+    .order("booking_date", { ascending: false })
+    .limit(2000);
+  if (error) throw error;
+  return data ?? [];
 }
 
 // My share of Splitwise expenses in the month (shares already paid by card are bank rows).
@@ -181,6 +213,22 @@ function TransactionsPage() {
     staleTime: 60_000,
   });
   const transfers = transfersQuery.data ?? [];
+
+  const pairsQuery = useQuery({
+    queryKey: ["transfer-pairs"],
+    queryFn: fetchSuggestedPairs,
+    staleTime: 60_000,
+  });
+  const pairIdOf = useMemo(() => pairIdByTx(pairsQuery.data ?? []), [pairsQuery.data]);
+  const resolvePair = useResolvePairMutation(queryClient);
+
+  const reviewQuery = useQuery({
+    queryKey: ["transfer-review"],
+    queryFn: fetchReviewRows,
+    staleTime: 5 * 60_000,
+  });
+  const review = useMemo(() => reviewGroups(reviewQuery.data ?? []), [reviewQuery.data]);
+  const decideGroup = useReviewGroupMutation(queryClient);
 
   const contactsQuery = useQuery({
     queryKey: ["split-contacts"],
@@ -379,6 +427,12 @@ function TransactionsPage() {
         </div>
       )}
 
+      <ReviewSection
+        groups={review}
+        savingKey={decideGroup.isPending ? decideGroup.variables.group.key : undefined}
+        onDecide={(group, choice) => decideGroup.mutate({ group, choice })}
+      />
+
       <MonthSwitcher
         className="mb-4"
         label={monthLabel}
@@ -571,6 +625,9 @@ function TransactionsPage() {
           rows={transfers}
           savingId={restoreTransfer.isPending ? txId(restoreTransfer.variables.tx) : undefined}
           onRestore={(tx) => restoreTransfer.mutate({ tx })}
+          pairIdOf={pairIdOf}
+          savingPair={resolvePair.isPending ? resolvePair.variables.pairId : undefined}
+          onResolvePair={(pairId, keep) => resolvePair.mutate({ pairId, keep })}
         />
       )}
     </div>
