@@ -3,7 +3,7 @@ import type { SplitRow } from "@/lib/splits";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import type { TablesUpdate } from "@/integrations/supabase/types";
-import type { ReviewGroup } from "@/lib/transfer-review";
+import type { ReviewGroup, ReviewRow } from "@/lib/transfer-review";
 import {
   restoredFlow,
   txId,
@@ -408,7 +408,8 @@ export type ReviewChoice = "transfer" | "count";
 // Settles a "To review" group: its rows take the chosen flow (a non-transfer row counts by its
 // own direction), and a rule makes future rows from the same name follow.
 export function useReviewGroupMutation(queryClient: QueryClient) {
-  return useMutation<void, Error, { group: ReviewGroup; choice: ReviewChoice }>({
+  type Context = { previous: Array<ReviewRow> | undefined };
+  return useMutation<void, Error, { group: ReviewGroup; choice: ReviewChoice }, Context>({
     mutationFn: async ({ group, choice }) => {
       if (choice === "transfer") {
         await updateTxs(group.rows, { flow_type: "transfer", flow_source: "user" });
@@ -444,7 +445,20 @@ export function useReviewGroupMutation(queryClient: QueryClient) {
           });
       if (error) throw error;
     },
-    onError: (error) => toast.error("Couldn't save", { description: error.message }),
+    // The group leaves the list at once; the saves and refetches run behind it.
+    onMutate: async ({ group }) => {
+      await queryClient.cancelQueries({ queryKey: ["transfer-review"] });
+      const previous = queryClient.getQueryData<Array<ReviewRow>>(["transfer-review"]);
+      const ids = new Set(group.rows.map(txId));
+      queryClient.setQueryData<Array<ReviewRow>>(["transfer-review"], (old) =>
+        old?.filter((r) => !ids.has(txId(r))),
+      );
+      return { previous };
+    },
+    onError: (error, _vars, context) => {
+      if (context?.previous) queryClient.setQueryData(["transfer-review"], context.previous);
+      toast.error("Couldn't save", { description: error.message });
+    },
     onSuccess: (_data, { group }) =>
       toast.success(
         `Updated ${group.rows.length} transaction${group.rows.length === 1 ? "" : "s"}`,

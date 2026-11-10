@@ -536,6 +536,34 @@ describe("settling a To review group", () => {
     );
     return renderHook(() => useReviewGroupMutation(queryClient), { wrapper }).result;
   }
+  function setupGroupWithCache(rows: Array<ReturnType<typeof rr>>) {
+    const queryClient = new QueryClient({ defaultOptions: { mutations: { retry: false } } });
+    queryClient.setQueryData(["transfer-review"], rows);
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    );
+    const result = renderHook(() => useReviewGroupMutation(queryClient), { wrapper }).result;
+    return { result, queryClient };
+  }
+
+  // protects=answering a group feels instant: it leaves the list before the saves finish
+  it("removes the answered group from the review list right away", async () => {
+    const a = rr("a1", "r1", "DBIT");
+    const other = rr("a1", "r9", "DBIT");
+    const { result, queryClient } = setupGroupWithCache([a, other]);
+    await act(() => result.current.mutateAsync({ group: group([a]), choice: "transfer" }));
+    expect(queryClient.getQueryData(["transfer-review"])).toEqual([other]);
+  });
+
+  it("puts the group back when the save fails", async () => {
+    insertError = new Error("denied");
+    const a = rr("a1", "r1", "DBIT");
+    const { result, queryClient } = setupGroupWithCache([a]);
+    await expect(
+      act(() => result.current.mutateAsync({ group: group([a]), choice: "count" })),
+    ).rejects.toThrow("denied");
+    expect(queryClient.getQueryData(["transfer-review"])).toEqual([a]);
+  });
 
   it("transfer: marks every row as the user's transfer and adds a rule for the name", async () => {
     const result = setupGroup();
