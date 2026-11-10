@@ -4,16 +4,34 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 type Row = Record<string, unknown>;
 const db: Record<string, Array<Row>> = {};
-const upserts: Array<{ rows: Array<Row>; opts: unknown }> = [];
+const upsertCalls: Array<{ rows: Array<Row>; opts: unknown }> = [];
+const upserts = upsertCalls;
 let failTable: string | null = null;
+let failUpsert: string | null = null;
 
+// A small in-memory PostgREST: filters, order and range really apply, so a wrong date range or
+// a missing filter in the page shows up as wrong figures, and the 1000-row cap is real.
+const CAP = 1000;
+const cmp = (a: unknown, b: unknown) => String(a).localeCompare(String(b));
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
     from: (table: string) => {
+      const filters: Array<(r: Row) => boolean> = [];
+      const sorts: Array<string> = [];
+      let from = 0;
+      let to = CAP - 1;
       const q: Record<string, unknown> = {};
-      for (const m of ["select", "eq", "gte", "lte", "lt", "order", "is"]) q[m] = () => q;
+      q["select"] = () => q;
+      q["eq"] = (c: string, v: unknown) => (filters.push((r) => r[c] === v), q);
+      q["gte"] = (c: string, v: unknown) => (filters.push((r) => cmp(r[c], v) >= 0), q);
+      q["lte"] = (c: string, v: unknown) => (filters.push((r) => cmp(r[c], v) <= 0), q);
+      q["lt"] = (c: string, v: unknown) => (filters.push((r) => cmp(r[c], v) < 0), q);
+      q["in"] = (c: string, v: Array<unknown>) => (filters.push((r) => v.includes(r[c])), q);
+      q["order"] = (c: string) => (sorts.push(c), q);
+      q["range"] = (a: number, b: number) => ((from = a), (to = b), q);
       q["upsert"] = (rows: Array<Row>, opts: unknown) => {
-        upserts.push({ rows, opts });
+        upsertCalls.push({ rows, opts });
+        if (failUpsert) return Promise.resolve({ error: { message: failUpsert } });
         for (const r of rows) {
           const list = (db[table] ??= []);
           const i = list.findIndex(
@@ -24,12 +42,13 @@ vi.mock("@/integrations/supabase/client", () => ({
         }
         return Promise.resolve({ error: null });
       };
-      q["then"] = (resolve: (v: unknown) => void) =>
-        resolve(
-          table === failTable
-            ? { data: null, error: { message: "relation does not exist" } }
-            : { data: db[table] ?? [], error: null },
-        );
+      q["then"] = (resolve: (v: unknown) => void) => {
+        if (table === failTable)
+          return resolve({ data: null, error: { message: "relation does not exist" } });
+        let rows = (db[table] ?? []).filter((r) => filters.every((f) => f(r)));
+        for (const c of [...sorts].reverse()) rows = [...rows].sort((a, b) => cmp(a[c], b[c]));
+        resolve({ data: rows.slice(from, Math.min(to + 1, from + CAP)), error: null });
+      };
       return q;
     },
   },
@@ -55,6 +74,7 @@ beforeEach(() => {
   for (const k of Object.keys(db)) delete db[k];
   upserts.length = 0;
   failTable = null;
+  failUpsert = null;
   db["v_spend_by_category_monthly"] = [
     { month: "2026-09-01", category: "Groceries", spend_eur: 300 },
     { month: "2026-10-01", category: "Groceries", spend_eur: 320 },
@@ -63,8 +83,8 @@ beforeEach(() => {
     { month: "2026-11-01", category: "Dine Out", spend_eur: 60 },
   ];
   db["v_transactions_eur"] = [
-    { booking_date: "2026-06-27", signed_amount_eur: 4000 },
-    { booking_date: "2026-11-27", signed_amount_eur: 2000 },
+    { booking_date: "2026-06-27", signed_amount_eur: 4000, flow_type: "income" },
+    { booking_date: "2026-11-27", signed_amount_eur: 2000, flow_type: "income" },
   ];
 });
 afterEach(() => vi.useRealTimers());
@@ -157,5 +177,28 @@ describe("Budgets page", () => {
     const alert = await screen.findByRole("alert");
     expect(alert.textContent).toContain("relation does not exist");
     expect(alert.textContent).toContain("UPGRADING.md");
+  });
+
+  // protects=rollover over a long history is not cut at PostgREST's 1000-row cap;
+  // fails_when=the spend history is read in one request
+  it("reads every page of a long spend history", async () => {
+    const months = Array.from({ length: 48 }, (_, i) => {
+      const d = new Date(2022, 11 + i, 1);
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-01`;
+    });
+    // 30 categories × 48 months = 1440 rows; only Groceries is budgeted, from the first month.
+    db["v_spend_by_category_monthly"] = months.flatMap((month) =>
+      Array.from({ length: 30 }, (_, c) => ({
+        month,
+        category: c === 0 ? "Groceries" : `Cat ${String(c).padStart(2, "0")}`,
+        spend_eur: c === 0 ? 90 : 5,
+      })),
+    );
+    db["category_budgets"] = [
+      { category: "Groceries", month: months[0], amount: 100, rollover: true },
+    ];
+    renderPage();
+    // 47 earlier months each leave 10 → 470 carried; this month 100 + 470 − 90 = 480 left.
+    expect(await screen.findByText("€480.00 left")).toBeTruthy();
   });
 });

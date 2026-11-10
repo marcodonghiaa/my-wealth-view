@@ -50,18 +50,44 @@ async function fetchBudgets(): Promise<Array<BudgetRow>> {
   return ((data ?? []) as Array<BudgetRow>).map((r) => ({ ...r, amount: Number(r.amount) }));
 }
 
-async function fetchSpend(from: string, to: string): Promise<Array<MonthSpend>> {
-  const { data, error } = await supabase
-    .from("v_spend_by_category_monthly")
-    .select("month,category,spend_eur")
-    .gte("month", from)
-    .lte("month", to);
-  if (error) throw error;
-  return ((data ?? []) as Array<Partial<MonthSpend>>).map((r) => ({
-    month: String(r.month),
-    category: r.category ?? "Uncategorized",
-    spend_eur: Number(r.spend_eur ?? 0),
-  }));
+const PAGE_SIZE = 1000; // PostgREST returns at most 1000 rows per request
+
+/**
+ * Spend per month and category from `from` to `to`, every page of it. With `categories`, only
+ * those (a long rollover history needs only the budgeted ones).
+ */
+async function fetchSpend(
+  from: string,
+  to: string,
+  categories?: ReadonlyArray<string>,
+): Promise<Array<MonthSpend>> {
+  if (from > to || categories?.length === 0) return [];
+  const out: Array<MonthSpend> = [];
+  for (let start = 0; ; start += PAGE_SIZE) {
+    let q = supabase
+      .from("v_spend_by_category_monthly")
+      .select("month,category,spend_eur")
+      .gte("month", from)
+      .lte("month", to);
+    if (categories) q = q.in("category", [...categories]);
+    const { data, error } = await q
+      .order("month")
+      .order("category")
+      .range(start, start + PAGE_SIZE - 1);
+    if (error) throw error;
+    const page = (data ?? []) as Array<{
+      month: string;
+      category: string | null;
+      spend_eur: number | null;
+    }>;
+    for (const r of page)
+      out.push({
+        month: String(r.month),
+        category: r.category ?? "Uncategorized",
+        spend_eur: Number(r.spend_eur ?? 0),
+      });
+    if (page.length < PAGE_SIZE) return out;
+  }
 }
 
 async function fetchIncomeByMonth(from: string, before: string): Promise<Map<string, number>> {
@@ -108,13 +134,17 @@ function BudgetsPage() {
 
   const budgetsQuery = useQuery({ queryKey: BUDGETS_KEY, queryFn: fetchBudgets });
   const rows = useMemo(() => budgetsQuery.data ?? [], [budgetsQuery.data]);
-  const earliest = rows.reduce(
-    (a, r) => (r.month < a ? r.month : a),
-    addMonths(monthIso, -HISTORY_MONTHS),
-  );
+  // Recent months for every category (averages, unbudgeted spend); older months only for the
+  // budgeted categories, as far back as their first budget (rollover).
+  const recentFrom = addMonths(monthIso, -HISTORY_MONTHS);
+  const earliest = rows.reduce((a, r) => (r.month < a ? r.month : a), recentFrom);
+  const budgetedCategories = [...new Set(rows.map((r) => r.category))].sort();
   const spendQuery = useQuery({
-    queryKey: ["budget-spend", earliest, monthIso],
-    queryFn: () => fetchSpend(earliest, monthIso),
+    queryKey: ["budget-spend", earliest, monthIso, budgetedCategories],
+    queryFn: async () => [
+      ...(await fetchSpend(earliest, addMonths(recentFrom, -1), budgetedCategories)),
+      ...(await fetchSpend(recentFrom, monthIso)),
+    ],
     enabled: budgetsQuery.isSuccess,
   });
   const incomeQuery = useQuery({
