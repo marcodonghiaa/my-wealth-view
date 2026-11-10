@@ -280,7 +280,18 @@ describe("parseAmount", () => {
     expect(parseAmount(" 250 ")).toBe(250);
     expect(parseAmount("250,5")).toBe(250.5);
     expect(parseAmount("0")).toBe(0);
-    expect(parseAmount("12.345")).toBe(12.35);
+    expect(parseAmount("12.3456")).toBe(12.35);
+  });
+  // protects=P1-1 thousands separators; fails_when="1.250" saves as €1.25
+  it("reads thousands separators either way, and nothing but plain numbers", () => {
+    expect(parseAmount("1.250")).toBe(1250);
+    expect(parseAmount("1,250")).toBe(1250);
+    expect(parseAmount("1.250,50")).toBe(1250.5);
+    expect(parseAmount("1,250.50")).toBe(1250.5);
+    expect(parseAmount("12.34")).toBe(12.34);
+    expect(parseAmount("12,345")).toBe(12345);
+    expect(parseAmount("1e3")).toBeNull();
+    expect(parseAmount("0x10")).toBeNull();
   });
   // protects=a cleared field never removes a budget; fails_when=blank parses as 0
   it("refuses blank, text and negatives", () => {
