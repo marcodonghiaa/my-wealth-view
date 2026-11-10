@@ -657,6 +657,19 @@ describe("settling a To review group", () => {
     expect(calls.map((c) => c.table)).toEqual(["transactions"]);
   });
 
+  // Polish pass 2 re-audit: rule text is capped at 200 in the database, so a longer bank name
+  // would make the whole answer fail. The rows are still answered; only the rule is skipped.
+  it("adds no rule for a name longer than a rule can hold", async () => {
+    const result = setupGroup();
+    await act(() =>
+      result.current.mutateAsync({
+        group: group([rr("a1", "r1", "DBIT")], "x".repeat(201)),
+        choice: "count",
+      }),
+    );
+    expect(calls.map((c) => c.table)).toEqual(["transactions"]);
+  });
+
   it("fails when signed out", async () => {
     getUser.mockResolvedValueOnce({ data: { user: null } });
     const result = setupGroup();

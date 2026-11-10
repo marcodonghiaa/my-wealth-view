@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import type { TablesUpdate } from "@/integrations/supabase/types";
 import type { ReviewGroup, ReviewRow } from "@/lib/transfer-review";
+import { MAX_MATCH_TEXT } from "@/lib/rules";
 import {
   restoredFlow,
   txId,
@@ -429,7 +430,8 @@ export function useReviewGroupMutation(queryClient: QueryClient) {
         await updateTxs(debits, { flow_type: "spend", flow_source: "user" });
         await updateTxs(credits, { flow_type: "income", flow_source: "user" });
       }
-      if (!group.name) return; // nothing a rule could match on
+      // Nothing a rule could match on, or a name longer than a rule can hold.
+      if (!group.name || group.name.length > MAX_MATCH_TEXT) return;
       const { data } = await supabase.auth.getUser();
       if (!data.user) throw new Error("You are signed out. Sign in again.");
       // The sync reads "spend" and "income" alike as "not a transfer: count by direction".
