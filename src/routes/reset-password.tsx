@@ -74,7 +74,10 @@ export function ResetPasswordPage() {
     setError(null);
     setPending(true);
     try {
-      if (needsCode) await verifyMfaCode(code);
+      if (needsCode) {
+        await verifyMfaCode(code);
+        setNeedsCode(false); // The session is now aal2: a retry needs no new code.
+      }
       const { error: updateError } = await supabase.auth.updateUser({ password });
       if (updateError) throw updateError;
       await navigate({ to: "/", replace: true });

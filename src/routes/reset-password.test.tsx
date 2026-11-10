@@ -81,6 +81,29 @@ describe("ResetPasswordPage", () => {
     expect(navigate).not.toHaveBeenCalled();
   });
 
+  // protects=a user whose new password is refused can fix it without a new code;
+  // fails_when=the accepted code is checked again on retry (a spent try, maybe expired by then)
+  it("does not check the code again after it was accepted", async () => {
+    session = { user: { id: "u" } };
+    mfa.needsMfaCode.mockResolvedValue(true);
+    updateUser.mockImplementationOnce(async () => ({ error: new Error("Password is too weak") }));
+    render(<ResetPasswordPage />);
+    fireEvent.change(await screen.findByLabelText("New password"), {
+      target: { value: "correct horse" },
+    });
+    fireEvent.change(await screen.findByLabelText("Authenticator code"), {
+      target: { value: "123456" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save and sign in" }));
+    await screen.findByRole("alert");
+    fireEvent.change(screen.getByLabelText("New password"), {
+      target: { value: "correct horse battery" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save and sign in" }));
+    await waitFor(() => expect(navigate).toHaveBeenCalledWith({ to: "/", replace: true }));
+    expect(mfa.verifyMfaCode).toHaveBeenCalledTimes(1);
+  });
+
   it("asks for no code when the account has no authenticator", async () => {
     session = { user: { id: "u" } };
     render(<ResetPasswordPage />);
