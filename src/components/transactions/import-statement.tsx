@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import {
+  NO_COLUMNS,
   readStatement,
   type DateOrder,
   type Statement,
@@ -38,15 +39,6 @@ const FIELD_LABELS: Array<[keyof StatementColumns, string]> = [
   ["out", "Money out"],
   ["direction", "In/out marker (D/C, Soll/Haben…)"],
 ];
-
-const NO_COLUMNS: StatementColumns = {
-  date: null,
-  description: null,
-  amount: null,
-  in: null,
-  out: null,
-  direction: null,
-};
 
 const field = fieldClass();
 

@@ -33,7 +33,7 @@ const DAY_MS = 86_400_000;
 // amount like "1500" is never mistaken for a date.
 const EXCEL_SERIAL_RANGE = [20_000, 80_000] as const;
 
-const pad = (n: number) => String(n).padStart(2, "0");
+export const pad = (n: number) => String(n).padStart(2, "0");
 const validMonth = (m: number) => m >= 1 && m <= 12;
 const validDay = (d: number) => d >= 1 && d <= 31;
 const ym = (year: number, month: number) => `${year}-${pad(month)}`;
@@ -64,14 +64,16 @@ export function parseMonth(raw: string): string | null {
     return index === -1 ? null : ym(Number(m[2]), index + 1);
   }
 
-  if (/^\d{5}$/.test(s)) {
-    const serial = Number(s);
-    if (serial < EXCEL_SERIAL_RANGE[0] || serial > EXCEL_SERIAL_RANGE[1]) return null;
-    const d = new Date(EXCEL_EPOCH_MS + serial * DAY_MS);
-    return ym(d.getUTCFullYear(), d.getUTCMonth() + 1);
-  }
+  const d = excelDay(s);
+  return d ? ym(d.getUTCFullYear(), d.getUTCMonth() + 1) : null;
+}
 
-  return null;
+/** An Excel day number ("46137") as a UTC date, or null for anything else. */
+export function excelDay(text: string): Date | null {
+  if (!/^\d{5}$/.test(text)) return null;
+  const serial = Number(text);
+  if (serial < EXCEL_SERIAL_RANGE[0] || serial > EXCEL_SERIAL_RANGE[1]) return null;
+  return new Date(EXCEL_EPOCH_MS + serial * DAY_MS);
 }
 
 const THOUSANDS_GROUPS = /^\d{1,3}([.,]\d{3})+$/;

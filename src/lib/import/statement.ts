@@ -2,7 +2,15 @@
 // Works out the layout by itself: separator, decimal mark, day/month order, which columns hold
 // what, and how money out is told apart from money in. Known exports go through a preset.
 import { appLocale, monthFirst } from "@/lib/locale";
-import { detectDecimal, monthNumber, parseAmount, type DecimalMark } from "./normalize";
+import { cleanHeader as clean, headerMatches } from "./guess-columns";
+import {
+  detectDecimal,
+  excelDay,
+  monthNumber,
+  pad,
+  parseAmount,
+  type DecimalMark,
+} from "./normalize";
 import { parseCsv } from "./parse-csv";
 import { findPreset, presetColumns } from "./statement-presets";
 
@@ -193,14 +201,6 @@ const IN_WORDS = new Set([
   "abono",
 ]);
 
-const clean = (header: string) =>
-  header
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim();
-
 // A direction cell as a word: "Débit" → "debit", "+" stays "+".
 const word = (text: string) =>
   text.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[.:]$/, "").trim();
@@ -223,7 +223,8 @@ export function currencyCode(text: string): string | undefined {
   return /^[A-Z]{3}$/.test(code) ? code : undefined;
 }
 
-const NO_COLUMNS = (): StatementColumns => ({
+/** No column picked yet. */
+export const NO_COLUMNS: Readonly<StatementColumns> = Object.freeze({
   date: null,
   description: null,
   amount: null,
@@ -236,7 +237,7 @@ const NO_COLUMNS = (): StatementColumns => ({
 export function guessStatementColumns(headers: Array<string>): StatementColumns {
   const names = headers.map(clean);
   const taken = new Set<number>();
-  const result = NO_COLUMNS();
+  const result: StatementColumns = { ...NO_COLUMNS };
   for (const field of FIELDS) {
     // Exact names first, so "Data" wins over "Data valuta" and "Descrizione" over its longer twin.
     for (const exact of [true, false]) {
@@ -261,8 +262,6 @@ export function guessStatementColumns(headers: Array<string>): StatementColumns 
 const usable = (c: StatementColumns) =>
   c.date != null && c.description != null && (c.amount != null || c.in != null || c.out != null);
 
-const EXCEL_EPOCH_MS = Date.UTC(1899, 11, 30);
-const pad = (n: number) => String(n).padStart(2, "0");
 const SHORT_DATE = /^(\d{1,2})[/.-](\d{1,2})[/.-](\d{2}|\d{4})$/;
 // Two-digit years: 70-99 are the 1900s, the rest the 2000s.
 const fullYear = (year: number) => (year >= 100 ? year : year >= 70 ? 1900 + year : 2000 + year);
@@ -284,8 +283,8 @@ export function parseDay(raw: string, order: DateOrder = "DMY"): string | null {
     [y, m, d] = [fullYear(year), order === "MDY" ? a : b, order === "MDY" ? b : a];
   } else if ((match = /^((?:19|20)\d{2})(\d{2})(\d{2})$/.exec(s))) {
     [y, m, d] = [Number(match[1]), Number(match[2]), Number(match[3])];
-  } else if (/^\d{5}$/.test(s) && Number(s) >= 20_000 && Number(s) <= 80_000) {
-    const date = new Date(EXCEL_EPOCH_MS + Number(s) * 86_400_000);
+  } else if (excelDay(s)) {
+    const date = excelDay(s)!;
     [y, m, d] = [date.getUTCFullYear(), date.getUTCMonth() + 1, date.getUTCDate()];
   } else if ((match = /^(\d{1,2})\.?[\s-]([^\s\d,-]+)[\s-](\d{2}|\d{4})$/.exec(text))) {
     // 4 Mar 2026, 04-Mar-26, 4. März 2026
@@ -373,8 +372,7 @@ type Base = Omit<Recipe, "dateOrder" | "decimal" | "invert">;
 function genericRecipe(headers: Array<string>, columns: StatementColumns): Base {
   const names = headers.map(clean);
   const descriptionAlt = names.flatMap((n, i) =>
-    !Object.values(columns).includes(i) &&
-    SYNONYMS.description.some((s) => n === s || n.startsWith(`${s} `))
+    !Object.values(columns).includes(i) && SYNONYMS.description.some((s) => headerMatches(n, s))
       ? [i]
       : [],
   );
@@ -422,7 +420,7 @@ export function readStatement(
   const preset = found?.preset ?? null;
   let base = found?.base ?? null;
   if (picked) {
-    const columns = { ...NO_COLUMNS(), ...picked };
+    const columns = { ...NO_COLUMNS, ...picked };
     base = preset && base ? { ...base, columns } : genericRecipe(lines[start]!, columns);
   }
   if (!base || !usable(base.columns)) {
