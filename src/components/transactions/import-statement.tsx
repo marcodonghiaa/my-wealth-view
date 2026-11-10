@@ -280,14 +280,17 @@ export function ImportStatement() {
                     <option value="MDY">Month first (12/31)</option>
                   </select>
                 </label>
-                <label className="flex min-h-11 items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={options.invert ?? false}
-                    onChange={(e) => setOption({ invert: e.target.checked })}
-                  />
-                  <span>Spending is written as positive</span>
-                </label>
+                {/* Only a single signed amount can be flipped; in/out columns say it already. */}
+                {statement.columns.amount != null && (
+                  <label className="flex min-h-11 items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={options.invert ?? false}
+                      onChange={(e) => setOption({ invert: e.target.checked })}
+                    />
+                    <span>Spending is written as positive</span>
+                  </label>
+                )}
               </div>
             </div>
           )}

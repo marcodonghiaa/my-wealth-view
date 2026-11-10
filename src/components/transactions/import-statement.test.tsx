@@ -169,6 +169,13 @@ describe("ImportStatement", () => {
     expect(await screen.findByText("+€3.20")).toBeTruthy();
   });
 
+  it("#10 hides the sign flip for files with separate in and out columns", async () => {
+    upload("Fineco_movimenti.csv", CSV);
+    expect(await screen.findByText("Ristorante Mario")).toBeTruthy();
+    expect(screen.getByLabelText("Date order")).toBeTruthy();
+    expect(screen.queryByLabelText("Spending is written as positive")).toBeNull();
+  });
+
   it("re-reads the dates month first when picked", async () => {
     upload("card.csv", "Date,Description,Amount\n01/02/2026,Shop,-5");
     expect(await screen.findByText(/1 Feb 2026/)).toBeTruthy();
