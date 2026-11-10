@@ -340,6 +340,7 @@ function RuleList({ rules }: { rules: RuleRow[] }) {
       if (error) throw error;
     },
     onMutate: async (id) => {
+      setChecking(false); // its count would include the rule being deleted
       await queryClient.cancelQueries({ queryKey: ["category-rules"] });
       const previous = queryClient.getQueryData<RuleRow[]>(["category-rules"]);
       queryClient.setQueryData<RuleRow[]>(["category-rules"], (old) =>
@@ -371,7 +372,7 @@ function RuleList({ rules }: { rules: RuleRow[] }) {
       </SectionTitle>
 
       {checking && (
-        <ApplyToPast key={rules.map((r) => r.id).join()} onDone={() => setChecking(false)} />
+        <ApplyToPast ruleIds={rules.map((r) => r.id).join()} onDone={() => setChecking(false)} />
       )}
 
       <GroupedList>
@@ -432,11 +433,11 @@ async function reapply(apply: boolean): Promise<ReapplyResult> {
 }
 
 // Rules run on new transactions only; this re-runs them on the past ones, after a preview that
-// starts as soon as the panel opens. Remounted (key) whenever the rules change.
-function ApplyToPast({ onDone }: { onDone: () => void }) {
+// starts as soon as the panel opens. A change to the rules is a new preview (ruleIds in the key).
+function ApplyToPast({ ruleIds, onDone }: { ruleIds: string; onDone: () => void }) {
   const queryClient = useQueryClient();
   const preview = useQuery({
-    queryKey: ["reapply-preview"],
+    queryKey: ["reapply-preview", ruleIds],
     queryFn: () => reapply(false),
     gcTime: 0,
     retry: false,

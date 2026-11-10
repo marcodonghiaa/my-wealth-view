@@ -65,7 +65,14 @@ vi.mock("@/integrations/supabase/client", () => {
           priority: 100,
           created_at: "2026-10-03T00:00:00Z",
         },
-      ].filter((r) => !onlyFlowRules.current || r.set_category === null),
+        // Rules saved during the test show up on the next read, like the real table.
+        ...inserted.map((r, i) => ({
+          id: `new${i}`,
+          set_flow_type: null,
+          created_at: "2026-11-01T00:00:00Z",
+          ...r,
+        })),
+      ].filter((r) => !onlyFlowRules.current || !("set_category" in r) || r.set_category === null),
       error: null,
     });
   };
@@ -419,5 +426,37 @@ describe("preview and tab focus", () => {
     await new Promise((r) => setTimeout(r, 20));
     focusManager.setFocused(undefined);
     expect(invoke).toHaveBeenCalledTimes(1);
+  });
+});
+
+// Polish pass 3 #2: after a rule change the panel briefly showed the old count, clickable.
+describe("preview after the rules change", () => {
+  it("checks again instead of showing the old count when a rule is added", async () => {
+    invoke.mockReset();
+    invoke.mockResolvedValueOnce({ data: { changes: 2, sample: [] }, error: null });
+    invoke.mockReturnValue(new Promise(() => {})); // the new preview is still running
+    renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: "Apply to past transactions" }));
+    await screen.findByRole("button", { name: "Update 2 transactions" });
+    await openForm();
+    fireEvent.change(screen.getByLabelText("Text"), { target: { value: "Spotify" } });
+    fireEvent.change(screen.getByLabelText("Set category"), { target: { value: "Entertainment" } });
+    fireEvent.click(screen.getByRole("button", { name: "Add rule" }));
+    expect(await screen.findByText("“Spotify”")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Update 2 transactions" })).toBeNull();
+    expect(screen.getByText("Checking your transactions…")).toBeTruthy();
+  });
+
+  it("closes the preview when a rule is deleted", async () => {
+    invoke.mockReset();
+    invoke.mockResolvedValue({ data: { changes: 2, sample: [] }, error: null });
+    renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: "Apply to past transactions" }));
+    await screen.findByRole("button", { name: "Update 2 transactions" });
+    fireEvent.click(screen.getByRole("button", { name: "Delete rule for Netflix" }));
+    await waitFor(() =>
+      expect(screen.queryByRole("button", { name: "Update 2 transactions" })).toBeNull(),
+    );
+    expect(screen.queryByText("Checking your transactions…")).toBeNull();
   });
 });
