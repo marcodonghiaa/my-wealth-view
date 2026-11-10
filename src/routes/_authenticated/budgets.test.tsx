@@ -200,6 +200,17 @@ describe("Budgets page", () => {
     expect(screen.getByText("Income, spread over the year")).toBeTruthy();
   });
 
+  // protects=P4 D-2 the hint fits any country's pay; fails_when=it names 13th/14th salaries or months
+  it("explains the spread without naming one country's payroll", async () => {
+    renderPage();
+    const box = await screen.findByRole("checkbox", { name: /Spread yearly income evenly/ });
+    const hint = box.closest("label")!.textContent!;
+    expect(hint).toContain(
+      "Evens out bonuses and irregular pay: your last 12 months of income ÷ 12.",
+    );
+    expect(hint).not.toMatch(/13th|June|December/);
+  });
+
   it("says what to do when the budgets table is missing", async () => {
     failTable = "category_budgets";
     renderPage();

@@ -425,8 +425,7 @@ function BudgetsPage() {
                 <span>
                   <span className="font-medium text-foreground">Spread yearly income evenly</span>
                   <span className="mt-0.5 block text-muted-foreground">
-                    For a 13th or 14th month salary or a yearly bonus: counts your last 12 months of
-                    income ÷ 12, so June and December don't look like windfalls.
+                    Evens out bonuses and irregular pay: your last 12 months of income ÷ 12.
                   </span>
                 </span>
               </label>
