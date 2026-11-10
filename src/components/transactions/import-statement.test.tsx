@@ -62,7 +62,7 @@ beforeEach(() => {
 describe("ImportStatement", () => {
   it("reads a Fineco-style CSV, takes the source from the file name and imports every row", async () => {
     const { invalidate } = upload("Fineco_movimenti.csv", CSV);
-    expect(await screen.findByText(/2 new transactions/)).toBeTruthy();
+    expect(await screen.findByText(/2 new transactions/)).toBeInTheDocument();
     expect((screen.getByLabelText("From") as HTMLInputElement).value).toBe("Fineco");
     fireEvent.click(screen.getByRole("button", { name: "Import 2" }));
     await waitFor(() => expect(rpc).toHaveBeenCalledTimes(2));
@@ -88,7 +88,7 @@ describe("ImportStatement", () => {
       },
     ];
     upload("statement.csv", CSV);
-    expect(await screen.findByText(/1 new transaction, 1 already here/)).toBeTruthy();
+    expect(await screen.findByText(/1 new transaction, 1 already here/)).toBeInTheDocument();
   });
 
   it("#4 refuses a huge file before reading it into memory", async () => {
@@ -120,7 +120,7 @@ describe("ImportStatement", () => {
       error: null,
     });
     upload("Fineco_estratto.pdf", "%PDF-1.4");
-    expect(await screen.findByText(/1 new transaction/)).toBeTruthy();
+    expect(await screen.findByText(/1 new transaction/)).toBeInTheDocument();
     expect(invoke).toHaveBeenCalledWith("parse-statement", { body: { pdf: btoa("%PDF-1.4") } });
     expect(screen.queryByText("Columns")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Import 1" }));
@@ -138,7 +138,7 @@ describe("ImportStatement", () => {
     fireEvent.change(screen.getByLabelText("Date column"), { target: { value: "0" } });
     fireEvent.change(screen.getByLabelText("Description column"), { target: { value: "1" } });
     fireEvent.change(screen.getByLabelText("Amount (+/−) column"), { target: { value: "2" } });
-    expect(await screen.findByText(/1 new transaction/)).toBeTruthy();
+    expect(await screen.findByText(/1 new transaction/)).toBeInTheDocument();
   });
 
   it("shows how far it got when the database refuses", async () => {
@@ -153,10 +153,10 @@ describe("ImportStatement", () => {
     const text = "Datum;Omschrijving;Bedrag\n03.02.2026;Caf\u00e9;-3,80";
     const bytes = Uint8Array.from([...text].map((c) => c.charCodeAt(0)));
     upload("bank.csv", bytes);
-    expect(await screen.findByText(/1 new transaction/)).toBeTruthy();
-    expect(screen.getByText(/Café/)).toBeTruthy();
-    expect(screen.getByText(/3 Feb 2026/)).toBeTruthy();
-    expect(screen.getByText(/decimal comma/)).toBeTruthy();
+    expect(await screen.findByText(/1 new transaction/)).toBeInTheDocument();
+    expect(screen.getByText(/Café/)).toBeInTheDocument();
+    expect(screen.getByText(/3 Feb 2026/)).toBeInTheDocument();
+    expect(screen.getByText(/decimal comma/)).toBeInTheDocument();
   });
 
   it("names a known export and lets you flip signs and the date order", async () => {
@@ -165,24 +165,24 @@ describe("ImportStatement", () => {
       "CARD_PAYMENT,Current,2026-03-02 09:00:00,2026-03-03 10:00:00,Coffee,-3.20,0.00,EUR,COMPLETED,1",
     ].join("\n");
     upload("revolut.csv", revolut);
-    expect(await screen.findByText(/Read as a Revolut export/)).toBeTruthy();
-    expect(screen.getByText("−€3.20")).toBeTruthy();
+    expect(await screen.findByText(/Read as a Revolut export/)).toBeInTheDocument();
+    expect(screen.getByText("−€3.20")).toBeInTheDocument();
     fireEvent.click(screen.getByLabelText("Spending is written as positive"));
-    expect(await screen.findByText("+€3.20")).toBeTruthy();
+    expect(await screen.findByText("+€3.20")).toBeInTheDocument();
   });
 
   it("#10 hides the sign flip for files with separate in and out columns", async () => {
     upload("Fineco_movimenti.csv", CSV);
-    expect(await screen.findByText("Ristorante Mario")).toBeTruthy();
-    expect(screen.getByLabelText("Date order")).toBeTruthy();
+    expect(await screen.findByText("Ristorante Mario")).toBeInTheDocument();
+    expect(screen.getByLabelText("Date order")).toBeInTheDocument();
     expect(screen.queryByLabelText("Spending is written as positive")).toBeNull();
   });
 
   it("re-reads the dates month first when picked", async () => {
     upload("card.csv", "Date,Description,Amount\n01/02/2026,Shop,-5");
-    expect(await screen.findByText(/1 Feb 2026/)).toBeTruthy();
+    expect(await screen.findByText(/1 Feb 2026/)).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("Date order"), { target: { value: "MDY" } });
-    expect(await screen.findByText(/2 Jan 2026/)).toBeTruthy();
+    expect(await screen.findByText(/2 Jan 2026/)).toBeInTheDocument();
   });
 
   it("after a partial failure, offers only the rows that were not saved", async () => {
@@ -201,7 +201,7 @@ describe("ImportStatement", () => {
       },
     ];
     expect(await screen.findByRole("alert")).toHaveTextContent(/1 of 2 added/);
-    expect(await screen.findByRole("button", { name: "Import 1" })).toBeTruthy();
+    expect(await screen.findByRole("button", { name: "Import 1" })).toBeInTheDocument();
   });
 
   it("polish-3 #12 refreshes accounts too when an import stops partway", async () => {
@@ -243,7 +243,7 @@ describe("ImportStatement", () => {
 
   it("shows only the latest read when an older duplicate check answers last", async () => {
     upload("card.csv", "Date,Description,Amount\n01/02/2026,Shop,-5");
-    expect(await screen.findByText(/1 Feb 2026/)).toBeTruthy();
+    expect(await screen.findByText(/1 Feb 2026/)).toBeInTheDocument();
     let releaseSlow: () => void = () => {};
     range = () =>
       new Promise((resolve) => {
@@ -252,11 +252,11 @@ describe("ImportStatement", () => {
     fireEvent.change(screen.getByLabelText("Date order"), { target: { value: "MDY" } });
     range = async () => ({ data: existing, error: null });
     fireEvent.click(screen.getByLabelText("Spending is written as positive"));
-    expect(await screen.findByText(/2 Jan 2026/)).toBeTruthy();
-    expect(screen.getByText("+€5.00")).toBeTruthy();
+    expect(await screen.findByText(/2 Jan 2026/)).toBeInTheDocument();
+    expect(screen.getByText("+€5.00")).toBeInTheDocument();
     await act(async () => releaseSlow());
     // The slow, older read (not flipped) must not replace the newer preview.
-    expect(screen.getByText("+€5.00")).toBeTruthy();
+    expect(screen.getByText("+€5.00")).toBeInTheDocument();
   });
 
   it("#1 drops a slow read when another file is picked meanwhile", async () => {
@@ -277,7 +277,7 @@ describe("ImportStatement", () => {
 
   it("does not claim a decimal mark it could not tell", async () => {
     upload("bank.csv", "Date,Description,Amount\n2026-01-02,Shop,-5");
-    expect(await screen.findByText(/1 new transaction/)).toBeTruthy();
+    expect(await screen.findByText(/1 new transaction/)).toBeInTheDocument();
     expect(screen.queryByText(/decimal/)).toBeNull();
   });
 

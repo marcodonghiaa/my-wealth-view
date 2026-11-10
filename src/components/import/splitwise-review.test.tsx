@@ -124,10 +124,10 @@ describe("SplitwiseReview", () => {
     show();
     const match = (await screen.findByRole("switch", { name: /Taxi/ })) as HTMLInputElement;
     expect(match.checked).toBe(true);
-    expect(screen.getByText(/Yellow Cab/)).toBeTruthy();
+    expect(screen.getByText(/Yellow Cab/)).toBeInTheDocument();
     // 1 share paid by the friend (Dinner) + the taxi share linked to the bank
-    expect(screen.getByRole("heading", { name: "2 expenses" })).toBeTruthy();
-    expect(screen.getByText(/Your share US\$25.00/)).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "2 expenses" })).toBeInTheDocument();
+    expect(screen.getByText(/Your share US\$25.00/)).toBeInTheDocument();
     expect(((await importButton()) as HTMLButtonElement).textContent).toBe("Import 2 expenses");
   });
 
@@ -143,8 +143,8 @@ describe("SplitwiseReview", () => {
     }) as HTMLButtonElement;
     expect(blocked.disabled).toBe(true);
     fireEvent.click(screen.getByRole("button", { name: "Skip" }));
-    expect(screen.getByText(/Skipped: not counted/)).toBeTruthy();
-    expect(screen.getByText(/Your share US\$15.00/)).toBeTruthy();
+    expect(screen.getByText(/Skipped: not counted/)).toBeInTheDocument();
+    expect(screen.getByText(/Your share US\$15.00/)).toBeInTheDocument();
     expect(((await importButton()) as HTMLButtonElement).disabled).toBe(false);
   });
 
@@ -164,13 +164,13 @@ describe("SplitwiseReview", () => {
       name: "Decide on 1 expense to continue",
     })) as HTMLButtonElement;
     expect(blocked.disabled).toBe(true);
-    expect(screen.getByText(/isn't in your bank yet/)).toBeTruthy();
+    expect(screen.getByText(/isn't in your bank yet/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Paid in cash" }));
-    expect(screen.getByText(/your share counts/)).toBeTruthy();
+    expect(screen.getByText(/your share counts/)).toBeInTheDocument();
     expect(((await importButton()) as HTMLButtonElement).textContent).toBe("Import 2 expenses");
     // Change brings the three choices back.
     fireEvent.click(screen.getByRole("button", { name: /Change what to do with Taxi/ }));
-    expect(screen.getByRole("button", { name: "Paid in cash" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Paid in cash" })).toBeInTheDocument();
   });
 
   // protects=a payment the matcher missed can be linked by hand, with my part = bank amount minus
@@ -183,14 +183,14 @@ describe("SplitwiseReview", () => {
     };
     show();
     fireEvent.click(await screen.findByRole("button", { name: "Find in bank" }));
-    expect(await screen.findByText("Which payment was Taxi?")).toBeTruthy();
+    expect(await screen.findByText("Which payment was Taxi?")).toBeInTheDocument();
     const link = screen.getByRole("button", { name: "Link payment" }) as HTMLButtonElement;
     expect(link.disabled).toBe(true);
     fireEvent.click(screen.getByRole("radio", { name: /Yellow Cab/ }));
-    expect(screen.getByText("−€9.20")).toBeTruthy();
-    expect(screen.getByText("€40.80")).toBeTruthy();
+    expect(screen.getByText("−€9.20")).toBeInTheDocument();
+    expect(screen.getByText("€40.80")).toBeInTheDocument();
     fireEvent.click(link);
-    expect(await screen.findByText(/Linked to Yellow Cab/)).toBeTruthy();
+    expect(await screen.findByText(/Linked to Yellow Cab/)).toBeInTheDocument();
     await clickImport();
     await waitFor(() => expect(rpc).toHaveBeenCalledTimes(1));
     const args = rpc.mock.calls[0]?.[1] as { p_links: Array<Record<string, unknown>> };
@@ -208,7 +208,7 @@ describe("SplitwiseReview", () => {
     tables.transactions = { data: [], error: null };
     show();
     fireEvent.click(await screen.findByRole("button", { name: "Find in bank" }));
-    expect(await screen.findByText(/No payments out of your accounts/)).toBeTruthy();
+    expect(await screen.findByText(/No payments out of your accounts/)).toBeInTheDocument();
   });
 
   // protects=each row gets its own category from its description; fails_when=rows are grouped by
@@ -309,7 +309,7 @@ describe("SplitwiseReview", () => {
       set_category: "Shopping",
       user_id: "u1",
     });
-    expect(await screen.findByText(/Rule saved/)).toBeTruthy();
+    expect(await screen.findByText(/Rule saved/)).toBeInTheDocument();
   });
 
   it("shows a database error", async () => {
@@ -385,7 +385,7 @@ describe("SplitwiseReview", () => {
     fireEvent.click(await screen.findByRole("button", { name: /Update balances/ }));
     await waitFor(() => expect(rpc).toHaveBeenCalledTimes(1));
     expect(rpc.mock.calls[0]?.[0]).toBe("save_splitwise_balances");
-    expect(await screen.findByText("Balances updated.")).toBeTruthy();
+    expect(await screen.findByText("Balances updated.")).toBeInTheDocument();
   });
 
   it("says when rows in another currency are left out of who owes you", async () => {
@@ -395,7 +395,7 @@ describe("SplitwiseReview", () => {
         <SplitwiseReview rows={rows} group="berkeley" balances={balances} onBack={onBack} />
       </QueryClientProvider>,
     );
-    expect(await screen.findByText(/2 rows are in another currency than USD/)).toBeTruthy();
+    expect(await screen.findByText(/2 rows are in another currency than USD/)).toBeInTheDocument();
   });
 
   const TAXI = share("2026-08-17|Taxi|2000|USD|1000#1", "Taxi", 10);
@@ -409,7 +409,7 @@ describe("SplitwiseReview", () => {
     show();
     expect(
       await screen.findByRole("button", { name: "Decide on 1 expense to continue" }),
-    ).toBeTruthy();
+    ).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "Nothing new" })).toBeNull();
   });
 
@@ -419,7 +419,7 @@ describe("SplitwiseReview", () => {
     show();
     fireEvent.click(await screen.findByRole("switch", { name: /Taxi/ }));
     fireEvent.click(screen.getByRole("button", { name: "Find in bank" }));
-    expect(await screen.findByText(/No payments out of your accounts/)).toBeTruthy();
+    expect(await screen.findByText(/No payments out of your accounts/)).toBeInTheDocument();
   });
 
   // protects=stored rows get no new bank suggestion; fails_when=an imported expense is matched
@@ -436,7 +436,9 @@ describe("SplitwiseReview", () => {
   it("shows the checkpoint and lists older rows that are not imported", async () => {
     tables.splitwise_expenses = { data: [TAXI], error: null };
     show();
-    expect(await screen.findByText(/Everything up to 17 Aug is already imported/)).toBeTruthy();
+    expect(
+      await screen.findByText(/Everything up to 17 Aug is already imported/),
+    ).toBeInTheDocument();
     const toggle = screen.getByRole("button", { name: /Changes to earlier imports/ });
     expect(toggle.getAttribute("aria-expanded")).toBe("false");
     expect(screen.queryByRole("region", { name: /Added late/ })).toBeNull();
@@ -444,13 +446,13 @@ describe("SplitwiseReview", () => {
     const older = screen.getByRole("region", { name: /Added late/ });
     expect(older.textContent).toMatch(/Older than your last import, not imported/);
     expect(older.textContent).toMatch(/Dinner.*16 Aug/);
-    expect(screen.getByRole("heading", { name: "Nothing new" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Nothing new" })).toBeInTheDocument();
   });
 
   it("says so and writes nothing when the same file is imported again", async () => {
     tables.splitwise_expenses = { data: [TAXI, DINNER], error: null };
     show();
-    expect(await screen.findByRole("heading", { name: "Nothing new" })).toBeTruthy();
+    expect(await screen.findByRole("heading", { name: "Nothing new" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^Import/ })).toBeNull();
     expect(rpc).not.toHaveBeenCalled();
   });
@@ -509,14 +511,14 @@ describe("SplitwiseReview", () => {
       fireEvent.click(await screen.findByRole("checkbox", { name: /Lunch/ }));
       fireEvent.click(await applyButton());
       expect(rpc).not.toHaveBeenCalled();
-      expect(screen.getByText(/Undo does not cover corrections/)).toBeTruthy();
+      expect(screen.getByText(/Undo does not cover corrections/)).toBeInTheDocument();
       fireEvent.click(screen.getByRole("button", { name: /Yes, apply 1 corrections/ }));
       await waitFor(() => expect(rpc).toHaveBeenCalledTimes(1));
       const [fn, args] = rpc.mock.calls[0] as [string, Record<string, unknown>];
       expect(fn).toBe("apply_splitwise_corrections");
       expect(args["p_remove"]).toEqual([{ id: GONE.id, old_fingerprint: GONE.fingerprint }]);
       expect(args["p_add"]).toEqual([]);
-      expect(await screen.findByText(/Applied: 1 added/)).toBeTruthy();
+      expect(await screen.findByText(/Applied: 1 added/)).toBeInTheDocument();
     });
 
     it("shows a clear message when the database function is missing", async () => {
@@ -540,7 +542,7 @@ describe("SplitwiseReview", () => {
       };
       show();
       await openChanges();
-      expect(await screen.findByText(/it counts in full again/)).toBeTruthy();
+      expect(await screen.findByText(/it counts in full again/)).toBeInTheDocument();
     });
   });
 });
