@@ -449,7 +449,10 @@ describe("Budgets page", () => {
   it("says when spending couldn't load", async () => {
     failTable = "v_spend_by_category_monthly";
     renderPage();
-    expect((await screen.findByRole("alert")).textContent).toContain("relation does not exist");
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toContain("Couldn't load spending: relation does not exist");
+    // P2-4: the migration advice is for a missing budgets table only.
+    expect(alert.textContent).not.toContain("UPGRADING.md");
   });
 
   it("says when a budget couldn't be saved", async () => {
