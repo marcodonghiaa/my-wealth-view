@@ -192,7 +192,13 @@ export function ImportStatement() {
       setFresh(null);
       // The app changed: check again from scratch.
       inApp.current.clear();
-      if (statement) setFresh(await newRows(client, statement.rows).catch(() => null));
+      const message = err instanceof Error ? err.message : "Import failed.";
+      if (statement) {
+        const left = await newRows(client, statement.rows).catch(() => null);
+        setFresh(left);
+        // Without the check a retry could add the saved rows twice, so it stays off.
+        if (!left) setError(`${message} Couldn't check what was saved: pick the file again.`);
+      }
     } finally {
       // Rows saved before an error are in the app too, maybe on a new account.
       for (const k of ADDED_TRANSACTION_QUERIES)

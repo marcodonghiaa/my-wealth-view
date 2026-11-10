@@ -225,6 +225,20 @@ describe("ImportStatement", () => {
     expect(screen.queryByText("Checking for duplicates…")).toBeNull();
   });
 
+  it("polish-3 #14 says to pick the file again when the re-check after a failure fails too", async () => {
+    rpc
+      .mockResolvedValueOnce({ data: [], error: null })
+      .mockResolvedValueOnce({ data: null, error: { message: "boom" } });
+    upload("Fineco.csv", CSV);
+    const button = await screen.findByRole("button", { name: "Import 2" });
+    range = async () => ({ data: null, error: { message: "offline" } }) as never;
+    fireEvent.click(button);
+    expect(await screen.findByRole("alert")).toHaveTextContent(/1 of 2 added/);
+    await waitFor(() =>
+      expect(screen.getByRole("alert")).toHaveTextContent(/pick the file again/i),
+    );
+  });
+
   it("shows only the latest read when an older duplicate check answers last", async () => {
     upload("card.csv", "Date,Description,Amount\n01/02/2026,Shop,-5");
     expect(await screen.findByText(/1 Feb 2026/)).toBeTruthy();
