@@ -24,9 +24,11 @@ export const Route = createFileRoute("/auth")({
   ssr: false,
   // Arriving here always ends a demo visit, so a real sign-in never shares a tab with fake data.
   // Cached queries go too: otherwise the next dashboard shows the previous visit's numbers.
+  // leftDemo: a login stored in this browser must not open straight from "Exit demo".
   beforeLoad: ({ context }) => {
-    exitDemoMode();
+    const leftDemo = exitDemoMode();
     context.queryClient.clear();
+    return { leftDemo };
   },
   validateSearch: (s: Record<string, unknown>) => {
     const next = safeNext(s["next"]);
@@ -53,6 +55,7 @@ export const Route = createFileRoute("/auth")({
 function AuthPage() {
   const navigate = useNavigate();
   const { next } = Route.useSearch();
+  const { leftDemo } = Route.useRouteContext();
 
   const goNext = useCallback(
     (replace = true) => {
@@ -73,8 +76,13 @@ function AuthPage() {
   const [mode, setMode] = useState<"signin" | "reset">("signin");
   const [resetSent, setResetSent] = useState(false);
 
-  // Already signed in? Go straight to the dashboard.
+  // Already signed in? Go straight to the dashboard, unless the visitor just left the demo:
+  // then a login stored in this browser waits for an explicit sign-in.
   useEffect(() => {
+    if (leftDemo) {
+      setCheckingSession(false);
+      return;
+    }
     let cancelled = false;
     let sessionPromise: ReturnType<typeof supabase.auth.getSession>;
     try {
@@ -96,7 +104,7 @@ function AuthPage() {
     return () => {
       cancelled = true;
     };
-  }, [goNext]);
+  }, [goNext, leftDemo]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

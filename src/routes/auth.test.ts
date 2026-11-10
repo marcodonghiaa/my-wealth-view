@@ -6,6 +6,12 @@ describe("safeNext", () => {
     expect(safeNext("/accounts")).toBe("/accounts");
   });
 
+  it("keeps the search of a bank redirect", () => {
+    expect(safeNext("/accounts?bank_code=x&bank_state=y")).toBe(
+      "/accounts?bank_code=x&bank_state=y",
+    );
+  });
+
   it("rejects a protocol-relative URL", () => {
     expect(safeNext("//evil.com")).toBeUndefined();
   });

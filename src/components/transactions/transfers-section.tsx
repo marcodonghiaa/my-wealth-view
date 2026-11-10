@@ -9,15 +9,22 @@ import {
 } from "@/lib/transactions";
 
 // Transactions marked as transfers are left out of spending and income. They are listed here so a
-// wrong one can be seen and put back.
+// wrong one can be seen and put back. A row the sync paired with its other side on its own
+// (pairIdOf) asks to be kept or not instead.
 export function TransfersSection({
   rows,
   savingId,
   onRestore,
+  pairIdOf = new Map(),
+  savingPair,
+  onResolvePair,
 }: {
   rows: Array<TransactionRow>;
   savingId: string | undefined;
   onRestore: (tx: TransactionRow) => void;
+  pairIdOf?: Map<string, string>;
+  savingPair?: string | undefined;
+  onResolvePair?: (pairId: string, keep: boolean) => void;
 }) {
   return (
     <section className="mt-6 overflow-hidden rounded-lg bg-card">
@@ -28,6 +35,7 @@ export function TransfersSection({
       <ul className="divide-y border-t">
         {rows.map((tx) => {
           const native = nativeSignedAmount(tx);
+          const pairId = pairIdOf.get(txId(tx));
           return (
             <li key={txId(tx)} className="flex items-center gap-3 px-4 py-3 sm:px-5">
               <div className="min-w-0 flex-1">
@@ -36,20 +44,44 @@ export function TransfersSection({
                 </div>
                 <div className="text-xs text-muted-foreground">
                   {formatBookingDateShort(tx.booking_date)}
+                  {pairId && " · Auto-paired"}
                 </div>
               </div>
               <span className="font-figure text-sm whitespace-nowrap text-foreground">
                 {native == null ? "—" : formatMoney(native, tx.currency ?? "EUR")}
               </span>
-              <Button
-                variant="quiet"
-                size="sm"
-                disabled={savingId === txId(tx)}
-                onClick={() => onRestore(tx)}
-                className="bg-muted"
-              >
-                Count as {restoredFlow(tx)}
-              </Button>
+              {pairId ? (
+                <>
+                  <Button
+                    disabled={savingPair === pairId}
+                    onClick={() => onResolvePair?.(pairId, true)}
+                    variant="quiet"
+                    size="sm"
+                    className="bg-muted"
+                  >
+                    Keep
+                  </Button>
+                  <Button
+                    disabled={savingPair === pairId}
+                    onClick={() => onResolvePair?.(pairId, false)}
+                    variant="quiet"
+                    size="sm"
+                    className="bg-muted"
+                  >
+                    Not a transfer
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  disabled={savingId === txId(tx)}
+                  onClick={() => onRestore(tx)}
+                  variant="quiet"
+                  size="sm"
+                  className="bg-muted"
+                >
+                  Count as {restoredFlow(tx)}
+                </Button>
+              )}
             </li>
           );
         })}

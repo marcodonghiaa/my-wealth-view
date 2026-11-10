@@ -238,6 +238,7 @@ class Store {
         category,
         category_source: category ? "manual" : null,
         flow_type: category === "Transfer" ? "transfer" : direction === "DBIT" ? "spend" : "income",
+        flow_source: "user",
         transaction_type: null,
         worth_it: null,
         personal_amount: null,
@@ -248,6 +249,33 @@ class Store {
     );
     this.refresh();
     return { data: [{ account_uid: account["uid"] as string, entry_reference }], error: null };
+  }
+  /** Mirror of the database function resolve_transfer_pair: keep makes both sides a transfer the
+   * user decided; not keeping puts each back by its direction. */
+  resolveTransferPair(id: unknown, keep: boolean): Result {
+    const pair = this.db["transfer_pairs"]!.find((p) => p["id"] === id);
+    if (!pair || pair["status"] !== "suggested")
+      return { data: null, error: { message: "pair not found" } };
+    const sides = [
+      [pair["out_account_uid"], pair["out_ref"]],
+      [pair["in_account_uid"], pair["in_ref"]],
+    ];
+    const rows = this.db["transactions"]!.filter((r) =>
+      sides.some(([a, ref]) => r["account_uid"] === a && r["entry_reference"] === ref),
+    );
+    // Like the database: Keep is refused once a side was changed since the pairing.
+    if (
+      keep &&
+      (rows.length < 2 || rows.some((r) => !["pair", "bank"].includes(String(r["flow_source"]))))
+    )
+      return { data: null, error: { message: "pair is stale" } };
+    pair["status"] = keep ? "confirmed" : "rejected";
+    for (const r of rows) {
+      r["flow_source"] = "user";
+      if (!keep) r["flow_type"] = r["credit_debit_indicator"] === "DBIT" ? "spend" : "income";
+    }
+    this.refresh();
+    return { data: null, error: null };
   }
   /** Mirror of the database function set_holding_quantity: the new quantity, and today's value
    * from the latest price, taken into net worth at once. Returns how many holdings changed. */
@@ -654,26 +682,28 @@ export function createFakeClient(now: Date = new Date()): SupabaseClient<Databas
               ),
               error: null,
             }
-          : fn === "stream_action"
-            ? store.streamAction(args["p_stream"], args["p_action"], args["p_args"] as Row)
-            : fn === "add_manual_transaction"
-              ? store.addManualTransaction(args)
-              : fn === "set_holding_quantity"
-                ? {
-                    data: store.setHoldingQuantity(
-                      args["p_kind"],
-                      args["p_key"],
-                      args["p_quantity"],
-                      args["p_source"],
-                    ),
-                    error: null,
-                  }
-                : fn === "delete_holding"
+          : fn === "resolve_transfer_pair"
+            ? store.resolveTransferPair(args["p_pair"], args["p_keep"] === true)
+            : fn === "stream_action"
+              ? store.streamAction(args["p_stream"], args["p_action"], args["p_args"] as Row)
+              : fn === "add_manual_transaction"
+                ? store.addManualTransaction(args)
+                : fn === "set_holding_quantity"
                   ? {
-                      data: store.deleteHolding(args["p_kind"], args["p_key"], args["p_source"]),
+                      data: store.setHoldingQuantity(
+                        args["p_kind"],
+                        args["p_key"],
+                        args["p_quantity"],
+                        args["p_source"],
+                      ),
                       error: null,
                     }
-                  : { data: null, error: DISABLED },
+                  : fn === "delete_holding"
+                    ? {
+                        data: store.deleteHolding(args["p_kind"], args["p_key"], args["p_source"]),
+                        error: null,
+                      }
+                    : { data: null, error: DISABLED },
     functions: {
       invoke: async (name: string, opts?: { body?: Record<string, unknown> }) =>
         name === "add-holding"

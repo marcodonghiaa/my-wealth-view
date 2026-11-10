@@ -83,6 +83,8 @@ function tx(
     deleted_at: null,
     refund_of: null,
     flow_type: "spend",
+    flow_source: "default",
+    own_counterparty: null,
     owed_by: null,
     owed_settled: false,
     personal_amount: null,
@@ -164,6 +166,7 @@ export function monthlyTransactions(n: number): Array<Tx> {
         category: "Transfer",
         creditor_name: "Risparmio Demo",
         flow_type: "transfer",
+        flow_source: "own_account",
       }),
     );
   }

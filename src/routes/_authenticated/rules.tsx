@@ -37,6 +37,7 @@ type RuleRow = {
   match_text: string;
   set_category: string | null;
   set_transaction_type: string | null;
+  set_flow_type: string | null;
   priority: number;
   created_at: string;
 };
@@ -50,12 +51,19 @@ const MATCH_FIELDS = [
 async function fetchRules(): Promise<RuleRow[]> {
   const { data, error } = await supabase
     .from("category_rules")
-    .select("id, match_field, match_text, set_category, set_transaction_type, priority, created_at")
+    .select(
+      "id, match_field, match_text, set_category, set_transaction_type, set_flow_type, priority, created_at",
+    )
     .order("priority", { ascending: true })
     .order("created_at", { ascending: true });
   if (error) throw error;
   return data ?? [];
 }
+
+// Rules from "To review" only decide how a row counts: "spend" and "income" both mean "count by
+// direction".
+const flowLabel = (setFlowType: string) =>
+  setFlowType === "transfer" ? "Count as transfer" : "Not a transfer";
 
 function fieldLabel(value: string) {
   return MATCH_FIELDS.find((f) => f.value === value)?.label ?? value;
@@ -377,6 +385,11 @@ function RulesPage() {
                   {rule.set_transaction_type && (
                     <span className="rounded-sm bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
                       {rule.set_transaction_type}
+                    </span>
+                  )}
+                  {rule.set_flow_type && (
+                    <span className="rounded-sm bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
+                      {flowLabel(rule.set_flow_type)}
                     </span>
                   )}
                   <Button

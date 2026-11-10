@@ -30,7 +30,9 @@ export function enterDemoMode(): void {
   }
 }
 
-export function exitDemoMode(): void {
+/** Ends demo mode. Returns true when the tab was in the demo. */
+export function exitDemoMode(): boolean {
+  const was = isDemoMode();
   inMemory = false;
   resetDemo?.();
   try {
@@ -38,4 +40,5 @@ export function exitDemoMode(): void {
   } catch {
     // Nothing stored.
   }
+  return was;
 }

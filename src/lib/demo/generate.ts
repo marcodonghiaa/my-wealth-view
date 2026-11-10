@@ -99,6 +99,31 @@ export function generateDemoData(now: Date = new Date()): DemoDb {
         b.booking_date!.localeCompare(a.booking_date!) ||
         a.entry_reference.localeCompare(b.entry_reference),
     );
+  // The latest move to savings is also seen arriving there, and the two sides wait as an
+  // auto-paired transfer, so the Transfers list shows Keep / Not a transfer.
+  const out = transactions.find((t) => t.entry_reference.endsWith("-to-savings"))!;
+  out.flow_source = "pair";
+  const arrived: typeof out = {
+    ...out,
+    entry_reference: `${out.entry_reference}-in`,
+    account_uid: SAVINGS,
+    credit_debit_indicator: "CRDT",
+    creditor_name: "Demo Bank Current",
+    merchant_key: "demo bank current",
+  };
+  transactions.splice(transactions.indexOf(out) + 1, 0, arrived);
+  const transfer_pairs: DemoDb["transfer_pairs"] = [
+    {
+      id: "demo-pair-1",
+      user_id,
+      out_account_uid: MAIN,
+      out_ref: out.entry_reference,
+      in_account_uid: SAVINGS,
+      in_ref: arrived.entry_reference,
+      status: "suggested",
+      created_at: stamp(out.booking_date!),
+    },
+  ];
 
   // Bank balances: the main account is walked back from today's balance through its own transactions.
   const MAIN_TODAY = 4850;
@@ -111,7 +136,9 @@ export function generateDemoData(now: Date = new Date()): DemoDb {
   const transferredAfter = (n: number) =>
     sum(
       transactions
-        .filter((t) => t.flow_type === "transfer" && t.booking_date! > iso(n))
+        .filter(
+          (t) => t.account_uid === MAIN && t.flow_type === "transfer" && t.booking_date! > iso(n),
+        )
         .map((t) => t.amount),
     );
   const balances = days.flatMap((n) => [
@@ -408,6 +435,7 @@ export function generateDemoData(now: Date = new Date()): DemoDb {
       match_text: "Supermercato",
       set_category: "Groceries",
       set_transaction_type: null,
+      set_flow_type: null,
       priority: 10,
     },
     {
@@ -416,6 +444,7 @@ export function generateDemoData(now: Date = new Date()): DemoDb {
       match_text: "Netflix",
       set_category: "Entertainment",
       set_transaction_type: "Subscription",
+      set_flow_type: null,
       priority: 20,
     },
     {
@@ -424,6 +453,7 @@ export function generateDemoData(now: Date = new Date()): DemoDb {
       match_text: "Trenitalia",
       set_category: "Transports",
       set_transaction_type: null,
+      set_flow_type: null,
       priority: 30,
     },
   ].map((r) => ({ ...r, created_at: stamp(iso(days[0]!)), user_id }));
@@ -431,6 +461,7 @@ export function generateDemoData(now: Date = new Date()): DemoDb {
   const db: DemoDb = {
     accounts,
     category_rules,
+    transfer_pairs,
     cd_holdings,
     crypto_holdings,
     crypto_snapshots,

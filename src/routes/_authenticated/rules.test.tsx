@@ -14,8 +14,29 @@ vi.mock("@/integrations/supabase/client", () => {
           match_text: "Netflix",
           set_category: "Entertainment",
           set_transaction_type: null,
+          set_flow_type: null,
           priority: 1,
           created_at: "2026-10-01T00:00:00Z",
+        },
+        {
+          id: "r2",
+          match_field: "creditor_name",
+          match_text: "Revolut",
+          set_category: null,
+          set_transaction_type: null,
+          set_flow_type: "transfer",
+          priority: 100,
+          created_at: "2026-10-02T00:00:00Z",
+        },
+        {
+          id: "r3",
+          match_field: "creditor_name",
+          match_text: "Mum",
+          set_category: null,
+          set_transaction_type: null,
+          set_flow_type: "spend",
+          priority: 100,
+          created_at: "2026-10-03T00:00:00Z",
         },
       ],
       error: null,
@@ -54,5 +75,18 @@ describe("Rules list", () => {
     for (const label of ["If this field", "set category (optional)", "set type (optional)"]) {
       expect(screen.getByLabelText(label).tagName).toBe("BUTTON");
     }
+  });
+});
+
+describe("flow rules", () => {
+  // Regression risk: a rule from To review has no category or type and looked empty.
+  it("shows a flow-only rule's effect", async () => {
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <Page />
+      </QueryClientProvider>,
+    );
+    expect(await screen.findByText("Count as transfer")).toBeTruthy();
+    expect(screen.getByText("Not a transfer")).toBeTruthy();
   });
 });

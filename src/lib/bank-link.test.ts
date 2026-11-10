@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { COUNTRIES, linkErrorMessage, linkedMessage, renewTarget } from "./bank-link";
+import { COUNTRIES, linkErrorMessage, linkedMessage, pendingLink, renewTarget } from "./bank-link";
 
 describe("linkedMessage", () => {
   it("names the bank and the currencies found", () => {
@@ -93,5 +93,27 @@ describe("linkErrorMessage", () => {
 
   it("is null without an error", () => {
     expect(linkErrorMessage(new URLSearchParams())).toBeNull();
+  });
+});
+
+describe("pendingLink", () => {
+  it("reads the code and state the bank's redirect forwards", () => {
+    expect(pendingLink(new URLSearchParams("bank_code=c1&bank_state=s1"))).toEqual({
+      code: "c1",
+      state: "s1",
+    });
+  });
+  it("is null unless both are there", () => {
+    expect(pendingLink(new URLSearchParams("bank_code=c1"))).toBeNull();
+    expect(pendingLink(new URLSearchParams("bank_state=s1"))).toBeNull();
+    expect(pendingLink(new URLSearchParams("bank_linked=2"))).toBeNull();
+  });
+});
+
+describe("linkErrorMessage for complete-bank-consent replies", () => {
+  it("shows the not-signed-in reason", () => {
+    expect(linkErrorMessage(new URLSearchParams({ bank_link_error: "Not signed in" }))).toBe(
+      "Not signed in",
+    );
   });
 });

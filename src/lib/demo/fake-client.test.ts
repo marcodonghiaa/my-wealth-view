@@ -451,6 +451,11 @@ describe("fake client: add_manual_transaction", () => {
       .select("flow_type")
       .eq("entry_reference", data[0]!.entry_reference);
     expect(rows).toMatchObject([{ flow_type: "transfer" }]);
+    const { data: raw } = await c
+      .from("transactions")
+      .select("flow_source")
+      .eq("entry_reference", data[0]!.entry_reference);
+    expect(raw).toMatchObject([{ flow_source: "user" }]);
     const bad = await add(c, { p_amount: 0 });
     expect(bad.error).toBeTruthy();
   });
@@ -558,5 +563,72 @@ describe("fake client: stream_action", () => {
     ] as const)
       expect((await act(c, toReview.id, action, args)).error).not.toBeNull();
     expect((await act(c, "nope", "confirm")).error).not.toBeNull();
+  });
+});
+
+describe("fake client: resolve_transfer_pair", () => {
+  const sides = async (c: ReturnType<typeof fresh>) => {
+    const { data: pairs } = await c.from("transfer_pairs").select("*").eq("status", "suggested");
+    const pair = pairs![0]!;
+    const { data: rows } = await c
+      .from("transactions")
+      .select("*")
+      .in("entry_reference", [pair.out_ref, pair.in_ref]);
+    return { pair, rows: rows! };
+  };
+
+  it("the demo has one suggested pair whose sides are transfers in two accounts", async () => {
+    const { pair, rows } = await sides(fresh());
+    expect(rows).toHaveLength(2);
+    expect(new Set(rows.map((r) => r.account_uid))).toEqual(
+      new Set([pair.out_account_uid, pair.in_account_uid]),
+    );
+    expect(rows.every((r) => r.flow_type === "transfer" && r.flow_source === "pair")).toBe(true);
+  });
+
+  it("keep confirms the pair and locks both rows as the user's transfer", async () => {
+    const c = fresh();
+    const { pair } = await sides(c);
+    expect(
+      (await c.rpc("resolve_transfer_pair", { p_pair: pair.id, p_keep: true })).error,
+    ).toBeNull();
+    const { data } = await c.from("transfer_pairs").select("status").eq("id", pair.id);
+    expect(data).toMatchObject([{ status: "confirmed" }]);
+    const { data: rows } = await c
+      .from("transactions")
+      .select("*")
+      .in("entry_reference", [pair.out_ref, pair.in_ref]);
+    expect(rows!.map((r) => [r.flow_type, r.flow_source])).toEqual([
+      ["transfer", "user"],
+      ["transfer", "user"],
+    ]);
+  });
+
+  it("not keeping puts each side back by direction; a settled pair can't be answered again", async () => {
+    const c = fresh();
+    const { pair } = await sides(c);
+    await c.rpc("resolve_transfer_pair", { p_pair: pair.id, p_keep: false });
+    const { data: rows } = await c
+      .from("transactions")
+      .select("*")
+      .in("entry_reference", [pair.out_ref, pair.in_ref]);
+    expect(rows!.map((r) => [r.credit_debit_indicator, r.flow_type, r.flow_source]).sort()).toEqual(
+      [
+        ["CRDT", "income", "user"],
+        ["DBIT", "spend", "user"],
+      ],
+    );
+    const again = await c.rpc("resolve_transfer_pair", { p_pair: pair.id, p_keep: true });
+    expect(again.error).toBeTruthy();
+  });
+
+  it("refuses Keep once a side changed since the pairing", async () => {
+    const c = fresh();
+    const { pair } = await sides(c);
+    await c.from("transactions").update({ flow_source: "user" }).eq("entry_reference", pair.in_ref);
+    const res = await c.rpc("resolve_transfer_pair", { p_pair: pair.id, p_keep: true });
+    expect(res.error).toBeTruthy();
+    const { data } = await c.from("transfer_pairs").select("status").eq("id", pair.id);
+    expect(data).toMatchObject([{ status: "suggested" }]);
   });
 });
