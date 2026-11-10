@@ -141,6 +141,27 @@ describe("TwoFactorSection", () => {
     expect(screen.getByText(/^On\./)).toBeInTheDocument();
   });
 
+  // fails_when=a refresh that fails after a change silently keeps the old list
+  it("says so when the list can't refresh after a change", async () => {
+    lib.listAuthenticators
+      .mockResolvedValueOnce([{ id: "a", name: "Phone" }])
+      .mockRejectedValueOnce(new Error("Failed to fetch"));
+    render(<TwoFactorSection />);
+    fireEvent.click(await screen.findByRole("button", { name: "Remove Phone" }));
+    fireEvent.click(screen.getByRole("button", { name: "Confirm remove" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Failed to fetch");
+  });
+
+  it("shows the retry is running", async () => {
+    lib.listAuthenticators
+      .mockRejectedValueOnce(new Error("Failed to fetch"))
+      .mockReturnValueOnce(new Promise(() => {}));
+    render(<TwoFactorSection />);
+    fireEvent.click(await screen.findByRole("button", { name: "Try again" }));
+    expect(await screen.findByText("Checking…")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
+  });
+
   it("says when the list can't load", async () => {
     lib.listAuthenticators.mockRejectedValue(new Error("network down"));
     render(<TwoFactorSection />);

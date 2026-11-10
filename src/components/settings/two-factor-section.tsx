@@ -36,7 +36,9 @@ export function TwoFactorSection() {
   const reload = () => queryClient.invalidateQueries({ queryKey: AUTHENTICATORS_KEY });
   const shownError =
     error ??
-    (loadFailed ? message(authenticators.error, "Couldn't load your authenticators.") : null);
+    (authenticators.isError && !authenticators.isFetching
+      ? message(authenticators.error, "Couldn't load your authenticators.")
+      : null);
 
   async function run(action: () => Promise<void>, fallback: string) {
     setError(null);
@@ -91,7 +93,7 @@ export function TwoFactorSection() {
           </h3>
           <p className="mt-1 text-sm text-muted-foreground">
             {list === null
-              ? loadFailed
+              ? loadFailed && !authenticators.isFetching
                 ? "Couldn't check right now."
                 : "Checking…"
               : on
