@@ -372,11 +372,13 @@ function BudgetsPage() {
               </div>
               {lines.length > 0 && income != null && (
                 <div className="flex items-center justify-between gap-3 px-4 py-3 text-sm sm:px-5">
-                  <span className="text-muted-foreground">Not yet budgeted</span>
+                  <span className="text-muted-foreground">
+                    {income - totalBudget < 0 ? "Budgeted above income" : "Not yet budgeted"}
+                  </span>
                   <span
                     className={`font-figure ${income - totalBudget < 0 ? "text-negative" : "text-foreground"}`}
                   >
-                    {formatEur(income - totalBudget)}
+                    {formatEur(Math.abs(income - totalBudget))}
                   </span>
                 </div>
               )}

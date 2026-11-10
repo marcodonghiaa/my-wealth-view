@@ -296,6 +296,20 @@ describe("Budgets page", () => {
     ).toBeTruthy();
   });
 
+  // protects=P4 P1-2 label and figure agree when budgets pass income;
+  // fails_when="Not yet budgeted" sits next to a negative amount
+  it("says Budgeted above income when budgets pass income", async () => {
+    db["category_budgets"] = [
+      { category: "Groceries", month: "2026-11-01", amount: 2500, rollover: false },
+    ];
+    renderPage();
+    const label = await screen.findByText("Budgeted above income");
+    // November income 2000, budgets 2500.
+    expect(label.parentElement!.textContent).toContain("€500.00");
+    expect(label.parentElement!.textContent).not.toContain("-");
+    expect(screen.queryByText("Not yet budgeted")).toBeNull();
+  });
+
   // P1-4: visible behaviour that had no test.
   it("says Left to spend or Over budget above the total", async () => {
     db["category_budgets"] = [
