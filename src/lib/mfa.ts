@@ -9,6 +9,16 @@ export function cleanCode(input: string): string | null {
   return /^\d{6}$/.test(digits) ? digits : null;
 }
 
+// Supabase's English error texts for these cases, in the app's own words.
+const OWN_WORDS: Record<string, string> = {
+  mfa_verification_failed: "That code didn't work. Try the next one.",
+  mfa_factor_name_conflict: "You already have an authenticator with that name. Pick another.",
+};
+const inOwnWords = (error: unknown): unknown => {
+  const text = OWN_WORDS[String((error as { code?: unknown } | null)?.code)];
+  return text ? new Error(text) : error;
+};
+
 /** True when the user has an authenticator but this session hasn't entered its code yet. */
 export async function needsMfaCode(): Promise<boolean> {
   // A client without MFA (the demo) or a broken stored session: no code to ask for here. The
@@ -44,7 +54,7 @@ export async function verifyMfaCode(input: string): Promise<void> {
     }
     last = verifyError;
   }
-  throw last instanceof Error ? last : new Error("That code didn't work. Try the next one.");
+  throw inOwnWords(last);
 }
 
 export interface Authenticator {
@@ -91,7 +101,7 @@ export async function startEnrollment(name: string): Promise<Enrollment> {
       name.trim() || defaultAuthenticatorName((list?.totp ?? []).map((f) => f.friendly_name ?? "")),
     issuer: "Alopex",
   });
-  if (error) throw error;
+  if (error) throw inOwnWords(error);
   return { factorId: data.id, qrCode: data.totp.qr_code, secret: data.totp.secret };
 }
 
@@ -99,7 +109,7 @@ export async function finishEnrollment(factorId: string, input: string): Promise
   const code = cleanCode(input);
   if (!code) throw new Error("Enter the 6-digit code from your authenticator app.");
   const { error } = await supabase.auth.mfa.challengeAndVerify({ factorId, code });
-  if (error) throw error;
+  if (error) throw inOwnWords(error);
 }
 
 export async function removeAuthenticator(factorId: string): Promise<void> {

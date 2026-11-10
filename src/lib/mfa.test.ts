@@ -1,3 +1,4 @@
+import { AuthApiError } from "@supabase/supabase-js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mfa = vi.hoisted(() => ({
@@ -35,6 +36,8 @@ const totp = (id: string, extra: Record<string, unknown> = {}) => ({
   created_at: "2026-11-10T00:00:00Z",
   ...extra,
 });
+
+const wrongCode = new AuthApiError("Invalid TOTP code entered", 422, "mfa_verification_failed");
 
 beforeEach(() => {
   for (const fn of Object.values(mfa)) fn.mockReset();
@@ -95,10 +98,17 @@ describe("verifyMfaCode", () => {
     await verifyMfaCode("123 456");
     expect(mfa.challengeAndVerify).toHaveBeenLastCalledWith({ factorId: "b", code: "123456" });
   });
-  it("reports a wrong code", async () => {
+  // protects=a wrong code reads as the app's own sentence on every screen;
+  // fails_when=Supabase's raw "Invalid TOTP code entered" reaches the user
+  it("reports a wrong code in the app's words", async () => {
     mfa.listFactors.mockResolvedValue({ data: { totp: [totp("a")] }, error: null });
-    mfa.challengeAndVerify.mockResolvedValue({ error: new Error("Invalid TOTP code entered") });
-    await expect(verifyMfaCode("123456")).rejects.toThrow(/Invalid TOTP/);
+    mfa.challengeAndVerify.mockResolvedValue({ error: wrongCode });
+    await expect(verifyMfaCode("123456")).rejects.toThrow(
+      "That code didn't work. Try the next one.",
+    );
+    await expect(finishEnrollment("f1", "123456")).rejects.toThrow(
+      "That code didn't work. Try the next one.",
+    );
   });
   // protects=a user who hit Supabase's MFA limit (15/min per IP) is told to wait, and no more
   // attempts are spent; fails_when=the raw 429 shows or the next authenticator is still tried
@@ -161,6 +171,20 @@ describe("enrollment", () => {
     await startEnrollment("  ");
     expect(mfa.enroll).toHaveBeenCalledWith(
       expect.objectContaining({ friendlyName: "Authenticator 1" }),
+    );
+  });
+  it("explains a name already in use", async () => {
+    mfa.listFactors.mockResolvedValue({ data: { all: [], totp: [] }, error: null });
+    mfa.enroll.mockResolvedValue({
+      data: null,
+      error: new AuthApiError(
+        'A factor with the friendly name "Phone" already exists',
+        422,
+        "mfa_factor_name_conflict",
+      ),
+    });
+    await expect(startEnrollment("Phone")).rejects.toThrow(
+      "You already have an authenticator with that name. Pick another.",
     );
   });
   it("surfaces an enroll error", async () => {
