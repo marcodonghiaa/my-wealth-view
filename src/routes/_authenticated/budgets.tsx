@@ -234,14 +234,24 @@ function BudgetsPage() {
       />
 
       {/* Option A from polish pass 1: a past-month change holds onward, so say so up front. */}
-      {canGoNext && !loading && !error && (
+      {canGoNext && !error && (
         <p className="-mt-3 mb-6 text-sm text-muted-foreground">
           Changes here apply from {monthLabel} onward, until a later month has its own budget.
         </p>
       )}
 
       {loading ? (
-        <Skeleton className="h-80" />
+        // Shaped like the page: the headline figure, then budget rows.
+        <div aria-hidden>
+          <Skeleton className="h-4 w-28" />
+          <Skeleton className="mt-2 h-12 w-56" />
+          <Skeleton className="mt-3 mb-8 h-4 w-48" />
+          <div className="space-y-2">
+            {[0, 1, 2, 3, 4].map((i) => (
+              <Skeleton key={i} className="h-24" />
+            ))}
+          </div>
+        </div>
       ) : error ? null : lines.length === 0 ? (
         <GroupedList>
           <EmptyState

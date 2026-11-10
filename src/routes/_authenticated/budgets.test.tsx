@@ -405,6 +405,20 @@ describe("Budgets page", () => {
     expect(screen.queryByText("Income this month")).toBeNull();
   });
 
+  // protects=P4 P2-3 loading keeps the page's shape; fails_when=the past-month note blinks
+  // away while loading, or one block stands in for the figure and the rows
+  it("keeps the past-month note and a page-shaped placeholder while loading", async () => {
+    db["category_budgets"] = [
+      { category: "Groceries", month: "2026-09-01", amount: 300, rollover: false },
+    ];
+    const { container } = renderPage();
+    await screen.findByText(whole("€180.00 left"));
+    fireEvent.click(screen.getByRole("button", { name: "Previous month" }));
+    expect(container.querySelectorAll(".animate-pulse").length).toBeGreaterThan(2);
+    expect(screen.getByText(/Changes here apply from October 2026 onward/)).toBeTruthy();
+    await screen.findByText(whole("€20.00 over"));
+  });
+
   // P1-4: visible behaviour that had no test.
   it("says Left to spend or Over budget above the total", async () => {
     db["category_budgets"] = [
@@ -532,7 +546,8 @@ describe("Budgets page", () => {
         "Changes here apply from October 2026 onward, until a later month has its own budget.",
       ),
     ).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: /Change budget for Groceries/ }));
+    // The note is there while October loads too, so wait for the row itself.
+    fireEvent.click(await screen.findByRole("button", { name: /Change budget for Groceries/ }));
     fireEvent.change(screen.getByLabelText("Budget for Groceries"), { target: { value: "280" } });
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
     await waitFor(() => expect(upserts).toHaveLength(1));
