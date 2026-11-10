@@ -67,63 +67,72 @@ vi.spyOn(Route, "useSearch").mockImplementation((() => search) as never);
 
 const Page = Route.options.component as () => React.JSX.Element;
 
-describe("Rules list", () => {
-  // Regression: the delete button was 28px, hard to hit with a thumb on a phone.
-  it("has a delete button big enough to tap (44px)", async () => {
-    render(
-      <QueryClientProvider client={new QueryClient()}>
-        <Page />
-      </QueryClientProvider>,
-    );
-
-    const remove = await screen.findByRole("button", { name: "Delete rule for Netflix" });
-
-    expect(remove).toHaveClass("size-11");
-  });
-
-  // Regression: the form's labels weren't tied to their fields, so screen readers read the
-  // match-text box and the pickers with no name.
-  it("names every field of the new-rule form", async () => {
-    render(
-      <QueryClientProvider client={new QueryClient()}>
-        <Page />
-      </QueryClientProvider>,
-    );
-    fireEvent.click(await screen.findByRole("button", { name: /Add rule/ }));
-    expect(screen.getByLabelText("this text")).toHaveAttribute("type", "text");
-    expect(screen.getByLabelText("How it matches").tagName).toBe("SELECT");
-    for (const label of ["If this field", "set category (optional)", "set type (optional)"]) {
-      expect(screen.getByLabelText(label).tagName).toBe("BUTTON");
-    }
-  });
-});
-
-describe("flow rules", () => {
-  // Regression risk: a rule from To review has no category or type and looked empty.
-  it("shows a flow-only rule's effect", async () => {
-    render(
-      <QueryClientProvider client={new QueryClient()}>
-        <Page />
-      </QueryClientProvider>,
-    );
-    expect(await screen.findByText("Count as transfer")).toBeTruthy();
-    expect(screen.getByText("Not a transfer")).toBeTruthy();
-  });
-});
-
 const renderPage = () =>
   render(
     <QueryClientProvider client={new QueryClient()}>
       <Page />
     </QueryClientProvider>,
   );
+const openForm = async () =>
+  fireEvent.click(await screen.findByRole("button", { name: "New rule" }));
+
+describe("Rules list", () => {
+  // Regression: the delete button was 28px, hard to hit with a thumb on a phone.
+  it("has a delete button big enough to tap (44px)", async () => {
+    renderPage();
+    const remove = await screen.findByRole("button", { name: "Delete rule for Netflix" });
+    expect(remove).toHaveClass("size-11");
+  });
+
+  // Regression: the form's labels weren't tied to their fields, so screen readers read the
+  // match-text box and the pickers with no name.
+  it("names every field of the new-rule form", async () => {
+    renderPage();
+    await openForm();
+    expect(screen.getByLabelText("Text")).toHaveAttribute("type", "text");
+    expect(screen.getByRole("radiogroup", { name: "Look in" })).toBeTruthy();
+    expect(screen.getByRole("radiogroup", { name: "Match" })).toBeTruthy();
+    for (const label of ["Set category", "Set type"]) {
+      expect(screen.getByLabelText(label).tagName).toBe("SELECT");
+    }
+  });
+
+  it("closes the form with Cancel", async () => {
+    renderPage();
+    await openForm();
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(screen.queryByLabelText("Text")).toBeNull();
+    expect(screen.getByRole("button", { name: "New rule" })).toBeTruthy();
+  });
+
+  it("asks for text, then for something to set, before saving", async () => {
+    inserted.length = 0;
+    renderPage();
+    await openForm();
+    fireEvent.click(screen.getByRole("button", { name: "Add rule" }));
+    expect(screen.getByRole("alert")).toHaveTextContent("Type the text to look for.");
+    fireEvent.change(screen.getByLabelText("Text"), { target: { value: "Spotify" } });
+    fireEvent.click(screen.getByRole("button", { name: "Add rule" }));
+    expect(screen.getByRole("alert")).toHaveTextContent("Pick a category, a type, or both.");
+    expect(inserted).toHaveLength(0);
+  });
+});
+
+describe("flow rules", () => {
+  // Regression risk: a rule from To review has no category or type and looked empty.
+  it("shows a flow-only rule's effect", async () => {
+    renderPage();
+    expect(await screen.findByText("Count as transfer")).toBeTruthy();
+    expect(screen.getByText("Not a transfer")).toBeTruthy();
+  });
+});
 
 describe("match modes", () => {
   it("shows how each rule matches; older rules without a mode match anywhere", async () => {
     renderPage();
     await screen.findByText("“Netflix”");
     expect(screen.getByText("“Netflix”").parentElement).toHaveTextContent(
-      "Creditor name contains “Netflix”",
+      "Name contains “Netflix”",
     );
     expect(screen.getByText("“Revolut”").parentElement).toHaveTextContent("is exactly “Revolut”");
     expect(screen.getByText("“Mum”").parentElement).toHaveTextContent("has the word “Mum”");
@@ -139,64 +148,73 @@ describe("match modes", () => {
   it("saves new rules as whole-word matches by default", async () => {
     inserted.length = 0;
     renderPage();
-    fireEvent.click(await screen.findByRole("button", { name: /Add rule/ }));
-    fireEvent.change(screen.getByLabelText("this text"), { target: { value: "bar" } });
+    await openForm();
+    fireEvent.change(screen.getByLabelText("Text"), { target: { value: "bar" } });
     expect(screen.queryByText(/is in “Barclays”/)).toBeNull();
-    fireEvent.change(screen.getByLabelText("How it matches"), { target: { value: "contains" } });
+    fireEvent.click(screen.getByRole("radio", { name: "Anywhere" }));
     expect(screen.getByText(/is in “Barclays”/)).toBeTruthy();
-    fireEvent.change(screen.getByLabelText("How it matches"), { target: { value: "word" } });
-    fireEvent.click(screen.getByLabelText("set type (optional)"));
-    fireEvent.click(await screen.findByRole("button", { name: "Subscription" }));
-    fireEvent.click(screen.getAllByRole("button", { name: /Add rule/ }).at(-1)!);
+    fireEvent.click(screen.getByRole("radio", { name: "Whole word" }));
+    fireEvent.change(screen.getByLabelText("Set type"), { target: { value: "Subscription" } });
+    fireEvent.click(screen.getByRole("button", { name: "Add rule" }));
     await waitFor(() => expect(inserted).toHaveLength(1));
-    expect(inserted[0]).toMatchObject({ match_mode: "word", match_text: "bar" });
+    expect(inserted[0]).toMatchObject({
+      match_field: "creditor_name",
+      match_mode: "word",
+      match_text: "bar",
+      set_category: null,
+      set_transaction_type: "Subscription",
+    });
   });
 
   it("opens the form filled in when coming from a transaction", async () => {
     search = { text: "BAR ROMA", category: "Dine Out" };
     renderPage();
-    expect(await screen.findByLabelText("this text")).toHaveValue("BAR ROMA");
-    expect(screen.getByLabelText("set category (optional)")).toHaveTextContent("Dine Out");
+    expect(await screen.findByLabelText("Text")).toHaveValue("BAR ROMA");
+    expect(screen.getByLabelText("Set category")).toHaveValue("Dine Out");
     search = {};
   });
 });
 
 describe("apply to past transactions", () => {
-  it("previews the changes, then applies them", async () => {
+  const open = async () => {
+    renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: "Apply to past transactions" }));
+  };
+
+  it("previews the changes as soon as it opens, then applies them", async () => {
     invoke.mockReset();
     invoke.mockResolvedValueOnce({
       data: { changes: 2, sample: [{ name: "Bar Roma", from: "Others", to: "Dine Out" }] },
       error: null,
     });
     invoke.mockResolvedValueOnce({ data: { changes: 2, sample: [] }, error: null });
-    renderPage();
-    await screen.findByText("“Netflix”"); // the button waits for the rules
-    fireEvent.click(screen.getByRole("button", { name: "Check what would change" }));
-    expect(await screen.findByText("2 transactions would change, for example:")).toBeTruthy();
+    await open();
+    expect(await screen.findByText(/would change, for example/)).toHaveTextContent(
+      "2 transactions would change, for example:",
+    );
+    expect(screen.getByText("Bar Roma")).toBeTruthy();
     expect(invoke).toHaveBeenLastCalledWith("reapply-rules", { body: { apply: false } });
-    fireEvent.click(screen.getByRole("button", { name: "Apply to 2 transactions" }));
+    fireEvent.click(screen.getByRole("button", { name: "Update 2 transactions" }));
     await waitFor(() =>
       expect(invoke).toHaveBeenLastCalledWith("reapply-rules", { body: { apply: true } }),
     );
-    expect(await screen.findByRole("button", { name: "Check what would change" })).toBeTruthy();
+    expect(await screen.findByRole("button", { name: "Apply to past transactions" })).toBeTruthy();
   });
 
   it("says so when nothing would change", async () => {
     invoke.mockReset();
     invoke.mockResolvedValueOnce({ data: { changes: 0, sample: [] }, error: null });
-    renderPage();
-    await screen.findByText("“Netflix”"); // the button waits for the rules
-    fireEvent.click(screen.getByRole("button", { name: "Check what would change" }));
+    await open();
     expect(await screen.findByText(/Nothing to change/)).toBeTruthy();
   });
 
-  it("keeps the check button when the server fails", async () => {
+  it("shows the error with a retry when the server fails", async () => {
     invoke.mockReset();
     invoke.mockResolvedValueOnce({ data: null, error: new Error("boom") });
-    renderPage();
-    await screen.findByText("“Netflix”"); // the button waits for the rules
-    fireEvent.click(screen.getByRole("button", { name: "Check what would change" }));
-    await waitFor(() => expect(invoke).toHaveBeenCalled());
-    expect(await screen.findByRole("button", { name: "Check what would change" })).toBeEnabled();
+    invoke.mockResolvedValueOnce({ data: { changes: 0, sample: [] }, error: null });
+    await open();
+    expect(await screen.findByRole("alert")).toHaveTextContent("Couldn't apply your rules");
+    fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+    expect(await screen.findByText(/Nothing to change/)).toBeTruthy();
   });
 });
