@@ -31,7 +31,7 @@ describe("TwoFactorSection", () => {
   it("sets up an authenticator: QR, key, code, then shows it as on", async () => {
     lib.listAuthenticators
       .mockResolvedValueOnce([])
-      .mockResolvedValueOnce([{ id: "f1", name: "Phone", createdAt: "" }]);
+      .mockResolvedValueOnce([{ id: "f1", name: "Phone" }]);
     render(<TwoFactorSection />);
     expect(await screen.findByText(/^Off\./)).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText(/Name/), { target: { value: "Phone" } });
@@ -51,7 +51,7 @@ describe("TwoFactorSection", () => {
   it("on a load error shows the error and a retry, not Off", async () => {
     lib.listAuthenticators
       .mockRejectedValueOnce(new Error("Failed to fetch"))
-      .mockResolvedValueOnce([{ id: "f1", name: "Phone", createdAt: "" }]);
+      .mockResolvedValueOnce([{ id: "f1", name: "Phone" }]);
     render(<TwoFactorSection />);
     expect(await screen.findByRole("alert")).toHaveTextContent("Failed to fetch");
     expect(screen.queryByText(/^Off\./)).not.toBeInTheDocument();
@@ -97,7 +97,7 @@ describe("TwoFactorSection", () => {
 
   it("removes an authenticator after a second click", async () => {
     lib.listAuthenticators
-      .mockResolvedValueOnce([{ id: "a", name: "Phone", createdAt: "" }])
+      .mockResolvedValueOnce([{ id: "a", name: "Phone" }])
       .mockResolvedValueOnce([]);
     render(<TwoFactorSection />);
     fireEvent.click(await screen.findByRole("button", { name: "Remove Phone" }));
@@ -110,8 +110,8 @@ describe("TwoFactorSection", () => {
   // protects=one remove at a time; fails_when=another row can start a remove mid-request
   it("disables the other rows' remove buttons while one is being removed", async () => {
     lib.listAuthenticators.mockResolvedValue([
-      { id: "a", name: "Phone", createdAt: "" },
-      { id: "b", name: "Laptop", createdAt: "" },
+      { id: "a", name: "Phone" },
+      { id: "b", name: "Laptop" },
     ]);
     lib.removeAuthenticator.mockReturnValue(new Promise(() => {}));
     render(<TwoFactorSection />);

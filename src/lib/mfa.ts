@@ -61,7 +61,6 @@ export async function verifyMfaCode(input: string): Promise<void> {
 export interface Authenticator {
   id: string;
   name: string;
-  createdAt: string;
 }
 
 export async function listAuthenticators(): Promise<Array<Authenticator>> {
@@ -70,7 +69,6 @@ export async function listAuthenticators(): Promise<Array<Authenticator>> {
   return data.totp.map((f) => ({
     id: f.id,
     name: f.friendly_name || "Authenticator app",
-    createdAt: f.created_at,
   }));
 }
 
