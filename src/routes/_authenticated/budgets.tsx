@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -41,6 +41,7 @@ export const Route = createFileRoute("/_authenticated/budgets")({
 });
 
 const BUDGETS_KEY = ["category-budgets"];
+const ADD_CATEGORY_ID = "add-budget-category";
 const SPREAD_KEY = "alopex.budgets.spreadIncome";
 
 const PAGE_SIZE = 1000; // PostgREST returns at most 1000 rows per request
@@ -424,6 +425,18 @@ function BudgetLineRow({
   const used = line.available > 0 ? Math.min(1, line.spent / line.available) : over ? 1 : 0;
 
   const [invalid, setInvalid] = useState(false);
+  // When the editor closes, focus goes back to the amount it was opened from.
+  const amountButton = useRef<HTMLButtonElement>(null);
+  const refocus = useRef(false);
+  useEffect(() => {
+    if (editing || !refocus.current) return;
+    refocus.current = false;
+    amountButton.current?.focus();
+  }, [editing]);
+  const close = () => {
+    refocus.current = true;
+    setEditing(false);
+  };
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -431,7 +444,7 @@ function BudgetLineRow({
     const amount = parseAmount(draft);
     if (amount == null) return setInvalid(true);
     setInvalid(false);
-    setEditing(false);
+    close();
     onSave(amount, line.rollover);
   }
 
@@ -461,7 +474,11 @@ function BudgetLineRow({
       </div>
       <div className="mt-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-[0.8125rem] text-muted-foreground">
         {editing ? (
-          <form onSubmit={submit} className="flex flex-wrap items-center gap-2">
+          <form
+            onSubmit={submit}
+            onKeyDown={(e) => e.key === "Escape" && close()}
+            className="flex flex-wrap items-center gap-2"
+          >
             <Input
               aria-label={`Budget for ${line.category}`}
               aria-invalid={invalid}
@@ -478,7 +495,7 @@ function BudgetLineRow({
             <Button type="submit" size="sm" disabled={busy}>
               Save
             </Button>
-            <Button variant="ghost" size="sm" onClick={() => setEditing(false)}>
+            <Button variant="ghost" size="sm" onClick={close}>
               Cancel
             </Button>
             <Button
@@ -486,6 +503,10 @@ function BudgetLineRow({
               size="sm"
               disabled={busy}
               onClick={() => {
+                // The row goes away: move on to the add form (or stay if there is none).
+                const next = document.getElementById(ADD_CATEGORY_ID);
+                if (next) next.focus();
+                else refocus.current = true;
                 setEditing(false);
                 onSave(0, false);
               }}
@@ -502,6 +523,7 @@ function BudgetLineRow({
           <span>
             <span className="font-figure">{formatEur(line.spent)}</span> of{" "}
             <button
+              ref={amountButton}
               type="button"
               className="inline-flex items-center gap-1.5 font-figure text-foreground underline decoration-rule underline-offset-4 hover:decoration-foreground"
               aria-label={`Change budget for ${line.category}, now ${formatEur(line.budget)}`}
@@ -570,6 +592,7 @@ function AddBudget({
       <GroupedList>
         <form onSubmit={submit} className="flex flex-col gap-2 p-4 sm:flex-row sm:px-5">
           <Select
+            id={ADD_CATEGORY_ID}
             aria-label="Category"
             value={category}
             onChange={(e) => {

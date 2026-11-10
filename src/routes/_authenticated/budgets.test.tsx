@@ -321,6 +321,36 @@ describe("Budgets page", () => {
     expect(change.textContent).toBe("€300.00");
   });
 
+  // protects=P4 P1-4 keyboard users keep their place; fails_when=focus falls to the page body
+  // after Cancel, Save or Remove, or Escape leaves the editor open
+  it("returns focus after the editor closes, and Escape cancels", async () => {
+    db["category_budgets"] = [
+      { category: "Groceries", month: "2026-11-01", amount: 300, rollover: false },
+    ];
+    renderPage();
+    const amount = () => screen.getByRole("button", { name: /Change budget for Groceries/ });
+    fireEvent.click(await screen.findByRole("button", { name: /Change budget for Groceries/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(document.activeElement).toBe(amount());
+
+    fireEvent.click(amount());
+    fireEvent.keyDown(screen.getByLabelText("Budget for Groceries"), { key: "Escape" });
+    expect(screen.queryByLabelText("Budget for Groceries")).toBeNull();
+    expect(document.activeElement).toBe(amount());
+    expect(upserts).toHaveLength(0);
+
+    fireEvent.click(amount());
+    fireEvent.change(screen.getByLabelText("Budget for Groceries"), { target: { value: "280" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(document.activeElement).toBe(amount());
+    await waitFor(() => expect(upserts).toHaveLength(1));
+
+    fireEvent.click(await screen.findByRole("button", { name: /now €280.00/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Remove" }));
+    // The row is about to go: focus moves on to the add form.
+    expect(document.activeElement).toBe(screen.getByLabelText("Category"));
+  });
+
   // P1-4: visible behaviour that had no test.
   it("says Left to spend or Over budget above the total", async () => {
     db["category_budgets"] = [
