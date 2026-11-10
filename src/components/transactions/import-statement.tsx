@@ -66,6 +66,8 @@ export function ImportStatement() {
   const readId = useRef(0);
 
   function reset() {
+    // A new file (or closing) makes any read still in flight stale.
+    readId.current++;
     setText(null);
     setStatement(null);
     setHeaders([]);
@@ -76,6 +78,7 @@ export function ImportStatement() {
     setSource("");
     setError(null);
     setProgress(null);
+    setReadingPdf(false);
   }
 
   async function read(csv: string, cols?: StatementColumns, opts: StatementOptions = {}) {
@@ -98,12 +101,15 @@ export function ImportStatement() {
   }
 
   async function handlePdf(file: File) {
+    const id = ++readId.current;
     setReadingPdf(true);
     try {
       const rows = await readStatementPdf(
         (name, opts) => supabase.functions.invoke(name, opts),
         file,
       );
+      const fresh = await newRows(client, rows);
+      if (id !== readId.current) return;
       setStatement({
         headers: [],
         columns: NO_COLUMNS,
@@ -113,11 +119,12 @@ export function ImportStatement() {
         dateOrder: "DMY",
         decimal: null,
       });
-      setFresh(await newRows(client, rows));
+      setFresh(fresh);
     } catch (err) {
+      if (id !== readId.current) return;
       setError(err instanceof Error ? err.message : "Couldn't read the PDF.");
     } finally {
-      setReadingPdf(false);
+      if (id === readId.current) setReadingPdf(false);
     }
   }
 

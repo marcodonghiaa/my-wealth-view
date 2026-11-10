@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 const rpc = vi.fn();
@@ -219,6 +219,22 @@ describe("ImportStatement", () => {
     await new Promise((r) => setTimeout(r, 20));
     // The slow, older read (not flipped) must not replace the newer preview.
     expect(screen.getByText("+€5.00")).toBeTruthy();
+  });
+
+  it("#1 drops a slow read when another file is picked meanwhile", async () => {
+    let releaseSlow: () => void = () => {};
+    range = () =>
+      new Promise((resolve) => {
+        releaseSlow = () => resolve({ data: existing, error: null });
+      });
+    upload("a.csv", "Date,Description,Amount\n2026-02-01,Shop,-5");
+    await waitFor(() => expect(releaseSlow).not.toBe(undefined));
+    const other = new File(["binary"], "b.xlsx");
+    fireEvent.change(screen.getByLabelText("Statement file"), { target: { files: [other] } });
+    expect(await screen.findByRole("alert")).toHaveTextContent(/Save as → CSV/i);
+    await act(async () => releaseSlow());
+    expect(screen.queryByText("Shop")).toBeNull();
+    expect(screen.getByRole("alert")).toHaveTextContent(/Save as → CSV/i);
   });
 
   it("does not claim a decimal mark it could not tell", async () => {
