@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { MIN_PASSWORD_LENGTH, passwordErrorMessage, validateNewPassword } from "@/lib/password";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/field";
+import { needsMfaCode, verifyMfaCode } from "@/lib/mfa";
 
 function Field(props: {
   id: string;
@@ -43,6 +44,9 @@ export function ChangePasswordForm() {
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
   const [pending, setPending] = useState(false);
+  // Signing in again drops a two-step session back to the password level: the authenticator code
+  // lifts it again before the change (Supabase requires it once an authenticator is set).
+  const [code, setCode] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -58,16 +62,25 @@ export function ChangePasswordForm() {
       const { data: sessionData } = await supabase.auth.getSession();
       const email = sessionData.session?.user.email;
       if (!email) throw new Error("You're signed out. Sign in again, then retry.");
-      const { error: verifyError } = await supabase.auth.signInWithPassword({
-        email,
-        password: current,
-      });
-      if (verifyError) throw verifyError;
+      if (code === null) {
+        const { error: verifyError } = await supabase.auth.signInWithPassword({
+          email,
+          password: current,
+        });
+        if (verifyError) throw verifyError;
+        if (await needsMfaCode()) {
+          setCode("");
+          return;
+        }
+      } else {
+        await verifyMfaCode(code);
+      }
       const { error: updateError } = await supabase.auth.updateUser({ password: next });
       if (updateError) throw updateError;
       setCurrent("");
       setNext("");
       setConfirmation("");
+      setCode(null);
       setDone(true);
     } catch (err) {
       setError(passwordErrorMessage(err));
@@ -105,6 +118,30 @@ export function ChangePasswordForm() {
           onChange={setConfirmation}
           autoComplete="new-password"
         />
+        {code !== null && (
+          <div className="space-y-1.5">
+            <label
+              htmlFor="password-mfa-code"
+              className="text-xs font-medium text-muted-foreground"
+            >
+              Authenticator code
+            </label>
+            <Input
+              id="password-mfa-code"
+              required
+              autoFocus
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              maxLength={9}
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              placeholder="123456"
+            />
+            <p className="text-xs text-muted-foreground">
+              Password checked. Type the code from your authenticator app to finish.
+            </p>
+          </div>
+        )}
         {error && (
           <p role="alert" className="text-sm text-negative">
             {error}

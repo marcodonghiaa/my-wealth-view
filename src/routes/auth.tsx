@@ -6,6 +6,7 @@ import { TrustNote } from "@/components/trust-note";
 import { supabase } from "@/integrations/supabase/client";
 import { exitDemoMode } from "@/lib/demo/mode";
 import { resetPasswordUrl } from "./reset-password";
+import { needsMfaCode, verifyMfaCode } from "@/lib/mfa";
 
 export function safeNext(value: unknown): string | undefined {
   if (typeof value !== "string" || !value.startsWith("/")) return undefined;
@@ -52,7 +53,7 @@ export const Route = createFileRoute("/auth")({
   component: AuthPage,
 });
 
-function AuthPage() {
+export function AuthPage() {
   const navigate = useNavigate();
   const { next } = Route.useSearch();
   const { leftDemo } = Route.useRouteContext();
@@ -73,7 +74,9 @@ function AuthPage() {
   const [pending, setPending] = useState(false);
   const [checkingSession, setCheckingSession] = useState(true);
   // "reset": the form asks only for the email and sends Supabase's recovery link.
-  const [mode, setMode] = useState<"signin" | "reset">("signin");
+  // "mfa": the password was right; the account has an authenticator, so its code comes next.
+  const [mode, setMode] = useState<"signin" | "reset" | "mfa">("signin");
+  const [code, setCode] = useState("");
   const [resetSent, setResetSent] = useState(false);
 
   // Already signed in? Go straight to the dashboard, unless the visitor just left the demo:
@@ -95,10 +98,20 @@ function AuthPage() {
       .then(({ data }) => {
         if (cancelled) return;
         if (data.session) {
-          void goNext();
-        } else {
-          setCheckingSession(false);
+          // Signed in but the code was never entered (closed tab, or sent back here by the
+          // dashboard): ask for it instead of looping.
+          return needsMfaCode().then((needed) => {
+            if (cancelled) return;
+            if (needed) {
+              setMode("mfa");
+              setCheckingSession(false);
+            } else {
+              void goNext();
+            }
+          });
         }
+        setCheckingSession(false);
+        return undefined;
       })
       .catch(() => setCheckingSession(false));
     return () => {
@@ -119,11 +132,20 @@ function AuthPage() {
         setResetSent(true);
         return;
       }
+      if (mode === "mfa") {
+        await verifyMfaCode(code);
+        await goNext();
+        return;
+      }
       const { error: signInError } = await supabase.auth.signInWithPassword({
         email: email.trim(),
         password,
       });
       if (signInError) throw signInError;
+      if (await needsMfaCode()) {
+        setMode("mfa");
+        return;
+      }
       await goNext();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Authentication failed");
@@ -148,24 +170,48 @@ function AuthPage() {
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-1.5">
-                <label htmlFor="email" className="text-xs font-medium text-muted-foreground">
-                  Email
-                </label>
-                <input
-                  id="email"
-                  type="email"
-                  required
-                  autoComplete="email"
-                  autoCapitalize="none"
-                  autoCorrect="off"
-                  spellCheck={false}
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-base text-foreground outline-none transition-colors placeholder:text-muted-foreground/60 focus:border-primary/60 focus:ring-2 focus:ring-ring"
-                  placeholder="you@example.com"
-                />
-              </div>
+              {mode === "mfa" && (
+                <div className="space-y-1.5">
+                  <label htmlFor="mfa-code" className="text-xs font-medium text-muted-foreground">
+                    Authenticator code
+                  </label>
+                  <input
+                    id="mfa-code"
+                    required
+                    autoFocus
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    maxLength={9}
+                    value={code}
+                    onChange={(e) => setCode(e.target.value)}
+                    className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-center font-mono text-lg tracking-[0.3em] text-foreground outline-none transition-colors placeholder:text-muted-foreground/60 focus:border-primary/60 focus:ring-2 focus:ring-ring"
+                    placeholder="123456"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Open your authenticator app and type the 6-digit code for Alopex.
+                  </p>
+                </div>
+              )}
+              {mode !== "mfa" && (
+                <div className="space-y-1.5">
+                  <label htmlFor="email" className="text-xs font-medium text-muted-foreground">
+                    Email
+                  </label>
+                  <input
+                    id="email"
+                    type="email"
+                    required
+                    autoComplete="email"
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    spellCheck={false}
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-base text-foreground outline-none transition-colors placeholder:text-muted-foreground/60 focus:border-primary/60 focus:ring-2 focus:ring-ring"
+                    placeholder="you@example.com"
+                  />
+                </div>
+              )}
               {mode === "signin" && (
                 <div className="space-y-1.5">
                   <div className="flex items-baseline justify-between">
@@ -218,8 +264,22 @@ function AuthPage() {
                 ) : (
                   <LockKeyhole className="size-4" />
                 )}
-                {mode === "reset" ? "Send reset link" : "Sign in"}
+                {mode === "reset" ? "Send reset link" : mode === "mfa" ? "Verify" : "Sign in"}
               </button>
+              {mode === "mfa" && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    void supabase.auth.signOut();
+                    setMode("signin");
+                    setCode("");
+                    setError(null);
+                  }}
+                  className="w-full text-center text-sm text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  Use a different account
+                </button>
+              )}
               {mode === "reset" && (
                 <button
                   type="button"

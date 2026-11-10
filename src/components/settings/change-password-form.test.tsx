@@ -16,6 +16,9 @@ vi.mock("@/integrations/supabase/client", () => ({
   },
 }));
 
+const mfa = vi.hoisted(() => ({ needsMfaCode: vi.fn(), verifyMfaCode: vi.fn() }));
+vi.mock("@/lib/mfa", () => mfa);
+
 import { ChangePasswordForm } from "./change-password-form";
 
 function fill(current: string, next: string, confirmation: string) {
@@ -34,6 +37,25 @@ describe("ChangePasswordForm", () => {
     session = { user: { email: "me@example.com" } };
     signInWithPassword.mockClear().mockResolvedValue({ error: null });
     updateUser.mockClear().mockResolvedValue({ error: null });
+    mfa.needsMfaCode.mockReset().mockResolvedValue(false);
+    mfa.verifyMfaCode.mockReset().mockResolvedValue(undefined);
+  });
+
+  // protects=a user with two-step sign-in can still change the password;
+  // fails_when=the update runs on the password-only session Supabase refuses
+  it("asks for the authenticator code after the password check, then saves", async () => {
+    mfa.needsMfaCode.mockResolvedValue(true);
+    render(<ChangePasswordForm />);
+    fill("oldpassword", "newpassword1", "newpassword1");
+    const codeField = await screen.findByLabelText("Authenticator code");
+    expect(updateUser).not.toHaveBeenCalled();
+    fireEvent.change(codeField, { target: { value: "123456" } });
+    fireEvent.click(screen.getByRole("button", { name: "Change password" }));
+    expect(await screen.findByRole("status")).toHaveTextContent(/Password changed/);
+    expect(mfa.verifyMfaCode).toHaveBeenCalledWith("123456");
+    expect(signInWithPassword).toHaveBeenCalledTimes(1);
+    expect(updateUser).toHaveBeenCalledWith({ password: "newpassword1" });
+    expect(screen.queryByLabelText("Authenticator code")).not.toBeInTheDocument();
   });
 
   it("verifies the current password, saves the new one and clears the form", async () => {

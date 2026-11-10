@@ -20,6 +20,7 @@ import {
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { loadDemoClient, supabase } from "@/integrations/supabase/client";
 import { isDemoMode } from "@/lib/demo/mode";
+import { needsMfaCode } from "@/lib/mfa";
 import { registerDashboardOrigin } from "@/lib/register-origin";
 import { MadeWith } from "@/components/made-with";
 import { GroupedList } from "@/components/ui/grouped-list";
@@ -49,6 +50,8 @@ export const Route = createFileRoute("/_authenticated")({
       if (error || !data.session) {
         throw toAuth();
       }
+      // Signed in with the password but not yet the authenticator code: the sign-in page asks for it.
+      if (!isDemoMode() && (await needsMfaCode())) throw toAuth();
       return { user: data.session.user };
     } catch (err) {
       if (err instanceof Response) throw err;
