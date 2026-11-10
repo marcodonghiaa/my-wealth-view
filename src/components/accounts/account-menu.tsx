@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { supabase } from "@/integrations/supabase/client";
-import { ACCOUNT_TYPES, parseOwed } from "@/lib/account-types";
+import { ACCOUNT_TYPES, isDebt, parseOwed } from "@/lib/account-types";
 
 export interface MenuAccount {
   uid: string;
@@ -203,7 +203,8 @@ export function AccountMenu({ title, accounts }: { title: string; accounts: Arra
                 }}
                 className={field}
               >
-                {ACCOUNT_TYPES.map(([value, label]) => (
+                {/* A manual account only holds a debt typed in by hand. */}
+                {ACCOUNT_TYPES.filter(([t]) => !a.manual || isDebt(t)).map(([value, label]) => (
                   <option key={value} value={value}>
                     {label}
                   </option>

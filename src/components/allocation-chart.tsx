@@ -1,5 +1,5 @@
 import { Cell, Pie, PieChart, ResponsiveContainer } from "recharts";
-import { Bitcoin, Building2, Landmark, ScrollText, Shapes } from "lucide-react";
+import { Bitcoin, Building2, CreditCard, Landmark, ScrollText, Shapes } from "lucide-react";
 import { shareSummary } from "@/lib/chart-summary";
 import { formatDay } from "@/lib/date";
 import {
@@ -25,7 +25,7 @@ const CLASSES = [
 
 // What net worth is made of: a donut of the mix with each class's share and value beside it,
 // for today or for `asOf` (the day being scrubbed on the chart above).
-// Liabilities (tax reserve) are left out so the mix describes what you hold, not what you owe.
+// Shares are of what you hold; debts follow as a negative line, so the values add up to net worth.
 export function AllocationChart({
   history,
   snapshots,
@@ -47,6 +47,7 @@ export function AllocationChart({
   const slices = CLASSES.map((c) => ({ ...c, value: row[c.key] ?? 0 })).filter((s) => s.value > 0);
   const gross = slices.reduce((sum, s) => sum + s.value, 0);
   if (gross <= 0) return null;
+  const debts = row.liabilities_eur ?? 0;
 
   return (
     <section aria-labelledby="allocation-title" className="rounded-lg bg-card p-5 sm:p-6">
@@ -105,11 +106,21 @@ export function AllocationChart({
                   {((value / gross) * 100).toFixed(1)}%
                 </p>
               </div>
-              <p className="font-figure text-sm text-foreground">
-                {format(value)}
-              </p>
+              <p className="font-figure text-sm text-foreground">{format(value)}</p>
             </li>
           ))}
+          {debts > 0 && (
+            <li className="flex min-h-16 items-center gap-3 py-2.5">
+              <span
+                aria-hidden
+                className="flex size-10 shrink-0 items-center justify-center rounded-full bg-negative/10 text-negative"
+              >
+                <CreditCard className="size-[1.125rem]" strokeWidth={2} />
+              </span>
+              <p className="min-w-0 flex-1 text-sm font-medium text-foreground">Debts</p>
+              <p className="font-figure text-sm text-foreground">{format(-debts)}</p>
+            </li>
+          )}
         </ul>
       </div>
     </section>

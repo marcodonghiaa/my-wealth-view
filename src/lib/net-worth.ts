@@ -109,6 +109,7 @@ export function withHistory(
       bank_total_eur: h.cash_eur,
       portfolio_total_eur: h.stocks_eur + h.bonds_eur,
       crypto_total_eur: h.crypto_eur,
+      liabilities_eur: h.liabilities_eur,
     })),
     ...reconstructed
       .filter((r) => before(r.snapshot_date) && !importedDates.has(r.snapshot_date))
@@ -146,6 +147,8 @@ export function monthNetWorth(rows: Array<NetWorthRow>, dayBeforeIso: string, en
       bank: end.bank_total_eur - start.bank_total_eur,
       portfolio: end.portfolio_total_eur - start.portfolio_total_eur,
       crypto: end.crypto_total_eur - start.crypto_total_eur,
+      // Debts owed more is a fall in net worth.
+      debts: (start.liabilities_eur ?? 0) - (end.liabilities_eur ?? 0),
     },
   };
 }

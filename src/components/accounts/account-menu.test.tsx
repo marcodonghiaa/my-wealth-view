@@ -69,6 +69,14 @@ describe("AccountMenu", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(/database update first/);
   });
 
+  // protects=the backend refuses other types on a manual account
+  it("offers only debt types on a manual debt", () => {
+    setup(<AccountMenu title="Car loan" accounts={[manual]} />);
+    fireEvent.click(screen.getByRole("button", { name: "Edit Car loan" }));
+    const options = screen.getAllByRole("option").map((o) => o.textContent);
+    expect(options).toEqual(["Credit card", "Loan"]);
+  });
+
   it("saves what is owed on a manual debt, as a positive amount", async () => {
     rpc.mockResolvedValue({ data: null, error: null });
     setup(<AccountMenu title="Car loan" accounts={[manual]} />);
