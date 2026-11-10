@@ -61,6 +61,7 @@ export type Database = {
           match_text: string;
           priority: number;
           set_category: string | null;
+          set_flow_type: string | null;
           set_transaction_type: string | null;
           user_id: string;
         };
@@ -71,6 +72,7 @@ export type Database = {
           match_text: string;
           priority?: number;
           set_category?: string | null;
+          set_flow_type?: string | null;
           set_transaction_type?: string | null;
           user_id: string;
         };
@@ -81,6 +83,7 @@ export type Database = {
           match_text?: string;
           priority?: number;
           set_category?: string | null;
+          set_flow_type?: string | null;
           set_transaction_type?: string | null;
           user_id?: string;
         };
@@ -786,6 +789,8 @@ export type Database = {
           deleted_at: string | null;
           refund_of: string | null;
           flow_type: string | null;
+          flow_source: string | null;
+          own_counterparty: boolean | null;
           owed_by: string | null;
           owed_settled: boolean;
           personal_amount: number | null;
@@ -816,6 +821,8 @@ export type Database = {
           deleted_at?: string | null;
           refund_of?: string | null;
           flow_type?: string | null;
+          flow_source?: string | null;
+          own_counterparty?: boolean | null;
           owed_by?: string | null;
           owed_settled?: boolean;
           personal_amount?: number | null;
@@ -846,6 +853,8 @@ export type Database = {
           deleted_at?: string | null;
           refund_of?: string | null;
           flow_type?: string | null;
+          flow_source?: string | null;
+          own_counterparty?: boolean | null;
           owed_by?: string | null;
           owed_settled?: boolean;
           personal_amount?: number | null;
@@ -874,6 +883,39 @@ export type Database = {
             referencedColumns: ["uid"];
           },
         ];
+      };
+      transfer_pairs: {
+        Row: {
+          created_at: string;
+          id: string;
+          in_account_uid: string;
+          in_ref: string;
+          out_account_uid: string;
+          out_ref: string;
+          status: string;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          in_account_uid: string;
+          in_ref: string;
+          out_account_uid: string;
+          out_ref: string;
+          status?: string;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          in_account_uid?: string;
+          in_ref?: string;
+          out_account_uid?: string;
+          out_ref?: string;
+          status?: string;
+          user_id?: string;
+        };
+        Relationships: [];
       };
     };
     Views: {
@@ -1073,6 +1115,10 @@ export type Database = {
       };
     };
     Functions: {
+      resolve_transfer_pair: {
+        Args: { p_pair: string; p_keep: boolean };
+        Returns: undefined;
+      };
       add_manual_transaction: {
         Args: {
           p_booking_date: string;

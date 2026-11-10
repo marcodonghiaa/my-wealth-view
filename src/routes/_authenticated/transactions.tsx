@@ -25,6 +25,13 @@ import {
 } from "@/lib/transactions";
 import { BulkCategoryPicker } from "@/components/transactions/pickers";
 import { TransfersSection } from "@/components/transactions/transfers-section";
+import { ReviewSection } from "@/components/transactions/review-section";
+import {
+  fetchReviewRows,
+  pairIdByTx,
+  reviewGroups,
+  type TransferPair,
+} from "@/lib/transfer-review";
 import { AddTransaction } from "@/components/transactions/add-transaction";
 import { ImportStatement } from "@/components/transactions/import-statement";
 import {
@@ -33,6 +40,8 @@ import {
   useFlowMutation,
   useManualAmountMutation,
   useRenameMerchantMutation,
+  useResolvePairMutation,
+  useReviewGroupMutation,
   useShareMutation,
   useSplitMutation,
   useTransactionFieldMutation,
@@ -100,6 +109,16 @@ async function fetchTransfersForMonth(month: Date): Promise<Array<TransactionRow
     .order("entry_reference", { ascending: false });
   if (error) throw error;
   return (data ?? []) as Array<TransactionRow>;
+}
+
+// Transfers the sync paired on its own, waiting for a yes or no.
+async function fetchSuggestedPairs(): Promise<Array<TransferPair>> {
+  const { data, error } = await supabase
+    .from("transfer_pairs")
+    .select("id,out_account_uid,out_ref,in_account_uid,in_ref")
+    .eq("status", "suggested");
+  if (error) throw error;
+  return data ?? [];
 }
 
 // My share of Splitwise expenses in the month (shares already paid by card are bank rows).
@@ -181,6 +200,22 @@ function TransactionsPage() {
     staleTime: 60_000,
   });
   const transfers = transfersQuery.data ?? [];
+
+  const pairsQuery = useQuery({
+    queryKey: ["transfer-pairs"],
+    queryFn: fetchSuggestedPairs,
+    staleTime: 60_000,
+  });
+  const pairIdOf = useMemo(() => pairIdByTx(pairsQuery.data ?? []), [pairsQuery.data]);
+  const resolvePair = useResolvePairMutation(queryClient);
+
+  const reviewQuery = useQuery({
+    queryKey: ["transfer-review"],
+    queryFn: fetchReviewRows,
+    staleTime: 5 * 60_000,
+  });
+  const review = useMemo(() => reviewGroups(reviewQuery.data ?? []), [reviewQuery.data]);
+  const decideGroup = useReviewGroupMutation(queryClient);
 
   const contactsQuery = useQuery({
     queryKey: ["split-contacts"],
@@ -379,6 +414,12 @@ function TransactionsPage() {
         </div>
       )}
 
+      <ReviewSection
+        groups={review}
+        savingKey={decideGroup.isPending ? decideGroup.variables.group.key : undefined}
+        onDecide={(group, choice) => decideGroup.mutate({ group, choice })}
+      />
+
       <MonthSwitcher
         className="mb-4"
         label={monthLabel}
@@ -571,6 +612,9 @@ function TransactionsPage() {
           rows={transfers}
           savingId={restoreTransfer.isPending ? txId(restoreTransfer.variables.tx) : undefined}
           onRestore={(tx) => restoreTransfer.mutate({ tx })}
+          pairIdOf={pairIdOf}
+          savingPair={resolvePair.isPending ? resolvePair.variables.pairId : undefined}
+          onResolvePair={(pairId, keep) => resolvePair.mutate({ pairId, keep })}
         />
       )}
     </div>

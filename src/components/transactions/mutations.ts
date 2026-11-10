@@ -3,6 +3,7 @@ import type { SplitRow } from "@/lib/splits";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import type { TablesUpdate } from "@/integrations/supabase/types";
+import type { ReviewGroup } from "@/lib/transfer-review";
 import {
   restoredFlow,
   txId,
@@ -12,10 +13,13 @@ import {
 } from "@/lib/transactions";
 
 // Picking the Transfer category also moves the row out of spending and income (flow_type),
-// the same way the bank sync marks a transfer: it then shows in the Transfers list.
+// the same way the bank sync marks a transfer: it then shows in the Transfers list. A flow the
+// user picked is marked as theirs (flow_source "user"), so the next sync leaves it alone.
 export const TRANSFER_CATEGORY = "Transfer";
 export function categoryPatch(category: string | null): TablesUpdate<"transactions"> {
-  return category === TRANSFER_CATEGORY ? { category, flow_type: "transfer" } : { category };
+  return category === TRANSFER_CATEGORY
+    ? { category, flow_type: "transfer", flow_source: "user" }
+    : { category };
 }
 
 // Lists and totals a move into or out of the transfers changes.
@@ -25,10 +29,14 @@ const FLOW_KEYS = [
   "income",
   "spend-by-category",
   "category-transactions",
+  "transfer-review",
 ];
 function refetchFlows(queryClient: QueryClient) {
   for (const k of FLOW_KEYS) void queryClient.invalidateQueries({ queryKey: [k] });
 }
+// A new category can put a row on the "To review" list or take it off.
+const refetchReview = (queryClient: QueryClient) =>
+  void queryClient.invalidateQueries({ queryKey: ["transfer-review"] });
 
 // account_uid is part of the primary key; filtering on the reference alone would also
 // touch the same reference in another account.
@@ -83,7 +91,9 @@ export function useTransactionFieldMutation<K extends "category" | "transaction_
       if (opts.successMessage) toast.success(opts.successMessage(vars.value));
     },
     onSettled: (_data, _error, vars) => {
-      if (column === "category" && vars.value === TRANSFER_CATEGORY) refetchFlows(queryClient);
+      if (column !== "category") return;
+      if (vars.value === TRANSFER_CATEGORY) refetchFlows(queryClient);
+      else refetchReview(queryClient);
     },
   });
 }
@@ -203,6 +213,7 @@ export function useBulkCategoryMutation(
           : old,
       );
       if (toTransfer) refetchFlows(queryClient);
+      else refetchReview(queryClient);
       toast.success(
         `Set ${vars.txs.length} transaction${vars.txs.length === 1 ? "" : "s"} to ${vars.category}`,
       );
@@ -301,8 +312,8 @@ export function useShareMutation(queryClient: QueryClient, monthKey: string) {
 // current category). The next sync categorizes it.
 export function restorePatch(tx: Pick<TransactionRow, "credit_debit_indicator" | "category">) {
   return tx.category === TRANSFER_CATEGORY
-    ? { flow_type: restoredFlow(tx), category: null, category_source: null }
-    : { flow_type: restoredFlow(tx) };
+    ? { flow_type: restoredFlow(tx), flow_source: "user", category: null, category_source: null }
+    : { flow_type: restoredFlow(tx), flow_source: "user" };
 }
 
 // Puts a transaction marked as a transfer back into spending or income. The row leaves the
@@ -367,5 +378,80 @@ export function useSettleSplitMutation(queryClient: QueryClient) {
       toast.error("Couldn't save", { description: error.message });
     },
     onSettled: () => queryClient.invalidateQueries({ queryKey: ["splits"] }),
+  });
+}
+
+// Answers an auto-paired transfer: keep it, or put both sides back in spending and income.
+export function useResolvePairMutation(queryClient: QueryClient) {
+  return useMutation<void, Error, { pairId: string; keep: boolean }>({
+    mutationFn: async ({ pairId, keep }) => {
+      const { error } = await supabase.rpc("resolve_transfer_pair", {
+        p_pair: pairId,
+        p_keep: keep,
+      });
+      if (error) throw error;
+    },
+    // The sync may have changed a side since the list loaded (then Keep is refused): the
+    // refetch below shows what is true now.
+    onError: (error) =>
+      toast.error("Couldn't save. List refreshed.", { description: error.message }),
+    onSuccess: (_data, { keep }) => toast.success(keep ? "Kept as transfer" : "Counted again"),
+    onSettled: () => {
+      refetchFlows(queryClient);
+      void queryClient.invalidateQueries({ queryKey: ["transfer-pairs"] });
+    },
+  });
+}
+
+export type ReviewChoice = "transfer" | "count";
+
+// Settles a "To review" group: its rows take the chosen flow (a non-transfer row counts by its
+// own direction), and a rule makes future rows from the same name follow.
+export function useReviewGroupMutation(queryClient: QueryClient) {
+  return useMutation<void, Error, { group: ReviewGroup; choice: ReviewChoice }>({
+    mutationFn: async ({ group, choice }) => {
+      if (choice === "transfer") {
+        await updateTxs(group.rows, { flow_type: "transfer", flow_source: "user" });
+      } else {
+        const debits = group.rows.filter((r) => restoredFlow(r) === "spend");
+        const credits = group.rows.filter((r) => restoredFlow(r) === "income");
+        await updateTxs(debits, { flow_type: "spend", flow_source: "user" });
+        await updateTxs(credits, { flow_type: "income", flow_source: "user" });
+      }
+      if (!group.name) return; // nothing a rule could match on
+      const { data } = await supabase.auth.getUser();
+      if (!data.user) throw new Error("You are signed out. Sign in again.");
+      // The sync reads "spend" and "income" alike as "not a transfer: count by direction".
+      const setFlowType = choice === "transfer" ? "transfer" : restoredFlow(group.rows[0]!);
+      // A second answer for the same name changes its rule instead of adding another.
+      const { data: existing, error: findError } = await supabase
+        .from("category_rules")
+        .select("id")
+        .eq("match_field", "creditor_name")
+        .eq("match_text", group.name)
+        .not("set_flow_type", "is", null)
+        .limit(1);
+      if (findError) throw findError;
+      const id = existing?.[0]?.id;
+      const { error } = id
+        ? await supabase.from("category_rules").update({ set_flow_type: setFlowType }).eq("id", id)
+        : await supabase.from("category_rules").insert({
+            user_id: data.user.id,
+            match_field: "creditor_name",
+            match_text: group.name,
+            set_category: null,
+            set_flow_type: setFlowType,
+          });
+      if (error) throw error;
+    },
+    onError: (error) => toast.error("Couldn't save", { description: error.message }),
+    onSuccess: (_data, { group }) =>
+      toast.success(
+        `Updated ${group.rows.length} transaction${group.rows.length === 1 ? "" : "s"}`,
+      ),
+    onSettled: () => {
+      refetchFlows(queryClient);
+      void queryClient.invalidateQueries({ queryKey: ["category-rules"] });
+    },
   });
 }

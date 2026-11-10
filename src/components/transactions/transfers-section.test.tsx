@@ -52,4 +52,43 @@ describe("TransfersSection", () => {
       (screen.getByRole("button", { name: /count as spend/i }) as HTMLButtonElement).disabled,
     ).toBe(true);
   });
+
+  // protects=an auto-paired row asks Keep / Not a transfer instead of Count as
+  it("offers Keep / Not a transfer on a row of a suggested pair", async () => {
+    const onResolvePair = vi.fn();
+    const onRestore = vi.fn();
+    render(
+      <TransfersSection
+        rows={[transfer({}), transfer({ entry_reference: "r2", creditor_name: "Sam" })]}
+        savingId={undefined}
+        onRestore={onRestore}
+        pairIdOf={new Map([["a1|r1", "p1"]])}
+        savingPair={undefined}
+        onResolvePair={onResolvePair}
+      />,
+    );
+    expect(screen.getByText(/Auto-paired/)).toBeTruthy();
+    expect(screen.getAllByRole("button", { name: /count as/i })).toHaveLength(1);
+    await userEvent.click(screen.getByRole("button", { name: "Keep" }));
+    expect(onResolvePair).toHaveBeenCalledWith("p1", true);
+    await userEvent.click(screen.getByRole("button", { name: "Not a transfer" }));
+    expect(onResolvePair).toHaveBeenCalledWith("p1", false);
+    expect(onRestore).not.toHaveBeenCalled();
+  });
+
+  it("disables both pair buttons while that pair saves", () => {
+    render(
+      <TransfersSection
+        rows={[transfer({})]}
+        savingId={undefined}
+        onRestore={vi.fn()}
+        pairIdOf={new Map([["a1|r1", "p1"]])}
+        savingPair="p1"
+      />,
+    );
+    expect((screen.getByRole("button", { name: "Keep" }) as HTMLButtonElement).disabled).toBe(true);
+    expect(
+      (screen.getByRole("button", { name: "Not a transfer" }) as HTMLButtonElement).disabled,
+    ).toBe(true);
+  });
 });
