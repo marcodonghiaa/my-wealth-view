@@ -23,7 +23,6 @@ function sample(): ExportData {
   ];
   d.portfolio_holdings = [{ name: "ACME", isin: "X1", shares: 2, broker_label: "b" }];
   d.crypto_holdings = [{ name: "Bitcoin", asset_symbol: "BTC", amount: 0.5, source: "s" }];
-  d.cd_holdings = [{ label: "CD", principal: 1000, currency: "EUR", annual_rate: 3 }];
   d.net_worth_history = [{ snapshot_date: "2026-01-01", total_eur: 10 }];
   d.net_worth_reconstructed = [{ snapshot_date: "2026-02-01", stocks_eur: 4 }];
   d.net_worth_snapshots = [{ snapshot_date: "2026-03-01", account_uid: "a1", amount: 7 }];
@@ -56,8 +55,8 @@ describe("buildZip", () => {
 
   it("makes one holdings row per holding of every kind", () => {
     const lines = text("holdings.csv").trim().split("\r\n");
-    expect(lines).toHaveLength(4);
-    expect(lines.map((l) => l.split(",")[0]).slice(1)).toEqual(["portfolio", "crypto", "cd"]);
+    expect(lines).toHaveLength(3);
+    expect(lines.map((l) => l.split(",")[0]).slice(1)).toEqual(["portfolio", "crypto"]);
   });
 
   it("lists the three net worth sources side by side", () => {

@@ -10,6 +10,7 @@ export type Database = {
     Tables: {
       accounts: {
         Row: {
+          account_type: string | null;
           bank_country: string | null;
           bank_logo: string | null;
           bank_name: string | null;
@@ -24,6 +25,7 @@ export type Database = {
           user_id: string;
         };
         Insert: {
+          account_type?: string | null;
           bank_country?: string | null;
           bank_logo?: string | null;
           bank_name?: string | null;
@@ -38,6 +40,7 @@ export type Database = {
           user_id: string;
         };
         Update: {
+          account_type?: string | null;
           bank_country?: string | null;
           bank_logo?: string | null;
           bank_name?: string | null;
@@ -933,6 +936,8 @@ export type Database = {
           snapshot_date: string | null;
           uid: string | null;
           user_id: string | null;
+          account_type: string | null;
+          manual: boolean | null;
         };
         Relationships: [];
       };
@@ -986,6 +991,7 @@ export type Database = {
           snapshot_date: string | null;
           total_eur: number | null;
           user_id: string | null;
+          liabilities_eur: number | null;
         };
         Relationships: [];
       };
@@ -1115,6 +1121,18 @@ export type Database = {
       };
     };
     Functions: {
+      set_account_type: {
+        Args: { p_account: string; p_type: string | null };
+        Returns: undefined;
+      };
+      add_manual_debt: {
+        Args: { p_name: string; p_amount: number; p_currency?: string };
+        Returns: string;
+      };
+      set_manual_balance: {
+        Args: { p_account: string; p_amount: number };
+        Returns: undefined;
+      };
       resolve_transfer_pair: {
         Args: { p_pair: string; p_keep: boolean };
         Returns: undefined;

@@ -22,6 +22,9 @@ export type NetWorthRow = {
   crypto_total_eur: number;
   // The bond-type holdings inside portfolio_total_eur. Only live snapshots carry it.
   portfolio_bonds_eur?: number;
+  // Credit cards and loans, as a positive number; total_eur already subtracts it, bank_total_eur
+  // leaves it out.
+  liabilities_eur?: number;
 };
 
 // Month-end rows imported from before live snapshots existed (table net_worth_history).
@@ -206,7 +209,7 @@ export function allocationHistory(
       bonds_eur: s.portfolio_bonds_eur ?? 0,
       crypto_eur: s.crypto_total_eur,
       cash_eur: s.bank_total_eur,
-      liabilities_eur: 0,
+      liabilities_eur: s.liabilities_eur ?? 0,
       total_eur: s.total_eur,
     })),
   ];

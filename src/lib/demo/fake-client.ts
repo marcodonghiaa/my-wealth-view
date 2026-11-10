@@ -3,8 +3,9 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import { DEMO_USER_ID, generateDemoData, type DemoDb } from "./generate";
 import { demoHoldingPerformance } from "./performance";
-import { deriveViews, todayNumOf } from "./views";
+import { deriveViews } from "./views";
 import { onDemoExit } from "./mode";
+import { ACCOUNT_TYPES, isDebt } from "@/lib/account-types";
 
 // A stand-in for the Supabase client that answers from generated, in-memory data. It makes no
 // network calls at all, and every write lives only in this object: a reload starts over.
@@ -23,7 +24,6 @@ const DISABLED = { message: "Disabled in the demo." };
 const FEEDS_VIEWS = new Set([
   "transactions",
   "subscription_billing_overrides",
-  "cd_holdings",
   "splitwise_expenses",
   "portfolio_holdings",
   "portfolio_snapshots",
@@ -150,12 +150,10 @@ function demoStatementRows(now: Date) {
 
 class Store {
   readonly db: Record<string, Array<Row>>;
-  private readonly todayNum: number;
   private nextId = 1;
   private readonly shapes: Map<string, Row>;
   constructor(now: Date) {
     this.db = generateDemoData(now) as unknown as Record<string, Array<Row>>;
-    this.todayNum = todayNumOf(now);
     // Read each table's shape once: the first row is gone once a table is emptied.
     this.shapes = new Map(Object.entries(this.db).map(([t, rows]) => [t, rows[0] ?? {}]));
   }
@@ -249,6 +247,125 @@ class Store {
     );
     this.refresh();
     return { data: [{ account_uid: account["uid"] as string, entry_reference }], error: null };
+  }
+  /** Moves the day's net worth from one account balance to another: debts count in liabilities
+   * (subtracted from the total), everything else in bank, like v_net_worth_daily. */
+  private moveNetWorth(date: unknown, before: [number, boolean], after: [number, boolean]): void {
+    const day = this.db["v_net_worth_daily"]!.find((r) => r["snapshot_date"] === date);
+    if (!day) return;
+    const part = ([eur, debt]: [number, boolean]) => (debt ? [0, Math.abs(eur)] : [eur, 0]);
+    const [bank0, owed0] = part(before);
+    const [bank1, owed1] = part(after);
+    day["bank_total_eur"] = Number(day["bank_total_eur"]) + bank1! - bank0!;
+    day["liabilities_eur"] = Number(day["liabilities_eur"] ?? 0) + owed1! - owed0!;
+    day["total_eur"] = Number(day["total_eur"]) + bank1! - bank0! - (owed1! - owed0!);
+  }
+  private latestDay(): string {
+    return this.db["v_net_worth_daily"]!.reduce(
+      (a, r) => (String(r["snapshot_date"]) > a ? String(r["snapshot_date"]) : a),
+      "",
+    );
+  }
+  /** Mirror of the database function set_account_type: past net worth follows the new type. */
+  setAccountType(uid: unknown, type: unknown): Result {
+    if (type !== null && !ACCOUNT_TYPES.some(([t]) => t === type))
+      return { data: null, error: { message: "unknown account type" } };
+    const account = this.db["accounts"]!.find((a) => a["uid"] === uid);
+    if (!account) return { data: null, error: { message: "account not found" } };
+    const [was, now] = [isDebt(account["account_type"] as string | null), isDebt(type as string)];
+    account["account_type"] = type;
+    for (const r of this.db["v_bank_accounts_latest"]!)
+      if (r["uid"] === uid) r["account_type"] = type;
+    if (was !== now)
+      for (const s of this.db["net_worth_snapshots"]!.filter((s) => s["account_uid"] === uid)) {
+        const eur = Number(s["eur_equivalent"] ?? 0);
+        this.moveNetWorth(s["snapshot_date"], [eur, was], [eur, now]);
+      }
+    return { data: null, error: null };
+  }
+  /** Mirror of the database function add_manual_debt: a manual loan with today's balance. */
+  addManualDebt(args: Record<string, unknown>): Result {
+    const name = String(args["p_name"] ?? "").trim();
+    const amount = Number(args["p_amount"]);
+    if (!name) return { data: null, error: { message: "name is required" } };
+    if (args["p_amount"] == null || !Number.isFinite(amount))
+      return { data: null, error: { message: "amount is required" } };
+    const currency = String(args["p_currency"] ?? "EUR").toUpperCase();
+    const rate = this.db["fx_rates"]!.filter((r) => r["currency"] === currency)
+      .sort((a, b) => String(b["date"]).localeCompare(String(a["date"])))
+      .at(0)?.["rate_to_eur"];
+    const eur = currency === "EUR" ? amount : amount * Number(rate ?? 1);
+    const uid = `demo-debt-${this.nextId++}`;
+    const today = this.latestDay();
+    this.db["accounts"]!.push(
+      this.withDefaults("accounts", {
+        uid,
+        user_id: DEMO_USER_ID,
+        label: name,
+        bank_name: name,
+        currency,
+        manual: true,
+        account_type: "loan",
+        iban: null,
+        consent_valid_until: null,
+      }),
+    );
+    this.db["net_worth_snapshots"]!.push({
+      account_uid: uid,
+      amount,
+      currency,
+      eur_equivalent: eur,
+      snapshot_date: today,
+      user_id: DEMO_USER_ID,
+    });
+    this.db["v_bank_accounts_latest"]!.push({
+      uid,
+      user_id: DEMO_USER_ID,
+      label: name,
+      bank_name: name,
+      bank_logo: null,
+      bank_country: null,
+      iban: null,
+      currency,
+      consent_valid_until: null,
+      snapshot_date: today,
+      amount,
+      amount_eur: eur,
+      account_type: "loan",
+      manual: true,
+    });
+    this.moveNetWorth(today, [0, true], [eur, true]);
+    return { data: uid, error: null };
+  }
+  /** Mirror of the database function set_manual_balance: today's balance of a manual account. */
+  setManualBalance(uid: unknown, value: unknown): Result {
+    const account = this.db["accounts"]!.find((a) => a["uid"] === uid);
+    if (!account) return { data: null, error: { message: "account not found" } };
+    if (!account["manual"]) return { data: null, error: { message: "not a manual account" } };
+    const amount = Number(value);
+    const row = this.db["v_bank_accounts_latest"]!.find((r) => r["uid"] === uid);
+    if (!row || !Number.isFinite(amount)) return { data: null, error: null };
+    const oldEur = Number(row["amount_eur"] ?? 0);
+    const eur = row["amount"] ? (oldEur * amount) / Number(row["amount"]) : amount;
+    const debt = isDebt(account["account_type"] as string | null);
+    const today = this.latestDay();
+    // Only today's balance changes; earlier days keep theirs.
+    const snap = this.db["net_worth_snapshots"]!.find(
+      (s) => s["account_uid"] === uid && s["snapshot_date"] === today,
+    );
+    if (snap) Object.assign(snap, { amount, eur_equivalent: eur });
+    else
+      this.db["net_worth_snapshots"]!.push({
+        account_uid: uid,
+        amount,
+        currency: account["currency"],
+        eur_equivalent: eur,
+        snapshot_date: today,
+        user_id: DEMO_USER_ID,
+      });
+    this.moveNetWorth(today, [oldEur, debt], [eur, debt]);
+    Object.assign(row, { amount, amount_eur: eur, snapshot_date: today });
+    return { data: null, error: null };
   }
   /** Mirror of the database function resolve_transfer_pair: keep makes both sides a transfer the
    * user decided; not keeping puts each back by its direction. */
@@ -390,7 +507,7 @@ class Store {
     return { data: null, error: null };
   }
   refresh(): void {
-    Object.assign(this.db, deriveViews(this.db as unknown as DemoDb, this.todayNum));
+    Object.assign(this.db, deriveViews(this.db as unknown as DemoDb));
   }
   withDefaults(table: string, row: Row): Row {
     const sample = this.shapes.get(table);
@@ -688,22 +805,32 @@ export function createFakeClient(now: Date = new Date()): SupabaseClient<Databas
               ? store.streamAction(args["p_stream"], args["p_action"], args["p_args"] as Row)
               : fn === "add_manual_transaction"
                 ? store.addManualTransaction(args)
-                : fn === "set_holding_quantity"
-                  ? {
-                      data: store.setHoldingQuantity(
-                        args["p_kind"],
-                        args["p_key"],
-                        args["p_quantity"],
-                        args["p_source"],
-                      ),
-                      error: null,
-                    }
-                  : fn === "delete_holding"
-                    ? {
-                        data: store.deleteHolding(args["p_kind"], args["p_key"], args["p_source"]),
-                        error: null,
-                      }
-                    : { data: null, error: DISABLED },
+                : fn === "set_account_type"
+                  ? store.setAccountType(args["p_account"], args["p_type"] ?? null)
+                  : fn === "add_manual_debt"
+                    ? store.addManualDebt(args)
+                    : fn === "set_manual_balance"
+                      ? store.setManualBalance(args["p_account"], args["p_amount"])
+                      : fn === "set_holding_quantity"
+                        ? {
+                            data: store.setHoldingQuantity(
+                              args["p_kind"],
+                              args["p_key"],
+                              args["p_quantity"],
+                              args["p_source"],
+                            ),
+                            error: null,
+                          }
+                        : fn === "delete_holding"
+                          ? {
+                              data: store.deleteHolding(
+                                args["p_kind"],
+                                args["p_key"],
+                                args["p_source"],
+                              ),
+                              error: null,
+                            }
+                          : { data: null, error: DISABLED },
     functions: {
       invoke: async (name: string, opts?: { body?: Record<string, unknown> }) =>
         name === "add-holding"

@@ -1,11 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  activeDepositsEur,
-  currentValueEur,
-  isEditableCryptoSource,
-  parseQuantity,
-  priceEur,
-} from "./holdings";
+import { currentValueEur, isEditableCryptoSource, parseQuantity, priceEur } from "./holdings";
 
 describe("currentValueEur", () => {
   it("is the snapshot value when the quantity has not changed", () => {
@@ -64,19 +58,5 @@ describe("isEditableCryptoSource", () => {
     expect(isEditableCryptoSource("Manual")).toBe(true);
     expect(isEditableCryptoSource("Ledger")).toBe(true);
     expect(isEditableCryptoSource("Coinbase")).toBe(false);
-  });
-});
-
-// Regression: matured deposits kept counting in the Accounts total after the money went back
-// to the bank, so it was counted twice.
-describe("activeDepositsEur", () => {
-  it("leaves matured deposits out", () => {
-    expect(
-      activeDepositsEur([
-        { current_value_eur: 2000, is_matured: false },
-        { current_value_eur: 3000, is_matured: true },
-        { current_value_eur: null, is_matured: false },
-      ]),
-    ).toBe(2000);
   });
 });

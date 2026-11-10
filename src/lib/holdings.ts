@@ -38,13 +38,3 @@ export function parseQuantity(input: string): number | null {
 
 // Coinbase amounts are overwritten by the sync, so only coins entered by hand can be edited.
 export const isEditableCryptoSource = (source: string | null): boolean => source !== "Coinbase";
-
-/**
- * Deposits still running, in EUR. A matured deposit has gone back to a bank account, so counting
- * it too would add the same money twice (net worth leaves it out the same way).
- */
-export function activeDepositsEur(
-  cds: Array<{ current_value_eur: number | null; is_matured: boolean | null }>,
-): number {
-  return cds.reduce((sum, c) => (c.is_matured ? sum : sum + (c.current_value_eur ?? 0)), 0);
-}

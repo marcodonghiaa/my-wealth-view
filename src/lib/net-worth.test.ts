@@ -296,6 +296,16 @@ describe("allocationHistory", () => {
     expect(rows[0]).toMatchObject({ stocks_eur: 500, bonds_eur: 300 });
   });
 
+  // protects=live debts reach the chart rows; fails_when=liabilities stay hardcoded to 0
+  it("carries live liabilities, and 0 when the view has none", () => {
+    const rows = allocationHistory(
+      [],
+      [{ ...live("2026-09-04"), liabilities_eur: 250 }, live("2026-09-05")],
+    );
+    expect(rows.map((r) => r.liabilities_eur)).toEqual([250, 0]);
+    expect(rows[0]).toMatchObject({ cash_eur: 100, total_eur: 1000 });
+  });
+
   // protects=partial early snapshots do not distort the mix; fails_when=the start date is ignored
   it("leaves out live snapshots before the configured start", () => {
     const rows = allocationHistory([], [live("2026-09-02"), live("2026-09-04")], "2026-09-04");

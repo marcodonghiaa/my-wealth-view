@@ -1,4 +1,4 @@
-import { DAY_MS, DEMO_USER_ID, round2, type DemoDb } from "./helpers";
+import { DEMO_USER_ID, type DemoDb } from "./helpers";
 import { buildMonthly, buildSubscriptions, signedEur } from "./bank-activity";
 
 type Derived = Pick<
@@ -7,7 +7,6 @@ type Derived = Pick<
   | "v_spend_by_category_monthly"
   | "v_income_vs_expenses_monthly"
   | "v_subscriptions"
-  | "v_cd_holdings"
   | "v_splitwise_eur"
   | "v_portfolio_latest"
   | "v_crypto_latest"
@@ -26,7 +25,7 @@ function latestSnapshot<T extends { snapshot_date: string }>(
 
 // The database computes these views from the base tables. In the demo they are rebuilt from the
 // in-memory tables, so an edit made while exploring shows up everywhere it would for real.
-export function deriveViews(db: DemoDb, todayNum: number): Derived {
+export function deriveViews(db: DemoDb): Derived {
   const live = db.transactions.filter((t) => !t.deleted_at);
   const v_transactions_eur: DemoDb["v_transactions_eur"] = live.map((t) => ({
     account_uid: t.account_uid,
@@ -64,28 +63,6 @@ export function deriveViews(db: DemoDb, todayNum: number): Derived {
     id: e.id,
     user_id: e.user_id,
   }));
-
-  const v_cd_holdings: DemoDb["v_cd_holdings"] = db.cd_holdings.map((c) => {
-    const start = Date.parse(c.start_date) / DAY_MS;
-    const end = Date.parse(c.maturity_date) / DAY_MS;
-    const elapsed = Math.max(0, Math.min(todayNum, end) - start);
-    const value = round2(c.principal * (1 + c.annual_rate) ** (elapsed / 365.25));
-    return {
-      annual_rate: c.annual_rate,
-      bank_label: c.bank_label,
-      currency: c.currency,
-      current_value_eur: value,
-      current_value_native: value,
-      days_elapsed: elapsed,
-      id: c.id,
-      is_matured: end <= todayNum,
-      label: c.label,
-      maturity_date: c.maturity_date,
-      principal: c.principal,
-      start_date: c.start_date,
-      user_id: c.user_id,
-    };
-  });
 
   const v_portfolio_latest: DemoDb["v_portfolio_latest"] = db.portfolio_holdings.flatMap((h) => {
     const snap = latestSnapshot(
@@ -138,10 +115,6 @@ export function deriveViews(db: DemoDb, todayNum: number): Derived {
     v_transactions_eur,
     ...buildMonthly(v_transactions_eur, v_splitwise_eur, db.spend_history),
     v_subscriptions: buildSubscriptions(live, db.subscription_billing_overrides),
-    v_cd_holdings,
     v_splitwise_eur,
   };
 }
-
-export const todayNumOf = (now: Date) =>
-  Math.floor(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()) / DAY_MS);

@@ -7,7 +7,7 @@ export async function fetchNetWorth(): Promise<Array<NetWorthRow>> {
   const { data, error } = await supabase
     .from("v_net_worth_daily")
     .select(
-      "snapshot_date,total_eur,bank_total_eur,portfolio_total_eur,crypto_total_eur,portfolio_bonds_eur",
+      "snapshot_date,total_eur,bank_total_eur,portfolio_total_eur,crypto_total_eur,portfolio_bonds_eur,liabilities_eur",
     )
     .order("snapshot_date", { ascending: true });
   if (error) throw error;

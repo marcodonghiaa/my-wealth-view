@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
-import { ChevronDown, Link2, Loader2, Plus, Trash2 } from "lucide-react";
+import { ChevronDown, Link2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { MaskedIban } from "@/components/masked-iban";
 import { supabase } from "@/integrations/supabase/client";
@@ -17,10 +17,11 @@ import {
 import { functionErrorMessage } from "@/lib/function-error";
 import { consentAlerts, type ConsentAlert } from "@/lib/consent-expiry";
 import { asOf, formatISODate } from "@/lib/date";
-import { AccountBadge, bankOf } from "@/components/bank-badge";
+import { AccountBadge, accountName, bankOf } from "@/components/bank-badge";
 import { formatEur, formatMoney } from "@/lib/transactions";
 import { HeadlineFigure } from "@/components/headline-figure";
-import { activeDepositsEur } from "@/lib/holdings";
+import { AccountMenu, AddDebt, type MenuAccount } from "@/components/accounts/account-menu";
+import { accountTypeLabel, debtEur, isDebt } from "@/lib/account-types";
 
 export const Route = createFileRoute("/_authenticated/accounts")({
   head: () => ({
@@ -28,12 +29,12 @@ export const Route = createFileRoute("/_authenticated/accounts")({
       { title: "Accounts — Alopex" },
       {
         name: "description",
-        content: "Your bank accounts and fixed-term deposits.",
+        content: "Your bank accounts and debts.",
       },
       { property: "og:title", content: "Accounts — Alopex" },
       {
         property: "og:description",
-        content: "Your bank accounts and fixed-term deposits.",
+        content: "Your bank accounts and debts.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -55,6 +56,9 @@ interface BankAccountRow {
   bank_name?: string | null;
   bank_logo?: string | null;
   bank_country?: string | null;
+  // Absent before the account types migration; null = unknown, counted as checking.
+  account_type?: string | null;
+  manual?: boolean | null;
 }
 
 interface BankGroup {
@@ -63,24 +67,6 @@ interface BankGroup {
   subAccounts: Array<BankAccountRow>;
   subtotalEur: number;
 }
-
-interface CdRow {
-  id: string;
-  label: string;
-  bank_label: string | null;
-  currency: string;
-  principal: number;
-  annual_rate: number;
-  start_date: string;
-  maturity_date: string;
-  is_matured: boolean;
-  current_value_native: number;
-  current_value_eur: number;
-}
-
-const MAX_CD_PRINCIPAL = 1e12;
-const MAX_CD_APY_PCT = 100;
-const DAY_MS = 86_400_000;
 
 async function fetchBankAccounts(): Promise<Array<BankAccountRow>> {
   const { data, error } = await supabase
@@ -92,25 +78,13 @@ async function fetchBankAccounts(): Promise<Array<BankAccountRow>> {
   return (data ?? []) as Array<BankAccountRow>;
 }
 
-async function fetchCds(): Promise<Array<CdRow>> {
-  const { data, error } = await supabase
-    .from("v_cd_holdings")
-    .select(
-      "id,label,bank_label,currency,principal,annual_rate,start_date,maturity_date,is_matured,current_value_native,current_value_eur",
-    )
-    .order("maturity_date", { ascending: true });
-  if (error) throw error;
-  return (data ?? []) as Array<CdRow>;
-}
-
-function formatDate(iso: string | null): string {
-  if (!iso) return "—";
-  return new Date(`${iso}T00:00:00`).toLocaleDateString("en-GB", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-}
+const menuAccount = (a: BankAccountRow): MenuAccount => ({
+  uid: a.uid,
+  name: accountName(a),
+  account_type: a.account_type,
+  manual: a.manual,
+  amount: a.amount,
+});
 
 function consentMessage({ bank, daysLeft }: ConsentAlert): string {
   if (daysLeft < 0) return `Bank access to ${bank} has expired, so it no longer syncs.`;
@@ -124,7 +98,6 @@ function AccountsPage() {
     queryKey: ["bank-accounts-latest"],
     queryFn: fetchBankAccounts,
   });
-  const cdQuery = useQuery({ queryKey: ["cd-holdings"], queryFn: fetchCds });
 
   // Landed here from the bank-consent-callback redirect after connecting a bank. The redirect
   // only carries the bank's one-time code: the link is finished here, signed in, so the accounts
@@ -175,16 +148,25 @@ function AccountsPage() {
 
   const bankAccounts = useMemo(() => bankQuery.data ?? [], [bankQuery.data]);
   const expiring = useMemo(() => consentAlerts(bankAccounts, new Date()), [bankAccounts]);
-  const cds = useMemo(() => cdQuery.data ?? [], [cdQuery.data]);
 
-  const totalBankEur = useMemo(
-    () => bankAccounts.reduce((sum, a) => sum + (a.amount_eur ?? 0), 0),
+  // Credit cards and loans get their own group; everything else is cash, as before.
+  const cashAccounts = useMemo(
+    () => bankAccounts.filter((a) => !isDebt(a.account_type)),
     [bankAccounts],
+  );
+  const debts = useMemo(() => bankAccounts.filter((a) => isDebt(a.account_type)), [bankAccounts]);
+  const totalBankEur = useMemo(
+    () => cashAccounts.reduce((sum, a) => sum + (a.amount_eur ?? 0), 0),
+    [cashAccounts],
+  );
+  const totalDebtEur = useMemo(
+    () => debts.reduce((sum, a) => sum + debtEur(a.amount_eur), 0),
+    [debts],
   );
 
   const bankGroups = useMemo<Array<BankGroup>>(() => {
     const byBank = new Map<string, Array<BankAccountRow>>();
-    for (const a of bankAccounts) {
+    for (const a of cashAccounts) {
       const bank = bankOf(a);
       const list = byBank.get(bank) ?? [];
       list.push(a);
@@ -211,8 +193,7 @@ function AccountsPage() {
         return { bank, main, subAccounts, subtotalEur };
       })
       .sort((a, b) => b.subtotalEur - a.subtotalEur);
-  }, [bankAccounts]);
-  const totalCdEur = useMemo(() => activeDepositsEur(cds), [cds]);
+  }, [cashAccounts]);
 
   // Connect-a-bank form state
   const [showConnectForm, setShowConnectForm] = useState(false);
@@ -269,128 +250,21 @@ function AccountsPage() {
     connectBank.mutate({ bankName, country: bankCountry });
   }
 
-  // Add-CD form state
-  const [label, setLabel] = useState("");
-  const [bankLabel, setBankLabel] = useState("");
-  const [currency, setCurrency] = useState("EUR");
-  const [principal, setPrincipal] = useState("");
-  const [annualRatePct, setAnnualRatePct] = useState("");
-  const [startDate, setStartDate] = useState(() => formatISODate(new Date()));
-  const [maturityDate, setMaturityDate] = useState("");
-  const [formError, setFormError] = useState<string | null>(null);
-  const [showCdForm, setShowCdForm] = useState(false);
-
-  const addCd = useMutation({
-    mutationFn: async (input: {
-      label: string;
-      bank_label: string | null;
-      currency: string;
-      principal: number;
-      annual_rate: number;
-      start_date: string;
-      maturity_date: string;
-    }) => {
-      const { data: userData, error: userError } = await supabase.auth.getUser();
-      if (userError || !userData.user) throw userError ?? new Error("Not signed in");
-      const { error } = await supabase
-        .from("cd_holdings")
-        .insert({ ...input, user_id: userData.user.id });
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast.success("Certificate of deposit added");
-      setLabel("");
-      setBankLabel("");
-      setPrincipal("");
-      setAnnualRatePct("");
-      setMaturityDate("");
-      setFormError(null);
-      void queryClient.invalidateQueries({ queryKey: ["cd-holdings"] });
-    },
-    onError: (err) => {
-      toast.error(err instanceof Error ? err.message : "Failed to add CD");
-    },
-  });
-
-  const deleteCd = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from("cd_holdings").delete().eq("id", id);
-      if (error) throw error;
-    },
-    onMutate: async (id) => {
-      await queryClient.cancelQueries({ queryKey: ["cd-holdings"] });
-      const previous = queryClient.getQueryData<Array<CdRow>>(["cd-holdings"]);
-      queryClient.setQueryData<Array<CdRow>>(["cd-holdings"], (old) =>
-        old?.filter((c) => c.id !== id),
-      );
-      return { previous };
-    },
-    onError: (err, _id, ctx) => {
-      if (ctx?.previous) queryClient.setQueryData(["cd-holdings"], ctx.previous);
-      toast.error(err instanceof Error ? err.message : "Failed to delete CD");
-    },
-    onSuccess: () => toast.success("Certificate of deposit removed"),
-    onSettled: () => void queryClient.invalidateQueries({ queryKey: ["cd-holdings"] }),
-  });
-
-  function handleAddCd(e: React.FormEvent) {
-    e.preventDefault();
-    const principalNum = parseFloat(principal);
-    const ratePctNum = parseFloat(annualRatePct);
-    if (!label.trim()) {
-      setFormError('Give it a name, e.g. "House deposit CD".');
-      return;
-    }
-    // Upper bounds keep the CD's growth (principal × (1 + APY)^years) a showable number.
-    if (!Number.isFinite(principalNum) || principalNum <= 0 || principalNum > MAX_CD_PRINCIPAL) {
-      setFormError(
-        `Principal must be a positive number up to ${MAX_CD_PRINCIPAL.toLocaleString("en-IE")}.`,
-      );
-      return;
-    }
-    if (!Number.isFinite(ratePctNum) || ratePctNum < 0 || ratePctNum > MAX_CD_APY_PCT) {
-      setFormError(`Annual rate (APY) must be between 0 and ${MAX_CD_APY_PCT}%.`);
-      return;
-    }
-    if (!startDate || !maturityDate || maturityDate <= startDate) {
-      setFormError("Maturity date must be after the start date.");
-      return;
-    }
-    const years = (Date.parse(maturityDate) - Date.parse(startDate)) / DAY_MS / 365.25;
-    if (!Number.isFinite(principalNum * (1 + ratePctNum / 100) ** years)) {
-      setFormError(
-        "These numbers grow too large to show by maturity. Check the start date and APY.",
-      );
-      return;
-    }
-    setFormError(null);
-    addCd.mutate({
-      label: label.trim(),
-      bank_label: bankLabel.trim() || null,
-      currency,
-      principal: principalNum,
-      annual_rate: ratePctNum / 100,
-      start_date: startDate,
-      maturity_date: maturityDate,
-    });
-  }
-
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-8 md:py-12">
       <header className="mb-10">
         <h1 className="text-[0.9375rem] font-medium text-muted-foreground">Accounts</h1>
         <div className="mt-1 min-h-16">
-          {bankQuery.isPending || cdQuery.isPending ? (
+          {bankQuery.isPending ? (
             <div className="h-16 w-72 animate-pulse rounded-2xl bg-muted" />
-          ) : bankQuery.isError || cdQuery.isError ? (
-            // A total missing one of its two parts would look complete; show none instead.
+          ) : bankQuery.isError ? (
             <p className="figure-display text-muted-foreground">—</p>
           ) : (
-            <HeadlineFigure value={totalBankEur + totalCdEur} currency="EUR" />
+            <HeadlineFigure value={totalBankEur + totalDebtEur} currency="EUR" />
           )}
         </div>
         <p className="mt-3 text-sm text-muted-foreground">
-          Your bank accounts and fixed-term deposits.{" "}
+          {debts.length > 0 ? "Your bank accounts and debts." : "Your bank accounts."}{" "}
           <Link to="/import" className="text-primary underline-offset-2 hover:underline">
             Import data
           </Link>
@@ -447,7 +321,7 @@ function AccountsPage() {
           </div>
         ))}
 
-        {/* Connect a bank — collapsed by default, same pattern as Add CD below. */}
+        {/* Connect a bank — collapsed by default. */}
         <form onSubmit={handleConnectBank} className="mb-4 rounded-2xl bg-card">
           <button
             type="button"
@@ -554,6 +428,12 @@ function AccountsPage() {
             </div>
           )}
         </form>
+        {/* No debts yet: adding one starts the Debts group. */}
+        {!bankQuery.isPending && debts.length === 0 && (
+          <div className="-mt-2 mb-2 flex justify-end">
+            <AddDebt />
+          </div>
+        )}
 
         <div className="overflow-hidden rounded-2xl bg-card">
           {bankQuery.isPending ? (
@@ -606,6 +486,10 @@ function AccountsPage() {
                             : "Syncing…"}
                         </div>
                       </div>
+                      <AccountMenu
+                        title={group.bank}
+                        accounts={[group.main, ...group.subAccounts].map(menuAccount)}
+                      />
                     </div>
 
                     {/* Sub-accounts in other currencies */}
@@ -637,241 +521,53 @@ function AccountsPage() {
         </div>
       </section>
 
-      {/* Certificates of deposit */}
-      <section>
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-foreground">Certificates of deposit</h2>
-          {!cdQuery.isPending && cds.length > 0 && (
-            <span className="font-figure text-sm font-medium text-foreground">
-              {formatEur(totalCdEur)}
-            </span>
-          )}
-        </div>
-
-        {/* Add CD form — collapsed by default so it doesn't push the actual
-            CD list below the fold on a phone. */}
-        <form onSubmit={handleAddCd} className="mb-4 rounded-2xl bg-card">
-          <button
-            type="button"
-            onClick={() => setShowCdForm((v) => !v)}
-            className="flex min-h-11 w-full items-center justify-between gap-3 p-5 text-left"
-            aria-expanded={showCdForm}
-          >
-            <h3 className="text-sm font-medium text-foreground">Add a certificate of deposit</h3>
-            <ChevronDown
-              className={`size-4 shrink-0 text-muted-foreground transition-transform ${showCdForm ? "rotate-180" : ""}`}
-            />
-          </button>
-          {showCdForm && (
-            <div className="px-5 pb-5">
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
-                <div className="lg:col-span-2">
-                  <label htmlFor="acc-name" className="mb-1 block text-xs text-muted-foreground">
-                    Name
-                  </label>
-                  <input
-                    id="acc-name"
-                    type="text"
-                    value={label}
-                    onChange={(e) => setLabel(e.target.value)}
-                    placeholder="e.g. House deposit CD"
-                    className="w-full rounded-lg border bg-background px-3 py-2 text-base placeholder:text-muted-foreground/50 focus:ring-2 focus:ring-ring focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label
-                    htmlFor="acc-bank-optional"
-                    className="mb-1 block text-xs text-muted-foreground"
-                  >
-                    Bank (optional)
-                  </label>
-                  <input
-                    id="acc-bank-optional"
-                    type="text"
-                    value={bankLabel}
-                    onChange={(e) => setBankLabel(e.target.value)}
-                    placeholder="Fineco"
-                    className="w-full rounded-lg border bg-background px-3 py-2 text-base placeholder:text-muted-foreground/50 focus:ring-2 focus:ring-ring focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label
-                    htmlFor="acc-currency"
-                    className="mb-1 block text-xs text-muted-foreground"
-                  >
-                    Currency
-                  </label>
-                  <select
-                    id="acc-currency"
-                    value={currency}
-                    onChange={(e) => setCurrency(e.target.value)}
-                    className="w-full rounded-lg border bg-background px-3 py-2 text-base focus:ring-2 focus:ring-ring focus:outline-none"
-                  >
-                    <option value="EUR">EUR</option>
-                    <option value="USD">USD</option>
-                    <option value="GBP">GBP</option>
-                    <option value="CHF">CHF</option>
-                  </select>
-                </div>
-                <div>
-                  <label
-                    htmlFor="acc-principal"
-                    className="mb-1 block text-xs text-muted-foreground"
-                  >
-                    Principal
-                  </label>
-                  <input
-                    id="acc-principal"
-                    type="number"
-                    min={0}
-                    step="0.01"
-                    value={principal}
-                    onChange={(e) => setPrincipal(e.target.value)}
-                    placeholder="10000"
-                    className="w-full rounded-lg border bg-background px-3 py-2 text-base placeholder:text-muted-foreground/50 focus:ring-2 focus:ring-ring focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label htmlFor="acc-apy" className="mb-1 block text-xs text-muted-foreground">
-                    APY %
-                  </label>
-                  <input
-                    id="acc-apy"
-                    type="number"
-                    min={0}
-                    step="0.01"
-                    value={annualRatePct}
-                    onChange={(e) => setAnnualRatePct(e.target.value)}
-                    placeholder="3.5"
-                    className="w-full rounded-lg border bg-background px-3 py-2 text-base placeholder:text-muted-foreground/50 focus:ring-2 focus:ring-ring focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label
-                    htmlFor="acc-start-date"
-                    className="mb-1 block text-xs text-muted-foreground"
-                  >
-                    Start date
-                  </label>
-                  <input
-                    id="acc-start-date"
-                    type="date"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                    className="w-full rounded-lg border bg-background px-3 py-2 text-base focus:ring-2 focus:ring-ring focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label
-                    htmlFor="acc-maturity-date"
-                    className="mb-1 block text-xs text-muted-foreground"
-                  >
-                    Maturity date
-                  </label>
-                  <input
-                    id="acc-maturity-date"
-                    type="date"
-                    value={maturityDate}
-                    onChange={(e) => setMaturityDate(e.target.value)}
-                    className="w-full rounded-lg border bg-background px-3 py-2 text-base focus:ring-2 focus:ring-ring focus:outline-none"
-                  />
-                </div>
-              </div>
-              <div className="mt-4 flex items-center gap-3">
-                <button
-                  type="submit"
-                  disabled={addCd.isPending}
-                  className="inline-flex min-h-11 items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
-                >
-                  {addCd.isPending ? (
-                    <Loader2 className="size-4 animate-spin" />
-                  ) : (
-                    <Plus className="size-4" />
-                  )}
-                  Add CD
-                </button>
-                {formError && <p className="text-sm text-negative">{formError}</p>}
-              </div>
+      {debts.length > 0 && (
+        <section className="mb-10">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <h2 className="text-lg font-semibold text-foreground">Debts</h2>
+            <div className="flex items-center gap-1">
+              <AddDebt />
+              <span className="font-figure text-sm font-medium text-foreground">
+                {formatEur(totalDebtEur)}
+              </span>
             </div>
-          )}
-        </form>
-
-        {cdQuery.isError && (
-          <div
-            role="alert"
-            className="mb-4 rounded-2xl bg-negative/10 px-4 py-3 text-sm text-negative"
-          >
-            Couldn't load CDs: {cdQuery.error.message}
           </div>
-        )}
-
-        {!cdQuery.isPending && cds.length === 0 && !cdQuery.isError && (
-          <div className="rounded-2xl border border-dashed bg-card/50 p-10 text-center text-sm text-muted-foreground">
-            No deposits yet.
-          </div>
-        )}
-
-        {cds.length > 0 && (
-          <div className="grid gap-4 sm:grid-cols-2">
-            {cds.map((cd) => {
-              const progressPct = Math.min(
-                100,
-                Math.max(
-                  0,
-                  ((new Date().getTime() - new Date(cd.start_date).getTime()) /
-                    (new Date(cd.maturity_date).getTime() - new Date(cd.start_date).getTime())) *
-                    100,
-                ),
-              );
+          <ul className="divide-y overflow-hidden rounded-2xl bg-card">
+            {debts.map((a) => {
+              const bank = bankOf(a);
               return (
-                <div key={cd.id} className="rounded-2xl bg-card p-5">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <h3 className="truncate font-medium text-foreground">{cd.label}</h3>
-                      <p className="mt-0.5 text-xs text-muted-foreground">
-                        {cd.bank_label ? `${cd.bank_label} · ` : ""}
-                        {(cd.annual_rate * 100).toFixed(2)}% APY
-                      </p>
+                <li key={a.uid} className="flex items-center gap-3 px-4 py-3 sm:px-5">
+                  <AccountBadge label={a.label ?? bank} bank={bank} logo={a.bank_logo ?? null} />
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-sm font-medium text-foreground">
+                      {a.manual ? (a.label ?? bank) : bank}
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => deleteCd.mutate(cd.id)}
-                      disabled={deleteCd.isPending}
-                      aria-label={`Remove ${cd.label}`}
-                      className="-m-2 inline-flex size-11 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-negative/10 hover:text-negative disabled:opacity-50"
-                    >
-                      <Trash2 className="size-4" />
-                    </button>
-                  </div>
-
-                  <div className="mt-3 font-figure text-2xl font-semibold text-foreground">
-                    {formatMoney(cd.current_value_native, cd.currency)}
-                  </div>
-                  {cd.currency !== "EUR" && (
-                    <div className="font-figure text-xs text-muted-foreground">
-                      {formatEur(cd.current_value_eur)}
+                    <div className="mt-0.5 truncate text-xs text-muted-foreground">
+                      {[
+                        accountTypeLabel(a.account_type),
+                        a.snapshot_date && asOf(a.snapshot_date, formatISODate(new Date())),
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
                     </div>
-                  )}
-
-                  <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-muted">
-                    <div
-                      className="h-full rounded-full bg-primary"
-                      style={{ width: `${progressPct}%` }}
-                    />
                   </div>
-                  <p className="mt-1.5 text-xs text-muted-foreground">
-                    {cd.is_matured
-                      ? `Matured ${formatDate(cd.maturity_date)}`
-                      : `Matures ${formatDate(cd.maturity_date)}`}
-                    {" · "}
-                    principal {formatMoney(cd.principal, cd.currency)}
-                  </p>
-                </div>
+                  <div className="shrink-0 text-right">
+                    <div className="font-figure text-sm font-medium text-foreground">
+                      {formatMoney(debtEur(a.amount), a.currency)}
+                    </div>
+                    {a.currency !== "EUR" && (
+                      <div className="font-figure text-xs text-muted-foreground">
+                        {formatEur(debtEur(a.amount_eur))}
+                      </div>
+                    )}
+                  </div>
+                  <AccountMenu title={a.label ?? bank} accounts={[menuAccount(a)]} />
+                </li>
               );
             })}
-          </div>
-        )}
-      </section>
+          </ul>
+        </section>
+      )}
     </div>
   );
 }
