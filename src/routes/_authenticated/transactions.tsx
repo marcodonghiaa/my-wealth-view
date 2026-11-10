@@ -1,6 +1,7 @@
 import { fetchSplitContacts } from "@/lib/splits";
 import { EmptyState } from "@/components/empty-state";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { makeRuleAction } from "@/lib/rules";
 import { accountName, bankOf } from "@/components/bank-badge";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -156,9 +157,11 @@ function TransactionsPage() {
   const queryClient = useQueryClient();
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
+  const navigate = useNavigate();
   const updateCategory = useTransactionFieldMutation(queryClient, monthKey, "category", {
     errorMessage: "Couldn't save category",
     successMessage: (value) => `Saved — ${value}`,
+    successAction: ({ tx, value }) => makeRuleAction(tx.creditor_name, value, navigate),
   });
 
   const updateType = useTransactionFieldMutation(queryClient, monthKey, "transaction_type", {

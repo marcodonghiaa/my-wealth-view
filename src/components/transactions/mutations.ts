@@ -58,9 +58,17 @@ export function useTransactionFieldMutation<K extends "category" | "transaction_
   opts: {
     errorMessage: string;
     successMessage?: (value: TransactionRow[K]) => string;
+    // A button on the success toast, e.g. "Make a rule" after a category change.
+    successAction?: (vars: {
+      tx: TxKey & Partial<Pick<TransactionRow, "creditor_name">>;
+      value: TransactionRow[K];
+    }) => { label: string; onClick: () => void } | undefined;
   },
 ) {
-  type Vars = { tx: TxKey; value: TransactionRow[K] };
+  type Vars = {
+    tx: TxKey & Partial<Pick<TransactionRow, "creditor_name">>;
+    value: TransactionRow[K];
+  };
   type Context = { previous: Array<TransactionRow> | undefined };
 
   return useMutation<void, Error, Vars, Context>({
@@ -88,7 +96,9 @@ export function useTransactionFieldMutation<K extends "category" | "transaction_
       toast.error(opts.errorMessage, { description: error.message });
     },
     onSuccess: (_data, vars) => {
-      if (opts.successMessage) toast.success(opts.successMessage(vars.value));
+      if (opts.successMessage) {
+        toast.success(opts.successMessage(vars.value), { action: opts.successAction?.(vars) });
+      }
     },
     onSettled: (_data, _error, vars) => {
       if (column !== "category") return;

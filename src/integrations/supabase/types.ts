@@ -61,6 +61,7 @@ export type Database = {
           created_at: string;
           id: string;
           match_field: string;
+          match_mode: string;
           match_text: string;
           priority: number;
           set_category: string | null;
@@ -72,6 +73,7 @@ export type Database = {
           created_at?: string;
           id?: string;
           match_field: string;
+          match_mode?: string;
           match_text: string;
           priority?: number;
           set_category?: string | null;
@@ -83,6 +85,7 @@ export type Database = {
           created_at?: string;
           id?: string;
           match_field?: string;
+          match_mode?: string;
           match_text?: string;
           priority?: number;
           set_category?: string | null;

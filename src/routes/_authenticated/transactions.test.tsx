@@ -22,6 +22,7 @@ vi.mock("@/integrations/supabase/client", () => ({
 }));
 
 import { Route } from "./transactions";
+import { makeRuleAction } from "@/lib/rules";
 
 const Page = Route.options.component as () => React.JSX.Element;
 const renderPage = () =>
@@ -47,5 +48,23 @@ describe("Transactions page when an extra source fails to load", () => {
     renderPage();
     await screen.findAllByText(/No transactions for/);
     expect(screen.queryByRole("alert")).toBeNull();
+  });
+});
+
+describe("Make a rule shortcut", () => {
+  it("opens Rules filled in with the name and the new category", () => {
+    const navigate = vi.fn();
+    const action = makeRuleAction(" BAR ROMA ", "Dine Out", navigate);
+    expect(action?.label).toBe("Make a rule");
+    action?.onClick();
+    expect(navigate).toHaveBeenCalledWith({
+      to: "/rules",
+      search: { text: "BAR ROMA", category: "Dine Out" },
+    });
+  });
+
+  it("offers nothing without a name or a category", () => {
+    expect(makeRuleAction("  ", "Dine Out", vi.fn())).toBeUndefined();
+    expect(makeRuleAction("BAR", null, vi.fn())).toBeUndefined();
   });
 });

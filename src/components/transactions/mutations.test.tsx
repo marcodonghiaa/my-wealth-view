@@ -19,6 +19,9 @@ const getUser = vi.fn(async () => ({ data: { user: { id: "u1" } as { id: string 
 let insertError: Error | null = null;
 let existingRule: Array<{ id: string }> = [];
 
+const toastSuccess = vi.hoisted(() => vi.fn());
+vi.mock("sonner", () => ({ toast: { success: toastSuccess, error: vi.fn() } }));
+
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
     rpc: (...args: unknown[]) => rpc(...args),
@@ -118,6 +121,31 @@ beforeEach(() => {
   calls.length = 0;
   insertError = null;
   existingRule = [];
+});
+
+describe("success toast action", () => {
+  // "Make a rule" after a category change: the action gets the row and the new value.
+  it("adds the action the caller builds from the saved row", async () => {
+    toastSuccess.mockReset();
+    const { queryClient, wrapper } = setup();
+    const onClick = vi.fn();
+    const successAction = vi.fn(() => ({ label: "Make a rule", onClick }));
+    const { result } = renderHook(
+      () =>
+        useTransactionFieldMutation(queryClient, MONTH, "category", {
+          errorMessage: "fail",
+          successMessage: (v) => `Saved — ${v}`,
+          successAction,
+        }),
+      { wrapper },
+    );
+    const tx = { account_uid: "a1", entry_reference: "r1", creditor_name: "BAR ROMA" };
+    await act(() => result.current.mutateAsync({ tx, value: "Dine Out" }));
+    expect(successAction).toHaveBeenCalledWith({ tx, value: "Dine Out" });
+    expect(toastSuccess).toHaveBeenCalledWith("Saved — Dine Out", {
+      action: { label: "Make a rule", onClick },
+    });
+  });
 });
 
 describe("transaction mutations are scoped to one account", () => {

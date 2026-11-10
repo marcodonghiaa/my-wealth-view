@@ -7,11 +7,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Input, fieldClass } from "@/components/ui/field";
+import { Input, Select, fieldClass } from "@/components/ui/field";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert } from "@/components/ui/alert";
 import { TRANSACTION_TYPES } from "@/lib/categories";
 import { useCategories } from "@/lib/use-categories";
+import { functionErrorMessage } from "@/lib/function-error";
+import { MATCH_MODES, isLooseMatch, modeLabel } from "@/lib/rules";
+
+// "Make a rule" from a transaction's category opens this page with the form filled in.
+type RulesSearch = { text?: string | undefined; category?: string | undefined };
 
 export const Route = createFileRoute("/_authenticated/rules")({
   head: () => ({
@@ -28,6 +33,10 @@ export const Route = createFileRoute("/_authenticated/rules")({
       },
     ],
   }),
+  validateSearch: (s: Record<string, unknown>): RulesSearch => ({
+    text: typeof s["text"] === "string" ? s["text"] : undefined,
+    category: typeof s["category"] === "string" ? s["category"] : undefined,
+  }),
   component: RulesPage,
 });
 
@@ -35,6 +44,7 @@ type RuleRow = {
   id: string;
   match_field: string;
   match_text: string;
+  match_mode: string | null; // null on a backend without the match_mode migration: "contains"
   set_category: string | null;
   set_transaction_type: string | null;
   set_flow_type: string | null;
@@ -52,7 +62,7 @@ async function fetchRules(): Promise<RuleRow[]> {
   const { data, error } = await supabase
     .from("category_rules")
     .select(
-      "id, match_field, match_text, set_category, set_transaction_type, set_flow_type, priority, created_at",
+      "id, match_field, match_text, match_mode, set_category, set_transaction_type, set_flow_type, priority, created_at",
     )
     .order("priority", { ascending: true })
     .order("created_at", { ascending: true });
@@ -71,15 +81,17 @@ function fieldLabel(value: string) {
 
 function RulesPage() {
   const queryClient = useQueryClient();
+  const prefill = Route.useSearch();
   const [matchField, setMatchField] = useState("creditor_name");
-  const [matchText, setMatchText] = useState("");
-  const [category, setCategory] = useState<string | null>(null);
+  const [matchMode, setMatchMode] = useState("word");
+  const [matchText, setMatchText] = useState(prefill.text ?? "");
+  const [category, setCategory] = useState<string | null>(prefill.category ?? null);
   const [type, setType] = useState<string | null>(null);
   const [fieldOpen, setFieldOpen] = useState(false);
   const [categoryOpen, setCategoryOpen] = useState(false);
   const [typeOpen, setTypeOpen] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
-  const [showForm, setShowForm] = useState(false);
+  const [showForm, setShowForm] = useState(!!prefill.text);
   const categories = useCategories().list;
 
   const rulesQuery = useQuery({ queryKey: ["category-rules"], queryFn: fetchRules });
@@ -87,6 +99,7 @@ function RulesPage() {
   const addRule = useMutation({
     mutationFn: async (rule: {
       match_field: string;
+      match_mode: string;
       match_text: string;
       set_category: string | null;
       set_transaction_type: string | null;
@@ -147,6 +160,7 @@ function RulesPage() {
     setFormError(null);
     addRule.mutate({
       match_field: matchField,
+      match_mode: matchMode,
       match_text: matchText.trim(),
       set_category: category,
       set_transaction_type: type,
@@ -178,7 +192,7 @@ function RulesPage() {
         </button>
         {showForm && (
           <div className="px-5 pb-5">
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
               <div className="lg:col-span-1">
                 <label htmlFor="rule-field" className="mb-1 block text-xs text-muted-foreground">
                   If this field
@@ -215,12 +229,29 @@ function RulesPage() {
                 </Popover>
               </div>
 
+              <div className="lg:col-span-1">
+                <label htmlFor="rule-mode" className="mb-1 block text-xs text-muted-foreground">
+                  How it matches
+                </label>
+                <Select
+                  id="rule-mode"
+                  value={matchMode}
+                  onChange={(e) => setMatchMode(e.target.value)}
+                >
+                  {MATCH_MODES.map((m) => (
+                    <option key={m.value} value={m.value}>
+                      {m.label}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+
               <div className="lg:col-span-2">
                 <label
                   htmlFor="rule-match-text"
                   className="mb-1 block text-xs text-muted-foreground"
                 >
-                  contains this text
+                  this text
                 </label>
                 <Input
                   id="rule-match-text"
@@ -229,6 +260,12 @@ function RulesPage() {
                   onChange={(e) => setMatchText(e.target.value)}
                   placeholder="e.g. spotify"
                 />
+                {isLooseMatch(matchText, matchMode) && (
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Short text can match other names (“bar” is in “Barclays”). Pick “has the word”
+                    to avoid that.
+                  </p>
+                )}
               </div>
 
               <div className="lg:col-span-1">
@@ -347,6 +384,8 @@ function RulesPage() {
         )}
       </form>
 
+      <ApplyToPast key={rules.map((r) => r.id).join()} hasRules={rules.length > 0} />
+
       {/* Rules list */}
       <div className="overflow-hidden rounded-lg bg-card">
         <div className="border-b px-5 py-3">
@@ -372,7 +411,7 @@ function RulesPage() {
                 <div className="min-w-0 flex-1">
                   <p className="text-sm">
                     <span className="text-muted-foreground">{fieldLabel(rule.match_field)}</span>{" "}
-                    contains{" "}
+                    {modeLabel(rule.match_mode)}{" "}
                     <span className="font-medium text-foreground">“{rule.match_text}”</span>
                   </p>
                 </div>
@@ -409,5 +448,90 @@ function RulesPage() {
         )}
       </div>
     </div>
+  );
+}
+
+type ReapplyResult = {
+  changes: number;
+  sample: Array<{ name: string; from: string | null; to: string }>;
+};
+
+async function reapply(apply: boolean): Promise<ReapplyResult> {
+  const { data, error } = await supabase.functions.invoke<ReapplyResult>("reapply-rules", {
+    body: { apply },
+  });
+  if (error || !data) {
+    throw new Error(await functionErrorMessage(error, "Couldn't apply your rules, try again"));
+  }
+  return data;
+}
+
+const plural = (n: number) => `${n} transaction${n === 1 ? "" : "s"}`;
+
+// Rules run on new transactions only; this re-runs them on the past ones, after a preview.
+// Remounted (key) whenever the rules change, so a preview never describes old rules.
+function ApplyToPast({ hasRules }: { hasRules: boolean }) {
+  const queryClient = useQueryClient();
+  const [preview, setPreview] = useState<ReapplyResult | null>(null);
+  const check = useMutation({
+    mutationFn: () => reapply(false),
+    onSuccess: setPreview,
+    onError: (err) => toast.error(err.message),
+  });
+  const apply = useMutation({
+    mutationFn: () => reapply(true),
+    onSuccess: (result) => {
+      toast.success(`Updated ${plural(result.changes)}`);
+      setPreview(null);
+      void queryClient.invalidateQueries(); // categories show on most pages
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  return (
+    <section className="mb-8 rounded-lg bg-card p-5">
+      <h2 className="text-sm font-medium">Apply to past transactions</h2>
+      <p className="mt-0.5 text-sm text-muted-foreground">
+        Rules run on new transactions. This runs them on the ones you already have. Categories you
+        picked yourself never change.
+      </p>
+      {preview === null ? (
+        <Button
+          className="mt-4"
+          onClick={() => check.mutate()}
+          disabled={!hasRules || check.isPending}
+        >
+          {check.isPending && <Loader2 className="size-4 animate-spin" />}
+          Check what would change
+        </Button>
+      ) : preview.changes === 0 ? (
+        <p className="mt-4 text-sm">
+          Nothing to change: your past transactions already follow your rules.
+        </p>
+      ) : (
+        <div className="mt-4">
+          <p className="text-sm font-medium">
+            {plural(preview.changes)} would change, for example:
+          </p>
+          <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
+            {preview.sample.map((s, i) => (
+              <li key={i}>
+                <span className="text-foreground">{s.name || "No name"}</span>: {s.from ?? "—"} →{" "}
+                <span className="text-foreground">{s.to}</span>
+              </li>
+            ))}
+          </ul>
+          <div className="mt-4 flex gap-3">
+            <Button onClick={() => apply.mutate()} disabled={apply.isPending}>
+              {apply.isPending && <Loader2 className="size-4 animate-spin" />}
+              Apply to {plural(preview.changes)}
+            </Button>
+            <Button variant="ghost" onClick={() => setPreview(null)} disabled={apply.isPending}>
+              Cancel
+            </Button>
+          </div>
+        </div>
+      )}
+    </section>
   );
 }

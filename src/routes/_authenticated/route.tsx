@@ -15,6 +15,7 @@ import {
   ArrowDownLeft,
   Users,
   Settings,
+  ListFilter,
   type LucideIcon,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -89,6 +90,7 @@ const NAV_GROUPS: Array<NavGroup> = [
       { label: "Spending", icon: PieChart, to: "/spending" },
       { label: "Subscriptions", icon: Repeat, to: "/subscriptions" },
       { label: "Who owes you", icon: Users, to: "/splitwise" },
+      { label: "Rules", icon: ListFilter, to: "/rules" },
     ],
   },
   {
