@@ -5,6 +5,7 @@ import {
   dateLocale,
   formatNumber,
   formatPercent,
+  formatQuantity,
   localeOverride,
   monthFirst,
   numberFormat,
@@ -134,5 +135,16 @@ describe("a planted locale value", () => {
     setLocaleOverride("");
     setBrowser("de-DE-u-nu-arab");
     expect(appLocale()).toBe("de-DE");
+  });
+});
+
+describe("formatQuantity", () => {
+  it("polish-3 #7 writes shares and coins with up to N decimals the locale's way", () => {
+    expect(formatQuantity(1.5, 8)).toBe("1.5");
+    expect(formatQuantity(0.123456789, 8)).toBe("0.12345679");
+    expect(formatQuantity(12.34567, 3)).toBe("12.346");
+    expect(formatQuantity(1234, 3)).toBe("1,234");
+    setBrowser("de-DE");
+    expect(formatQuantity(1.5, 8)).toBe("1,5");
   });
 });

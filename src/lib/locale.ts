@@ -79,6 +79,10 @@ export function formatNumber(value: number, digits: number): string {
   }).format(value);
 }
 
+/** A quantity of shares or coins with up to `maxDigits` decimals: 1.5 → "1.5" / "1,5". */
+export const formatQuantity = (value: number, maxDigits: number): string =>
+  numberFormat({ minimumFractionDigits: 0, maximumFractionDigits: maxDigits }).format(value);
+
 /**
  * A share or change as a percent in the chosen locale: 0.2548 → "25.5%" (en), "25,5 %" (de).
  * signed: "+" above zero and a real minus "−" below, nothing on zero.

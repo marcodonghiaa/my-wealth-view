@@ -1,4 +1,4 @@
-import { appLocale } from "@/lib/locale";
+import { formatQuantity } from "@/lib/locale";
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Pencil, Trash2 } from "lucide-react";
@@ -140,9 +140,8 @@ export function TradesDialog({
         <DialogHeader>
           <DialogTitle>{name}</DialogTitle>
           <DialogDescription>
-            Trades add up to {net.toLocaleString(appLocale(), { maximumFractionDigits: 8 })}; you
-            hold {quantity.toLocaleString(appLocale(), { maximumFractionDigits: 8 })}. Prices are
-            per share, in EUR.
+            Trades add up to {formatQuantity(net, 8)}; you hold {formatQuantity(quantity, 8)}.
+            Prices are per share, in EUR.
           </DialogDescription>
         </DialogHeader>
 

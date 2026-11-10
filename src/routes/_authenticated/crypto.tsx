@@ -1,4 +1,4 @@
-import { formatPercent, numberFormat } from "@/lib/locale";
+import { formatPercent, formatQuantity } from "@/lib/locale";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
@@ -76,13 +76,6 @@ async function fetchCrypto(): Promise<Array<CryptoRow>> {
 function formatPrice(asset: AssetGroup): string {
   if (asset.priceEur != null) return formatEur(asset.priceEur);
   return asset.priceUsd != null ? formatUsd(asset.priceUsd) : "—";
-}
-
-function formatAmount(value: number): string {
-  return numberFormat({
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 8,
-  }).format(value);
 }
 
 /** Merge per-source rows for the same asset into one line, keeping the
@@ -246,7 +239,7 @@ function CryptoPage() {
                         </td>
                         <td className="px-4 py-3 sm:px-5">
                           <div className="font-figure text-foreground">
-                            {formatAmount(asset.amount)} {asset.symbol}
+                            {formatQuantity(asset.amount, 8)} {asset.symbol}
                           </div>
                           {asset.bySource.length > 1 && (
                             <div className="mt-1 flex flex-wrap gap-1.5">
@@ -255,7 +248,7 @@ function CryptoPage() {
                                   key={s.source}
                                   className="inline-flex items-center rounded-sm bg-muted px-2 py-0.5 text-xs text-muted-foreground"
                                 >
-                                  {s.source}: {formatAmount(s.amount)}
+                                  {s.source}: {formatQuantity(s.amount, 8)}
                                 </span>
                               ))}
                             </div>
@@ -313,7 +306,7 @@ function CryptoPage() {
                           key={s.source}
                           className="inline-flex items-center rounded-sm bg-muted px-2 py-0.5 text-xs text-muted-foreground"
                         >
-                          {s.source}: {formatAmount(s.amount)}
+                          {s.source}: {formatQuantity(s.amount, 8)}
                         </span>
                       ))}
                     </div>
@@ -323,7 +316,7 @@ function CryptoPage() {
                     <div>
                       <div className="text-xs text-muted-foreground">Amount</div>
                       <div className="font-figure text-foreground">
-                        {formatAmount(asset.amount)} {asset.symbol}
+                        {formatQuantity(asset.amount, 8)} {asset.symbol}
                       </div>
                     </div>
                     <div>

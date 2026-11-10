@@ -1,4 +1,4 @@
-import { formatPercent, numberFormat } from "@/lib/locale";
+import { formatPercent, formatQuantity } from "@/lib/locale";
 import { createFileRoute } from "@tanstack/react-router";
 import { EmptyState } from "@/components/empty-state";
 import { useQuery } from "@tanstack/react-query";
@@ -96,13 +96,6 @@ async function fetchPortfolio(): Promise<Array<PortfolioRow>> {
     .order("value_eur", { ascending: false });
   if (error) throw error;
   return (data ?? []) as Array<PortfolioRow>;
-}
-
-function formatShares(value: number): string {
-  return numberFormat({
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 3,
-  }).format(value);
 }
 
 interface TypeGroup {
@@ -314,7 +307,7 @@ function PortfolioPage() {
                                     </div>
                                   </td>
                                   <td className="px-4 py-3 font-figure text-foreground sm:px-5">
-                                    {row.shares != null ? formatShares(row.shares) : "—"}
+                                    {row.shares != null ? formatQuantity(row.shares, 3) : "—"}
                                   </td>
                                   <td className="px-4 py-3 font-figure text-foreground sm:px-5">
                                     {row.price != null && row.currency
@@ -382,7 +375,7 @@ function PortfolioPage() {
                                 <div>
                                   <div className="text-xs text-muted-foreground">Shares</div>
                                   <div className="font-figure text-foreground">
-                                    {row.shares != null ? formatShares(row.shares) : "—"}
+                                    {row.shares != null ? formatQuantity(row.shares, 3) : "—"}
                                   </div>
                                 </div>
                                 <div>
