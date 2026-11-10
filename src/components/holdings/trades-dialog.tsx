@@ -214,7 +214,7 @@ export function TradesDialog({
               <li key={t.id} className="flex items-center gap-2 px-3 py-1">
                 <span className="min-w-0 flex-1">
                   <span className="font-medium text-foreground">
-                    {t.side === "buy" ? "Bought" : "Sold"} {t.shares}
+                    {t.side === "buy" ? "Bought" : "Sold"} {formatQuantity(t.shares, 8)}
                   </span>{" "}
                   at {formatEur(t.price_eur)}
                   <span className="block text-xs text-muted-foreground">
