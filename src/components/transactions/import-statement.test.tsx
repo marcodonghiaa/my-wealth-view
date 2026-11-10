@@ -96,6 +96,13 @@ describe("ImportStatement", () => {
     read.mockRestore();
   });
 
+  it("#6 keeps the From name to 60 characters", async () => {
+    upload(`${"B".repeat(100)}.csv`, CSV);
+    const from = (await screen.findByLabelText("From")) as HTMLInputElement;
+    expect(from.value).toHaveLength(60);
+    expect(from.maxLength).toBe(60);
+  });
+
   it("asks for a CSV when given an Excel file", async () => {
     upload("movimenti.xlsx", "binary");
     expect(await screen.findByRole("alert")).toHaveTextContent(/Save as → CSV/i);

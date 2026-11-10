@@ -43,7 +43,7 @@ const FIELD_LABELS: Array<[keyof StatementColumns, string]> = [
 const field = fieldClass();
 
 // The bank's name from a file like "Fineco_movimenti_2026.csv", as the default source.
-const sourceFromFile = (name: string) => /^[A-Za-z]+/.exec(name)?.[0] ?? "";
+const sourceFromFile = (name: string) => (/^[A-Za-z]+/.exec(name)?.[0] ?? "").slice(0, 60);
 
 // Adds the transactions of a bank statement saved as CSV. Rows already in the app are left out,
 // so importing the same file twice adds nothing.
@@ -326,6 +326,7 @@ export function ImportStatement() {
                 <span>From</span>
                 <input
                   aria-label="From"
+                  maxLength={60}
                   placeholder="Manual"
                   value={source}
                   onChange={(e) => setSource(e.target.value)}
