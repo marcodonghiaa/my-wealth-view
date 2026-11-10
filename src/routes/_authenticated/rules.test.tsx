@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, focusManager } from "@tanstack/react-query";
 
 const invoke = vi.fn();
 const toastError = vi.fn();
@@ -403,5 +403,21 @@ describe("applying twice", () => {
     expect(
       invoke.mock.calls.filter(([, o]) => (o as { body: { apply: boolean } }).body.apply),
     ).toHaveLength(1);
+  });
+});
+
+// Polish pass 3 #1: coming back to the tab re-ran the server scan under the open preview.
+describe("preview and tab focus", () => {
+  it("doesn't re-run the preview when the tab regains focus", async () => {
+    invoke.mockReset();
+    invoke.mockResolvedValue({ data: { changes: 2, sample: [] }, error: null });
+    renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: "Apply to past transactions" }));
+    await screen.findByRole("button", { name: "Update 2 transactions" });
+    focusManager.setFocused(false);
+    focusManager.setFocused(true);
+    await new Promise((r) => setTimeout(r, 20));
+    focusManager.setFocused(undefined);
+    expect(invoke).toHaveBeenCalledTimes(1);
   });
 });

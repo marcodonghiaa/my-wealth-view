@@ -440,6 +440,7 @@ function ApplyToPast({ onDone }: { onDone: () => void }) {
     queryFn: () => reapply(false),
     gcTime: 0,
     retry: false,
+    refetchOnWindowFocus: false, // a scan of your whole history; the count stays put while you read it
   });
   const apply = useMutation({
     mutationFn: () => reapply(true),
