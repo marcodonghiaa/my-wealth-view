@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { Link, createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { trendSummary } from "@/lib/chart-summary";
@@ -13,7 +13,9 @@ import {
   CHART_RANGES,
   RANGE_LABEL,
   chartPoints,
+  dayBeforeMonth,
   inRange,
+  monthNetWorth,
   withHistory,
   type ChartRange,
 } from "@/lib/net-worth";
@@ -21,6 +23,7 @@ import { fetchHistory, fetchNetWorth, fetchReconstructed } from "@/lib/net-worth
 import { TONE_TEXT, toneOf } from "@/lib/tone";
 import { Alert } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useSyncStatus } from "@/components/health/use-health";
 
 type FxRate = { date: string; currency: string; rate_to_eur: number };
 
@@ -99,23 +102,33 @@ function NetWorthPage() {
   });
 
   const snapshots = useMemo(() => netWorthQuery.data ?? [], [netWorthQuery.data]);
-  const chartData = useMemo(
-    () =>
-      inRange(
-        chartPoints(
-          withHistory(historyQuery.data ?? [], snapshots, undefined, reconstructedQuery.data ?? []),
-        ),
-        range,
-      ),
-    [historyQuery.data, snapshots, reconstructedQuery.data, range],
+  const allRows = useMemo(
+    () => withHistory(historyQuery.data ?? [], snapshots, undefined, reconstructedQuery.data ?? []),
+    [historyQuery.data, snapshots, reconstructedQuery.data],
   );
+  const chartData = useMemo(() => inRange(chartPoints(allRows), range), [allRows, range]);
   const chartFirst = chartData.at(0);
   const latest = snapshots.at(-1);
   const previous = snapshots.at(-2);
-  const dayChange =
+  // Today and this month, as amounts (EUR) with the share that colours them.
+  const today =
     latest != null && previous != null && previous.total_eur !== 0
-      ? (latest.total_eur - previous.total_eur) / previous.total_eur
+      ? {
+          eur: latest.total_eur - previous.total_eur,
+          share: (latest.total_eur - previous.total_eur) / Math.abs(previous.total_eur),
+        }
       : null;
+  const monthRow = latest
+    ? monthNetWorth(allRows, dayBeforeMonth(latest.snapshot_date), latest.snapshot_date)
+    : null;
+  const month =
+    monthRow?.delta && monthRow.start && monthRow.start.total_eur !== 0
+      ? {
+          eur: monthRow.delta.total,
+          share: monthRow.delta.total / Math.abs(monthRow.start.total_eur),
+        }
+      : null;
+  const sync = useSyncStatus();
 
   // These feed the chart history and other currencies; say so when one fails.
   const extraError = [historyQuery, reconstructedQuery, fxQuery].find((q) => q.isError)?.error;
@@ -204,12 +217,19 @@ function NetWorthPage() {
 
         {/* Today's context: hidden (space kept) while scrubbing a past day */}
         <div className={scrubbed ? "invisible" : undefined}>
-          {dayChange != null && (
-            <p className="mt-2 flex items-baseline gap-1.5 text-sm">
-              <span className="text-muted-foreground">Today</span>
-              <span className={`font-figure ${TONE_TEXT[toneOf(dayChange, NOISE_BAND)]}`}>
-                {formatPercent(dayChange)}
-              </span>
+          {(today || month) && rateToEur != null && (
+            <p className="mt-2 flex flex-wrap items-baseline gap-x-1.5 text-sm">
+              {today && (
+                <PeriodChange label="Today" change={today} rate={rateToEur} currency={currency} />
+              )}
+              {today && month && (
+                <span aria-hidden className="text-muted-foreground">
+                  ·
+                </span>
+              )}
+              {month && (
+                <PeriodChange label="Month" change={month} rate={rateToEur} currency={currency} />
+              )}
             </p>
           )}
           {currency !== "EUR" && headline != null && rateToEur != null && (
@@ -218,13 +238,33 @@ function NetWorthPage() {
               {formatFxDate(fxQuery.data?.[currency]?.date)}
             </p>
           )}
+          {sync && (
+            <p className="mt-2 text-xs text-muted-foreground">
+              {sync.attention > 0 ? (
+                // A failing check: the line becomes the way to it.
+                <Link
+                  to="/settings"
+                  hash="health"
+                  className="inline-flex min-h-6 items-center underline decoration-hairline underline-offset-4 hover:text-foreground"
+                >
+                  {sync.text} ·{" "}
+                  <span className="ml-1 text-warning">
+                    {sync.attention} {sync.attention === 1 ? "check needs" : "checks need"}{" "}
+                    attention
+                  </span>
+                </Link>
+              ) : (
+                sync.text
+              )}
+            </p>
+          )}
         </div>
       </section>
 
       {/* Chart: one line, no grid; scrub it to read any day */}
       <section aria-label="Net worth over time" className="mb-8">
         <div
-          className="-mx-1 h-72 sm:h-80"
+          className="-mx-1 h-52 sm:h-80"
           role="img"
           aria-label={
             // The chart's own range and the currency on screen, not always EUR and today.
@@ -259,12 +299,14 @@ function NetWorthPage() {
         </div>
 
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-          <SegmentedControl
-            label="Chart range"
-            options={CHART_RANGES.map((r) => ({ value: r, label: r }))}
-            value={range}
-            onChange={setRange}
-          />
+          <div className="w-full sm:w-auto">
+            <SegmentedControl
+              label="Chart range"
+              options={CHART_RANGES.map((r) => ({ value: r, label: r }))}
+              value={range}
+              onChange={setRange}
+            />
+          </div>
           <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
             {chartData.some((p) => p.estimated_eur != null) && (
               <LegendDot
@@ -293,6 +335,28 @@ function NetWorthPage() {
 function formatPercent(value: number, signed = true): string {
   const sign = signed ? (value > 0 ? "+" : value < 0 ? "−" : "") : "";
   return `${sign}${Math.abs(value * 100).toFixed(2)}%`;
+}
+
+function PeriodChange({
+  label,
+  change,
+  rate,
+  currency,
+}: {
+  label: string;
+  change: { eur: number; share: number };
+  rate: number;
+  currency: Currency;
+}) {
+  return (
+    <span className="inline-flex items-baseline gap-1.5">
+      <span className="text-muted-foreground">{label}</span>
+      <span className={`font-figure ${TONE_TEXT[toneOf(change.share, NOISE_BAND)]}`}>
+        {change.eur >= 0 ? "+" : "−"}
+        {formatMoney(Math.abs(change.eur) / rate, currency)}
+      </span>
+    </span>
+  );
 }
 
 function LegendDot({ color, label, dashed }: { color: string; label: string; dashed?: boolean }) {

@@ -218,6 +218,12 @@ export function allocationHistory(
   ];
 }
 
+// The last day of the month before `iso`'s month (2026-03-14 -> 2026-02-28): a month's baseline.
+export function dayBeforeMonth(iso: string): string {
+  const [y = 0, m = 1] = iso.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, 0)).toISOString().slice(0, 10);
+}
+
 // Same day one month earlier, clamped to that month's last day (31 Mar -> 28 Feb).
 export function monthAgo(iso: string, months = 1): string {
   const [y = 0, m = 1, d = 1] = iso.split("-").map(Number);

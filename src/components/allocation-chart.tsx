@@ -1,5 +1,14 @@
+import { Link } from "@tanstack/react-router";
 import { Cell, Pie, PieChart, ResponsiveContainer } from "recharts";
-import { Bitcoin, Building2, CreditCard, Landmark, ScrollText, Shapes } from "lucide-react";
+import {
+  Bitcoin,
+  Building2,
+  ChevronRight,
+  CreditCard,
+  Landmark,
+  ScrollText,
+  Shapes,
+} from "lucide-react";
 import { shareSummary } from "@/lib/chart-summary";
 import { formatDay } from "@/lib/date";
 import {
@@ -9,19 +18,63 @@ import {
   type ReconstructedRow,
 } from "@/lib/net-worth";
 import { formatEur } from "@/lib/transactions";
+import type { ReactNode } from "react";
 
+// Each class leads to the page that explains it. "Stocks & funds" is everything in the portfolio
+// that isn't a bond (stocks, ETFs, funds), so it reads as the sum of those rows on Portfolio.
 const CLASSES = [
-  { key: "stocks_eur", label: "Stocks", color: "var(--alloc-stocks)", icon: Building2 },
-  { key: "bonds_eur", label: "Bonds", color: "var(--alloc-bonds)", icon: ScrollText },
-  { key: "crypto_eur", label: "Crypto", color: "var(--alloc-crypto)", icon: Bitcoin },
-  { key: "cash_eur", label: "Cash", color: "var(--alloc-cash)", icon: Landmark },
+  {
+    key: "stocks_eur",
+    label: "Stocks & funds",
+    color: "var(--alloc-stocks)",
+    icon: Building2,
+    to: "/portfolio",
+  },
+  {
+    key: "bonds_eur",
+    label: "Bonds",
+    color: "var(--alloc-bonds)",
+    icon: ScrollText,
+    to: "/portfolio",
+  },
+  {
+    key: "crypto_eur",
+    label: "Crypto",
+    color: "var(--alloc-crypto)",
+    icon: Bitcoin,
+    to: "/crypto",
+  },
+  { key: "cash_eur", label: "Cash", color: "var(--alloc-cash)", icon: Landmark, to: "/accounts" },
   {
     key: "other_eur",
     label: "Unallocated",
     color: "var(--color-muted-foreground)",
     icon: Shapes,
+    to: null,
   },
 ] as const;
+
+type RowTarget = "/portfolio" | "/crypto" | "/accounts" | null;
+
+// A breakdown row; with a target it is a link to that page, with a chevron.
+function Row({ to, children }: { to: RowTarget; children: ReactNode }) {
+  const row = "flex min-h-16 items-center gap-3 py-2.5";
+  return (
+    <li>
+      {to ? (
+        <Link
+          to={to}
+          className={`${row} -mx-2 rounded-sm px-2 transition-colors hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring`}
+        >
+          {children}
+          <ChevronRight aria-hidden className="size-4 shrink-0 text-muted-foreground" />
+        </Link>
+      ) : (
+        <div className={row}>{children}</div>
+      )}
+    </li>
+  );
+}
 
 // What net worth is made of: a donut of the mix with each class's share and value beside it,
 // for today or for `asOf` (the day being scrubbed on the chart above).
@@ -56,9 +109,10 @@ export function AllocationChart({
       </h2>
       <p className="text-xs text-muted-foreground">As of {formatDay(row.snapshot_date)}</p>
 
-      <div className="mt-4 flex flex-col items-center gap-6 sm:flex-row sm:gap-10">
+      <div className="mt-2 flex flex-col items-center sm:mt-4 sm:flex-row sm:gap-10">
+        {/* Phones drop the donut: the rows carry each share, and the colours alone say nothing. */}
         <div
-          className="size-48 shrink-0"
+          className="hidden size-48 shrink-0 sm:block"
           role="img"
           aria-label={shareSummary(
             "Breakdown",
@@ -88,8 +142,8 @@ export function AllocationChart({
         </div>
 
         <ul className="w-full flex-1 divide-y divide-hairline">
-          {slices.map(({ key, label, color, icon: Icon, value }) => (
-            <li key={key} className="flex min-h-16 items-center gap-3 py-2.5">
+          {slices.map(({ key, label, color, icon: Icon, value, to }) => (
+            <Row key={key} to={to}>
               <span
                 aria-hidden
                 className="flex size-10 shrink-0 items-center justify-center rounded-full"
@@ -107,10 +161,10 @@ export function AllocationChart({
                 </p>
               </div>
               <p className="font-figure text-sm text-foreground">{format(value)}</p>
-            </li>
+            </Row>
           ))}
           {debts > 0 && (
-            <li className="flex min-h-16 items-center gap-3 py-2.5">
+            <Row to="/accounts">
               <span
                 aria-hidden
                 className="flex size-10 shrink-0 items-center justify-center rounded-full bg-negative/10 text-negative"
@@ -119,7 +173,7 @@ export function AllocationChart({
               </span>
               <p className="min-w-0 flex-1 text-sm font-medium text-foreground">Debts</p>
               <p className="font-figure text-sm text-foreground">{format(-debts)}</p>
-            </li>
+            </Row>
           )}
         </ul>
       </div>
