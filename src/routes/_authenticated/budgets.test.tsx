@@ -8,6 +8,8 @@ const upsertCalls: Array<{ rows: Array<Row>; opts: unknown }> = [];
 const upserts = upsertCalls;
 let failTable: string | null = null;
 let failUpsert: string | null = null;
+const toast = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }));
+vi.mock("sonner", () => ({ toast }));
 
 // A small in-memory PostgREST: filters, order and range really apply, so a wrong date range or
 // a missing filter in the page shows up as wrong figures, and the 1000-row cap is real.
@@ -75,6 +77,7 @@ beforeEach(() => {
   upserts.length = 0;
   failTable = null;
   failUpsert = null;
+  toast.error.mockClear();
   db["v_spend_by_category_monthly"] = [
     { month: "2026-09-01", category: "Groceries", spend_eur: 300 },
     { month: "2026-10-01", category: "Groceries", spend_eur: 320 },
@@ -261,5 +264,83 @@ describe("Budgets page", () => {
     failTable = "v_spend_by_category_monthly";
     renderPage();
     expect((await screen.findByRole("alert")).textContent).toContain("relation does not exist");
+  });
+
+  it("says when a budget couldn't be saved", async () => {
+    failUpsert = "permission denied";
+    renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: "Start from my averages" }));
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith("Couldn't save the budget", {
+        description: "permission denied",
+      }),
+    );
+  });
+
+  it("removes a budget with Remove, and Cancel saves nothing", async () => {
+    db["category_budgets"] = [
+      { category: "Groceries", month: "2026-10-01", amount: 300, rollover: true },
+    ];
+    renderPage();
+    const change = await screen.findByRole("button", { name: /Change budget for Groceries/ });
+    fireEvent.click(change);
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(upserts).toHaveLength(0);
+    expect(screen.queryByLabelText("Budget for Groceries")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: /Change budget for Groceries/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Remove" }));
+    await waitFor(() => expect(upserts).toHaveLength(1));
+    expect(upserts[0]!.rows[0]).toMatchObject({
+      category: "Groceries",
+      month: "2026-11-01",
+      amount: 0,
+      rollover: false,
+    });
+  });
+
+  it("prefills the add form with the average and adds the budget", async () => {
+    renderPage();
+    fireEvent.change(await screen.findByLabelText("Category"), { target: { value: "Groceries" } });
+    // (300 + 320) / 2 = 310.
+    expect((screen.getByLabelText("Monthly budget in euros") as HTMLInputElement).value).toBe(
+      "310",
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Add" }));
+    await waitFor(() => expect(upserts).toHaveLength(1));
+    expect(upserts[0]!.rows[0]).toMatchObject({
+      category: "Groceries",
+      amount: 310,
+      rollover: false,
+      month: "2026-11-01",
+    });
+  });
+
+  it("cannot go past the current month", async () => {
+    renderPage();
+    await screen.findByRole("button", { name: "Start from my averages" });
+    const next = screen.getByRole("button", { name: "Next month" }) as HTMLButtonElement;
+    expect(next.disabled).toBe(true);
+    fireEvent.click(screen.getByRole("button", { name: "Previous month" }));
+    await waitFor(() => expect(next.disabled).toBe(false));
+  });
+
+  // protects=unbudgeted spend: Uncategorized can't get a budget; a category with no earlier
+  // months gets this month's spend rounded up to €10
+  it("adds a budget for new spending, never for Uncategorized", async () => {
+    db["category_budgets"] = [
+      { category: "Groceries", month: "2026-11-01", amount: 300, rollover: false },
+      { category: "Dine Out", month: "2026-11-01", amount: 50, rollover: false },
+    ];
+    db["v_spend_by_category_monthly"]!.push(
+      { month: "2026-11-01", category: "Pets", spend_eur: 43 },
+      { month: "2026-11-01", category: "Uncategorized", spend_eur: 20 },
+    );
+    renderPage();
+    expect(await screen.findByText("Uncategorized")).toBeTruthy();
+    const add = screen.getAllByRole("button", { name: "Add budget" });
+    expect(add).toHaveLength(1);
+    fireEvent.click(add[0]!);
+    await waitFor(() => expect(upserts).toHaveLength(1));
+    expect(upserts[0]!.rows[0]).toMatchObject({ category: "Pets", amount: 50 });
   });
 });

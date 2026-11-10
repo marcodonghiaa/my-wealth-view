@@ -87,6 +87,15 @@ describe("budgetLines without rollover", () => {
     ];
     expect(budgetLines(rows, [], "2026-04-01")).toEqual([]);
   });
+
+  it("sorts by budget, largest first, then by name", () => {
+    const lines = budgetLines(
+      [b("Rent", "2026-01-01", 50), b("Gym", "2026-01-01", 50), b("Groceries", "2026-01-01", 300)],
+      [],
+      "2026-01-01",
+    );
+    expect(lines.map((l) => l.category)).toEqual(["Groceries", "Gym", "Rent"]);
+  });
   it("sorts by budget, biggest first", () => {
     const rows = [b("A", "2026-01-01", 50), b("B", "2026-01-01", 200)];
     expect(budgetLines(rows, [], "2026-01-01").map((l) => l.category)).toEqual(["B", "A"]);
