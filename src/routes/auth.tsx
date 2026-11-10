@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Github, Loader2, LockKeyhole } from "lucide-react";
 import { BrandMark } from "@/components/brand-mark";
 import { TrustNote } from "@/components/trust-note";
+import { CodeInput } from "@/components/ui/field";
 import { supabase } from "@/integrations/supabase/client";
 import { exitDemoMode } from "@/lib/demo/mode";
 import { resetPasswordUrl } from "./reset-password";
@@ -175,17 +176,12 @@ export function AuthPage() {
                   <label htmlFor="mfa-code" className="text-xs font-medium text-muted-foreground">
                     Authenticator code
                   </label>
-                  <input
+                  <CodeInput
                     id="mfa-code"
-                    required
                     autoFocus
-                    inputMode="numeric"
-                    autoComplete="one-time-code"
-                    maxLength={9}
                     value={code}
                     onChange={(e) => setCode(e.target.value)}
                     className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-center font-mono text-lg tracking-[0.3em] text-foreground outline-none transition-colors placeholder:text-muted-foreground/60 focus:border-primary/60 focus:ring-2 focus:ring-ring"
-                    placeholder="123456"
                   />
                   <p className="text-xs text-muted-foreground">
                     Open your authenticator app and type the 6-digit code for Alopex.

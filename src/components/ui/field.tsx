@@ -25,3 +25,21 @@ export const Select = forwardRef<
 >(function Select({ className, onGround, ...props }, ref) {
   return <select ref={ref} className={cn(fieldClass(onGround), className)} {...props} />;
 });
+
+/** A code from an authenticator app: 6 digits, spaces or a dash allowed while typing. */
+export const CodeInput = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(
+  function CodeInput({ className, ...props }, ref) {
+    return (
+      <input
+        ref={ref}
+        required
+        inputMode="numeric"
+        autoComplete="one-time-code"
+        maxLength={9}
+        placeholder="123456"
+        className={className ?? fieldClass()}
+        {...props}
+      />
+    );
+  },
+);

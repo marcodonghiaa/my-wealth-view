@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Loader2, ShieldCheck, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/field";
+import { CodeInput, Input } from "@/components/ui/field";
 import {
   finishEnrollment,
   listAuthenticators,
@@ -150,16 +150,7 @@ export function TwoFactorSection() {
               <label htmlFor="enroll-code" className="text-xs font-medium text-muted-foreground">
                 Code from the app
               </label>
-              <Input
-                id="enroll-code"
-                required
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                maxLength={9}
-                value={code}
-                onChange={(e) => setCode(e.target.value)}
-                placeholder="123456"
-              />
+              <CodeInput id="enroll-code" value={code} onChange={(e) => setCode(e.target.value)} />
             </div>
             <div className="flex gap-2">
               <Button type="submit" disabled={pending} className="flex-1">
