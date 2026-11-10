@@ -1,5 +1,5 @@
 import { Button, buttonVariants } from "@/components/ui/button";
-import { fieldClass } from "@/components/ui/field";
+import { Input, Select } from "@/components/ui/field";
 import { cn } from "@/lib/utils";
 import { useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -39,8 +39,6 @@ const FIELD_LABELS: Array<[keyof StatementColumns, string]> = [
   ["out", "Money out"],
   ["direction", "In/out marker (D/C, Soll/Haben…)"],
 ];
-
-const field = fieldClass();
 
 // The bank's name from a file like "Fineco_movimenti_2026.csv", as the default source.
 const sourceFromFile = (name: string) => (/^[A-Za-z]+/.exec(name)?.[0] ?? "").slice(0, 60);
@@ -248,11 +246,10 @@ export function ImportStatement() {
                     className="block min-w-0 space-y-1 text-xs text-muted-foreground"
                   >
                     <span>{label}</span>
-                    <select
+                    <Select
                       aria-label={`${label} column`}
                       value={columns?.[key] ?? ""}
                       onChange={(e) => pick(key, e.target.value)}
-                      className={field}
                     >
                       <option value="">—</option>
                       {headers.map((h, i) => (
@@ -260,7 +257,7 @@ export function ImportStatement() {
                           {h || `Column ${i + 1}`}
                         </option>
                       ))}
-                    </select>
+                    </Select>
                   </label>
                 ))}
               </div>
@@ -277,15 +274,15 @@ export function ImportStatement() {
               <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
                 <label className="flex items-center gap-2">
                   <span>Dates</span>
-                  <select
+                  <Select
                     aria-label="Date order"
                     value={statement.dateOrder}
                     onChange={(e) => setOption({ dateOrder: e.target.value as DateOrder })}
-                    className={cn(field, "w-auto")}
+                    className="w-auto"
                   >
                     <option value="DMY">Day first (31/12)</option>
                     <option value="MDY">Month first (12/31)</option>
-                  </select>
+                  </Select>
                 </label>
                 {/* Only a single signed amount can be flipped; in/out columns say it already. */}
                 {statement.columns.amount != null && (
@@ -334,13 +331,12 @@ export function ImportStatement() {
               )}
               <label className="block space-y-1 text-xs text-muted-foreground">
                 <span>From</span>
-                <input
+                <Input
                   aria-label="From"
                   maxLength={60}
                   placeholder="Manual"
                   value={source}
                   onChange={(e) => setSource(e.target.value)}
-                  className={field}
                 />
               </label>
             </>
