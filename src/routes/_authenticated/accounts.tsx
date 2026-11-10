@@ -5,6 +5,10 @@ import { flushSync } from "react-dom";
 import { ChevronDown, Link2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { MaskedIban } from "@/components/masked-iban";
+import { Button } from "@/components/ui/button";
+import { Select } from "@/components/ui/field";
+import { Alert } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { assertHttpsUrl } from "@/lib/consent-url";
 import {
@@ -256,7 +260,7 @@ function AccountsPage() {
         <h1 className="text-[0.9375rem] font-medium text-muted-foreground">Accounts</h1>
         <div className="mt-1 min-h-16">
           {bankQuery.isPending ? (
-            <div className="h-16 w-72 animate-pulse rounded-2xl bg-muted" />
+            <Skeleton className="h-16 w-72" />
           ) : bankQuery.isError ? (
             <p className="figure-display text-muted-foreground">—</p>
           ) : (
@@ -276,19 +280,12 @@ function AccountsPage() {
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-lg font-semibold text-foreground">Bank accounts</h2>
           {!bankQuery.isPending && (
-            <span className="font-figure text-sm font-medium text-foreground">
-              {formatEur(totalBankEur)}
-            </span>
+            <span className="font-figure text-sm text-foreground">{formatEur(totalBankEur)}</span>
           )}
         </div>
 
         {bankQuery.isError && (
-          <div
-            role="alert"
-            className="mb-4 rounded-2xl bg-negative/10 px-4 py-3 text-sm text-negative"
-          >
-            Couldn't load bank accounts: {bankQuery.error.message}
-          </div>
+          <Alert className="mb-4">Couldn't load bank accounts: {bankQuery.error.message}</Alert>
         )}
 
         {/* Renewing is linking the bank again, so the button opens Connect a bank below. */}
@@ -296,11 +293,11 @@ function AccountsPage() {
           <div
             key={alert.bank}
             role="status"
-            className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-warning/60 bg-warning/10 px-4 py-3 text-sm text-foreground"
+            className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-lg bg-warning/10 px-4 py-3 text-sm text-foreground"
           >
             <span>{consentMessage(alert)}</span>
-            <button
-              type="button"
+            <Button
+              variant="ghost"
               onClick={() => {
                 // Prefill without the country select's handler, which would clear the bank.
                 const t = renewTarget(alert.bank, bankAccounts);
@@ -314,15 +311,15 @@ function AccountsPage() {
                 connectStepsRef.current?.scrollIntoView({ block: "center" });
                 connectStepsRef.current?.focus({ preventScroll: true });
               }}
-              className="min-h-11 rounded-full px-3 font-medium text-primary hover:bg-primary/10"
+              className="px-3 text-primary hover:bg-primary/10 hover:text-primary"
             >
               Renew access
-            </button>
+            </Button>
           </div>
         ))}
 
         {/* Connect a bank — collapsed by default. */}
-        <form onSubmit={handleConnectBank} className="mb-4 rounded-2xl bg-card">
+        <form onSubmit={handleConnectBank} className="mb-4 rounded-lg bg-card">
           <button
             type="button"
             onClick={() => setShowConnectForm((v) => !v)}
@@ -366,32 +363,31 @@ function AccountsPage() {
                   <label htmlFor="acc-country" className="mb-1 block text-xs text-muted-foreground">
                     Country
                   </label>
-                  <select
+                  <Select
                     id="acc-country"
                     value={bankCountry}
                     onChange={(e) => {
                       setBankCountry(e.target.value);
                       setBankName("");
                     }}
-                    className="w-full rounded-lg border bg-background px-3 py-2 text-base focus:ring-2 focus:ring-ring focus:outline-none sm:w-28"
+                    className="sm:w-28"
                   >
                     {COUNTRIES.map((c) => (
                       <option key={c.code} value={c.code}>
                         {c.name}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                 </div>
                 <div>
                   <label htmlFor="acc-bank" className="mb-1 block text-xs text-muted-foreground">
                     Bank
                   </label>
-                  <select
+                  <Select
                     id="acc-bank"
                     value={bankName}
                     onChange={(e) => setBankName(e.target.value)}
                     disabled={banksQuery.isPending || banksQuery.isError}
-                    className="w-full rounded-lg border bg-background px-3 py-2 text-base focus:ring-2 focus:ring-ring focus:outline-none disabled:opacity-50"
                   >
                     <option value="">
                       {banksQuery.isPending ? "Loading banks…" : "Select a bank…"}
@@ -401,7 +397,7 @@ function AccountsPage() {
                         {b.name}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                   {banksQuery.isError && (
                     <p className="mt-1 break-words text-xs text-negative">
                       {banksQuery.error.message}
@@ -410,10 +406,9 @@ function AccountsPage() {
                 </div>
               </div>
               <div className="mt-4 flex items-center gap-3">
-                <button
+                <Button
                   type="submit"
                   disabled={connectBank.isPending || !banks.some((b) => b.name === bankName)}
-                  className="inline-flex min-h-11 items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
                 >
                   {connectBank.isPending ? (
                     <Loader2 className="size-4 animate-spin" />
@@ -421,7 +416,7 @@ function AccountsPage() {
                     <Link2 className="size-4" />
                   )}
                   {connectBank.isPending ? "Connecting…" : "Approve here"}
-                </button>
+                </Button>
                 {connectError && <p className="text-sm text-negative">{connectError}</p>}
               </div>
               <p className="mt-3 text-xs text-muted-foreground">You sign in on your bank's site.</p>
@@ -435,11 +430,11 @@ function AccountsPage() {
           </div>
         )}
 
-        <div className="overflow-hidden rounded-2xl bg-card">
+        <div className="overflow-hidden rounded-lg bg-card">
           {bankQuery.isPending ? (
             <div className="space-y-3 p-4">
               {Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="h-12 animate-pulse rounded-xl bg-muted" />
+                <Skeleton key={i} className="h-12" />
               ))}
             </div>
           ) : bankAccounts.length === 0 ? (
@@ -472,7 +467,7 @@ function AccountsPage() {
                         </div>
                       </div>
                       <div className="shrink-0 text-right">
-                        <div className="font-figure text-sm font-medium text-foreground">
+                        <div className="font-figure text-sm text-foreground">
                           {formatEur(group.subtotalEur)}
                         </div>
                         <div className="text-xs text-muted-foreground">
@@ -532,7 +527,7 @@ function AccountsPage() {
               </span>
             </div>
           </div>
-          <ul className="divide-y overflow-hidden rounded-2xl bg-card">
+          <ul className="divide-y overflow-hidden rounded-lg bg-card">
             {debts.map((a) => {
               const bank = bankOf(a);
               return (

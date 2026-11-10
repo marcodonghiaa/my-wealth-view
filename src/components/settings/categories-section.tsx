@@ -4,9 +4,9 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { ALWAYS_SHOWN, CATEGORIES, categoryColor } from "@/lib/categories";
 import { CATEGORIES_KEY, useCategories } from "@/lib/use-categories";
-
-const BUTTON =
-  "min-h-11 shrink-0 rounded-full px-3 text-sm font-medium text-muted-foreground hover:bg-muted disabled:opacity-50";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/field";
+import { GroupedList } from "@/components/ui/grouped-list";
 
 // Your categories: add your own, hide built-in ones you don't use. Pickers everywhere and the AI
 // categorizer use the result. A hidden or deleted category stays on the transactions that have it.
@@ -68,75 +68,73 @@ export function CategoriesSection() {
       ) : (
         <div className="space-y-4">
           <form onSubmit={add} className="flex gap-2">
-            <input
+            <Input
               aria-label="New category"
               placeholder="New category"
               value={name}
               maxLength={40}
               onChange={(e) => setName(e.target.value)}
-              className="h-11 min-w-0 flex-1 rounded-full border bg-background px-4 text-base focus:ring-2 focus:ring-ring focus:outline-none"
+              className="flex-1 px-4"
             />
-            <button
-              type="submit"
-              disabled={busy}
-              className="min-h-11 rounded-full bg-primary px-4 text-sm font-medium text-primary-foreground disabled:opacity-50"
-            >
+            <Button type="submit" disabled={busy}>
               Add
-            </button>
+            </Button>
           </form>
           {error && (
             <p role="alert" className="text-sm text-negative">
               {error}
             </p>
           )}
-          <ul className="divide-y overflow-hidden rounded-2xl bg-card">
-            {[...builtIn, ...own].map((c) => {
-              const isOwn = !builtIn.includes(c);
-              const isHidden = hidden.has(c);
-              return (
-                <li key={c} className="flex min-h-12 items-center gap-3 px-4 py-1">
-                  <span
-                    aria-hidden
-                    className="size-2.5 shrink-0 rounded-full"
-                    style={{ backgroundColor: categoryColor(c) }}
-                  />
-                  <span
-                    className={`min-w-0 flex-1 truncate text-sm ${isHidden ? "text-muted-foreground line-through" : "text-foreground"}`}
-                  >
-                    {c}
-                  </span>
-                  {isOwn ? (
-                    <button
-                      type="button"
-                      disabled={busy}
-                      onClick={() => remove.mutate(c)}
-                      className={BUTTON}
+          <GroupedList>
+            <ul className="divide-y divide-hairline">
+              {[...builtIn, ...own].map((c) => {
+                const isOwn = !builtIn.includes(c);
+                const isHidden = hidden.has(c);
+                return (
+                  <li key={c} className="flex min-h-12 items-center gap-3 px-4 py-1">
+                    <span
+                      aria-hidden
+                      className="size-2.5 shrink-0 rounded-full"
+                      style={{ backgroundColor: categoryColor(c) }}
+                    />
+                    <span
+                      className={`min-w-0 flex-1 truncate text-sm ${isHidden ? "text-muted-foreground line-through" : "text-foreground"}`}
                     >
-                      Delete
-                    </button>
-                  ) : ALWAYS_SHOWN.includes(c) ? null : isHidden ? (
-                    <button
-                      type="button"
-                      disabled={busy}
-                      onClick={() => remove.mutate(c)}
-                      className={BUTTON}
-                    >
-                      Show
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      disabled={busy}
-                      onClick={() => save.mutate({ name: c, hidden: true })}
-                      className={BUTTON}
-                    >
-                      Hide
-                    </button>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
+                      {c}
+                    </span>
+                    {isOwn ? (
+                      <Button
+                        variant="ghost"
+                        className="px-3"
+                        disabled={busy}
+                        onClick={() => remove.mutate(c)}
+                      >
+                        Delete
+                      </Button>
+                    ) : ALWAYS_SHOWN.includes(c) ? null : isHidden ? (
+                      <Button
+                        variant="ghost"
+                        className="px-3"
+                        disabled={busy}
+                        onClick={() => remove.mutate(c)}
+                      >
+                        Show
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="ghost"
+                        className="px-3"
+                        disabled={busy}
+                        onClick={() => save.mutate({ name: c, hidden: true })}
+                      >
+                        Hide
+                      </Button>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          </GroupedList>
         </div>
       )}
     </section>

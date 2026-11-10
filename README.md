@@ -86,7 +86,7 @@ The backend repo ([alopex](https://github.com/marcodonghiaa/alopex)) is a real f
 
 ## Support
 
-If Alopex is useful to you, a ⭐ on [GitHub](https://github.com/marcodonghiaa/alopex-web) helps others find it. The app shows a small "Made with Alopex" credit in its menu; set `VITE_HIDE_BRANDING=true` to hide it.
+If Alopex is useful to you, a ⭐ on [GitHub](https://github.com/marcodonghiaa/alopex-web) helps others find it. The app shows a small "Made with Alopex" credit at the bottom of each page.
 
 ## License
 

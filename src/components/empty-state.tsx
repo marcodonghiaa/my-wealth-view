@@ -21,7 +21,13 @@ export function EmptyState({
       className={`flex flex-col items-center px-4 py-12 text-center text-muted-foreground ${className}`}
     >
       <svg viewBox="0 0 64 64" aria-hidden className="size-12" data-testid="empty-fox">
-        <path fill="none" stroke="currentColor" strokeWidth={2} strokeLinejoin="round" d={FOX_PATH} />
+        <path
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2}
+          strokeLinejoin="round"
+          d={FOX_PATH}
+        />
       </svg>
       <p className="mt-4 text-[0.9375rem] font-medium text-foreground">{title}</p>
       {hint && <p className="mt-1 text-sm">{hint}</p>}

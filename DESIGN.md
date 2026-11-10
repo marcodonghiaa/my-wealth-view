@@ -204,6 +204,7 @@ A cold neutral world: snow ground, cold ink for controls, one warm Ember accent,
 ### Categorical
 - **Category 1 to 5** (chart-1 to chart-5): one cold hue (240), low chroma, ordered by lightness. Rank 1 is the darkest (largest share) and the ramp inverts on dark. Coins use the same ramp.
 - Identity comes from rank and label, never from a distinct hue, so a category can never read as a price move.
+- **Exception, pending a new palette (owner, 2026-11-09):** spending categories, their avatars and pills, and crypto coins keep their own distinct colours (`CATEGORY_COLORS` in `src/lib/categories.ts`, `src/lib/crypto-colors.ts`), like the asset-allocation donut (`--alloc-*`). A better-tuned categorical palette will replace the hex values; do not flatten them to the lightness ramp.
 
 ### Named Rules
 **The One Tint Rule.** Ink is the only colour a control may wear (white on dark). Ember is the only accent, and it is a line, a dot or a count, never a filled control.

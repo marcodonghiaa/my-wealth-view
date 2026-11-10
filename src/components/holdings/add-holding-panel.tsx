@@ -4,6 +4,8 @@ import { ChevronDown, Loader2, Plus, Search } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { parseQuantity } from "@/lib/holdings";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/field";
 
 export type HoldingKind = "stock" | "crypto";
 
@@ -146,7 +148,7 @@ export function AddHoldingPanel({
   }
 
   return (
-    <div className="mb-6 rounded-2xl bg-card">
+    <div className="mb-6 rounded-lg bg-card">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -168,27 +170,23 @@ export function AddHoldingPanel({
             <label className="sr-only" htmlFor={`${kind}-search`}>
               Search
             </label>
-            <input
+            <Input
               id={`${kind}-search`}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder={copy.placeholder}
               maxLength={50}
               autoComplete="off"
-              className="min-w-0 flex-1 rounded-full border bg-background px-3 py-2 text-base focus:ring-2 focus:ring-ring focus:outline-none"
+              className="flex-1"
             />
-            <button
-              type="submit"
-              disabled={search.isPending || !query.trim()}
-              className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground disabled:opacity-50"
-            >
+            <Button type="submit" disabled={search.isPending || !query.trim()}>
               {search.isPending ? (
                 <Loader2 className="size-4 animate-spin" />
               ) : (
                 <Search className="size-4" />
               )}
               Search
-            </button>
+            </Button>
           </form>
 
           {results && results.length === 0 && (
@@ -198,7 +196,7 @@ export function AddHoldingPanel({
           {results && results.length > 0 && (
             <fieldset>
               <legend className="mb-2 text-xs text-muted-foreground">Pick the right one</legend>
-              <div className="divide-y rounded-lg border">
+              <div className="divide-y divide-hairline overflow-hidden rounded-lg bg-background">
                 {results.map((r) => (
                   <label
                     key={r.id}
@@ -233,13 +231,12 @@ export function AddHoldingPanel({
                 >
                   {copy.quantity}
                 </label>
-                <input
+                <Input
                   id={`${kind}-quantity`}
                   inputMode="decimal"
                   value={quantity}
                   onChange={(e) => setQuantity(e.target.value)}
                   placeholder="0"
-                  className="w-full rounded-lg border bg-background px-3 py-2 text-base focus:ring-2 focus:ring-ring focus:outline-none"
                 />
               </div>
               {kind === "stock" && (
@@ -250,25 +247,19 @@ export function AddHoldingPanel({
                   >
                     Broker (optional)
                   </label>
-                  <input
+                  <Input
                     id="stock-broker"
                     value={broker}
                     onChange={(e) => setBroker(e.target.value)}
                     maxLength={40}
                     placeholder="e.g. Degiro"
-                    className="w-full rounded-lg border bg-background px-3 py-2 text-base focus:ring-2 focus:ring-ring focus:outline-none"
                   />
                 </div>
               )}
-              <button
-                type="button"
-                onClick={handleAdd}
-                disabled={add.isPending}
-                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground disabled:opacity-50"
-              >
+              <Button onClick={handleAdd} disabled={add.isPending}>
                 {add.isPending && <Loader2 className="size-4 animate-spin" />}
                 Add
-              </button>
+              </Button>
             </div>
           )}
 

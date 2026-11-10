@@ -1,3 +1,5 @@
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/field";
 import { useState } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { parseQuantity } from "@/lib/holdings";
@@ -43,7 +45,7 @@ export function AmountEditor({
           type="button"
           aria-label="Change amount"
           disabled={saving}
-          className="cursor-pointer font-figure font-medium text-foreground decoration-dotted underline-offset-4 hover:underline disabled:opacity-60"
+          className="cursor-pointer font-figure text-foreground decoration-dotted underline-offset-4 hover:underline disabled:opacity-60"
         >
           {formatMoney(amount, currency)}
         </button>
@@ -51,13 +53,13 @@ export function AmountEditor({
       <PopoverContent align="end" className="w-64 space-y-2.5 p-3">
         <label className="block text-xs font-medium text-muted-foreground">
           Amount
-          <input
+          <Input
             aria-label="Amount"
             inputMode="decimal"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && save()}
-            className="mt-1 h-11 w-full rounded-lg border bg-background px-3 text-base text-foreground focus:ring-2 focus:ring-ring focus:outline-none"
+            className="mt-1"
           />
         </label>
         {error && (
@@ -65,13 +67,9 @@ export function AmountEditor({
             {error}
           </p>
         )}
-        <button
-          type="button"
-          onClick={save}
-          className="inline-flex min-h-11 w-full cursor-pointer items-center justify-center rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground"
-        >
+        <Button onClick={save} className="w-full px-3">
           Save
-        </button>
+        </Button>
       </PopoverContent>
     </Popover>
   );

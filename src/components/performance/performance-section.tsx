@@ -1,5 +1,7 @@
 import { TradesDialog } from "@/components/holdings/trades-dialog";
 import { ImportTrades } from "@/components/holdings/import-trades";
+import { Alert } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
 import { shortHoldingName } from "@/lib/holding-name";
 import { RETURN_NOISE_BAND, formatReturn } from "@/lib/performance";
 import { formatEur } from "@/lib/transactions";
@@ -65,14 +67,10 @@ export function ReturnCell({
 /** Your total return from your trades, and the best and worst holding. Nothing else. */
 export function PerformanceSummary({ perf }: { perf: Performance }) {
   if (perf.error) {
-    return (
-      <div role="alert" className="mt-3 rounded-2xl bg-negative/10 px-4 py-3 text-sm text-negative">
-        Couldn't load returns: {perf.error.message}
-      </div>
-    );
+    return <Alert className="mt-3">Couldn't load returns: {perf.error.message}</Alert>;
   }
   if (perf.isPending) {
-    return <div className="mt-3 h-5 w-56 animate-pulse rounded-lg bg-muted" />;
+    return <Skeleton className="mt-3 h-5 w-56" />;
   }
   if (perf.unavailable) {
     return (
@@ -90,7 +88,7 @@ export function PerformanceSummary({ perf }: { perf: Performance }) {
     <section aria-label="Return" className="mt-3 space-y-1">
       {summary.counted > 0 ? (
         <p className="flex flex-wrap items-baseline gap-x-2 text-[0.9375rem]" aria-live="polite">
-          <span className="font-medium">
+          <span>
             <Change change={summary.change} />
           </span>
           <span className="font-figure text-foreground">{formatGain(summary.gain)}</span>

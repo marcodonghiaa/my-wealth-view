@@ -6,6 +6,10 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Input, fieldClass } from "@/components/ui/field";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Alert } from "@/components/ui/alert";
 import { TRANSACTION_TYPES } from "@/lib/categories";
 import { useCategories } from "@/lib/use-categories";
 
@@ -160,7 +164,7 @@ function RulesPage() {
 
       {/* Add rule form — collapsed by default so it doesn't push the
           existing rules list below the fold on a phone. */}
-      <form onSubmit={handleSubmit} className="mb-8 rounded-2xl bg-card">
+      <form onSubmit={handleSubmit} className="mb-8 rounded-lg bg-card">
         <button
           type="button"
           onClick={() => setShowForm((v) => !v)}
@@ -184,7 +188,7 @@ function RulesPage() {
                     <button
                       id="rule-field"
                       type="button"
-                      className="flex w-full items-center justify-between rounded-lg border bg-background px-3 py-2 text-base"
+                      className={cn(fieldClass(), "flex items-center justify-between text-left")}
                     >
                       {fieldLabel(matchField)}
                       <ChevronDown className="size-3.5 opacity-50" />
@@ -200,7 +204,7 @@ function RulesPage() {
                           setFieldOpen(false);
                         }}
                         className={cn(
-                          "min-h-11 w-full rounded-md px-2.5 py-1.5 text-left text-sm hover:bg-accent",
+                          "min-h-11 w-full rounded-sm px-2.5 py-1.5 text-left text-sm hover:bg-accent",
                           f.value === matchField && "bg-accent",
                         )}
                       >
@@ -218,13 +222,12 @@ function RulesPage() {
                 >
                   contains this text
                 </label>
-                <input
+                <Input
                   id="rule-match-text"
                   type="text"
                   value={matchText}
                   onChange={(e) => setMatchText(e.target.value)}
                   placeholder="e.g. spotify"
-                  className="w-full rounded-lg border bg-background px-3 py-2 text-base placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/50"
                 />
               </div>
 
@@ -237,7 +240,7 @@ function RulesPage() {
                     <button
                       id="rule-category"
                       type="button"
-                      className="flex w-full items-center justify-between rounded-lg border bg-background px-3 py-2 text-base"
+                      className={cn(fieldClass(), "flex items-center justify-between text-left")}
                     >
                       <span className={cn(!category && "text-muted-foreground/60")}>
                         {category ?? "—"}
@@ -253,7 +256,7 @@ function RulesPage() {
                         setCategoryOpen(false);
                       }}
                       className={cn(
-                        "min-h-11 w-full rounded-md px-2.5 py-1.5 text-left text-sm text-muted-foreground hover:bg-accent",
+                        "min-h-11 w-full rounded-sm px-2.5 py-1.5 text-left text-sm text-muted-foreground hover:bg-accent",
                         !category && "bg-accent",
                       )}
                     >
@@ -268,7 +271,7 @@ function RulesPage() {
                           setCategoryOpen(false);
                         }}
                         className={cn(
-                          "min-h-11 w-full rounded-md px-2.5 py-1.5 text-left text-sm hover:bg-accent",
+                          "min-h-11 w-full rounded-sm px-2.5 py-1.5 text-left text-sm hover:bg-accent",
                           c === category && "bg-accent",
                         )}
                       >
@@ -288,7 +291,7 @@ function RulesPage() {
                     <button
                       id="rule-type"
                       type="button"
-                      className="flex w-full items-center justify-between rounded-lg border bg-background px-3 py-2 text-base"
+                      className={cn(fieldClass(), "flex items-center justify-between text-left")}
                     >
                       <span className={cn(!type && "text-muted-foreground/60")}>{type ?? "—"}</span>
                       <ChevronDown className="size-3.5 opacity-50" />
@@ -302,7 +305,7 @@ function RulesPage() {
                         setTypeOpen(false);
                       }}
                       className={cn(
-                        "min-h-11 w-full rounded-md px-2.5 py-1.5 text-left text-sm text-muted-foreground hover:bg-accent",
+                        "min-h-11 w-full rounded-sm px-2.5 py-1.5 text-left text-sm text-muted-foreground hover:bg-accent",
                         !type && "bg-accent",
                       )}
                     >
@@ -317,7 +320,7 @@ function RulesPage() {
                           setTypeOpen(false);
                         }}
                         className={cn(
-                          "min-h-11 w-full rounded-md px-2.5 py-1.5 text-left text-sm hover:bg-accent",
+                          "min-h-11 w-full rounded-sm px-2.5 py-1.5 text-left text-sm hover:bg-accent",
                           t === type && "bg-accent",
                         )}
                       >
@@ -330,18 +333,14 @@ function RulesPage() {
             </div>
 
             <div className="mt-4 flex items-center gap-3">
-              <button
-                type="submit"
-                disabled={addRule.isPending}
-                className="inline-flex min-h-11 items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
-              >
+              <Button type="submit" disabled={addRule.isPending}>
                 {addRule.isPending ? (
                   <Loader2 className="size-4 animate-spin" />
                 ) : (
                   <Plus className="size-4" />
                 )}
                 Add rule
-              </button>
+              </Button>
               {formError && <p className="text-sm text-destructive">{formError}</p>}
             </div>
           </div>
@@ -349,7 +348,7 @@ function RulesPage() {
       </form>
 
       {/* Rules list */}
-      <div className="overflow-hidden rounded-2xl bg-card">
+      <div className="overflow-hidden rounded-lg bg-card">
         <div className="border-b px-5 py-3">
           <h2 className="text-sm font-medium">
             Existing rules <span className="text-muted-foreground">({rules.length})</span>
@@ -359,11 +358,11 @@ function RulesPage() {
         {rulesQuery.isLoading ? (
           <div className="space-y-2 p-5">
             {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="h-12 animate-pulse rounded-lg bg-muted/40" />
+              <Skeleton key={i} className="h-12" />
             ))}
           </div>
         ) : rulesQuery.isError ? (
-          <div className="p-5 text-sm text-destructive">Failed to load rules.</div>
+          <Alert className="m-5">Failed to load rules.</Alert>
         ) : rules.length === 0 ? (
           <div className="p-8 text-center text-sm text-muted-foreground">No rules yet.</div>
         ) : (
@@ -379,29 +378,30 @@ function RulesPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   {rule.set_category && (
-                    <span className="rounded-full bg-primary/15 px-2.5 py-0.5 text-xs font-medium text-primary">
+                    <span className="rounded-sm bg-muted px-2.5 py-0.5 text-xs font-medium text-foreground">
                       {rule.set_category}
                     </span>
                   )}
                   {rule.set_transaction_type && (
-                    <span className="rounded-full border px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
+                    <span className="rounded-sm bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
                       {rule.set_transaction_type}
                     </span>
                   )}
                   {rule.set_flow_type && (
-                    <span className="rounded-full border px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
+                    <span className="rounded-sm bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
                       {flowLabel(rule.set_flow_type)}
                     </span>
                   )}
-                  <button
-                    type="button"
+                  <Button
+                    variant="ghost"
+                    size="icon"
                     onClick={() => deleteRule.mutate(rule.id)}
                     disabled={deleteRule.isPending}
                     aria-label={`Delete rule for ${rule.match_text}`}
-                    className="-m-2 inline-flex size-11 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
+                    className="-m-2 hover:bg-negative/10 hover:text-negative"
                   >
-                    <Trash2 className="size-4" />
-                  </button>
+                    <Trash2 />
+                  </Button>
                 </div>
               </li>
             ))}

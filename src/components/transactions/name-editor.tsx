@@ -1,3 +1,5 @@
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/field";
 import { useState } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
@@ -43,23 +45,19 @@ export function NameEditor({
       <PopoverContent align="start" className="w-64 space-y-2.5 p-3">
         <label className="block text-xs font-medium text-muted-foreground">
           Name
-          <input
+          <Input
             type="text"
             value={input}
             maxLength={100}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && save()}
-            className="mt-1 h-11 w-full rounded-lg border bg-background px-3 text-base text-foreground focus:ring-2 focus:ring-ring focus:outline-none"
+            className="mt-1"
           />
         </label>
         <p className="text-xs text-muted-foreground">Leave empty to use the bank's name.</p>
-        <button
-          type="button"
-          onClick={save}
-          className="inline-flex min-h-11 w-full cursor-pointer items-center justify-center rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground"
-        >
+        <Button onClick={save} className="w-full px-3">
           Save
-        </button>
+        </Button>
       </PopoverContent>
     </Popover>
   );

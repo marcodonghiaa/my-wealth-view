@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/button";
 import {
   formatBookingDateShort,
   formatMoney,
@@ -10,9 +11,6 @@ import {
 // Transactions marked as transfers are left out of spending and income. They are listed here so a
 // wrong one can be seen and put back. A row the sync paired with its other side on its own
 // (pairIdOf) asks to be kept or not instead.
-const BUTTON =
-  "h-9 shrink-0 rounded-full bg-muted px-3 text-xs font-medium text-foreground transition-colors hover:bg-accent disabled:opacity-50";
-
 export function TransfersSection({
   rows,
   savingId,
@@ -29,7 +27,7 @@ export function TransfersSection({
   onResolvePair?: (pairId: string, keep: boolean) => void;
 }) {
   return (
-    <section className="mt-6 overflow-hidden rounded-2xl bg-card">
+    <section className="mt-6 overflow-hidden rounded-lg bg-card">
       <div className="px-4 py-3 sm:px-5">
         <h2 className="text-sm font-semibold text-foreground">Transfers</h2>
         <p className="mt-0.5 text-xs text-muted-foreground">Not counted.</p>
@@ -54,32 +52,35 @@ export function TransfersSection({
               </span>
               {pairId ? (
                 <>
-                  <button
-                    type="button"
+                  <Button
                     disabled={savingPair === pairId}
                     onClick={() => onResolvePair?.(pairId, true)}
-                    className={BUTTON}
+                    variant="quiet"
+                    size="sm"
+                    className="bg-muted"
                   >
                     Keep
-                  </button>
-                  <button
-                    type="button"
+                  </Button>
+                  <Button
                     disabled={savingPair === pairId}
                     onClick={() => onResolvePair?.(pairId, false)}
-                    className={BUTTON}
+                    variant="quiet"
+                    size="sm"
+                    className="bg-muted"
                   >
                     Not a transfer
-                  </button>
+                  </Button>
                 </>
               ) : (
-                <button
-                  type="button"
+                <Button
                   disabled={savingId === txId(tx)}
                   onClick={() => onRestore(tx)}
-                  className={BUTTON}
+                  variant="quiet"
+                  size="sm"
+                  className="bg-muted"
                 >
                   Count as {restoredFlow(tx)}
-                </button>
+                </Button>
               )}
             </li>
           );

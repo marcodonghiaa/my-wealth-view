@@ -12,6 +12,15 @@ describe("rankShares", () => {
     expect(ranked[0]!.tone).toBe("var(--color-chart-1)");
     expect(ranked[1]!.tone).toBe("var(--color-chart-2)");
   });
+
+  it("keeps a share's own colour when it has one", () => {
+    const ranked = rankShares([
+      { label: "Food", value: 10, color: "#f97316" },
+      { label: "Rest", value: 1 },
+    ]);
+    expect(ranked[0]!.tone).toBe("#f97316");
+    expect(ranked[1]!.tone).toBe("var(--color-chart-2)");
+  });
 });
 
 describe("ShareBar", () => {

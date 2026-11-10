@@ -9,6 +9,9 @@ import { formatEur, personalAmountEur, startOfMonth } from "@/lib/transactions";
 import { MonthSwitcher } from "@/components/month-switcher";
 import { HeadlineFigure } from "@/components/headline-figure";
 import { ShareBar } from "@/components/share-bar";
+import { Alert } from "@/components/ui/alert";
+import { GroupedList, SectionTitle } from "@/components/ui/grouped-list";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export const Route = createFileRoute("/_authenticated/spending")({
   head: () => ({
@@ -129,21 +132,13 @@ function SpendingPage() {
       <h1 className="sr-only">Spending by category</h1>
 
       {spendQuery.isError && (
-        <div
-          role="alert"
-          className="mb-6 rounded-2xl bg-negative/10 px-4 py-3 text-sm text-negative"
-        >
-          Couldn't load spending data: {spendQuery.error.message}
-        </div>
+        <Alert className="mb-6">Couldn't load spending data: {spendQuery.error.message}</Alert>
       )}
 
       {regretQuery.isError && (
-        <div
-          role="alert"
-          className="mb-6 rounded-2xl bg-negative/10 px-4 py-3 text-sm text-negative"
-        >
+        <Alert className="mb-6">
           Couldn't load your "worth it?" answers: {regretQuery.error.message}
-        </div>
+        </Alert>
       )}
 
       <MonthSwitcher
@@ -155,9 +150,9 @@ function SpendingPage() {
       />
 
       {spendQuery.isPending ? (
-        <div className="h-80 animate-pulse rounded-2xl bg-muted/50" />
+        <Skeleton className="h-80" />
       ) : rows.length === 0 ? (
-        <div className="flex h-48 items-center justify-center rounded-2xl bg-card text-sm text-muted-foreground">
+        <div className="flex h-48 items-center justify-center rounded-lg bg-card text-sm text-muted-foreground">
           No spending recorded for {monthLabel}.
         </div>
       ) : (
@@ -181,8 +176,8 @@ function SpendingPage() {
           </section>
 
           {/* Breakdown list */}
-          <section className="overflow-hidden rounded-2xl bg-card">
-            <ul className="divide-y">
+          <GroupedList>
+            <ul className="divide-y divide-hairline">
               {rows.map((row) => (
                 <CategoryRow
                   key={row.category}
@@ -191,37 +186,37 @@ function SpendingPage() {
                   month={month}
                 />
               ))}
-              <li className="flex items-center justify-between border-t px-4 py-3 text-sm font-semibold sm:px-5">
-                <span className="text-foreground">Total</span>
+              <li className="flex items-center justify-between px-4 py-3 text-sm sm:px-5">
+                <span className="font-medium text-foreground">Total</span>
                 <span className="font-figure text-foreground">{formatEur(total)}</span>
               </li>
             </ul>
-          </section>
+          </GroupedList>
         </>
       )}
 
       {regretCount > 0 && (
-        <section className="mt-6 overflow-hidden rounded-2xl bg-card">
-          <div className="border-b px-4 py-3 sm:px-5">
-            <h2 className="text-sm font-semibold text-foreground">
-              Not worth it — {formatEur(regretTotal)} across {regretCount} purchase
-              {regretCount === 1 ? "" : "s"}
-            </h2>
-          </div>
-          <ul className="divide-y">
-            {regretRows.map((row) => (
-              <li
-                key={row.category}
-                className="flex items-center justify-between px-4 py-3 text-sm sm:px-5"
-              >
-                <span className="font-medium text-foreground">
-                  {row.category}{" "}
-                  <span className="text-xs text-muted-foreground">({row.count})</span>
-                </span>
-                <span className="font-figure text-foreground">{formatEur(row.total)}</span>
-              </li>
-            ))}
-          </ul>
+        <section className="mt-6">
+          <SectionTitle>
+            Not worth it — {formatEur(regretTotal)} across {regretCount} purchase
+            {regretCount === 1 ? "" : "s"}
+          </SectionTitle>
+          <GroupedList>
+            <ul className="divide-y divide-hairline">
+              {regretRows.map((row) => (
+                <li
+                  key={row.category}
+                  className="flex items-center justify-between px-4 py-3 text-sm sm:px-5"
+                >
+                  <span className="font-medium text-foreground">
+                    {row.category}{" "}
+                    <span className="text-xs text-muted-foreground">({row.count})</span>
+                  </span>
+                  <span className="font-figure text-foreground">{formatEur(row.total)}</span>
+                </li>
+              ))}
+            </ul>
+          </GroupedList>
         </section>
       )}
     </div>
