@@ -39,6 +39,8 @@ vi.mock("recharts", async (importOriginal) => ({
 import { Route } from "./cash-flow";
 
 const Page = Route.options.component as () => React.JSX.Element;
+let search: { month?: string } = {};
+vi.spyOn(Route, "useSearch").mockImplementation((() => search) as never);
 
 function renderPage() {
   return render(
@@ -54,6 +56,7 @@ const row = (label: string) => screen.getByText(label).closest("li") as HTMLElem
 
 beforeEach(() => {
   failTable = null;
+  search = {};
   tables = {
     v_income_vs_expenses_monthly: [
       { month: monthISO(-1), income_eur: 1000, expenses_eur: 1500 },
@@ -122,6 +125,20 @@ describe("Cash flow page", () => {
     fireEvent.click(screen.getByRole("radio", { name: "Month" }));
     await waitFor(() => expect(row("Income")).toHaveTextContent("€3,000.00"));
     expect(screen.getByRole("button", { name: "Next month" })).toBeDisabled();
+  });
+
+  // Polish 1 #7: Reports links here with its month, so the page opens on that month.
+  it("opens on the month in the link", async () => {
+    search = { month: monthISO(-1).slice(0, 7) };
+    renderPage();
+    await waitFor(() => expect(row("Income")).toHaveTextContent("€1,000.00"));
+  });
+
+  it("keeps only a well-formed month from the link", () => {
+    const validate = Route.options.validateSearch as (s: Record<string, unknown>) => unknown;
+    expect(validate({ month: "2026-09" })).toEqual({ month: "2026-09" });
+    expect(validate({ month: "2026-13" })).toEqual({});
+    expect(validate({ month: 5, other: "x" })).toEqual({});
   });
 
   // protects=the switcher stops at the first month with data and at the current period

@@ -148,7 +148,8 @@ describe("Reports rows lead to their pages", () => {
       screen.getByText(text).closest("a")?.getAttribute("href") ?? null;
     await screen.findByText("Income minus spending");
     expect(href("Net worth")).toBe("/");
-    expect(href("Income minus spending")).toBe("/cash-flow");
+    // Polish 1 #7: Cash flow opens on the month Reports is showing.
+    expect(href("Income minus spending")).toMatch(/^\/cash-flow\?month=\d{4}-\d{2}$/);
     expect(href("Not worth it")).toBe("/spending");
     expect(href("Subscriptions")).toBe("/subscriptions");
     expect(screen.queryByText("Income vs expenses")).toBeNull();

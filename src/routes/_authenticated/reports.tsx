@@ -6,7 +6,13 @@ import { TrendingUp, TrendingDown, ArrowLeftRight, ThumbsDown, ChevronRight } fr
 import { supabase } from "@/integrations/supabase/client";
 import { formatISODate } from "@/lib/date";
 import { estimatedMonthlyEur, splitSubscriptions } from "@/lib/subscriptions";
-import { formatEur, formatSignedEur, personalAmountEur, startOfMonth } from "@/lib/transactions";
+import {
+  formatEur,
+  formatSignedEur,
+  monthParam,
+  personalAmountEur,
+  startOfMonth,
+} from "@/lib/transactions";
 import { fetchIncomeExpenses, incomeExpensesKey, netAfterSpending } from "@/lib/income-expenses";
 import { CategoryRow } from "@/components/spending/category-row";
 import {
@@ -237,6 +243,7 @@ function ReportsPage() {
             label="Income minus spending"
             sublabel={undefined}
             to="/cash-flow"
+            search={{ month: monthParam(month) }}
             pending={incomeExpensesQuery.isPending}
             // No row: nothing was recorded that month (or only imported totals), not a net of zero.
             value={net == null ? "—" : formatSignedEur(net)}
@@ -341,6 +348,7 @@ function HeadlineCard({
   pending,
   tone,
   to,
+  search,
 }: {
   icon: ReactNode;
   label: string;
@@ -349,10 +357,11 @@ function HeadlineCard({
   pending: boolean;
   tone: Tone;
   to: string;
+  search?: Record<string, string>;
 }) {
   return (
     <li>
-      <Link to={to} className={`${ROW_LINK} min-h-16`}>
+      <Link to={to} {...(search ? { search } : {})} className={`${ROW_LINK} min-h-16`}>
         <span
           aria-hidden
           className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted text-foreground"

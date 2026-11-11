@@ -23,7 +23,12 @@ import {
   type Period,
 } from "@/lib/cash-flow";
 import type { MonthlySpendRow } from "@/lib/spending";
-import { formatEur, formatSignedEur } from "@/lib/transactions";
+import {
+  formatEur,
+  formatSignedEur,
+  monthFromParam,
+  parseTransactionsSearch,
+} from "@/lib/transactions";
 import { TONE_TEXT, toneOf } from "@/lib/tone";
 import { FlowSankey } from "@/components/cash-flow/flow-sankey";
 import { TrendBars } from "@/components/cash-flow/trend-bars";
@@ -48,6 +53,11 @@ export const Route = createFileRoute("/_authenticated/cash-flow")({
       { name: "twitter:card", content: "summary" },
     ],
   }),
+  // ?month=YYYY-MM: the month to open on (Reports links here with the month it shows).
+  validateSearch: (s: Record<string, unknown>): { month?: string } => {
+    const { month } = parseTransactionsSearch(s);
+    return month ? { month } : {};
+  },
   component: CashFlowPage,
 });
 
@@ -99,7 +109,8 @@ async function fetchIncomeRows(from: string, to: string): Promise<Array<IncomeTx
 
 function CashFlowPage() {
   const [period, setPeriod] = useState<Period>("month");
-  const [start, setStart] = useState<Date>(() => periodStart(new Date(), "month"));
+  const search = Route.useSearch();
+  const [start, setStart] = useState<Date>(() => monthFromParam(search.month));
   const locale = dateLocale();
 
   const { from, to } = periodRange(start, period);
