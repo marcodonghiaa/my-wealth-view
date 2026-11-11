@@ -240,6 +240,27 @@ describe("note and tags saves", () => {
     expect(cached()[0]).toMatchObject({ note: null, tags: ["trip"] });
   });
 
+  // polish-3 #1 re-audit: fails_when=the first save's reload lands before the queued one's write and
+  // wipes its tag from the list the next tag is built on
+  it("reloads the month only after the last queued tags save", async () => {
+    const { queryClient, wrapper } = setup();
+    const invalidate = vi.spyOn(queryClient, "invalidateQueries");
+    let open = () => {};
+    updateGate = new Promise<void>((r) => (open = r));
+    const { result } = renderHook(
+      () => useTransactionFieldMutation(queryClient, MONTH, "tags", { errorMessage: "fail" }),
+      { wrapper },
+    );
+    const tx = { account_uid: "a1", entry_reference: "r1" };
+    act(() => result.current.mutate({ tx, value: ["a"] }));
+    act(() => result.current.mutate({ tx, value: ["a", "b"] }));
+    open();
+    await waitFor(() => expect(calls).toHaveLength(2));
+    await waitFor(() => expect(queryClient.isMutating()).toBe(0));
+    const monthReloads = invalidate.mock.calls.filter(([f]) => f?.queryKey?.[0] === "transactions");
+    expect(monthReloads).toHaveLength(1);
+  });
+
   it("rolls back a failed tags save and reloads the month", async () => {
     const { queryClient, wrapper, cached } = setup();
     const invalidate = vi.spyOn(queryClient, "invalidateQueries");

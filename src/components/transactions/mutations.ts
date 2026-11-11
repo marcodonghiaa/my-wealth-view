@@ -78,7 +78,9 @@ export function useTransactionFieldMutation<
 
   return useMutation<void, Error, Vars, Context>({
     // Saves of one field go out one after another, so a quick second tag can't land before the first.
-    ...(column === "note" || column === "tags" ? { scope: { id: `transaction-${column}` } } : {}),
+    ...(column === "note" || column === "tags"
+      ? { scope: { id: `transaction-${column}` }, mutationKey: ["transaction-field", column] }
+      : {}),
     mutationFn: async ({ tx, value }) => {
       const patch =
         column === "category" ? categoryPatch(value as string | null) : { [column]: value };
@@ -120,10 +122,12 @@ export function useTransactionFieldMutation<
       }
     },
     onSettled: (_data, _error, vars) => {
-      // The rollback above restores the whole month, which can also undo a note or tags save made
-      // just before; reloading the month puts the saved ones back. New tags join the suggestions.
+      // Reload the month for what the database really holds, but only after the last queued save
+      // of this field: an earlier reload could land before a queued write and drop its change.
+      // New tags join the suggestions.
       if (column === "note" || column === "tags") {
-        void queryClient.invalidateQueries({ queryKey: ["transactions", monthKey] });
+        if (queryClient.isMutating({ mutationKey: ["transaction-field", column] }) <= 1)
+          void queryClient.invalidateQueries({ queryKey: ["transactions", monthKey] });
         if (column === "tags")
           void queryClient.invalidateQueries({ queryKey: ["transaction-tags"] });
         return;
