@@ -6,6 +6,7 @@ import {
   MAIN,
   SAVINGS,
   between,
+  dayOfMonth,
   hash,
   iso,
   pick,
@@ -93,7 +94,14 @@ export function generateDemoData(now: Date = new Date()): DemoDb {
   const today = iso(todayNum);
   const user_id = DEMO_USER_ID;
 
-  const transactions = days
+  // Bank activity covers whole months: the window's first month starts on its 1st, so its rent
+  // and salary are there and a monthly average (budgets) isn't dragged down by a part month.
+  const firstOfMonth = days[0]! - (dayOfMonth(days[0]!) - 1);
+  const activityDays = Array.from(
+    { length: todayNum - firstOfMonth + 1 },
+    (_, i) => firstOfMonth + i,
+  );
+  const transactions = activityDays
     .flatMap((n) => [...monthlyTransactions(n), ...dailyTransactions(n, todayNum)])
     .sort(
       (a, b) =>
