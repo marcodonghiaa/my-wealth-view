@@ -12,7 +12,7 @@ afterEach(() => {
 describe("FormatsSection", () => {
   it("follows the browser by default and shows an example", () => {
     render(<FormatsSection reload={() => {}} />);
-    expect(screen.getByLabelText("Format")).toHaveValue("");
+    expect(screen.getByRole("combobox", { name: "Number and date format" })).toHaveValue("");
     // polish-4 #7: a real minus, like the transaction list.
     expect(screen.getByText("−€1,234.50")).toBeInTheDocument();
     expect(screen.getByText("3 Mar 2026")).toBeInTheDocument();
@@ -28,10 +28,20 @@ describe("FormatsSection", () => {
     expect(screen.getByText(/Saved on this device/)).toBeInTheDocument();
   });
 
+  it("polish-4 #11 lands back on the menu after the reload a change causes", () => {
+    window.location.hash = "#formats";
+    try {
+      render(<FormatsSection reload={() => {}} />);
+      expect(screen.getByRole("combobox", { name: "Number and date format" })).toHaveFocus();
+    } finally {
+      window.location.hash = "";
+    }
+  });
+
   it("saves the choice and reloads so every figure uses it", () => {
     const reload = vi.fn();
     render(<FormatsSection reload={reload} />);
-    fireEvent.change(screen.getByLabelText("Format"), {
+    fireEvent.change(screen.getByRole("combobox", { name: "Number and date format" }), {
       target: { value: "de-DE" },
     });
     expect(localeOverride()).toBe("de-DE");
@@ -41,7 +51,9 @@ describe("FormatsSection", () => {
   it("clears the choice when set back to automatic", () => {
     setLocaleOverride("it-IT");
     render(<FormatsSection reload={() => {}} />);
-    fireEvent.change(screen.getByLabelText("Format"), { target: { value: "" } });
+    fireEvent.change(screen.getByRole("combobox", { name: "Number and date format" }), {
+      target: { value: "" },
+    });
     expect(localeOverride()).toBe("");
   });
 
@@ -51,7 +63,9 @@ describe("FormatsSection", () => {
     });
     const reload = vi.fn();
     render(<FormatsSection reload={reload} />);
-    fireEvent.change(screen.getByLabelText("Format"), { target: { value: "de-DE" } });
+    fireEvent.change(screen.getByRole("combobox", { name: "Number and date format" }), {
+      target: { value: "de-DE" },
+    });
     expect(screen.getByRole("alert")).toHaveTextContent(/Couldn't save/);
     expect(reload).not.toHaveBeenCalled();
   });
@@ -61,7 +75,9 @@ describe("FormatsSection", () => {
       throw new DOMException("blocked", "SecurityError");
     });
     render(<FormatsSection reload={() => {}} />);
-    fireEvent.change(screen.getByLabelText("Format"), { target: { value: "de-DE" } });
-    expect(screen.getByLabelText("Format")).toHaveValue("");
+    fireEvent.change(screen.getByRole("combobox", { name: "Number and date format" }), {
+      target: { value: "de-DE" },
+    });
+    expect(screen.getByRole("combobox", { name: "Number and date format" })).toHaveValue("");
   });
 });

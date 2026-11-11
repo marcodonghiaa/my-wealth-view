@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Select } from "@/components/ui/field";
 import { formatDay } from "@/lib/date";
 import { LOCALE_CHOICES, appLocale, localeOverride, setLocaleOverride } from "@/lib/locale";
@@ -12,12 +12,20 @@ const browserFormat = () => {
 
 // How numbers and dates are written. Follows the browser unless picked here (this device only).
 export function FormatsSection({
-  reload = () => window.location.reload(),
+  // Back to this menu after the reload, so focus and scroll aren't lost.
+  reload = () => {
+    window.location.hash = "formats";
+    window.location.reload();
+  },
 }: {
   reload?: () => void;
 }) {
   const [value, setValue] = useState(localeOverride);
   const [failed, setFailed] = useState(false);
+  const select = useRef<HTMLSelectElement>(null);
+  useEffect(() => {
+    if (window.location.hash === "#formats") select.current?.focus();
+  }, []);
   return (
     <section id="formats" aria-labelledby="formats-heading" className="scroll-mt-6">
       <h2 id="formats-heading" className="mb-4 text-[0.9375rem] font-medium text-muted-foreground">
@@ -25,7 +33,8 @@ export function FormatsSection({
       </h2>
       <div className="max-w-sm space-y-3 rounded-lg bg-card p-5">
         <Select
-          aria-label="Format"
+          ref={select}
+          aria-labelledby="formats-heading"
           value={value}
           onChange={(e) => {
             const saved = setLocaleOverride(e.target.value);
