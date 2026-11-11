@@ -155,6 +155,17 @@ describe("SplitEditor", () => {
     }
   });
 
+  it("polish-4 #6 clears the error when a quick split fills a valid share", async () => {
+    render(<SplitEditor tx={tx()} onSave={vi.fn()} saving={false} />);
+    await open();
+    const share = await screen.findByLabelText(/Your share/);
+    await userEvent.clear(share);
+    await userEvent.type(share, "abc");
+    await userEvent.click(screen.getByRole("button", { name: "Split in 2" }));
+    expect(share).toHaveValue("10");
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
   it("polish-4 #2 fills the share box with the chosen decimal mark", async () => {
     setLocaleOverride("it-IT");
     try {

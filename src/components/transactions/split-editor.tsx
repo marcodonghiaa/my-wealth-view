@@ -138,7 +138,10 @@ export function SplitEditor({
                 key={n}
                 type="button"
                 aria-label={`Split in ${n}`}
-                onClick={() => setShareInput(shareText(evenShare(fullAmount, n)))}
+                onClick={() => {
+                  setShareInput(shareText(evenShare(fullAmount, n)));
+                  setShareError(false);
+                }}
                 className={`${pill(parseOwed(shareInput) === evenShare(fullAmount, n))} flex-1 justify-center`}
               >
                 ÷{n}
