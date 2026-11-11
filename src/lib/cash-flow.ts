@@ -35,19 +35,19 @@ export function switchPeriod(start: Date, from: Period, to: Period, today: Date)
   return periodStart(anchor, to);
 }
 
+const quarterOf = (date: Date) => Math.floor(date.getMonth() / 3) + 1;
+
 /** "November 2026", "Q4 2026" or "2026". */
 export function periodLabel(start: Date, period: Period, locale?: string): string {
   if (period === "year") return String(start.getFullYear());
-  if (period === "quarter")
-    return `Q${Math.floor(start.getMonth() / 3) + 1} ${start.getFullYear()}`;
+  if (period === "quarter") return `Q${quarterOf(start)} ${start.getFullYear()}`;
   return start.toLocaleDateString(locale, { month: "long", year: "numeric" });
 }
 
 /** A short label for one bar of the trend: "Nov", "Q4 '26" or "2026". */
 export function shortPeriodLabel(start: Date, period: Period, locale?: string): string {
   if (period === "year") return String(start.getFullYear());
-  if (period === "quarter")
-    return `Q${Math.floor(start.getMonth() / 3) + 1} '${String(start.getFullYear()).slice(2)}`;
+  if (period === "quarter") return `Q${quarterOf(start)} '${String(start.getFullYear()).slice(2)}`;
   return start.toLocaleDateString(locale, { month: "short" });
 }
 
@@ -245,8 +245,8 @@ export const SAVED = "Saved";
 export const FROM_SAVINGS = "From savings";
 const HUB = "Income";
 
-const INCOME_COLOR = "var(--color-positive)";
-const SAVED_COLOR = "var(--color-positive)";
+// Money in and money kept share the gain colour; money taken from savings is the loss colour.
+const GAIN_COLOR = "var(--color-positive)";
 const DRAWN_COLOR = "var(--color-negative)";
 const OTHER_COLOR = categoryColor(null);
 
@@ -281,7 +281,7 @@ export function buildFlow({
     nodes.push({ name, kind, color });
     links.push({ source: nodes.length - 1, target: -1, value });
   };
-  for (const p of lefts) left(p.name, "income", INCOME_COLOR, p.value);
+  for (const p of lefts) left(p.name, "income", GAIN_COLOR, p.value);
   if (net < -CENT) left(FROM_SAVINGS, "drawn", DRAWN_COLOR, -net);
 
   nodes.push({ name: HUB, kind: "hub", color: "var(--color-foreground)" });
@@ -299,7 +299,7 @@ export function buildFlow({
       p.name === OTHER_SPENDING ? OTHER_COLOR : categoryColor(p.name),
       p.value,
     );
-  if (net > CENT) right(SAVED, "saved", SAVED_COLOR, net);
+  if (net > CENT) right(SAVED, "saved", GAIN_COLOR, net);
 
   return { nodes, links };
 }
