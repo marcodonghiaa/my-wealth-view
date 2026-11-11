@@ -30,6 +30,7 @@ export async function fetchIncomeWindow(month: Date): Promise<Array<IncomeTx>> {
       .gte("booking_date", start)
       .lt("booking_date", end)
       .order("booking_date", { ascending: false })
+      .order("account_uid", { ascending: true })
       .order("entry_reference", { ascending: true })
       .range(from, from + PAGE - 1);
     if (error) throw error;

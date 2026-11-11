@@ -51,6 +51,25 @@ describe("fetchIncomeWindow", () => {
     ).toBe(true);
   });
 
+  // Polish #9: pages are read by offset, so the order must be total: the same reference on the
+  // same day in two accounts could otherwise swap between pages (one read twice, one never).
+  it("pages in a total order (date, account, reference)", async () => {
+    const real = client.current.from.bind(client.current);
+    const orders: Array<string> = [];
+    const spy = vi.spyOn(client.current, "from").mockImplementation(((table: string) => {
+      const q = real(table as never);
+      const order = q.order.bind(q);
+      (q as unknown as { order: unknown }).order = (col: string, opts?: unknown) => {
+        orders.push(col);
+        return order(col, opts as never);
+      };
+      return q;
+    }) as never);
+    await fetchIncomeWindow(NOW);
+    spy.mockRestore();
+    expect(orders).toEqual(["booking_date", "account_uid", "entry_reference"]);
+  });
+
   it("leaves out credits that count as a transfer", async () => {
     const rows = await fetchIncomeWindow(NOW);
     const { data: transfers } = await client.current
