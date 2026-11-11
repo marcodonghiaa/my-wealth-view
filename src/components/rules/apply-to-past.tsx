@@ -107,7 +107,8 @@ export function ApplyToPast({ ruleIds, onDone }: { ruleIds: string; onDone: () =
                 key={i}
                 className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2.5 text-sm"
               >
-                <span className="min-w-0 flex-1 truncate font-medium" title={s.name}>
+                {/* Whole name on its own line on a phone; "from → to" wraps under it. */}
+                <span className="min-w-0 basis-full font-medium break-words sm:flex-1 sm:basis-auto">
                   {s.name || "No name"}
                 </span>
                 <span className="flex items-center gap-1.5 text-muted-foreground">

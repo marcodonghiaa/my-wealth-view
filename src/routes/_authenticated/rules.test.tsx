@@ -294,6 +294,19 @@ describe("apply to past transactions", () => {
     expect(await screen.findByRole("button", { name: "Apply to past transactions" })).toBeTruthy();
   });
 
+  // Polish pass 4 #6: on a phone the name was cut to "Superm…" to fit "from → to" beside it.
+  it("shows each example's whole name", async () => {
+    invoke.mockResolvedValueOnce({
+      data: {
+        changes: 1,
+        sample: [{ name: "Supermercato Coop Milano", from: null, to: "Groceries" }],
+      },
+      error: null,
+    });
+    await open();
+    expect(await screen.findByText("Supermercato Coop Milano")).not.toHaveClass("truncate");
+  });
+
   it("says so when nothing would change", async () => {
     invoke.mockReset();
     invoke.mockResolvedValueOnce({ data: { changes: 0, sample: [] }, error: null });
