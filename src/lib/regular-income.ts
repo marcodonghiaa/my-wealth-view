@@ -50,7 +50,8 @@ export function incomeWindow(month: Date): { start: string; end: string } {
   };
 }
 
-/** The first of `rules` (already in priority order) that matches the row, as the sync matches. */
+/** The first of `rules` (in priority order) that matches the row: same fields and modes as the
+ * sync, folded like the dashboard's other rule checks (case and accents ignored). */
 export function ruleFor(
   t: Pick<IncomeTx, "creditor_name" | "remittance_info">,
   rules: ReadonlyArray<IncomeRule>,
