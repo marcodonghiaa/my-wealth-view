@@ -57,6 +57,14 @@ describe("closing the sheet", () => {
     expect(onSave).not.toHaveBeenCalled();
   });
 
+  // polish-3 #3: fails_when=passing through the field rewrites a note stored in another form
+  it("doesn't save on blur when nothing was typed", () => {
+    const onSave = vi.fn();
+    render(<NoteEditor note={"cafe\u0301 x\u00a0"} onSave={onSave} saving={false} />);
+    fireEvent.blur(screen.getByLabelText("Note"));
+    expect(onSave).not.toHaveBeenCalled();
+  });
+
   // polish-3 #2: fails_when=a note whose save failed is dropped when the sheet closes
   it("retries a failed note when the editor goes away", () => {
     const onSave = vi.fn();

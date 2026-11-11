@@ -60,7 +60,7 @@ export function NoteEditor({
       }}
       onBlur={() => {
         const next = normalizeNote(input);
-        if (next !== (note ?? null)) {
+        if (edited && next !== (note ?? null)) {
           sent.current = next;
           onSave(next);
         }
