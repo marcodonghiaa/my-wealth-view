@@ -47,11 +47,9 @@ const Page = Route.options.component as () => React.JSX.Element;
 let search: { month?: string } = {};
 vi.spyOn(Route, "useSearch").mockImplementation((() => search) as never);
 
-function renderPage() {
+function renderPage(client = new QueryClient({ defaultOptions: { queries: { retry: false } } })) {
   return render(
-    <QueryClientProvider
-      client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
-    >
+    <QueryClientProvider client={client}>
       <Page />
     </QueryClientProvider>,
   );
@@ -245,5 +243,21 @@ describe("Cash flow page", () => {
     renderPage();
     await waitFor(() => expect(row("Savings rate")).toHaveTextContent("0%"));
     expect(within(row("Savings rate")).getByText("0%")).toHaveClass("text-muted-foreground");
+  });
+
+  // Polish 3 #4: a failed background refresh keeps the figures that already loaded.
+  it("keeps loaded figures when a refresh fails", async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    renderPage(client);
+    await screen.findByRole("img", { name: /^Cash flow for/ });
+    failTable = "v_income_vs_expenses_monthly";
+    await client.refetchQueries();
+    await screen.findByRole("alert");
+    expect(row("Income")).toHaveTextContent("€3,000.00");
+    expect(screen.getByRole("img", { name: /^Cash flow for/ })).toBeInTheDocument();
+    failTable = "v_transactions_eur";
+    await client.refetchQueries();
+    await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("boom"));
+    expect(screen.getByRole("img", { name: /^Cash flow for/ })).toBeInTheDocument();
   });
 });

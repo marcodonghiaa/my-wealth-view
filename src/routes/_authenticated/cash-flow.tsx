@@ -150,8 +150,10 @@ function CashFlowPage() {
 
   const label = periodLabel(start, period, locale);
   const pending = monthlyQuery.isPending;
-  // Without the totals every figure would read as a real €0 month: show dashes instead.
-  const noTotals = monthlyQuery.isError;
+  // Without the totals every figure would read as a real €0 month: show dashes instead. A failed
+  // refresh keeps what already loaded (the alert still says it failed).
+  const failed = (q: { isError: boolean; data?: unknown }) => q.isError && q.data === undefined;
+  const noTotals = failed(monthlyQuery);
   const money = (value: number) => (noTotals ? "—" : formatEur(value));
   const flowPending = pending || spendQuery.isPending || incomeQuery.isPending;
 
@@ -232,7 +234,7 @@ function CashFlowPage() {
             <p className="px-2 py-8 text-center text-sm text-muted-foreground">
               The totals didn't load.
             </p>
-          ) : spendQuery.isError || incomeQuery.isError ? (
+          ) : failed(spendQuery) || failed(incomeQuery) ? (
             // Drawing without the breakdown would lump everything into one "Other" band.
             <p className="px-2 py-8 text-center text-sm text-muted-foreground">
               The breakdown didn't load.
