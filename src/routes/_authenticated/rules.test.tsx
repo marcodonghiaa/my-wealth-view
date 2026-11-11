@@ -3,7 +3,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { QueryClient, QueryClientProvider, focusManager } from "@tanstack/react-query";
 
 const invoke = vi.fn();
-const toastError = vi.fn();
+const toastError = vi.fn((_m: string, _o?: unknown) => {});
 const inserted: Array<Record<string, unknown>> = [];
 const onlyFlowRules = { current: false };
 // How the mocked database answers: the rules list, a delete, an insert.
@@ -27,7 +27,7 @@ const toastLoading = vi.fn();
 vi.mock("sonner", () => ({
   toast: {
     success: (m: string, o?: unknown) => (o ? toastSuccess(m, o) : toastSuccess(m)),
-    error: (m: string) => toastError(m),
+    error: (m: string, o?: unknown) => (o ? toastError(m, o) : toastError(m)),
     info: (m: string, o?: unknown) => toastInfo(m, o),
     loading: (m: string, o?: unknown) => toastLoading(m, o),
     dismiss: (id: unknown) => toastDismiss(id),
@@ -945,7 +945,9 @@ describe("re-sorting what a deleted rule filed", () => {
     await waitFor(() => expect(toastInfo).toHaveBeenCalled());
     (toastInfo.mock.calls[0] as unknown as [string, Offer])[1].action.onClick();
     await waitFor(() =>
-      expect(toastError).toHaveBeenCalledWith("Couldn't update your transactions."),
+      expect(toastError).toHaveBeenCalledWith("Couldn't update your transactions.", {
+        id: "resort-r1",
+      }),
     );
   });
 
