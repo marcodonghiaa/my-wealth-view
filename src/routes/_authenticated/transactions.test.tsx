@@ -354,6 +354,7 @@ describe("Transactions page tag filter", () => {
     const log = vi.spyOn(console, "error").mockImplementation(() => {});
     rpcResult = { data: null, error: { message: "denied" } };
     renderPage();
+    await screen.findAllByText(/No transactions for/);
     await waitFor(() =>
       expect(log).toHaveBeenCalledWith(
         expect.stringContaining("tag suggestions"),
@@ -385,6 +386,30 @@ describe("Transactions page tag filter", () => {
     fireEvent.change(screen.getByLabelText("Filter by tag"), { target: { value: "trip" } });
     expect(screen.queryAllByText("Cafe Beta")).toHaveLength(0);
     expect(screen.getAllByText("Hotel Alpha").length).toBeGreaterThan(0);
+  });
+
+  // polish-3 #8: fails_when=the tag filter carries over to another month
+  it("turns the tag filter off when the month changes", async () => {
+    const today = new Date().toISOString().slice(0, 10);
+    rows["v_transactions_eur"] = [
+      {
+        account_uid: "a",
+        booking_date: today,
+        category: "Travel",
+        currency: "EUR",
+        amount: 10,
+        signed_amount_eur: -10,
+        credit_debit_indicator: "DBIT",
+        flow_type: "spend",
+        entry_reference: "1",
+        creditor_name: "Hotel Alpha",
+        tags: ["trip"],
+      },
+    ];
+    renderPage();
+    fireEvent.change(await screen.findByLabelText("Filter by tag"), { target: { value: "trip" } });
+    await userEvent.click(screen.getAllByRole("button", { name: "Previous month" })[0]!);
+    expect(await screen.findByLabelText("Filter by tag")).toHaveValue("");
   });
 
   // fails_when=removing the last use of the selected tag leaves the filter on and the list empty

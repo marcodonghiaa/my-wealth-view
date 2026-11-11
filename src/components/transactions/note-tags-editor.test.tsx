@@ -57,6 +57,12 @@ describe("closing the sheet", () => {
     expect(onSave).not.toHaveBeenCalled();
   });
 
+  // polish-3 #8: fails_when=the note can be edited while its save runs
+  it("locks the note while it saves", () => {
+    render(<NoteEditor note="old" onSave={vi.fn()} saving={true} />);
+    expect(screen.getByLabelText("Note")).toBeDisabled();
+  });
+
   // polish-3 #3: fails_when=passing through the field rewrites a note stored in another form
   it("doesn't save on blur when nothing was typed", () => {
     const onSave = vi.fn();
@@ -123,6 +129,13 @@ describe("TagEditor", () => {
     expect(input).toBeEnabled();
     await userEvent.type(input, "b,");
     expect(onSave.mock.calls).toEqual([[["trip", "a"]], [["trip", "a", "b"]]]);
+  });
+
+  // polish-3 #8: while a save runs, the remove buttons wait; the add field stays open (#1)
+  it("disables removing while a save runs", () => {
+    render(<TagEditor tags={["trip"]} onSave={vi.fn()} saving={true} />);
+    expect(screen.getByRole("button", { name: "Remove tag trip" })).toBeDisabled();
+    expect(screen.getByLabelText("Add a tag")).toBeEnabled();
   });
 
   it("removes a tag", () => {
