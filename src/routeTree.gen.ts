@@ -15,6 +15,7 @@ import { Route as DemoRouteImport } from './routes/demo'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
 import { Route as AuthenticatedAccountsRouteImport } from './routes/_authenticated/accounts'
+import { Route as AuthenticatedBudgetsRouteImport } from './routes/_authenticated/budgets'
 import { Route as AuthenticatedCryptoRouteImport } from './routes/_authenticated/crypto'
 import { Route as AuthenticatedHealthRouteImport } from './routes/_authenticated/health'
 import { Route as AuthenticatedImportRouteImport } from './routes/_authenticated/import'
@@ -55,6 +56,11 @@ const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
 const AuthenticatedAccountsRoute = AuthenticatedAccountsRouteImport.update({
   id: '/accounts',
   path: '/accounts',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedBudgetsRoute = AuthenticatedBudgetsRouteImport.update({
+  id: '/budgets',
+  path: '/budgets',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedCryptoRoute = AuthenticatedCryptoRouteImport.update({
@@ -126,6 +132,7 @@ export interface FileRoutesByFullPath {
   '/demo': typeof DemoRoute
   '/reset-password': typeof ResetPasswordRoute
   '/accounts': typeof AuthenticatedAccountsRoute
+  '/budgets': typeof AuthenticatedBudgetsRoute
   '/crypto': typeof AuthenticatedCryptoRoute
   '/health': typeof AuthenticatedHealthRoute
   '/import': typeof AuthenticatedImportRoute
@@ -144,6 +151,7 @@ export interface FileRoutesByTo {
   '/demo': typeof DemoRoute
   '/reset-password': typeof ResetPasswordRoute
   '/accounts': typeof AuthenticatedAccountsRoute
+  '/budgets': typeof AuthenticatedBudgetsRoute
   '/crypto': typeof AuthenticatedCryptoRoute
   '/health': typeof AuthenticatedHealthRoute
   '/import': typeof AuthenticatedImportRoute
@@ -165,6 +173,7 @@ export interface FileRoutesById {
   '/demo': typeof DemoRoute
   '/reset-password': typeof ResetPasswordRoute
   '/_authenticated/accounts': typeof AuthenticatedAccountsRoute
+  '/_authenticated/budgets': typeof AuthenticatedBudgetsRoute
   '/_authenticated/crypto': typeof AuthenticatedCryptoRoute
   '/_authenticated/health': typeof AuthenticatedHealthRoute
   '/_authenticated/import': typeof AuthenticatedImportRoute
@@ -187,6 +196,7 @@ export interface FileRouteTypes {
     | '/demo'
     | '/reset-password'
     | '/accounts'
+    | '/budgets'
     | '/crypto'
     | '/health'
     | '/import'
@@ -205,6 +215,7 @@ export interface FileRouteTypes {
     | '/demo'
     | '/reset-password'
     | '/accounts'
+    | '/budgets'
     | '/crypto'
     | '/health'
     | '/import'
@@ -225,6 +236,7 @@ export interface FileRouteTypes {
     | '/demo'
     | '/reset-password'
     | '/_authenticated/accounts'
+    | '/_authenticated/budgets'
     | '/_authenticated/crypto'
     | '/_authenticated/health'
     | '/_authenticated/import'
@@ -289,6 +301,13 @@ declare module '@tanstack/react-router' {
       path: '/accounts'
       fullPath: '/accounts'
       preLoaderRoute: typeof AuthenticatedAccountsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/budgets': {
+      id: '/_authenticated/budgets'
+      path: '/budgets'
+      fullPath: '/budgets'
+      preLoaderRoute: typeof AuthenticatedBudgetsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/crypto': {
@@ -380,6 +399,7 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAccountsRoute: typeof AuthenticatedAccountsRoute
+  AuthenticatedBudgetsRoute: typeof AuthenticatedBudgetsRoute
   AuthenticatedCryptoRoute: typeof AuthenticatedCryptoRoute
   AuthenticatedHealthRoute: typeof AuthenticatedHealthRoute
   AuthenticatedImportRoute: typeof AuthenticatedImportRoute
@@ -397,6 +417,7 @@ interface AuthenticatedRouteRouteChildren {
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAccountsRoute: AuthenticatedAccountsRoute,
+  AuthenticatedBudgetsRoute: AuthenticatedBudgetsRoute,
   AuthenticatedCryptoRoute: AuthenticatedCryptoRoute,
   AuthenticatedHealthRoute: AuthenticatedHealthRoute,
   AuthenticatedImportRoute: AuthenticatedImportRoute,

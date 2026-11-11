@@ -13,6 +13,8 @@ export const DEMO_USER_ID = "00000000-0000-4000-8000-00000000demo";
 // Empty on purpose.
 // Certificates of deposit left the app; their table goes in a later release.
 export const DEMO_EXEMPT_TABLES = [
+  // A demo visitor sets their own budgets: the page starts empty, like a new install.
+  "category_budgets",
   "cd_holdings",
   "v_cd_holdings",
   "pending_bank_consents",

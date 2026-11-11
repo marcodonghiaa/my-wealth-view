@@ -45,10 +45,22 @@ export interface TransactionViewProps {
   highlighted?: boolean;
   /** "Make a rule" from this name and category, shown under Category in the sheet. */
   makeRule?: { label: string; onClick: () => void } | undefined;
+  /** Table rows: show which account a row came from; pointless with a single account. */
+  showAccount?: boolean;
 }
 
 const isSplit = (tx: TransactionRow): boolean =>
   tx.personal_amount != null && tx.personal_amount < Math.abs(tx.amount ?? 0);
+
+/** "Worth it" / "Not worth it" once answered, for the row's quiet second line. */
+const worthItNote = (tx: TransactionRow): string | null =>
+  tx.worth_it === "yes" ? "Worth it" : tx.worth_it === "no" ? "Not worth it" : null;
+
+/** An open "worth it?" question: a hint on the row, answered in the row's sheet. */
+function WorthItHint({ tx }: { tx: TransactionRow }) {
+  if (isSplitwiseShare(tx) || !isWorthItEligible(tx)) return null;
+  return <span className="shrink-0 font-medium text-primary">Worth it?</span>;
+}
 
 /** Signed amount in the transaction's own currency, with the euro value under it if foreign. */
 function AmountText({ tx }: { tx: TransactionRow }) {
@@ -190,7 +202,7 @@ function TransactionEditSheet({
 
 /** Desktop row: date, merchant (its category icon opens the category picker), amount with its account. Type, split and the rest sit behind ›. */
 export function TransactionRowView(props: TransactionViewProps) {
-  const { tx, accountLabel, selected, onToggleSelect, highlighted } = props;
+  const { tx, accountLabel, selected, onToggleSelect, highlighted, showAccount = true } = props;
   const [open, setOpen] = useState(false);
   // A Splitwise share lives in its own table: nothing here can edit, select or delete it.
   const share = isSplitwiseShare(tx);
@@ -200,6 +212,7 @@ export function TransactionRowView(props: TransactionViewProps) {
     isSplit(tx)
       ? `split, owed ${formatMoney(Math.abs(tx.amount ?? 0) - (tx.personal_amount ?? 0), tx.currency ?? "EUR")}`
       : null,
+    share ? null : worthItNote(tx),
   ].filter(Boolean);
 
   return (
@@ -239,18 +252,18 @@ export function TransactionRowView(props: TransactionViewProps) {
                 saving={props.savingRename}
               />
             </div>
-            <div className="truncate text-xs text-muted-foreground">
-              {(share ? notes.slice(0, 1) : notes).join(" · ")}
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <span className="truncate">{(share ? notes.slice(0, 1) : notes).join(" · ")}</span>
+              <WorthItHint tx={tx} />
             </div>
             <RefundedBadge flowType={tx.flow_type} />
-            {!share && <WorthItPrompt tx={tx} onAnswer={props.onAnswerWorthIt} />}
           </div>
         </div>
       </td>
       <td className="px-4 py-3">
         <div className="flex items-center justify-end gap-3">
           <AmountText tx={tx} />
-          <AccountBadge label={share ? "Splitwise" : accountLabel} />
+          {(share || showAccount) && <AccountBadge label={share ? "Splitwise" : accountLabel} />}
         </div>
       </td>
       <td className="w-12 px-2 py-3 text-right">
@@ -272,7 +285,7 @@ export function TransactionRowView(props: TransactionViewProps) {
   );
 }
 
-/** Phone row: a clean read-only line; every editor lives in the sheet that a tap opens. */
+/** Phone row: a clean read-only line under its day heading; every editor lives in the sheet that a tap opens. */
 export function TransactionCardView(props: TransactionViewProps) {
   const { tx, selected, highlighted } = props;
   const [open, setOpen] = useState(false);
@@ -292,12 +305,15 @@ export function TransactionCardView(props: TransactionViewProps) {
             </span>
           )}
           <span className="truncate">
-            {tx.category ?? "Uncategorized"} · {formatBookingDateShort(tx.booking_date)}
-            {tx.flow_type === "refunded" ? " · Refunded" : ""}
+            {[
+              tx.category ?? "Uncategorized",
+              tx.flow_type === "refunded" ? "Refunded" : null,
+              share ? null : worthItNote(tx),
+            ]
+              .filter(Boolean)
+              .join(" · ")}
           </span>
-          {!share && isWorthItEligible(tx) && (
-            <span className="shrink-0 font-medium text-primary">Worth it?</span>
-          )}
+          <WorthItHint tx={tx} />
         </p>
       </div>
       <AmountText tx={tx} />

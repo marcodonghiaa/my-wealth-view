@@ -11,6 +11,7 @@ import {
   pushRow,
   supabaseSecretsUrl,
   syncRows,
+  syncStatus,
   type HealthAccount,
   type HealthRow,
 } from "@/lib/health";
@@ -95,4 +96,13 @@ export function useHealth() {
       : null;
 
   return { accounts, rows, push };
+}
+
+/** Just the freshness line for Net Worth: shares the accounts query with Settings › Health. */
+export function useSyncStatus() {
+  const accounts = useQuery({ queryKey: ["bank-accounts-latest"], queryFn: fetchAccounts });
+  return useMemo(
+    () => (accounts.data ? syncStatus(accounts.data, new Date()) : null),
+    [accounts.data],
+  );
 }

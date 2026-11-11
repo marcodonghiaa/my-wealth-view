@@ -4,7 +4,15 @@ import { useState } from "react";
 import { ArrowDownLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatISODate } from "@/lib/date";
-import { formatMoney, incomeTitle, startOfMonth } from "@/lib/transactions";
+import {
+  categoryRepeatsTitle,
+  formatMoney,
+  formatSignedEur,
+  incomeTitle,
+  startOfMonth,
+} from "@/lib/transactions";
+import { fetchIncomeExpenses, incomeExpensesKey, netAfterSpending } from "@/lib/income-expenses";
+import { TONE_TEXT, toneOf } from "@/lib/tone";
 import { MonthSwitcher } from "@/components/month-switcher";
 import { HeadlineFigure } from "@/components/headline-figure";
 import { CategoryPicker } from "@/components/transactions/pickers";
@@ -68,6 +76,11 @@ function IncomePage() {
     queryKey: ["income", formatISODate(month)],
     queryFn: () => fetchIncomeForMonth(month),
   });
+  const flowQuery = useQuery({
+    queryKey: incomeExpensesKey(formatISODate(month)),
+    queryFn: () => fetchIncomeExpenses(formatISODate(month)),
+  });
+  const net = netAfterSpending(flowQuery.data);
   const rows = incomeQuery.data ?? [];
   const total = rows.reduce((sum, r) => sum + Math.abs(r.signed_amount_eur ?? 0), 0);
 
@@ -78,10 +91,8 @@ function IncomePage() {
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-8 md:py-12">
-      <header className="mb-8">
-        <h1 className="ios-large-title">Income</h1>
-        <p className="mt-0.5 text-sm text-muted-foreground">Excludes transfers.</p>
-      </header>
+      {/* One header, as on Spending: the month and its arrows; the figure below is the answer */}
+      <h1 className="sr-only">Income</h1>
 
       {incomeQuery.isError && (
         <Alert className="mb-6">Couldn't load income: {incomeQuery.error.message}</Alert>
@@ -95,8 +106,8 @@ function IncomePage() {
         canGoNext={canGoNext}
       />
 
-      <section aria-label="Total income" className="mb-8">
-        <p className="text-[0.9375rem] font-medium text-muted-foreground">Total income</p>
+      <section aria-label={`Received in ${monthLabel}`} className="mb-8">
+        <p className="text-[0.9375rem] font-medium text-muted-foreground">Received</p>
         <div className="mt-1">
           {incomeQuery.isError ? (
             <p className="figure-display text-muted-foreground">—</p>
@@ -104,6 +115,13 @@ function IncomePage() {
             <HeadlineFigure value={total} currency="EUR" />
           )}
         </div>
+        {net != null && (
+          <p className="mt-1.5 text-sm text-muted-foreground">
+            Net after spending{" "}
+            <span className={`font-figure ${TONE_TEXT[toneOf(net)]}`}>{formatSignedEur(net)}</span>
+          </p>
+        )}
+        <p className="mt-1 text-xs text-muted-foreground">Excludes transfers.</p>
       </section>
 
       <GroupedList>
@@ -133,15 +151,17 @@ function IncomePage() {
                           month: "short",
                         })
                       : "—"}
-                    <CategoryPicker
-                      tx={r}
-                      saving={
-                        updateCategory.isPending &&
-                        updateCategory.variables?.tx.entry_reference === r.entry_reference &&
-                        updateCategory.variables.tx.account_uid === r.account_uid
-                      }
-                      onSelect={(category) => updateCategory.mutate({ tx: r, category })}
-                    />
+                    {!categoryRepeatsTitle(r) && (
+                      <CategoryPicker
+                        tx={r}
+                        saving={
+                          updateCategory.isPending &&
+                          updateCategory.variables?.tx.entry_reference === r.entry_reference &&
+                          updateCategory.variables.tx.account_uid === r.account_uid
+                        }
+                        onSelect={(category) => updateCategory.mutate({ tx: r, category })}
+                      />
+                    )}
                   </div>
                 </div>
                 <span className="inline-flex shrink-0 items-center gap-1 font-figure text-foreground">

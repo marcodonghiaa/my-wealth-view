@@ -1,5 +1,8 @@
 import { isDemoMode } from "./demo/mode";
 
+// The stocks_eur class holds ETFs too; every screen names it the same way.
+export const STOCKS_LABEL = "Stocks & ETFs";
+
 // (The public demo ignores it: its fake history is complete.)
 // Optional YYYY-MM-DD from which "change since the start" is measured. Set it when your first
 // snapshots only held part of your net worth (e.g. before investments were added), which would

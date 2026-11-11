@@ -665,6 +665,33 @@ export type Database = {
         };
         Relationships: [];
       };
+      category_budgets: {
+        Row: {
+          user_id: string;
+          category: string;
+          month: string;
+          amount: number;
+          rollover: boolean;
+          updated_at: string;
+        };
+        Insert: {
+          user_id?: string;
+          category: string;
+          month: string;
+          amount: number;
+          rollover?: boolean;
+          updated_at?: string;
+        };
+        Update: {
+          user_id?: string;
+          category?: string;
+          month?: string;
+          amount?: number;
+          rollover?: boolean;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       user_categories: {
         Row: { user_id: string; name: string; hidden: boolean; created_at: string };
         Insert: { user_id?: string; name: string; hidden?: boolean; created_at?: string };
