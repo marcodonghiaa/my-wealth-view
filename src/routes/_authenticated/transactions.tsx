@@ -467,11 +467,7 @@ function TransactionsPage({ category: initialCategory, month: initialMonth }: Tr
     showAccount: multiAccount,
     onSaveNote: (note) => updateNote.mutate({ tx, value: note }),
     savingNote: updateNote.isPending && isSameTx(updateNote.variables?.tx, tx),
-    onSaveTags: (next) =>
-      updateTags.mutate(
-        { tx, value: next },
-        { onSettled: () => void queryClient.invalidateQueries({ queryKey: ["transaction-tags"] }) },
-      ),
+    onSaveTags: (next) => updateTags.mutate({ tx, value: next }),
     savingTags: updateTags.isPending && isSameTx(updateTags.variables?.tx, tx),
     tagSuggestions: tagsQuery.data ?? [],
     ...(tx.account_uid && accounts[tx.account_uid]?.manual

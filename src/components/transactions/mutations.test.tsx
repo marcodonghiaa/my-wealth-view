@@ -216,6 +216,10 @@ describe("note and tags saves", () => {
     expect(calls[0]?.update).toEqual({ tags: ["trip"] });
     expect(cached().map((r) => r.tags)).toEqual([[], []]);
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ["transactions", MONTH] });
+    // polish-3 #4: the hook alone refreshes the suggestions, once per save
+    expect(
+      invalidate.mock.calls.filter(([f]) => f?.queryKey?.[0] === "transaction-tags"),
+    ).toHaveLength(1);
   });
 });
 
