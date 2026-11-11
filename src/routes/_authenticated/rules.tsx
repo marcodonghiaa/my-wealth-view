@@ -5,7 +5,7 @@ import { ArrowRight, Loader2, Plus, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { ApplyToPast } from "@/components/rules/apply-to-past";
-import { reapply, type RetiredRule } from "@/lib/reapply-rules";
+import { invalidateAfterReapply, reapply, type RetiredRule } from "@/lib/reapply-rules";
 import { rulesQuery as rulesQueryOptions, type RuleRow } from "@/lib/rules-query";
 import { Button } from "@/components/ui/button";
 import { Input, Select } from "@/components/ui/field";
@@ -390,7 +390,7 @@ function RuleList({ rules }: { rules: RuleRow[] }) {
     mutationFn: (retired: RetiredRule) => reapply(true, retired),
     onSuccess: (result) => {
       toast.success(`${plural(result.changes)} will be re-sorted at the next sync`);
-      void queryClient.invalidateQueries({ predicate: (q) => q.queryKey[0] !== "reapply-preview" });
+      void invalidateAfterReapply(queryClient);
     },
     onError: (err) => toast.error(err.message),
   });

@@ -1,6 +1,7 @@
 // The reapply-rules Edge Function: { apply } re-runs your rules over past transactions;
 // with `retired` (a rule just deleted), only the rows it filed that no other rule matches,
 // back to uncategorized for the next sync. apply=false previews.
+import type { QueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { functionErrorMessage } from "@/lib/function-error";
 import type { RuleRow } from "@/lib/rules-query";
@@ -28,3 +29,8 @@ export async function reapply(apply: boolean, retired?: RetiredRule): Promise<Re
   }
   return data;
 }
+
+// Categories show on most pages, so after a change everything is read again, except the
+// preview: a closed one must not ask the server again.
+export const invalidateAfterReapply = (queryClient: QueryClient) =>
+  queryClient.invalidateQueries({ predicate: (q) => q.queryKey[0] !== "reapply-preview" });

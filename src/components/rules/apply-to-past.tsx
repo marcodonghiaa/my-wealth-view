@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { GroupedList } from "@/components/ui/grouped-list";
 import { plural } from "@/lib/plural";
 import { previewLine } from "@/lib/rules";
-import { reapply } from "@/lib/reapply-rules";
+import { invalidateAfterReapply, reapply } from "@/lib/reapply-rules";
 
 // Rules run on new transactions only; this re-runs them on the past ones, after a preview that
 // starts as soon as the panel opens. A change to the rules is a new preview (ruleIds in the key).
@@ -26,8 +26,7 @@ export function ApplyToPast({ ruleIds, onDone }: { ruleIds: string; onDone: () =
     onSuccess: (result) => {
       toast.success(`Updated ${plural(result.changes)}`);
       onDone();
-      // Categories show on most pages; the closed preview must not ask the server again.
-      void queryClient.invalidateQueries({ predicate: (q) => q.queryKey[0] !== "reapply-preview" });
+      void invalidateAfterReapply(queryClient);
     },
     onError: (err) => toast.error(err.message),
   });
