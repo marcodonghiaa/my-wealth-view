@@ -206,9 +206,12 @@ describe("Budgets page", () => {
     renderPage();
     const box = await screen.findByRole("checkbox", { name: /Spread yearly income evenly/ });
     const hint = box.closest("label")!.textContent!;
+    // P5 P2-1: with less than 12 months of history the sum is not divided by 12, so the hint
+    // says "average", which is true either way (4000 + 2000 over 6 months = 1000 below).
     expect(hint).toContain(
-      "Evens out bonuses and irregular pay: your last 12 months of income ÷ 12.",
+      "Evens out bonuses and irregular pay: your average monthly income over the last 12 months.",
     );
+    expect(hint).not.toContain("÷ 12");
     expect(hint).not.toMatch(/13th|June|December/);
   });
 

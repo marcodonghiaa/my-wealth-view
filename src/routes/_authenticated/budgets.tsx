@@ -458,7 +458,8 @@ function BudgetsPage() {
                 <span>
                   <span className="font-medium text-foreground">Spread yearly income evenly</span>
                   <span className="mt-0.5 block text-muted-foreground">
-                    Evens out bonuses and irregular pay: your last 12 months of income ÷ 12.
+                    Evens out bonuses and irregular pay: your average monthly income over the last
+                    12 months.
                   </span>
                 </span>
               </label>
