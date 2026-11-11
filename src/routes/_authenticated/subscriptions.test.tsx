@@ -358,3 +358,21 @@ describe("Subscriptions page", () => {
     expect(total).toHaveTextContent("+ 1 without a frequency");
   });
 });
+
+// protects=the calendar is one tap from the list; fails_when=the view switch is gone or the list stays
+describe("List / Calendar", () => {
+  beforeEach(() => {
+    db.rows = [stream({})];
+    db.error = null;
+  });
+
+  it("switches to the calendar and back", async () => {
+    renderPage();
+    await screen.findByText("Streamflix");
+    fireEvent.click(screen.getByRole("radio", { name: "Calendar" }));
+    expect(await screen.findByRole("region", { name: "Recurring calendar" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Remove Streamflix" })).toBeNull();
+    fireEvent.click(screen.getByRole("radio", { name: "List" }));
+    expect(await screen.findByRole("button", { name: "Remove Streamflix" })).toBeTruthy();
+  });
+});

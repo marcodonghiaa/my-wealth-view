@@ -60,6 +60,9 @@ export const Route = createFileRoute("/_authenticated/rules")({
 const flowLabel = (setFlowType: string) =>
   setFlowType === "transfer" ? "Count as transfer" : "Not a transfer";
 
+const incomeKindLabel = (kind: string) =>
+  kind === "regular" ? "Regular income" : "One-off income";
+
 const LABEL = "mb-1.5 block text-xs font-medium text-muted-foreground";
 const CHIP = "rounded-sm bg-muted px-2 py-0.5 text-xs font-medium";
 
@@ -559,6 +562,11 @@ function RuleList({ rules }: { rules: RuleRow[] }) {
                 {rule.set_flow_type && (
                   <span className={`${CHIP} text-muted-foreground`}>
                     {flowLabel(rule.set_flow_type)}
+                  </span>
+                )}
+                {rule.set_income_kind && (
+                  <span className={`${CHIP} text-muted-foreground`}>
+                    {incomeKindLabel(rule.set_income_kind)}
                   </span>
                 )}
               </div>

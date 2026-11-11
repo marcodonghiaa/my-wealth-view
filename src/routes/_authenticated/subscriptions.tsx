@@ -18,6 +18,8 @@ import { RECURRING_KEY, useRecurringStreams } from "@/lib/use-recurring-streams"
 import { formatBookingDateShort, formatMoney } from "@/lib/transactions";
 import { CategoryAvatar } from "@/components/category-avatar";
 import { RevealDialog } from "@/components/subscriptions/reveal-dialog";
+import { RecurringCalendar } from "@/components/subscriptions/recurring-calendar";
+import { SegmentedControl } from "@/components/segmented-control";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input, Select } from "@/components/ui/field";
@@ -77,8 +79,15 @@ function customIntervalLabel(value: number, unit: IntervalUnit): string {
   return `Every ${value} ${unitLabel}`;
 }
 
+const VIEWS = [
+  { value: "list", label: "List" },
+  { value: "calendar", label: "Calendar" },
+] as const;
+type View = (typeof VIEWS)[number]["value"];
+
 function SubscriptionsPage() {
   const queryClient = useQueryClient();
+  const [view, setView] = useState<View>("list");
   const query = useRecurringStreams();
 
   const actionMutation = useMutation({
@@ -191,91 +200,105 @@ function SubscriptionsPage() {
         )}
       </section>
 
-      {toReview.length > 0 && (
-        <section aria-label="To review" className="mb-8">
-          <SectionTitle>To review ({toReview.length})</SectionTitle>
-          <GroupedList>
-            <ul className="divide-y divide-hairline">
-              {toReview.map((s) => (
-                <ReviewRow
-                  key={s.id}
-                  stream={s}
-                  onConfirm={() => actionMutation.mutate({ id: s.id, action: "confirm" })}
-                  onDismiss={() => actionMutation.mutate({ id: s.id, action: "dismiss" })}
-                />
-              ))}
-            </ul>
-          </GroupedList>
-        </section>
-      )}
+      <div className="mb-8 max-w-xs">
+        <SegmentedControl label="View" options={[...VIEWS]} value={view} onChange={setView} />
+      </div>
 
-      {/* Recurring subscriptions: one grouped list */}
-      {query.isPending ? (
-        <GroupedList>
-          <ul className="divide-y divide-hairline">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <li key={i} className="flex items-center gap-3 px-4 py-3">
-                <Skeleton className="size-10 rounded-full" />
-                <div className="flex-1 space-y-2">
-                  <Skeleton className="h-4 w-1/2" />
-                  <Skeleton className="h-3 w-3/4" />
-                </div>
-              </li>
-            ))}
-          </ul>
-        </GroupedList>
-      ) : (
-        active.length > 0 && (
-          <GroupedList>
-            <ul className="divide-y divide-hairline">{active.map(renderCard)}</ul>
-          </GroupedList>
+      {view === "calendar" ? (
+        query.isPending ? (
+          <Skeleton className="h-96" />
+        ) : (
+          <RecurringCalendar streams={active} today={romeToday()} />
         )
-      )}
+      ) : (
+        <>
+          {toReview.length > 0 && (
+            <section aria-label="To review" className="mb-8">
+              <SectionTitle>To review ({toReview.length})</SectionTitle>
+              <GroupedList>
+                <ul className="divide-y divide-hairline">
+                  {toReview.map((s) => (
+                    <ReviewRow
+                      key={s.id}
+                      stream={s}
+                      onConfirm={() => actionMutation.mutate({ id: s.id, action: "confirm" })}
+                      onDismiss={() => actionMutation.mutate({ id: s.id, action: "dismiss" })}
+                    />
+                  ))}
+                </ul>
+              </GroupedList>
+            </section>
+          )}
 
-      {!query.isPending && active.length === 0 && (
-        <EmptyState
-          className="mt-8 rounded-lg bg-card"
-          title="No subscription charges found yet."
-          hint="Recurring charges show up here once a few months of transactions are in."
-        />
-      )}
+          {/* Recurring subscriptions: one grouped list */}
+          {query.isPending ? (
+            <GroupedList>
+              <ul className="divide-y divide-hairline">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <li key={i} className="flex items-center gap-3 px-4 py-3">
+                    <Skeleton className="size-10 rounded-full" />
+                    <div className="flex-1 space-y-2">
+                      <Skeleton className="h-4 w-1/2" />
+                      <Skeleton className="h-3 w-3/4" />
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </GroupedList>
+          ) : (
+            active.length > 0 && (
+              <GroupedList>
+                <ul className="divide-y divide-hairline">{active.map(renderCard)}</ul>
+              </GroupedList>
+            )
+          )}
 
-      {stopped.length > 0 && (
-        <details className="group mt-8">
-          <summary className="ios-section-title flex min-h-11 cursor-pointer list-none items-center gap-2">
-            <ChevronDown className="size-4 transition-transform group-open:rotate-180" />
-            Stopped ({stopped.length})
-          </summary>
-          <p className="mb-3 px-4 text-[0.8125rem] text-muted-foreground">
-            No recent charge. Not counted.
-          </p>
-          <GroupedList>
-            <ul className="divide-y divide-hairline">{stopped.map(renderCard)}</ul>
-          </GroupedList>
-        </details>
-      )}
+          {!query.isPending && active.length === 0 && (
+            <EmptyState
+              className="mt-8 rounded-lg bg-card"
+              title="No subscription charges found yet."
+              hint="Recurring charges show up here once a few months of transactions are in."
+            />
+          )}
 
-      {dismissed.length > 0 && (
-        <details className="group mt-8">
-          <summary className="ios-section-title flex min-h-11 cursor-pointer list-none items-center gap-2">
-            <ChevronDown className="size-4 transition-transform group-open:rotate-180" />
-            Dismissed ({dismissed.length})
-          </summary>
-          <p className="mb-3 px-4 text-[0.8125rem] text-muted-foreground">
-            Hidden and not counted. Restore to bring one back.
-          </p>
-          <GroupedList>
-            <ul className="divide-y divide-hairline">
-              {dismissed.map((s) => (
-                <DismissedRow
-                  key={s.id}
-                  stream={s}
-                  onRestore={() => actionMutation.mutate({ id: s.id, action: "undismiss" })}
-                />
-              ))}
-            </ul>
-          </GroupedList>
-        </details>
+          {stopped.length > 0 && (
+            <details className="group mt-8">
+              <summary className="ios-section-title flex min-h-11 cursor-pointer list-none items-center gap-2">
+                <ChevronDown className="size-4 transition-transform group-open:rotate-180" />
+                Stopped ({stopped.length})
+              </summary>
+              <p className="mb-3 px-4 text-[0.8125rem] text-muted-foreground">
+                No recent charge. Not counted.
+              </p>
+              <GroupedList>
+                <ul className="divide-y divide-hairline">{stopped.map(renderCard)}</ul>
+              </GroupedList>
+            </details>
+          )}
+
+          {dismissed.length > 0 && (
+            <details className="group mt-8">
+              <summary className="ios-section-title flex min-h-11 cursor-pointer list-none items-center gap-2">
+                <ChevronDown className="size-4 transition-transform group-open:rotate-180" />
+                Dismissed ({dismissed.length})
+              </summary>
+              <p className="mb-3 px-4 text-[0.8125rem] text-muted-foreground">
+                Hidden and not counted. Restore to bring one back.
+              </p>
+              <GroupedList>
+                <ul className="divide-y divide-hairline">
+                  {dismissed.map((s) => (
+                    <DismissedRow
+                      key={s.id}
+                      stream={s}
+                      onRestore={() => actionMutation.mutate({ id: s.id, action: "undismiss" })}
+                    />
+                  ))}
+                </ul>
+              </GroupedList>
+            </details>
+          )}
+        </>
       )}
     </div>
   );

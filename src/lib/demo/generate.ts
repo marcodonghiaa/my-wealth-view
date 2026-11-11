@@ -445,6 +445,7 @@ export function generateDemoData(now: Date = new Date()): DemoDb {
       set_category: "Groceries",
       set_transaction_type: null,
       set_flow_type: null,
+      set_income_kind: null,
       priority: 10,
     },
     {
@@ -455,6 +456,7 @@ export function generateDemoData(now: Date = new Date()): DemoDb {
       set_category: "Entertainment",
       set_transaction_type: "Subscription",
       set_flow_type: null,
+      set_income_kind: null,
       priority: 20,
     },
     {
@@ -465,6 +467,7 @@ export function generateDemoData(now: Date = new Date()): DemoDb {
       set_category: "Transports",
       set_transaction_type: null,
       set_flow_type: null,
+      set_income_kind: null,
       priority: 30,
     },
   ].map((r) => ({ ...r, created_at: stamp(iso(days[0]!)), user_id }));
@@ -589,7 +592,8 @@ function demoStreams(
     id: `00000000-0000-4000-8000-${String(i + 1).padStart(12, "0")}`,
     user_id: DEMO_USER_ID,
     stream_key: `${r.name.toLowerCase().replace(/\W+/g, "")}|demo|${r.currency}`,
-    merchant_key: r.name.toLowerCase().replace(/\W+/g, ""),
+    // As bank-activity keys its rows, so the calendar can tick a paid charge.
+    merchant_key: r.name.toLowerCase().trim(),
     account_uid: MAIN,
     currency: r.currency,
     display_name: r.name,
