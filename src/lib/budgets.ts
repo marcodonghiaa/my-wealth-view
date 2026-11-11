@@ -44,7 +44,8 @@ const MAX_BUDGET = 10_000_000;
  * 3 digits is a thousands separator: budgets are never typed to the tenth of a cent.
  */
 export function parseAmount(text: string): number | null {
-  const t = text.trim();
+  // A € sign before or after the number is fine (the field itself says "€ per month").
+  const t = text.trim().replace(/^€\s*|\s*€$/g, "");
   // "1.250", "1,000,000": groups of 3 after one kind of separator, not starting with 0.
   const grouped = /^[1-9]\d{0,2}([.,])\d{3}(\1\d{3})*$/.test(t);
   const v = parseTypedAmount(grouped ? t.replace(/[.,]/g, "") : t);

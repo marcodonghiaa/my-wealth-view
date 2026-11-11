@@ -310,3 +310,15 @@ describe("parseAmount", () => {
     expect(parseAmount("9999999.999")).toBeNull();
   });
 });
+
+// protects=P5 P2-10 the placeholder says "€ per month", so a typed € sign is fine;
+// fails_when="€250" is refused
+describe("parseAmount with a euro sign", () => {
+  it("reads an amount with € before or after it", () => {
+    expect(parseAmount("€250")).toBe(250);
+    expect(parseAmount("250 €")).toBe(250);
+    expect(parseAmount("€ 1.250,50")).toBe(1250.5);
+    expect(parseAmount("€")).toBeNull();
+    expect(parseAmount("2€50")).toBeNull();
+  });
+});
