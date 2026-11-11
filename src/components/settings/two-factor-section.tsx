@@ -105,21 +105,12 @@ export function TwoFactorSection() {
         {on && (
           <ul className="space-y-2">
             {list!.map((a) => (
-              <li key={a.id} className="flex items-center justify-between gap-3 text-sm">
-                <span className="flex min-w-0 items-center gap-2">
-                  <ShieldCheck className="size-4 shrink-0 text-positive" />
-                  <span className="truncate text-foreground">{a.name}</span>
-                </span>
-                {confirmRemove === a.id ? (
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    disabled={pending}
-                    onClick={() => void remove(a.id)}
-                  >
-                    Confirm remove
-                  </Button>
-                ) : (
+              <li key={a.id} className="space-y-2 text-sm">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="flex min-w-0 items-center gap-2">
+                    <ShieldCheck className="size-4 shrink-0 text-positive" />
+                    <span className="truncate text-foreground">{a.name}</span>
+                  </span>
                   <Button
                     variant="ghost"
                     size="sm"
@@ -129,6 +120,33 @@ export function TwoFactorSection() {
                   >
                     <Trash2 />
                   </Button>
+                </div>
+                {confirmRemove === a.id && (
+                  <div
+                    className="space-y-2 rounded-lg bg-negative/10 p-3"
+                    onKeyDown={(e) => e.key === "Escape" && setConfirmRemove(null)}
+                  >
+                    <p className="text-xs text-foreground">
+                      Remove {a.name}?
+                      {list!.length === 1 && " Sign-in won't ask for a code any more."}
+                    </p>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="quiet"
+                        onClick={() => setConfirmRemove(null)}
+                        className="flex-1"
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        disabled={pending}
+                        onClick={() => void remove(a.id)}
+                        className="flex-1 bg-negative text-white"
+                      >
+                        Confirm remove
+                      </Button>
+                    </div>
+                  </div>
                 )}
               </li>
             ))}

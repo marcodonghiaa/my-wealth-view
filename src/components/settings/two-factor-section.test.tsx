@@ -163,6 +163,21 @@ describe("TwoFactorSection", () => {
     expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
   });
 
+  // protects=an accidental bin tap can be undone, and removing the last one says what it does;
+  // fails_when=the confirm can't be cancelled (no Cancel, Esc ignored) or turns two-step off silently
+  it("lets a remove be cancelled, and warns when it is the last authenticator", async () => {
+    lib.listAuthenticators.mockResolvedValue([{ id: "a", name: "Phone" }]);
+    render(<TwoFactorSection />);
+    fireEvent.click(await screen.findByRole("button", { name: "Remove Phone" }));
+    expect(screen.getByText(/Sign-in won't ask for a code any more/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(screen.queryByRole("button", { name: "Confirm remove" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Remove Phone" }));
+    fireEvent.keyDown(screen.getByRole("button", { name: "Confirm remove" }), { key: "Escape" });
+    expect(screen.queryByRole("button", { name: "Confirm remove" })).toBeNull();
+    expect(lib.removeAuthenticator).not.toHaveBeenCalled();
+  });
+
   it("says when the list can't load", async () => {
     lib.listAuthenticators.mockRejectedValue(new Error("network down"));
     render(<TwoFactorSection />);
