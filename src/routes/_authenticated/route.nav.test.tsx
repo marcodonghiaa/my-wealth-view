@@ -172,6 +172,7 @@ describe("phone tabs and More", () => {
       "Who owes you",
       "Reports",
       "Income",
+      "Budgets",
     ]);
     expect(rest.map((g) => g.label)).toEqual(["Tools"]);
   });
