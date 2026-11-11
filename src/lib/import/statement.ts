@@ -322,7 +322,7 @@ export function detectDateOrder(cells: Array<string>, locale: string = appLocale
   return monthFirst(locale) ? "MDY" : "DMY";
 }
 
-const MAX_AMOUNT = 1e12;
+export const MAX_AMOUNT = 1e12;
 
 const cell = (row: Array<string>, i: number | null | undefined) =>
   i == null ? "" : (row[i] ?? "").trim();

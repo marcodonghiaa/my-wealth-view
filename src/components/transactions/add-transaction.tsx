@@ -17,6 +17,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCategories } from "@/lib/use-categories";
 import { parseQuantity } from "@/lib/holdings";
 import { ADDED_TRANSACTION_QUERIES } from "@/lib/transactions";
+import { MAX_AMOUNT } from "@/lib/import/statement";
+import { numberFormat } from "@/lib/locale";
 
 type Direction = "DBIT" | "CRDT";
 
@@ -91,6 +93,9 @@ export function AddTransaction({ today }: { today: string }) {
     e.preventDefault();
     const value = parseQuantity(amount);
     if (value == null) return setError("Enter an amount above zero, e.g. 12.50.");
+    // The same limits the database checks, said before sending.
+    if (value > MAX_AMOUNT)
+      return setError(`Enter an amount up to ${numberFormat().format(MAX_AMOUNT)}.`);
     if (!description.trim()) return setError("Add a description, e.g. the shop or what it was.");
     if (!date) return setError("Pick a date.");
     setError(null);
@@ -166,6 +171,7 @@ export function AddTransaction({ today }: { today: string }) {
             <input
               aria-label="Description"
               placeholder="e.g. Dinner at Mario's"
+              maxLength={500}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               className={field}
@@ -188,6 +194,7 @@ export function AddTransaction({ today }: { today: string }) {
               <input
                 aria-label="From"
                 placeholder="Manual"
+                maxLength={60}
                 value={source}
                 onChange={(e) => setSource(e.target.value)}
                 className={field}
