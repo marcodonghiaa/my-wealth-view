@@ -350,6 +350,20 @@ function RuleList({ rules }: { rules: RuleRow[] }) {
   }, [checking]);
   const hasCategoryRules = rules.some((r) => r.set_category);
 
+  // Undo after a delete saves the same rule again (a new id, same place in the list).
+  const restoreRule = useMutation({
+    mutationFn: async ({ id: _id, created_at: _created, ...rule }: RuleRow) => {
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError || !userData.user) throw userError ?? new Error("Not signed in");
+      const { error } = await supabase
+        .from("category_rules")
+        .insert({ ...rule, user_id: userData.user.id });
+      if (error) throw error;
+    },
+    onError: () => toast.error("Couldn't restore the rule. Add it again."),
+    onSettled: () => void queryClient.invalidateQueries({ queryKey: ["category-rules"] }),
+  });
+
   const deleteRule = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("category_rules").delete().eq("id", id);
@@ -368,7 +382,13 @@ function RuleList({ rules }: { rules: RuleRow[] }) {
       if (ctx?.previous) queryClient.setQueryData(["category-rules"], ctx.previous);
       toast.error("Couldn't delete the rule. Try again.");
     },
-    onSuccess: () => toast.success("Rule deleted"),
+    onSuccess: (_data, id, ctx) => {
+      const rule = ctx?.previous?.find((r) => r.id === id);
+      toast.success(
+        "Rule deleted",
+        rule ? { action: { label: "Undo", onClick: () => restoreRule.mutate(rule) } } : {},
+      );
+    },
     onSettled: () => void queryClient.invalidateQueries({ queryKey: ["category-rules"] }),
   });
 

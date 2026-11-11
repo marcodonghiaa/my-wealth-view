@@ -19,7 +19,10 @@ let search: Record<string, string> = {};
 
 const toastSuccess = vi.fn();
 vi.mock("sonner", () => ({
-  toast: { success: (m: string) => toastSuccess(m), error: (m: string) => toastError(m) },
+  toast: {
+    success: (m: string, o?: unknown) => (o ? toastSuccess(m, o) : toastSuccess(m)),
+    error: (m: string) => toastError(m),
+  },
 }));
 
 vi.mock("@/integrations/supabase/client", () => {
@@ -444,8 +447,48 @@ describe("deleting a rule", () => {
   it("removes it and says so", async () => {
     renderPage();
     fireEvent.click(await screen.findByRole("button", { name: "Delete rule for Netflix" }));
-    await waitFor(() => expect(toastSuccess).toHaveBeenCalledWith("Rule deleted"));
+    await waitFor(() =>
+      expect(toastSuccess).toHaveBeenCalledWith("Rule deleted", expect.anything()),
+    );
     expect(db.deleted).toEqual(["r1"]);
+  });
+
+  // Polish pass 4 #11: one tap deleted a rule for good.
+  it("puts the rule back from Undo", async () => {
+    renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: "Delete rule for Netflix" }));
+    await waitFor(() =>
+      expect(toastSuccess).toHaveBeenCalledWith("Rule deleted", {
+        action: { label: "Undo", onClick: expect.any(Function) },
+      }),
+    );
+    const undo = toastSuccess.mock.calls[0]?.[1] as { action: { onClick: () => void } };
+    undo.action.onClick();
+    await waitFor(() =>
+      expect(inserted).toEqual([
+        {
+          match_field: "creditor_name",
+          match_text: "Netflix",
+          match_mode: "contains",
+          set_category: "Entertainment",
+          set_transaction_type: null,
+          set_flow_type: null,
+          priority: 1,
+          user_id: "u1",
+        },
+      ]),
+    );
+  });
+
+  it("says so when Undo can't save the rule again", async () => {
+    db.insertError = new Error("down");
+    renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: "Delete rule for Netflix" }));
+    await waitFor(() => expect(toastSuccess).toHaveBeenCalled());
+    (toastSuccess.mock.calls[0]?.[1] as { action: { onClick: () => void } }).action.onClick();
+    await waitFor(() =>
+      expect(toastError).toHaveBeenCalledWith("Couldn't restore the rule. Add it again."),
+    );
   });
 
   it("puts the rule back and shows the error when the delete fails", async () => {
