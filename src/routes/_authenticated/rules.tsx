@@ -5,7 +5,7 @@ import { ArrowRight, Loader2, Plus, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { ApplyToPast } from "@/components/rules/apply-to-past";
-import type { Tables } from "@/integrations/supabase/types";
+import { rulesQuery as rulesQueryOptions, type RuleRow } from "@/lib/rules-query";
 import { Button } from "@/components/ui/button";
 import { Input, Select } from "@/components/ui/field";
 import { GroupedList, SectionTitle } from "@/components/ui/grouped-list";
@@ -54,32 +54,6 @@ export const Route = createFileRoute("/_authenticated/rules")({
   component: RulesPage,
 });
 
-// The columns fetchRules selects, typed from the database (match_mode: "word" | "exact" |
-// "contains"; rules made before modes are "contains").
-type RuleRow = Pick<
-  Tables<"category_rules">,
-  | "id"
-  | "match_field"
-  | "match_text"
-  | "match_mode"
-  | "set_category"
-  | "set_transaction_type"
-  | "set_flow_type"
-  | "priority"
-  | "created_at"
->;
-async function fetchRules(): Promise<RuleRow[]> {
-  const { data, error } = await supabase
-    .from("category_rules")
-    .select(
-      "id, match_field, match_text, match_mode, set_category, set_transaction_type, set_flow_type, priority, created_at",
-    )
-    .order("priority", { ascending: true })
-    .order("created_at", { ascending: true });
-  if (error) throw error;
-  return data ?? [];
-}
-
 // Rules from "To review" only decide how a row counts: "spend" and "income" both mean "count by
 // direction".
 const flowLabel = (setFlowType: string) =>
@@ -99,7 +73,7 @@ function RulesPage() {
     if (wasOpen.current && !showForm) newRuleButton.current?.focus();
     wasOpen.current = showForm;
   }, [showForm]);
-  const rulesQuery = useQuery({ queryKey: ["category-rules"], queryFn: fetchRules });
+  const rulesQuery = useQuery(rulesQueryOptions);
   const rules = rulesQuery.data ?? [];
 
   return (

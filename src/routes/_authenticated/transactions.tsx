@@ -1,7 +1,8 @@
 import { fetchSplitContacts } from "@/lib/splits";
 import { EmptyState } from "@/components/empty-state";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { makeRuleAction, type RuleLike } from "@/lib/rules";
+import { makeRuleAction } from "@/lib/rules";
+import { rulesQuery } from "@/lib/rules-query";
 import { accountName, bankOf } from "@/components/bank-badge";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -158,14 +159,10 @@ function TransactionsPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
   const navigate = useNavigate();
-  // "Make a rule" (toast and sheet); not offered when a loaded rule already sorts the name.
+  // "Make a rule" (toast and sheet); not offered when a saved rule already sorts the name.
+  const rules = useQuery(rulesQuery).data;
   const ruleAction = (name: string | null | undefined, category: string | null) =>
-    makeRuleAction(
-      name,
-      category,
-      navigate,
-      queryClient.getQueryData<RuleLike[]>(["category-rules"]),
-    );
+    makeRuleAction(name, category, navigate, rules);
   const updateCategory = useTransactionFieldMutation(queryClient, monthKey, "category", {
     errorMessage: "Couldn't save category",
     successMessage: (value) => `Saved — ${value}`,

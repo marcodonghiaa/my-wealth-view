@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
@@ -67,23 +67,24 @@ describe("Make a rule in the transaction sheet", () => {
     expect(within(sheet).getByRole("button", { name: "Make a rule" })).toBeTruthy();
   });
 
-  it("leaves it out when a loaded rule already sorts the name", async () => {
+  // pass5 #1: the rules come from the database, not only from a cache the Rules page filled
+  it("leaves it out on a cold start when a saved rule already sorts the name", async () => {
     rows["v_transactions_eur"] = [bankRow];
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    client.setQueryData(
-      ["category-rules"],
-      [
-        {
-          match_field: "creditor_name",
-          match_text: "Poste",
-          match_mode: "word",
-          set_category: "Shopping",
-        },
-      ],
-    );
-    renderPage(client);
+    rows["category_rules"] = [
+      {
+        id: "r1",
+        match_field: "creditor_name",
+        match_text: "Poste",
+        match_mode: "word",
+        set_category: "Shopping",
+        priority: 100,
+      },
+    ];
+    renderPage();
     const sheet = await openSheet(/Poste Italiane/);
-    expect(within(sheet).queryByRole("button", { name: "Make a rule" })).toBeNull();
+    await waitFor(() =>
+      expect(within(sheet).queryByRole("button", { name: "Make a rule" })).toBeNull(),
+    );
   });
 
   it("leaves it out for a Splitwise share", async () => {
