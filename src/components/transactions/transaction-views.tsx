@@ -42,6 +42,8 @@ export interface TransactionViewProps {
   onSaveAmount?: (amount: number) => void;
   savingAmount?: boolean;
   highlighted?: boolean;
+  /** "Make a rule" from this name and category, shown under Category in the sheet. */
+  makeRule?: { label: string; onClick: () => void } | undefined;
 }
 
 const isSplit = (tx: TransactionRow): boolean =>
@@ -131,6 +133,15 @@ function TransactionEditSheet({
             <Field label="Category">
               <CategoryPicker tx={tx} onSelect={p.onSelectCategory} saving={p.savingCategory} />
             </Field>
+            {p.makeRule && (
+              <button
+                type="button"
+                onClick={p.makeRule.onClick}
+                className="flex min-h-12 w-full items-center px-4 text-left text-sm font-medium hover:bg-muted/60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              >
+                {p.makeRule.label}
+              </button>
+            )}
             {!share && (
               <>
                 <Field label="Type">

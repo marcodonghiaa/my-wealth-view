@@ -360,6 +360,10 @@ function TransactionsPage() {
         ? name && updateShare.mutate({ id: shareId(tx), patch: { description: name } })
         : renameTx.mutate({ tx, name }),
     highlighted: tx.entry_reference === highlightRef,
+    // In the sheet too: on a phone the open sheet covers the toast's button.
+    makeRule: isSplitwiseShare(tx)
+      ? undefined
+      : makeRuleAction(tx.creditor_name, tx.category, navigate),
     ...(tx.account_uid && accounts[tx.account_uid]?.manual
       ? {
           onSaveAmount: (amount: number) => changeAmount.mutate({ tx, amount }),
