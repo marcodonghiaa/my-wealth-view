@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from "react";
+import { useId, useState } from "react";
 import { X } from "lucide-react";
 import { fieldClass } from "@/components/ui/field";
 import { cn } from "@/lib/utils";
@@ -11,7 +11,10 @@ import {
   sameTag,
 } from "@/lib/transactions";
 
-/** Free text about a transaction. Saved when the field loses focus, if it changed. */
+/**
+ * Free text about a transaction. Saved when the field loses focus, if it changed. The field keeps
+ * what the user typed: a failed save rolls the note back, and the next blur tries again.
+ */
 export function NoteEditor({
   note,
   onSave,
@@ -22,7 +25,6 @@ export function NoteEditor({
   saving: boolean;
 }) {
   const [input, setInput] = useState(note ?? "");
-  useEffect(() => setInput(note ?? ""), [note]);
 
   return (
     <textarea

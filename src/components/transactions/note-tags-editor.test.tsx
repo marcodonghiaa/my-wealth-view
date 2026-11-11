@@ -20,6 +20,22 @@ describe("NoteEditor", () => {
   });
 });
 
+describe("NoteEditor draft", () => {
+  // protects=a failed save never wipes what the user typed; fails_when=the rollback resets the field
+  it("keeps the typed note when a save fails and the old note comes back", () => {
+    const onSave = vi.fn();
+    const { rerender } = render(<NoteEditor note="old" onSave={onSave} saving={false} />);
+    const field = screen.getByLabelText("Note");
+    fireEvent.change(field, { target: { value: "new" } });
+    fireEvent.blur(field);
+    rerender(<NoteEditor note="new" onSave={onSave} saving={true} />);
+    rerender(<NoteEditor note="old" onSave={onSave} saving={false} />);
+    expect(field).toHaveValue("new");
+    fireEvent.blur(field);
+    expect(onSave).toHaveBeenCalledTimes(2);
+  });
+});
+
 describe("TagEditor", () => {
   it("adds a tag on Enter and on comma, skipping repeats", () => {
     const onSave = vi.fn();
