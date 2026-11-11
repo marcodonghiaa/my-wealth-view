@@ -128,6 +128,9 @@ const isMissingTable = (error: { code?: string; message: string }) =>
   error.code === "42P01" ||
   /does not exist|schema cache/i.test(error.message);
 
+/** Stable, so React calls it when the editor opens and not on every render. */
+const bringIntoView = (el: HTMLElement | null) => el?.scrollIntoView?.({ block: "nearest" });
+
 /** The month in the address (?month=YYYY-MM), so a reload stays on it; otherwise this month. */
 function readMonth(): Date {
   const now = startOfMonth(new Date());
@@ -598,7 +601,7 @@ function BudgetLineRow({
             onSubmit={submit}
             onKeyDown={(e) => e.key === "Escape" && close()}
             // On a phone the editor can open under the bottom bar: bring all of it into view.
-            ref={(el) => el?.scrollIntoView?.({ block: "nearest" })}
+            ref={bringIntoView}
             className="flex flex-wrap items-center gap-2"
           >
             <Input

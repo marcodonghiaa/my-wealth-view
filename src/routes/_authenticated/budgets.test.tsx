@@ -1061,4 +1061,19 @@ describe("Budgets page", () => {
     renderPage();
     expect(await screen.findByText("November 2026")).toBeTruthy();
   });
+
+  // protects=P5 audit note 2: typing in the editor doesn't pull the page back each keystroke;
+  // fails_when=the editor is scrolled into view on every render
+  it("scrolls the editor into view once, not on every keystroke", async () => {
+    const scrolled = vi.fn();
+    Element.prototype.scrollIntoView = scrolled;
+    db["category_budgets"] = [
+      { category: "Groceries", month: "2026-11-01", amount: 300, rollover: false },
+    ];
+    renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: /Change budget for Groceries/ }));
+    const input = screen.getByLabelText("Budget for Groceries");
+    for (const v of ["3", "32", "325"]) fireEvent.change(input, { target: { value: v } });
+    expect(scrolled).toHaveBeenCalledTimes(1);
+  });
 });
