@@ -354,6 +354,23 @@ function RuleForm({
   );
 }
 
+const retiredRule = ({
+  match_field,
+  match_text,
+  match_mode,
+  set_category,
+}: RuleRow): RetiredRule => ({
+  match_field,
+  match_text,
+  match_mode,
+  set_category,
+});
+// Rule text in a toast: long rules (up to 200 characters, older ones more) are cut.
+const shortText = (text: string) => {
+  const chars = [...text];
+  return chars.length > 40 ? `${chars.slice(0, 39).join("")}…` : text;
+};
+
 function RuleList({ rules }: { rules: RuleRow[] }) {
   const queryClient = useQueryClient();
   const [checking, setChecking] = useState(false);
@@ -382,57 +399,61 @@ function RuleList({ rules }: { rules: RuleRow[] }) {
   });
 
   // After a delete, the rows that rule filed keep its category (no other rule explains them,
-  // so "Apply to past transactions" can't fix them). Offer to send them back to the next sync.
-  // Each offer's toast id is the rule's, so Undo closes that rule's offer and no other.
+  // so "Apply to past transactions" can't fix them). Offer to send them back to the next sync,
+  // in the same toast as "Rule deleted" so Undo stays in view. Each rule has its own toast id.
   const resortToastId = (rule: RuleRow) => `resort-${rule.id}`;
   const undone = useRef(new WeakSet<RuleRow>());
-  // The offer's toast shows "Re-sorting…" until the answer replaces it. Sonner merges an update
-  // into the toast with the same id, so each update clears the offer's text and button itself.
+  // Keyboard users land back on the list when a toast button they pressed goes away.
+  const focusList = () => document.querySelector<HTMLElement>("[data-rule-id]")?.focus();
+  // The toast shows "Re-sorting…" until the answer replaces it. Sonner merges an update into
+  // the toast with the same id, so each update clears the offer's text and Re-sort itself.
   const resort = useMutation({
-    mutationFn: ({ retired }: { retired: RetiredRule; toastId: string }) => reapply(true, retired),
-    onMutate: ({ toastId }) =>
-      void toast.loading("Re-sorting…", { id: toastId, description: undefined, action: undefined }),
-    onSuccess: (result, { toastId }) => {
+    mutationFn: ({ rule }: { rule: RuleRow }) => reapply(true, retiredRule(rule)),
+    onMutate: ({ rule }) =>
+      void toast.loading("Re-sorting…", {
+        id: resortToastId(rule),
+        description: undefined,
+        action: undefined,
+      }),
+    onSuccess: (result, { rule }) => {
+      void invalidateAfterReapply(queryClient);
+      if (undone.current.has(rule)) return; // Undo already closed this toast
       toast.success(`${plural(result.changes)} will be re-sorted at the next sync`, {
-        id: toastId,
+        id: resortToastId(rule),
         description: undefined,
         action: undefined,
       });
-      void invalidateAfterReapply(queryClient);
     },
-    onError: (err, vars) =>
+    onError: (err, { rule }) => {
+      if (undone.current.has(rule)) return;
       toast.error(err.message, {
-        id: vars.toastId,
+        id: resortToastId(rule),
         description: undefined,
-        action: { label: "Retry", onClick: (e) => startResort(e, vars) },
-      }),
+        action: { label: "Retry", onClick: (e) => startResort(e, rule) },
+      });
+    },
   });
   // preventDefault: sonner closes a toast when its action is clicked, which hid "Re-sorting…".
-  const startResort = (
-    e: { preventDefault: () => void },
-    vars: { retired: RetiredRule; toastId: string },
-  ) => {
+  const startResort = (e: { preventDefault: () => void }, rule: RuleRow) => {
     e.preventDefault();
-    resort.mutate(vars);
+    focusList();
+    resort.mutate({ rule });
   };
-  const offerResort = async (rule: RuleRow) => {
+  const offerResort = async (rule: RuleRow, undo?: { label: string; onClick: () => void }) => {
     if (!rule.set_category || rule.set_category === "Transfer") return; // Transfer rows never change
-    const { match_field, match_text, match_mode, set_category } = rule;
-    const retired = { match_field, match_text, match_mode, set_category };
     let changes = 0;
     try {
-      changes = (await reapply(false, retired)).changes;
+      changes = (await reapply(false, retiredRule(rule))).changes;
     } catch {
       return; // only an offer: the delete itself worked
     }
     if (!changes || undone.current.has(rule)) return;
-    toast.info(`${plural(changes)} still filed by this rule`, {
+    toast.success("Rule deleted", {
       id: resortToastId(rule),
-      description: "Re-sort them: they show as uncategorized until the next sync sorts them again.",
-      action: {
-        label: "Re-sort",
-        onClick: (e) => startResort(e, { retired, toastId: resortToastId(rule) }),
-      },
+      duration: 8000, // two lines and two buttons: 4s is short on a phone
+      description: `${plural(changes)} still in ${rule.set_category} because of ${quoteText(shortText(rule.match_text))}. Re-sort clears them now; the next sync sorts them again.`,
+      action: { label: "Re-sort", onClick: (e) => startResort(e, rule) },
+      cancel: undo, // Undo stays, beside Re-sort
     });
   };
 
@@ -460,13 +481,17 @@ function RuleList({ rules }: { rules: RuleRow[] }) {
       // Rules from before the 200-character cap can't be saved again, so no Undo for them.
       const length = [...rule.match_text].length;
       const restorable = length >= 1 && length <= MAX_MATCH_TEXT;
-      const undo = () => {
-        undone.current.add(rule);
-        toast.dismiss(resortToastId(rule));
-        restoreRule.mutate(rule);
+      const undo = {
+        label: "Undo",
+        onClick: () => {
+          undone.current.add(rule);
+          focusList();
+          restoreRule.mutate(rule);
+        },
       };
-      toast.success("Rule deleted", restorable ? { action: { label: "Undo", onClick: undo } } : {});
-      void offerResort(rule);
+      const toastId = resortToastId(rule);
+      toast.success("Rule deleted", restorable ? { id: toastId, action: undo } : { id: toastId });
+      void offerResort(rule, restorable ? undo : undefined);
     },
     onSettled: () => void queryClient.invalidateQueries({ queryKey: ["category-rules"] }),
   });
