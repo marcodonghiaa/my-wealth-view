@@ -158,16 +158,18 @@ function TransactionsPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
   const navigate = useNavigate();
+  // "Make a rule" (toast and sheet); not offered when a loaded rule already sorts the name.
+  const ruleAction = (name: string | null | undefined, category: string | null) =>
+    makeRuleAction(
+      name,
+      category,
+      navigate,
+      queryClient.getQueryData<RuleLike[]>(["category-rules"]),
+    );
   const updateCategory = useTransactionFieldMutation(queryClient, monthKey, "category", {
     errorMessage: "Couldn't save category",
     successMessage: (value) => `Saved — ${value}`,
-    successAction: ({ tx, value }) =>
-      makeRuleAction(
-        tx.creditor_name,
-        value,
-        navigate,
-        queryClient.getQueryData<RuleLike[]>(["category-rules"]),
-      ),
+    successAction: ({ tx, value }) => ruleAction(tx.creditor_name, value),
   });
 
   const updateType = useTransactionFieldMutation(queryClient, monthKey, "transaction_type", {
@@ -367,14 +369,7 @@ function TransactionsPage() {
         : renameTx.mutate({ tx, name }),
     highlighted: tx.entry_reference === highlightRef,
     // In the sheet too: on a phone the open sheet covers the toast's button.
-    makeRule: isSplitwiseShare(tx)
-      ? undefined
-      : makeRuleAction(
-          tx.creditor_name,
-          tx.category,
-          navigate,
-          queryClient.getQueryData<RuleLike[]>(["category-rules"]),
-        ),
+    makeRule: isSplitwiseShare(tx) ? undefined : ruleAction(tx.creditor_name, tx.category),
     ...(tx.account_uid && accounts[tx.account_uid]?.manual
       ? {
           onSaveAmount: (amount: number) => changeAmount.mutate({ tx, amount }),
