@@ -12,9 +12,10 @@ import {
 } from "@/lib/transactions";
 
 /**
- * Free text about a transaction. Saved when the field loses focus, if it changed. The field keeps
- * what the user typed: a failed save rolls the note back, and the next blur tries again. Closing
- * the sheet (Esc, X) can remove the field with no blur, so a change not yet sent is saved then.
+ * Free text about a transaction. Saved when the field loses focus, if it changed. Until the user
+ * types, the field follows the note (a refetch can bring a newer one). Once they type, it keeps
+ * their text: a failed save rolls the note back, and the next blur tries again. Closing the sheet
+ * (Esc, X) can remove the field with no blur, so an edit not yet sent is saved then.
  */
 export function NoteEditor({
   note,
@@ -26,14 +27,16 @@ export function NoteEditor({
   saving: boolean;
 }) {
   const [input, setInput] = useState(note ?? "");
+  const [edited, setEdited] = useState(false);
+  if (!edited && input !== (note ?? "")) setInput(note ?? "");
   const sent = useRef<string | null>(null);
-  const latest = useRef({ input, note, onSave });
-  latest.current = { input, note, onSave };
+  const latest = useRef({ input, edited, note, onSave });
+  latest.current = { input, edited, note, onSave };
   useEffect(
     () => () => {
-      const { input, note, onSave } = latest.current;
+      const { input, edited, note, onSave } = latest.current;
       const next = normalizeNote(input);
-      if (next !== (note ?? null) && next !== sent.current) onSave(next);
+      if (edited && next !== (note ?? null) && next !== sent.current) onSave(next);
     },
     [],
   );
@@ -46,7 +49,10 @@ export function NoteEditor({
       rows={2}
       disabled={saving}
       placeholder="Add a note"
-      onChange={(e) => setInput(e.target.value)}
+      onChange={(e) => {
+        setEdited(true);
+        setInput(e.target.value);
+      }}
       onBlur={() => {
         const next = normalizeNote(input);
         if (next !== (note ?? null)) {

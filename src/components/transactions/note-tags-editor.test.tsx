@@ -46,6 +46,16 @@ describe("closing the sheet", () => {
     expect(onSave).toHaveBeenCalledWith("new");
   });
 
+  // fails_when=closing the sheet saves the old text over a newer note the user never touched
+  it("shows a newer note that arrives while untouched, and doesn't save on close", () => {
+    const onSave = vi.fn();
+    const { rerender, unmount } = render(<NoteEditor note="old" onSave={onSave} saving={false} />);
+    rerender(<NoteEditor note="newer" onSave={onSave} saving={false} />);
+    expect(screen.getByLabelText("Note")).toHaveValue("newer");
+    unmount();
+    expect(onSave).not.toHaveBeenCalled();
+  });
+
   it("does not save twice when blur already saved", () => {
     const onSave = vi.fn();
     const { unmount } = render(<NoteEditor note="old" onSave={onSave} saving={false} />);
