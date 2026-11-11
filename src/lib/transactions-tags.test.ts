@@ -73,3 +73,16 @@ describe("filterTransactions by tag and note", () => {
     expect(refs(filterTransactions(rows, "hotel", "all"))).toEqual(["1"]);
   });
 });
+
+// polish-1 #12: limits count characters like the database (char_length), so an emoji at the
+// boundary is kept whole, never cut in half (half an emoji is refused by Postgres).
+describe("length limits count characters, not UTF-16 units", () => {
+  it("keeps an emoji at the tag and note boundary whole", () => {
+    const tag = `${"x".repeat(39)}😀`;
+    expect(normalizeTags([tag])).toEqual([tag]);
+    expect(normalizeTags([`${"x".repeat(40)}😀`])).toEqual(["x".repeat(40)]);
+    const note = `${"x".repeat(1999)}😀`;
+    expect(normalizeNote(note)).toBe(note);
+    expect(normalizeNote(`${"😀".repeat(2001)}`)).toBe("😀".repeat(2000));
+  });
+});

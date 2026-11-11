@@ -368,9 +368,12 @@ export const MAX_TAGS = 20;
 export const MAX_TAG_LENGTH = 40;
 export const MAX_NOTE_LENGTH = 2000;
 
+/** The first `max` characters (code points, like Postgres char_length): never half an emoji. */
+const cutChars = (s: string, max: number): string => Array.from(s).slice(0, max).join("");
+
 /** One tag as typed: trimmed, inner spaces collapsed, cut to the length limit. */
 export const cleanTag = (raw: string): string =>
-  raw.trim().replace(/\s+/g, " ").slice(0, MAX_TAG_LENGTH).trim();
+  cutChars(raw.trim().replace(/\s+/g, " "), MAX_TAG_LENGTH).trim();
 
 /** Tags to save: cleaned, no blanks, no repeats (ignoring case, first spelling wins), at most 20. */
 export function normalizeTags(raw: Array<string>): Array<string> {
@@ -387,7 +390,7 @@ export function normalizeTags(raw: Array<string>): Array<string> {
 
 /** Note to save: trimmed, null when empty. */
 export function normalizeNote(raw: string): string | null {
-  const note = raw.trim().slice(0, MAX_NOTE_LENGTH);
+  const note = cutChars(raw.trim(), MAX_NOTE_LENGTH).trim();
   return note === "" ? null : note;
 }
 
