@@ -8,7 +8,7 @@ const inserted: Array<Record<string, unknown>> = [];
 const onlyFlowRules = { current: false };
 // How the mocked database answers: the rules list, a delete, an insert.
 const db = {
-  rules: "ok" as "ok" | "error" | "empty" | "pending",
+  rules: "ok" as "ok" | "error" | "empty" | "pending" | "legacy",
   rulesReads: 0,
   table: "",
   deleted: [] as string[],
@@ -33,6 +33,24 @@ vi.mock("@/integrations/supabase/client", () => {
     if (db.rules === "pending") return;
     if (db.rules === "error") return resolve({ data: null, error: new Error("down") });
     if (db.rules === "empty") return resolve({ data: [], error: null });
+    // A rule from before the 200-character cap: the database refuses to insert it again.
+    if (db.rules === "legacy")
+      return resolve({
+        data: [
+          {
+            id: "old",
+            match_field: "creditor_name",
+            match_text: "x".repeat(201),
+            match_mode: "contains",
+            set_category: "Shopping",
+            set_transaction_type: null,
+            set_flow_type: null,
+            priority: 1,
+            created_at: "2026-01-01T00:00:00Z",
+          },
+        ],
+        error: null,
+      });
     return resolve({
       data: [
         {
@@ -620,6 +638,15 @@ describe("deleting a rule", () => {
         },
       ]),
     );
+  });
+
+  // pass5 #3: a rule longer than the cap can't be saved again, so Undo would always fail
+  it("offers no Undo for a rule the database wouldn't take back", async () => {
+    db.rules = "legacy";
+    renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: /^Delete rule for x+/ }));
+    await waitFor(() => expect(toastSuccess).toHaveBeenCalled());
+    expect(toastSuccess.mock.calls[0]?.[1]).not.toHaveProperty("action");
   });
 
   it("says so when Undo can't save the rule again", async () => {
