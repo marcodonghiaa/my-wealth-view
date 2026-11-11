@@ -7,7 +7,7 @@ type Row = Record<string, unknown>;
 const db = vi.hoisted(() => ({
   charges: [] as Array<Row>,
   income: [] as Array<Row>,
-  rules: [] as Array<Row>,
+  rules: [] as Array<Row> | "pending",
   error: null as { message: string } | null,
   chargeReads: 0,
 }));
@@ -23,7 +23,8 @@ vi.mock("@/integrations/supabase/client", () => ({
         return q;
       };
       q["then"] = (resolve: (v: unknown) => void) => {
-        if (table === "category_rules") return resolve({ data: db.rules, error: null });
+        if (table === "category_rules")
+          return db.rules === "pending" ? undefined : resolve({ data: db.rules, error: null });
         if (side === "DBIT") db.chargeReads++;
         if (db.error) return resolve({ data: null, error: db.error });
         resolve({ data: side === "DBIT" ? db.charges : db.income, error: null });
@@ -155,6 +156,15 @@ describe("RecurringCalendar", () => {
     db.error = { message: "offline" };
     renderCal([stream({})]);
     expect(await screen.findByText("Couldn't load the calendar: offline")).toBeTruthy();
+  });
+
+  // Polish #13: before the rules load, the income count isn't known yet: no "Income 0 of 0".
+  it("waits for the rules before counting income", async () => {
+    db.rules = "pending";
+    renderCal([stream({})]);
+    expect(await screen.findByRole("gridcell", { name: /^5 November/ })).toBeTruthy();
+    await new Promise((r) => setTimeout(r, 50));
+    expect(screen.queryByText(/Income 0 of/)).toBeNull();
   });
 
   it("drops income a rule calls one-off", async () => {

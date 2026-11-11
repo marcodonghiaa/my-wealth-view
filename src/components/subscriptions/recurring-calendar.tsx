@@ -104,7 +104,8 @@ export function RecurringCalendar({
   }, [streams, chargesQuery.data, windowQuery.data, rulesQuery.data, month, today, isFuture]);
   const days = useMemo(() => byDay(entries), [entries]);
 
-  const pending = (!isFuture && chargesQuery.isPending) || windowQuery.isPending;
+  const pending =
+    (!isFuture && chargesQuery.isPending) || windowQuery.isPending || rulesQuery.isPending;
   const failed = chargesQuery.error ?? windowQuery.error ?? rulesQuery.error;
   const bills = entries.filter((e) => e.kind === "bill");
   const income = entries.filter((e) => e.kind === "income");
