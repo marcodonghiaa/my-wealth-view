@@ -186,6 +186,7 @@ describe("connect a bank", () => {
         <Page />
       </QueryClientProvider>,
     );
+    Element.prototype.scrollIntoView = vi.fn(); // jsdom has none; Renew scrolls to the form
     fireEvent.click(await screen.findByRole("button", { name: "Renew access" }));
     expect(
       await screen.findByText(
