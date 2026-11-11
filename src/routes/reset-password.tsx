@@ -5,6 +5,8 @@ import { BrandMark } from "@/components/brand-mark";
 import { openedFromRecoveryLink, supabase } from "@/integrations/supabase/client";
 import { exitDemoMode } from "@/lib/demo/mode";
 import { MIN_PASSWORD_LENGTH } from "@/lib/password";
+import { needsMfaCode, verifyMfaCode } from "@/lib/mfa";
+import { CodeInput } from "@/components/ui/field";
 
 /** Where the recovery email sends the user: this page, on the dashboard's own origin. */
 export const resetPasswordUrl = (origin: string) => `${origin}/reset-password`;
@@ -31,6 +33,10 @@ export function ResetPasswordPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  // The recovery link signs in with the password level only; with an authenticator, Supabase
+  // takes the new password only after its code. Null until checked: Save waits for it.
+  const [needsCode, setNeedsCode] = useState<boolean | null>(null);
+  const [code, setCode] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -54,11 +60,24 @@ export function ResetPasswordPage() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!hasSession) return;
+    let cancelled = false;
+    void needsMfaCode().then((needed) => !cancelled && setNeedsCode(needed));
+    return () => {
+      cancelled = true;
+    };
+  }, [hasSession]);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     setPending(true);
     try {
+      if (needsCode) {
+        await verifyMfaCode(code);
+        setNeedsCode(false); // The session is now aal2: a retry needs no new code.
+      }
       const { error: updateError } = await supabase.auth.updateUser({ password });
       if (updateError) throw updateError;
       await navigate({ to: "/", replace: true });
@@ -105,15 +124,38 @@ export function ResetPasswordPage() {
                 </p>
               </div>
 
+              {needsCode && (
+                <div className="space-y-1.5">
+                  <label
+                    htmlFor="reset-mfa-code"
+                    className="text-xs font-medium text-muted-foreground"
+                  >
+                    Authenticator code
+                  </label>
+                  <CodeInput
+                    id="reset-mfa-code"
+                    aria-invalid={error ? true : undefined}
+                    aria-describedby={error ? "reset-code-hint reset-error" : "reset-code-hint"}
+                    value={code}
+                    onChange={(e) => setCode(e.target.value)}
+                    large
+                  />
+                  <p id="reset-code-hint" className="text-xs text-muted-foreground">
+                    Your account has two-step sign-in: type the 6-digit code from your authenticator
+                    app.
+                  </p>
+                </div>
+              )}
+
               {error && (
-                <p role="alert" className="text-sm text-negative">
+                <p id="reset-error" role="alert" className="text-sm text-negative">
                   {error}
                 </p>
               )}
 
               <button
                 type="submit"
-                disabled={pending}
+                disabled={pending || needsCode === null}
                 className="flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-primary px-4 text-sm font-semibold text-primary-foreground transition-colors hover:brightness-110 disabled:opacity-50"
               >
                 {pending ? (

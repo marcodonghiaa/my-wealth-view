@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { KeyRound, Loader2 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { checkPassword, supabase } from "@/integrations/supabase/client";
 import { MIN_PASSWORD_LENGTH, passwordErrorMessage, validateNewPassword } from "@/lib/password";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/field";
@@ -33,8 +33,8 @@ function Field(props: {
 
 /**
  * Change the password of the signed-in account. No email involved: the current password is
- * checked by signing in again (which also gives a fresh session, so the server's
- * recent-sign-in requirement is met), then the new one is saved.
+ * checked on a throwaway client (this tab's session, two-step level included, stays as it is),
+ * then the new one is saved.
  */
 export function ChangePasswordForm() {
   const [current, setCurrent] = useState("");
@@ -58,10 +58,7 @@ export function ChangePasswordForm() {
       const { data: sessionData } = await supabase.auth.getSession();
       const email = sessionData.session?.user.email;
       if (!email) throw new Error("You're signed out. Sign in again, then retry.");
-      const { error: verifyError } = await supabase.auth.signInWithPassword({
-        email,
-        password: current,
-      });
+      const { error: verifyError } = await checkPassword(email, current);
       if (verifyError) throw verifyError;
       const { error: updateError } = await supabase.auth.updateUser({ password: next });
       if (updateError) throw updateError;

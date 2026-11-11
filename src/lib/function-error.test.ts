@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { functionErrorMessage } from "./function-error";
+import { functionErrorBody, functionErrorMessage } from "./function-error";
 
 const FALLBACK = "Couldn't load banks for this country.";
 
@@ -33,5 +33,15 @@ describe("functionErrorMessage", () => {
     const context = new Response(JSON.stringify({ error: "gone" }));
     await context.text();
     expect(await functionErrorMessage({ context }, FALLBACK)).toBe(FALLBACK);
+  });
+});
+
+describe("functionErrorBody", () => {
+  it("reads the JSON body, and is null without one", async () => {
+    const error = { context: new Response('{"code":"mfa_required"}', { status: 403 }) };
+    expect(await functionErrorBody(error)).toEqual({ code: "mfa_required" });
+    expect(await functionErrorBody(error)).toEqual({ code: "mfa_required" }); // body not consumed
+    expect(await functionErrorBody({ context: new Response("not json") })).toBeNull();
+    expect(await functionErrorBody(new Error("x"))).toBeNull();
   });
 });

@@ -2,11 +2,13 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 let session: unknown;
-const signInWithPassword = vi.fn(async (_a: unknown): Promise<{ error: unknown }> => ({
+const checkPassword = vi.fn(async (_e: string, _p: string): Promise<{ error: unknown }> => ({
   error: null,
 }));
+const signInWithPassword = vi.fn();
 const updateUser = vi.fn(async (_a: unknown): Promise<{ error: unknown }> => ({ error: null }));
 vi.mock("@/integrations/supabase/client", () => ({
+  checkPassword: (e: string, p: string) => checkPassword(e, p),
   supabase: {
     auth: {
       getSession: async () => ({ data: { session } }),
@@ -32,18 +34,25 @@ function fill(current: string, next: string, confirmation: string) {
 describe("ChangePasswordForm", () => {
   beforeEach(() => {
     session = { user: { email: "me@example.com" } };
-    signInWithPassword.mockClear().mockResolvedValue({ error: null });
+    checkPassword.mockClear().mockResolvedValue({ error: null });
+    signInWithPassword.mockClear();
     updateUser.mockClear().mockResolvedValue({ error: null });
+  });
+
+  // protects=a two-step session stays at its level while the password is checked;
+  // fails_when=the check signs in on the main client (every tab then needs the code again)
+  it("never signs in on this tab's client", async () => {
+    render(<ChangePasswordForm />);
+    fill("oldpassword", "newpassword1", "newpassword1");
+    await screen.findByRole("status");
+    expect(signInWithPassword).not.toHaveBeenCalled();
   });
 
   it("verifies the current password, saves the new one and clears the form", async () => {
     render(<ChangePasswordForm />);
     fill("oldpassword", "newpassword1", "newpassword1");
     expect(await screen.findByRole("status")).toHaveTextContent(/Password changed/);
-    expect(signInWithPassword).toHaveBeenCalledWith({
-      email: "me@example.com",
-      password: "oldpassword",
-    });
+    expect(checkPassword).toHaveBeenCalledWith("me@example.com", "oldpassword");
     expect(updateUser).toHaveBeenCalledWith({ password: "newpassword1" });
     expect(screen.getByLabelText("Current password")).toHaveValue("");
     expect(screen.getByLabelText("New password")).toHaveValue("");
@@ -54,12 +63,12 @@ describe("ChangePasswordForm", () => {
     render(<ChangePasswordForm />);
     fill("oldpassword", "newpassword1", "newpassword2");
     expect(await screen.findByRole("alert")).toHaveTextContent(/don't match/);
-    expect(signInWithPassword).not.toHaveBeenCalled();
+    expect(checkPassword).not.toHaveBeenCalled();
     expect(updateUser).not.toHaveBeenCalled();
   });
 
   it("does not change anything when the current password is wrong", async () => {
-    signInWithPassword.mockResolvedValue({
+    checkPassword.mockResolvedValue({
       error: Object.assign(new Error("Invalid login credentials"), { code: "invalid_credentials" }),
     });
     render(<ChangePasswordForm />);
@@ -84,7 +93,7 @@ describe("ChangePasswordForm", () => {
     render(<ChangePasswordForm />);
     fill("oldpassword", "newpassword1", "newpassword1");
     expect(await screen.findByRole("alert")).toHaveTextContent(/signed out/);
-    expect(signInWithPassword).not.toHaveBeenCalled();
+    expect(checkPassword).not.toHaveBeenCalled();
   });
 
   it("disables the button while saving so a double tap sends one request", async () => {

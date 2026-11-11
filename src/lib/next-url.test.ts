@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { safeNext } from "./auth";
+import { backHereSearch, safeNext } from "./next-url";
 
 describe("safeNext", () => {
   it("accepts a same-origin relative path", () => {
@@ -28,5 +28,20 @@ describe("safeNext", () => {
   it("rejects a value that doesn't start with a slash", () => {
     expect(safeNext("evil.com")).toBeUndefined();
     expect(safeNext("https://evil.com")).toBeUndefined();
+  });
+});
+
+// protects=after sign-in (or the authenticator code) the user is back on the page they were on;
+// fails_when=the search or a bank's #bank_code is dropped, or "/" adds a useless ?next=
+describe("backHereSearch", () => {
+  it("keeps path, search and hash", () => {
+    expect(
+      backHereSearch({ pathname: "/accounts", searchStr: "?a=1", hash: "bank_code=x" }),
+    ).toEqual({
+      next: "/accounts?a=1#bank_code=x",
+    });
+  });
+  it("adds nothing for the home page", () => {
+    expect(backHereSearch({ pathname: "/", searchStr: "", hash: "" })).toEqual({});
   });
 });

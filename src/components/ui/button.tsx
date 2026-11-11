@@ -10,6 +10,8 @@ export const buttonVariants = cva(
       variant: {
         primary: "bg-primary text-primary-foreground hover:opacity-90",
         quiet: "bg-card text-foreground hover:bg-accent",
+        // Quiet's look for buttons inside a white card, where quiet would be white on white.
+        secondary: "bg-background text-foreground hover:bg-accent",
         ghost: "text-muted-foreground hover:bg-accent hover:text-foreground",
         destructive: "text-negative hover:bg-negative/10",
       },

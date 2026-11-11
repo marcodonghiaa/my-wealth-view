@@ -6,6 +6,9 @@ vi.mock("@/lib/demo/mode", () => ({ isDemoMode: () => demo.current }));
 vi.mock("@/components/settings/change-password-form", () => ({
   ChangePasswordForm: () => <h2>Password</h2>,
 }));
+vi.mock("@/components/settings/two-factor-section", () => ({
+  TwoFactorSection: () => <h2>Two-step</h2>,
+}));
 vi.mock("@/components/settings/delete-account", () => ({ DeleteAccount: () => <h2>Delete</h2> }));
 vi.mock("@/components/settings/export-data", () => ({ ExportData: () => <h2>Export</h2> }));
 vi.mock("@/components/settings/categories-section", () => ({
@@ -32,6 +35,7 @@ describe("SettingsPage order", () => {
       "Categories",
       "Number and date format",
       "Password",
+      "Two-step",
       "Export",
       "Delete",
     ]);

@@ -28,6 +28,9 @@ vi.mock("@/integrations/supabase/client", () => ({
   },
 }));
 
+const mfa = vi.hoisted(() => ({ needsMfaCode: vi.fn(), verifyMfaCode: vi.fn() }));
+vi.mock("@/lib/mfa", () => mfa);
+
 import { ResetPasswordPage, resetPasswordUrl } from "./reset-password";
 
 describe("ResetPasswordPage", () => {
@@ -36,6 +39,94 @@ describe("ResetPasswordPage", () => {
     updateUser.mockClear();
     updateError = null;
     fromRecoveryLink = true;
+    mfa.needsMfaCode.mockReset().mockResolvedValue(false);
+    mfa.verifyMfaCode.mockReset().mockResolvedValue(undefined);
+  });
+
+  // protects=a user with two-step sign-in can still reset a forgotten password;
+  // fails_when=the new password is sent on the password-only session Supabase refuses
+  it("asks for the authenticator code and verifies it before saving", async () => {
+    session = { user: { id: "u" } };
+    mfa.needsMfaCode.mockResolvedValue(true);
+    const order: string[] = [];
+    mfa.verifyMfaCode.mockImplementation(async () => void order.push("verify"));
+    updateUser.mockImplementationOnce(async () => (order.push("update"), { error: null }));
+    render(<ResetPasswordPage />);
+    fireEvent.change(await screen.findByLabelText("New password"), {
+      target: { value: "correct horse" },
+    });
+    fireEvent.change(await screen.findByLabelText("Authenticator code"), {
+      target: { value: "123456" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save and sign in" }));
+    await waitFor(() => expect(navigate).toHaveBeenCalledWith({ to: "/", replace: true }));
+    expect(mfa.verifyMfaCode).toHaveBeenCalledWith("123456");
+    expect(order).toEqual(["verify", "update"]);
+  });
+
+  it("keeps the form and saves nothing when the code is wrong", async () => {
+    session = { user: { id: "u" } };
+    mfa.needsMfaCode.mockResolvedValue(true);
+    mfa.verifyMfaCode.mockRejectedValue(new Error("Invalid TOTP code entered"));
+    render(<ResetPasswordPage />);
+    fireEvent.change(await screen.findByLabelText("New password"), {
+      target: { value: "correct horse" },
+    });
+    fireEvent.change(await screen.findByLabelText("Authenticator code"), {
+      target: { value: "000000" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save and sign in" }));
+    expect((await screen.findByRole("alert")).textContent).toBe("Invalid TOTP code entered");
+    expect(screen.getByLabelText("Authenticator code")).toHaveAccessibleDescription(
+      /type the 6-digit code.*Invalid TOTP code entered/,
+    );
+    expect(screen.getByLabelText("Authenticator code")).toHaveAttribute("aria-invalid", "true");
+    expect(updateUser).not.toHaveBeenCalled();
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
+  // protects=a user whose new password is refused can fix it without a new code;
+  // fails_when=the accepted code is checked again on retry (a spent try, maybe expired by then)
+  it("does not check the code again after it was accepted", async () => {
+    session = { user: { id: "u" } };
+    mfa.needsMfaCode.mockResolvedValue(true);
+    updateUser.mockImplementationOnce(async () => ({ error: new Error("Password is too weak") }));
+    render(<ResetPasswordPage />);
+    fireEvent.change(await screen.findByLabelText("New password"), {
+      target: { value: "correct horse" },
+    });
+    fireEvent.change(await screen.findByLabelText("Authenticator code"), {
+      target: { value: "123456" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save and sign in" }));
+    await screen.findByRole("alert");
+    fireEvent.change(screen.getByLabelText("New password"), {
+      target: { value: "correct horse battery" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save and sign in" }));
+    await waitFor(() => expect(navigate).toHaveBeenCalledWith({ to: "/", replace: true }));
+    expect(mfa.verifyMfaCode).toHaveBeenCalledTimes(1);
+  });
+
+  // protects=a user with an authenticator always gets the code step before saving;
+  // fails_when=Save works before the check answers and Supabase's raw aal2 error shows
+  it("waits for the authenticator check before allowing Save", async () => {
+    session = { user: { id: "u" } };
+    let answer: (needed: boolean) => void = () => {};
+    mfa.needsMfaCode.mockReturnValue(new Promise<boolean>((resolve) => (answer = resolve)));
+    render(<ResetPasswordPage />);
+    await screen.findByLabelText("New password");
+    expect(screen.getByRole("button", { name: "Save and sign in" })).toBeDisabled();
+    act(() => answer(true));
+    expect(await screen.findByLabelText("Authenticator code")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Save and sign in" })).toBeEnabled();
+  });
+
+  it("asks for no code when the account has no authenticator", async () => {
+    session = { user: { id: "u" } };
+    render(<ResetPasswordPage />);
+    await screen.findByLabelText("New password");
+    expect(screen.queryByLabelText("Authenticator code")).toBeNull();
   });
 
   // protects=a locked-out user can set a new password from the recovery email;

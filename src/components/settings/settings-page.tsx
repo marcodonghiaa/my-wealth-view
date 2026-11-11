@@ -1,5 +1,6 @@
 import { ChangePasswordForm } from "@/components/settings/change-password-form";
 import { DeleteAccount } from "@/components/settings/delete-account";
+import { TwoFactorSection } from "@/components/settings/two-factor-section";
 import { ExportData } from "@/components/settings/export-data";
 import { FormatsSection } from "@/components/settings/formats-section";
 import { CategoriesSection } from "@/components/settings/categories-section";
@@ -18,7 +19,10 @@ export function SettingsPage() {
       {/* The demo has no real account: a password change or account deletion would do nothing and an export would be fake data. */}
       {!isDemoMode() && (
         <div className="space-y-10">
-          <ChangePasswordForm />
+          <div className="space-y-4">
+            <ChangePasswordForm />
+            <TwoFactorSection />
+          </div>
           <div className="space-y-4">
             <ExportData />
             <DeleteAccount />
