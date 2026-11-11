@@ -379,6 +379,26 @@ describe("apply to past transactions", () => {
     expect(await screen.findByText("Supermercato Coop Milano")).not.toHaveClass("truncate");
   });
 
+  // Polish pass 4 #16: a screen reader ran each name into the row before it.
+  it("reads the examples as a list", async () => {
+    invoke.mockResolvedValueOnce({
+      data: {
+        changes: 2,
+        sample: [
+          { name: "Bar Roma", from: null, to: "Dine Out" },
+          { name: "Esselunga", from: "Shopping", to: "Groceries" },
+        ],
+      },
+      error: null,
+    });
+    await open();
+    const list = await screen.findByRole("list");
+    expect(Array.from(list.children).map((li) => li.getAttribute("role"))).toEqual([
+      "listitem",
+      "listitem",
+    ]);
+  });
+
   it("says so when nothing would change", async () => {
     invoke.mockReset();
     invoke.mockResolvedValueOnce({ data: { changes: 0, sample: [] }, error: null });

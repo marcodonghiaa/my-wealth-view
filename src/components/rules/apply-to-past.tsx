@@ -101,10 +101,11 @@ export function ApplyToPast({ ruleIds, onDone }: { ruleIds: string; onDone: () =
           <p role="status" className="mt-4 text-sm">
             {previewLine(changes, preview.data.sample.length)}
           </p>
-          <GroupedList className="mt-2 bg-background">
+          <GroupedList role="list" className="mt-2 bg-background">
             {preview.data.sample.map((s, i) => (
               <div
                 key={i}
+                role="listitem"
                 className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2.5 text-sm"
               >
                 {/* Whole name on its own line on a phone; "from → to" wraps under it. */}
