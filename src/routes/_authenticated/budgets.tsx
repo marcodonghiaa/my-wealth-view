@@ -128,6 +128,24 @@ const isMissingTable = (error: { code?: string; message: string }) =>
   error.code === "42P01" ||
   /does not exist|schema cache/i.test(error.message);
 
+/** The month in the address (?month=YYYY-MM), so a reload stays on it; otherwise this month. */
+function readMonth(): Date {
+  const now = startOfMonth(new Date());
+  const m = /^(\d{4})-(0[1-9]|1[0-2])$/.exec(
+    new URLSearchParams(window.location.search).get("month") ?? "",
+  );
+  if (!m) return now;
+  const month = new Date(Number(m[1]), Number(m[2]) - 1, 1);
+  return month <= now ? month : now;
+}
+
+function writeMonth(month: Date) {
+  const url = new URL(window.location.href);
+  if (month.getTime() === startOfMonth(new Date()).getTime()) url.searchParams.delete("month");
+  else url.searchParams.set("month", formatISODate(month).slice(0, 7));
+  window.history.replaceState(window.history.state, "", url);
+}
+
 function readSpread(): boolean {
   try {
     return window.localStorage.getItem(SPREAD_KEY) === "1";
@@ -146,7 +164,11 @@ function writeSpread(on: boolean) {
 
 function BudgetsPage() {
   const queryClient = useQueryClient();
-  const [month, setMonth] = useState<Date>(() => startOfMonth(new Date()));
+  const [month, setMonthState] = useState<Date>(readMonth);
+  const setMonth = (next: Date) => {
+    setMonthState(next);
+    writeMonth(next);
+  };
   const [spread, setSpread] = useState<boolean>(readSpread);
   const monthIso = formatISODate(month);
 

@@ -103,6 +103,7 @@ beforeEach(() => {
   spendReads.now = spendReads.most = 0;
   toast.error.mockClear();
   window.localStorage.clear();
+  window.history.replaceState(null, "", "/budgets");
   db["v_spend_by_category_monthly"] = [
     { month: "2026-09-01", category: "Groceries", spend_eur: 300 },
     { month: "2026-10-01", category: "Groceries", spend_eur: 320 },
@@ -1034,5 +1035,30 @@ describe("Budgets page", () => {
     for (let i = 0; i < 14; i++) fireEvent.click(prev);
     expect(await screen.findByText("September 2025")).toBeTruthy();
     expect(prev.disabled).toBe(true);
+  });
+
+  // protects=P5 P2-11 a reload stays on the month being looked at;
+  // fails_when=the month isn't in the address, so a reload jumps back to the current month
+  it("keeps the viewed month in the address", async () => {
+    window.history.replaceState(null, "", "/budgets?month=2026-09");
+    renderPage();
+    expect(await screen.findByText("September 2026")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Next month" }));
+    expect(await screen.findByText("October 2026")).toBeTruthy();
+    expect(window.location.search).toBe("?month=2026-10");
+    // The current month is the plain address.
+    fireEvent.click(screen.getByRole("button", { name: "Next month" }));
+    expect(await screen.findByText("November 2026")).toBeTruthy();
+    expect(window.location.search).toBe("");
+  });
+
+  it("ignores a month in the address that is in the future or not a month", async () => {
+    window.history.replaceState(null, "", "/budgets?month=2027-01");
+    const first = renderPage();
+    expect(await screen.findByText("November 2026")).toBeTruthy();
+    first.unmount();
+    window.history.replaceState(null, "", "/budgets?month=2026-13");
+    renderPage();
+    expect(await screen.findByText("November 2026")).toBeTruthy();
   });
 });
