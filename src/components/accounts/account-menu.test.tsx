@@ -102,7 +102,7 @@ describe("AccountMenu", () => {
 
   it.each([
     ["it-IT", 1250.5, "1250,5"],
-    ["de-DE", 1250, "1250"],
+    ["de-DE", 0.75, "0,75"],
     ["en-GB", 1250.5, "1250.5"],
   ])(
     "left-open #2 in %s fills %s as %s and saving it unchanged keeps it",

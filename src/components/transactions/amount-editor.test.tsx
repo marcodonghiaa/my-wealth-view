@@ -37,9 +37,9 @@ describe("AmountEditor", () => {
 
   it.each([
     ["it-IT", 1234.56, "1234,56"],
-    ["de-DE", 1250, "1250"],
-    ["en-GB", 1250, "1250"],
-    ["en-US", 0.5, "0.5"],
+    ["it-IT", 1.125, "1,125"],
+    ["de-DE", 0.5, "0,5"],
+    ["en-US", 1.125, "1.125"],
   ])(
     "left-open #2 in %s fills %s as %s and saving it unchanged keeps it",
     (locale, amount, text) => {
