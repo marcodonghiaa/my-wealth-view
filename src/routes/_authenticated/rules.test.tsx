@@ -614,6 +614,8 @@ describe("deleting a rule", () => {
           set_transaction_type: null,
           set_flow_type: null,
           priority: 1,
+          // Re-audit of #11: without its date the restored rule sank below rules it used to beat.
+          created_at: "2026-10-01T00:00:00Z",
           user_id: "u1",
         },
       ]),

@@ -391,9 +391,10 @@ function RuleList({ rules }: { rules: RuleRow[] }) {
   }, [checking]);
   const hasCategoryRules = rules.some((r) => r.set_category);
 
-  // Undo after a delete saves the same rule again (a new id, same place in the list).
+  // Undo after a delete saves the same rule again: a new id, but its old date keeps its place in
+  // the list (the list, and which rule wins, go by priority then date).
   const restoreRule = useMutation({
-    mutationFn: async ({ id: _id, created_at: _created, ...rule }: RuleRow) => {
+    mutationFn: async ({ id: _id, ...rule }: RuleRow) => {
       const { data: userData, error: userError } = await supabase.auth.getUser();
       if (userError || !userData.user) throw userError ?? new Error("Not signed in");
       const { error } = await supabase
