@@ -85,7 +85,7 @@ async function fetchRules(): Promise<RuleRow[]> {
 const flowLabel = (setFlowType: string) =>
   setFlowType === "transfer" ? "Count as transfer" : "Not a transfer";
 
-const LABEL = "mb-1.5 block text-[0.8125rem] font-medium text-muted-foreground";
+const LABEL = "mb-1.5 block text-xs font-medium text-muted-foreground";
 const CHIP = "rounded-sm bg-muted px-2 py-0.5 text-xs font-medium";
 
 function RulesPage() {

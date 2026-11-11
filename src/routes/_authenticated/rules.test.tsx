@@ -162,6 +162,15 @@ describe("Rules list", () => {
     expect(await screen.findByRole("button", { name: "Try again" })).toHaveClass("min-h-11");
   });
 
+  // Polish pass 4 #21: labels were 13px; other forms use text-xs.
+  it("sizes form labels like the other forms", async () => {
+    renderPage();
+    await openForm();
+    for (const name of ["Look in", "Match", "Text to look for", "Set category", "Set type"]) {
+      expect(screen.getByText(name, { selector: "label, span" })).toHaveClass("text-xs");
+    }
+  });
+
   // Polish pass 4 #18: each picker's name was read twice (the visible label, then aria-label).
   it("names each picker by its visible label", async () => {
     renderPage();
