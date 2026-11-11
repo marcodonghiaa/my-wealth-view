@@ -50,8 +50,9 @@ const CUSTOM_COLORS = ["#0ea5e9", "#f43f5e", "#22c55e", "#a855f7", "#f59e0b", "#
 export function categoryColor(category: string | null | undefined): string {
   // "Uncategorized" is what the spending views call a missing category.
   if (!category || category === "Uncategorized") return UNKNOWN_CATEGORY_COLOR;
-  const builtIn = (CATEGORY_COLORS as Record<string, string>)[category];
-  if (builtIn) return builtIn;
+  // Own keys only, so a category called "constructor" isn't read off Object.prototype.
+  if (Object.hasOwn(CATEGORY_COLORS, category))
+    return (CATEGORY_COLORS as Record<string, string>)[category]!;
   let hash = 0;
   for (const ch of category) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
   return CUSTOM_COLORS[hash % CUSTOM_COLORS.length]!;
