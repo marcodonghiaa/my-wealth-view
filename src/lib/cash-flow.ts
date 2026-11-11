@@ -324,3 +324,15 @@ export function fitLabel(name: string, max: number): string {
         .trimEnd()}…`
     : clean;
 }
+
+/** Gap between a Sankey band and its label. */
+export const SANKEY_LAYOUT_GAP = 8;
+
+/**
+ * Sankey label room. The svg clips past its edge, so each side's margin holds the longest label
+ * (`chars` capitals). On a phone the payers' labels sit on their band instead of outside it.
+ */
+export const SANKEY_LAYOUT = {
+  desktop: { chars: 20, left: 160, right: 168, outsideLeft: true },
+  phone: { chars: 12, left: 4, right: 104, outsideLeft: false },
+};

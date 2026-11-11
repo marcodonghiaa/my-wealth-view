@@ -1,5 +1,11 @@
 import { ResponsiveContainer, Sankey } from "recharts";
-import { fitLabel, type FlowGraph, type FlowNode } from "@/lib/cash-flow";
+import {
+  fitLabel,
+  SANKEY_LAYOUT,
+  SANKEY_LAYOUT_GAP,
+  type FlowGraph,
+  type FlowNode,
+} from "@/lib/cash-flow";
 import { formatEur } from "@/lib/transactions";
 import { useIsMobile } from "@/lib/use-is-mobile";
 
@@ -19,8 +25,9 @@ function FlowNodeShape({ x, y, width, height, payload, narrow }: NodeProps & { n
   const isHub = payload.kind === "hub";
   // On a phone there's no room for a label column on both sides: the payers' labels sit on
   // their own band instead, which is pale enough to read on.
-  const outside = isLeft && !narrow;
-  const labelX = outside ? x - 8 : x + width + 8;
+  const layout = SANKEY_LAYOUT[narrow ? "phone" : "desktop"];
+  const outside = isLeft && layout.outsideLeft;
+  const labelX = outside ? x - SANKEY_LAYOUT_GAP : x + width + SANKEY_LAYOUT_GAP;
   const mid = y + height / 2;
   return (
     <g>
@@ -34,7 +41,7 @@ function FlowNodeShape({ x, y, width, height, payload, narrow }: NodeProps & { n
           style={{ fontSize: 12 }}
         >
           <tspan x={labelX} dy="-0.2em">
-            {fitLabel(payload.name, narrow ? 13 : 24)}
+            {fitLabel(payload.name, layout.chars)}
           </tspan>
           <tspan
             x={labelX}
@@ -91,6 +98,7 @@ function FlowLinkShape({
  */
 export function FlowSankey({ graph, label }: { graph: FlowGraph; label: string }) {
   const narrow = useIsMobile();
+  const { left, right } = SANKEY_LAYOUT[narrow ? "phone" : "desktop"];
   const lefts = graph.links.filter((l) => graph.nodes[l.target]?.kind === "hub").length;
   const rights = graph.links.length - lefts;
   const height = Math.max(240, Math.max(lefts, rights) * ROW);
@@ -104,7 +112,7 @@ export function FlowSankey({ graph, label }: { graph: FlowGraph; label: string }
           nodePadding={30}
           linkCurvature={0.5}
           iterations={0}
-          margin={{ top: 12, bottom: 12, left: narrow ? 4 : 104, right: narrow ? 104 : 112 }}
+          margin={{ top: 12, bottom: 12, left, right }}
           node={(props: NodeProps) => <FlowNodeShape {...props} narrow={narrow} />}
           link={(props: LinkProps) => <FlowLinkShape {...props} />}
         />

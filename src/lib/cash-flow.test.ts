@@ -20,6 +20,8 @@ import {
   switchPeriod,
   spendByCategory,
   summarize,
+  SANKEY_LAYOUT,
+  SANKEY_LAYOUT_GAP,
   topParts,
   trend,
   trimLeadingEmpty,
@@ -455,4 +457,14 @@ it("summarize rounds to cents, so a break-even period nets exactly zero", () => 
   );
   expect(s.net).toBe(0);
   expect(s.savingsRate).toBe(0);
+});
+
+// Polish 3 #2: the svg clips anything past its edge, so the longest label must fit its margin.
+// 7.5px is a capital in Geist at 12px (measured: "ACME CONSULTING GMBH" = 148.8px).
+it("the longest Sankey label fits in its margin on desktop and phone", () => {
+  const CAPITAL_PX = 7.5;
+  for (const l of Object.values(SANKEY_LAYOUT)) {
+    const room = Math.min(l.outsideLeft ? l.left : Infinity, l.right) - SANKEY_LAYOUT_GAP;
+    expect(l.chars * CAPITAL_PX).toBeLessThanOrEqual(room);
+  }
 });
