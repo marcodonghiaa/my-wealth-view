@@ -106,6 +106,17 @@ export function normalizeNumber(input: string): string {
   return text.split(mark).length > 2 ? text.split(mark).join("") : "";
 }
 
+/**
+ * Why normalizeNumber refused a typed number that could mean two things, or null when it didn't:
+ * "1.250" in Italian → '"1.250" could mean 1250 or 1,25: type one of those.'
+ */
+export function ambiguousNumberHint(input: string): string | null {
+  const text = input.trim().replace(/[\s']/g, "");
+  if (!text || normalizeNumber(text) !== "") return null;
+  const [whole, part] = text.split(/[.,]/);
+  return `"${text}" could mean ${whole}${part} or ${inputNumber(Number(`${whole}.${part}`))}: type one of those.`;
+}
+
 /** A number to put back in an input box: the chosen decimal mark, no grouping, Latin digits. */
 export const inputNumber = (value: number, maxDigits = 20): string =>
   numberFormat({

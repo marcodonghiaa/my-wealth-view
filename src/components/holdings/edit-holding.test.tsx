@@ -112,6 +112,16 @@ describe("EditHolding delete", () => {
     }
   });
 
+  it("left-open #1 says why an unclear quantity like 1,250 is refused", () => {
+    setup({ kind: "stock", isin: "IE00TEST" });
+    fireEvent.change(screen.getByLabelText("How many you hold now"), {
+      target: { value: "1,250" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(screen.getByRole("alert")).toHaveTextContent('"1,250" could mean 1250 or 1.25');
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
   it("sends the crypto source", async () => {
     rpc.mockResolvedValue({ data: 1, error: null });
     setup({ kind: "crypto", symbol: "BTC", source: "Manual" });

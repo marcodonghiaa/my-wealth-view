@@ -1,4 +1,4 @@
-import { formatQuantity, inputNumber } from "@/lib/locale";
+import { ambiguousNumberHint, formatQuantity, inputNumber } from "@/lib/locale";
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Pencil, Trash2 } from "lucide-react";
@@ -36,9 +36,10 @@ function validate(form: Form) {
   const fee = form.fee.trim() === "" ? 0 : parseTypedAmount(form.fee);
   if (!form.date) return { error: "Pick the date of the trade." };
   if (form.date > localToday()) return { error: "The date can't be in the future." };
-  if (shares == null) return { error: "Shares must be a number above zero." };
-  if (price == null) return { error: "Price must be a number." };
-  if (fee == null) return { error: "Fee must be a number." };
+  if (shares == null)
+    return { error: ambiguousNumberHint(form.shares) ?? "Shares must be a number above zero." };
+  if (price == null) return { error: ambiguousNumberHint(form.price) ?? "Price must be a number." };
+  if (fee == null) return { error: ambiguousNumberHint(form.fee) ?? "Fee must be a number." };
   return {
     values: {
       side: form.side,

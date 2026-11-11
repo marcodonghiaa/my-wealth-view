@@ -1,4 +1,4 @@
-import { inputNumber } from "@/lib/locale";
+import { ambiguousNumberHint, inputNumber } from "@/lib/locale";
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Pencil } from "lucide-react";
@@ -107,7 +107,7 @@ export function EditHolding({
     e.preventDefault();
     const next = parseQuantity(value);
     if (next == null) {
-      setError("Enter a number above zero, or use Mark as sold.");
+      setError(ambiguousNumberHint(value) ?? "Enter a number above zero, or use Mark as sold.");
       return;
     }
     setError(null);
