@@ -90,6 +90,15 @@ describe("AccountMenu", () => {
     );
   });
 
+  it("left-open #1 says why an unclear amount owed like 1,250 is refused", () => {
+    setup(<AccountMenu title="Car loan" accounts={[manual]} />);
+    fireEvent.click(screen.getByRole("button", { name: "Edit Car loan" }));
+    fireEvent.change(screen.getByLabelText("Owed now"), { target: { value: "1,250" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(screen.getByRole("alert")).toHaveTextContent('"1,250" could mean 1250 or 1.25');
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
   it("refuses an amount it can't read, and shows a server error", async () => {
     rpc.mockResolvedValue({ data: null, error: { message: "not a manual account" } });
     setup(<AccountMenu title="Car loan" accounts={[manual]} />);
@@ -157,6 +166,16 @@ describe("AddDebt", () => {
       }),
     );
     await waitFor(() => expect(invalidate).toHaveBeenCalledWith({ queryKey: ["net-worth-daily"] }));
+  });
+
+  it("left-open #1 a new debt with an unclear amount like 1,250 says why", () => {
+    setup(<AddDebt />);
+    open();
+    fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Loan" } });
+    fireEvent.change(screen.getByLabelText("Owed"), { target: { value: "1,250" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(screen.getByRole("alert")).toHaveTextContent('"1,250" could mean 1250 or 1.25');
+    expect(rpc).not.toHaveBeenCalled();
   });
 
   it("asks for a name and an amount before saving", () => {

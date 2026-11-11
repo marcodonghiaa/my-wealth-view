@@ -5,7 +5,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { formatAmountPlain, formatMoney, type TransactionRow } from "@/lib/transactions";
 import { evenShare, joinNames, parseNames } from "@/lib/splits";
 import { parseOwed } from "@/lib/account-types";
-import { numberFormat } from "@/lib/locale";
+import { ambiguousNumberHint, numberFormat } from "@/lib/locale";
 
 const QUICK_SPLITS = [2, 3, 4];
 
@@ -132,7 +132,8 @@ export function SplitEditor({
           />
           {shareError && (
             <p id="split-share-error" role="alert" className="mt-1 text-xs text-negative">
-              Enter an amount between 0 and {formatAmountPlain(fullAmount)}.
+              {ambiguousNumberHint(shareInput) ??
+                `Enter an amount between 0 and ${formatAmountPlain(fullAmount)}.`}
             </p>
           )}
           <div className="mt-1.5 flex gap-1.5" role="group" aria-label="Quick split">

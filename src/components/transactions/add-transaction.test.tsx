@@ -80,6 +80,14 @@ describe("AddTransaction", () => {
     expect(rpc).not.toHaveBeenCalled();
   });
 
+  it("left-open #1 says why an unclear amount like 1,250 is refused", async () => {
+    open();
+    type("Amount", "1,250");
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent('"1,250" could mean 1250 or 1.25');
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
   it("polish-5 #9 stops at the database's limits before sending", async () => {
     open();
     expect(screen.getByLabelText("Description")).toHaveAttribute("maxLength", "500");

@@ -1,4 +1,4 @@
-import { inputNumber } from "@/lib/locale";
+import { ambiguousNumberHint, inputNumber } from "@/lib/locale";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/field";
 import { useState } from "react";
@@ -25,7 +25,8 @@ export function AmountEditor({
 
   function save() {
     const next = parseQuantity(input);
-    if (next == null) return setError("Enter an amount above zero, e.g. 12.50.");
+    if (next == null)
+      return setError(ambiguousNumberHint(input) ?? "Enter an amount above zero, e.g. 12.50.");
     setOpen(false);
     if (next !== amount) onSave(next);
   }

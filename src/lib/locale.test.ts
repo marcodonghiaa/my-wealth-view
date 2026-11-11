@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { formatDay } from "./date";
 import {
+  ambiguousNumberHint,
   appLocale,
   dateLocale,
   formatNumber,
@@ -220,5 +221,28 @@ describe("inputNumber", () => {
     setLocaleOverride("it-IT");
     expect(inputNumber(0.123456789012)).toBe("0,123456789012");
     expect(inputNumber(1234.5)).toBe("1234,5");
+  });
+});
+
+describe("ambiguousNumberHint", () => {
+  it("explains a lone group the box refused, in Italian", () => {
+    setLocaleOverride("it-IT");
+    expect(parseQuantity("1.250")).toBeNull();
+    expect(ambiguousNumberHint("1.250")).toBe(
+      '"1.250" could mean 1250 or 1,25: type one of those.',
+    );
+  });
+
+  it("explains a lone group the box refused, in English", () => {
+    expect(parseOwed("1,250")).toBeNull();
+    expect(ambiguousNumberHint(" 1,250 ")).toBe(
+      '"1,250" could mean 1250 or 1.25: type one of those.',
+    );
+  });
+
+  it("stays quiet for numbers that are clear or simply wrong", () => {
+    setLocaleOverride("it-IT");
+    for (const text of ["", "  ", "1250", "1,25", "1.250.000", "0.5", "abc", "-3", "1.2.3"])
+      expect(ambiguousNumberHint(text)).toBeNull();
   });
 });

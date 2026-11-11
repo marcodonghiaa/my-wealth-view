@@ -25,4 +25,12 @@ describe("AmountEditor", () => {
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
     expect(onSave).not.toHaveBeenCalled();
   });
+
+  it("left-open #1 says why an unclear number like 1,250 is refused", () => {
+    const onSave = openEditor();
+    fireEvent.change(screen.getByLabelText("Amount"), { target: { value: "1,250" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(screen.getByRole("alert")).toHaveTextContent('"1,250" could mean 1250 or 1.25');
+    expect(onSave).not.toHaveBeenCalled();
+  });
 });

@@ -1,4 +1,4 @@
-import { inputNumber } from "@/lib/locale";
+import { ambiguousNumberHint, inputNumber } from "@/lib/locale";
 import { useState } from "react";
 import { useMutation, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { Loader2, Pencil, Plus } from "lucide-react";
@@ -69,7 +69,8 @@ function OwedForm({ account, onDone }: { account: MenuAccount; onDone: () => voi
       onSubmit={(e) => {
         e.preventDefault();
         const amount = parseOwed(value);
-        if (amount == null) return setError("Enter what you owe, e.g. 1250.");
+        if (amount == null)
+          return setError(ambiguousNumberHint(value) ?? "Enter what you owe, e.g. 1250.");
         setError(null);
         save.mutate(amount);
       }}
@@ -291,7 +292,8 @@ export function AddDebt() {
             e.preventDefault();
             const owed = parseOwed(amount);
             if (!name.trim()) return setError("Give it a name, e.g. Car loan.");
-            if (owed == null) return setError("Enter what you owe, e.g. 1250.");
+            if (owed == null)
+              return setError(ambiguousNumberHint(amount) ?? "Enter what you owe, e.g. 1250.");
             setError(null);
             add.mutate({ name: name.trim(), amount: owed, currency });
           }}

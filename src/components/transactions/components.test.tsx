@@ -118,6 +118,18 @@ describe("SplitEditor", () => {
     expect(onSave).toHaveBeenCalledWith(5, "Anna");
   });
 
+  it("left-open #1 says why an unclear share like 1,250 is refused", async () => {
+    const onSave = vi.fn();
+    render(<SplitEditor tx={tx()} onSave={onSave} saving={false} />);
+    await open();
+    const share = await screen.findByLabelText(/Your share/);
+    await userEvent.clear(share);
+    await userEvent.type(share, "1,250");
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(onSave).not.toHaveBeenCalled();
+    expect(screen.getByRole("alert")).toHaveTextContent('"1,250" could mean 1250 or 1.25');
+  });
+
   it("polish-3 #4 takes a share typed with a decimal comma and says when it can't", async () => {
     const onSave = vi.fn();
     render(<SplitEditor tx={tx()} onSave={onSave} saving={false} />);

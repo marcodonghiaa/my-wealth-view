@@ -4,6 +4,7 @@ import { ChevronDown, Loader2, Plus, Search } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { parseQuantity } from "@/lib/holdings";
+import { ambiguousNumberHint } from "@/lib/locale";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/field";
 
@@ -140,7 +141,9 @@ export function AddHoldingPanel({
     }
     const value = parseQuantity(quantity);
     if (value == null) {
-      setFormError(`${copy.quantity} must be a number above zero.`);
+      setFormError(
+        ambiguousNumberHint(quantity) ?? `${copy.quantity} must be a number above zero.`,
+      );
       return;
     }
     setFormError(null);

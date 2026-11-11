@@ -71,4 +71,32 @@ describe("TradesDialog", () => {
     expect(screen.getByLabelText(/Price/)).toHaveValue("1234,56");
     expect(screen.getByLabelText(/Fee/)).toHaveValue("1,5");
   });
+
+  it("left-open #1 says why an unclear shares, price or fee like 1,250 is refused", async () => {
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <TradesDialog
+          kind="stock"
+          holdingKey="K"
+          name="Example ETF"
+          quantity={0}
+          label="Trades"
+          trades={[]}
+        />
+      </QueryClientProvider>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Trades" }));
+    const fill = (shares: string, price: string, fee: string) => {
+      fireEvent.change(screen.getByLabelText(/Shares/), { target: { value: shares } });
+      fireEvent.change(screen.getByLabelText(/Price/), { target: { value: price } });
+      fireEvent.change(screen.getByLabelText(/Fee/), { target: { value: fee } });
+      fireEvent.click(screen.getByRole("button", { name: "Add trade" }));
+    };
+    fill("1,250", "10", "");
+    expect(await screen.findByRole("alert")).toHaveTextContent('"1,250" could mean 1250 or 1.25');
+    fill("1", "2,500", "");
+    expect(screen.getByRole("alert")).toHaveTextContent('"2,500" could mean 2500 or 2.5');
+    fill("1", "10", "3,000");
+    expect(screen.getByRole("alert")).toHaveTextContent('"3,000" could mean 3000 or 3');
+  });
 });

@@ -18,7 +18,7 @@ import { useCategories } from "@/lib/use-categories";
 import { parseQuantity } from "@/lib/holdings";
 import { ADDED_TRANSACTION_QUERIES } from "@/lib/transactions";
 import { MAX_AMOUNT } from "@/lib/import/statement";
-import { numberFormat } from "@/lib/locale";
+import { ambiguousNumberHint, numberFormat } from "@/lib/locale";
 
 type Direction = "DBIT" | "CRDT";
 
@@ -92,7 +92,8 @@ export function AddTransaction({ today }: { today: string }) {
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const value = parseQuantity(amount);
-    if (value == null) return setError("Enter an amount above zero, e.g. 12.50.");
+    if (value == null)
+      return setError(ambiguousNumberHint(amount) ?? "Enter an amount above zero, e.g. 12.50.");
     // The same limits the database checks, said before sending.
     if (value > MAX_AMOUNT)
       return setError(`Enter an amount up to ${numberFormat().format(MAX_AMOUNT)}.`);
