@@ -10,12 +10,17 @@ const monthISO = (offset: number) =>
 
 let tables: Record<string, Array<Record<string, unknown>>> = {};
 let failTable: string | null = null;
+const calls: Array<Array<unknown>> = [];
 
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
     from: (table: string) => {
       const q: Record<string, unknown> = {};
-      for (const m of ["select", "order", "eq", "gt", "gte", "lt"]) q[m] = () => q;
+      for (const m of ["select", "order", "eq", "gt", "gte", "lt"])
+        q[m] = (...args: Array<unknown>) => {
+          calls.push([table, m, ...args]);
+          return q;
+        };
       q["then"] = (resolve: (v: unknown) => void) =>
         resolve(
           table === failTable
@@ -139,6 +144,19 @@ describe("Cash flow page", () => {
     expect(validate({ month: "2026-09" })).toEqual({ month: "2026-09" });
     expect(validate({ month: "2026-13" })).toEqual({});
     expect(validate({ month: 5, other: "x" })).toEqual({});
+  });
+
+  // Polish 1 #12: past the server's row cap, the payers kept are the biggest ones.
+  it("asks for the biggest incoming payments first", async () => {
+    calls.length = 0;
+    renderPage();
+    await waitFor(() => expect(row("Income")).toHaveTextContent("€3,000.00"));
+    expect(calls).toContainEqual([
+      "v_transactions_eur",
+      "order",
+      "personal_signed_amount_eur",
+      { ascending: false },
+    ]);
   });
 
   // protects=the switcher stops at the first month with data and at the current period

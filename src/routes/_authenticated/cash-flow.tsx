@@ -99,7 +99,9 @@ async function fetchIncomeRows(from: string, to: string): Promise<Array<IncomeTx
     .eq("flow_type", "income")
     .gt("personal_signed_amount_eur", 0)
     .gte("booking_date", from)
-    .lt("booking_date", to);
+    .lt("booking_date", to)
+    // Biggest first, so a cut-off list keeps the payers that matter.
+    .order("personal_signed_amount_eur", { ascending: false });
   if (error) throw error;
   return (data ?? []) as Array<IncomeTxRow>;
 }
