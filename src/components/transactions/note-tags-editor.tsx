@@ -72,7 +72,9 @@ export function NoteEditor({
 
 /**
  * Tags as chips. Type one and press Enter (or a comma) to add it; tags used before are
- * suggested. Every add or remove saves at once.
+ * suggested. Every add or remove saves at once. The field stays open while a save runs (locking it
+ * would drop keys typed meanwhile and close a phone keyboard); the next tag builds on the list just
+ * sent, and the saves go out one after another.
  */
 export function TagEditor({
   tags,
@@ -86,7 +88,12 @@ export function TagEditor({
   suggestions?: Array<string> | undefined;
 }) {
   const listId = useId();
-  const current = tags ?? [];
+  // The list last sent, until the tags come back from the save (or roll back after a failure).
+  const sent = useRef<Array<string> | null>(null);
+  useEffect(() => {
+    sent.current = null;
+  }, [tags]);
+  const current = sent.current ?? tags ?? [];
   const [input, setInput] = useState("");
   const full = current.length >= MAX_TAGS;
 
@@ -96,7 +103,12 @@ export function TagEditor({
       i < current.length ? t : (suggestions.find((s) => sameTag(s, t)) ?? t),
     );
     setInput("");
-    if (next.length !== current.length) onSave(next);
+    if (next.length !== current.length) save(next);
+  }
+
+  function save(next: Array<string>) {
+    sent.current = next;
+    onSave(next);
   }
 
   // Closing the sheet can remove the field with no blur: keep a half-typed tag then too.
@@ -122,7 +134,7 @@ export function TagEditor({
                 type="button"
                 disabled={saving}
                 aria-label={`Remove tag ${t}`}
-                onClick={() => onSave(current.filter((x) => x !== t))}
+                onClick={() => save(current.filter((x) => x !== t))}
                 className="inline-flex size-6 items-center justify-center rounded-sm text-muted-foreground hover:bg-background hover:text-foreground"
               >
                 <X className="size-3" />
@@ -136,7 +148,7 @@ export function TagEditor({
         list={listId}
         value={input}
         maxLength={MAX_TAG_LENGTH}
-        disabled={saving || full}
+        disabled={full}
         placeholder={full ? `Up to ${MAX_TAGS} tags` : "Add a tag"}
         onChange={(e) => {
           // A comma ends a tag, like Enter. Some phone keyboards send it with no key event.

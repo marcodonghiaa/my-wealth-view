@@ -18,6 +18,8 @@ const rpc = vi.fn();
 const getUser = vi.fn(async () => ({ data: { user: { id: "u1" } as { id: string } | null } }));
 let insertError: Error | null = null;
 let updateError: Error | null = null;
+// When set, updates wait for it: a slow network.
+let updateGate: Promise<void> | null = null;
 let existingRule: Array<{ id: string }> = [];
 
 const toastSuccess = vi.hoisted(() => vi.fn());
@@ -62,6 +64,10 @@ vi.mock("@/integrations/supabase/client", () => ({
         },
         then(resolve: (v: { data?: unknown; error: Error | null }) => void) {
           calls.push(call);
+          if (call.update && updateGate) {
+            void updateGate.then(() => resolve({ error: updateError }));
+            return;
+          }
           if (call.select) resolve({ data: existingRule, error: null });
           else resolve({ error: call.insert ? insertError : call.update ? updateError : null });
         },
@@ -124,6 +130,7 @@ beforeEach(() => {
   calls.length = 0;
   insertError = null;
   updateError = null;
+  updateGate = null;
   existingRule = [];
 });
 
@@ -170,6 +177,27 @@ describe("note and tags saves", () => {
     expect(calls[0]?.update).toEqual({ note: "hi" });
     expect(calls[0]?.eq).toEqual({ account_uid: "a1", entry_reference: "r1" });
     expect(cached().map((r) => r.note)).toEqual(["hi", null]);
+  });
+
+  // polish-3 #1: two quick tag adds must reach the database in order, or the older list can land last
+  it("sends a second tags save only after the first one is done", async () => {
+    const { queryClient, wrapper } = setup();
+    let open = () => {};
+    updateGate = new Promise<void>((r) => (open = r));
+    const { result } = renderHook(
+      () => useTransactionFieldMutation(queryClient, MONTH, "tags", { errorMessage: "fail" }),
+      { wrapper },
+    );
+    const tx = { account_uid: "a1", entry_reference: "r1" };
+    act(() => result.current.mutate({ tx, value: ["a"] }));
+    act(() => result.current.mutate({ tx, value: ["a", "b"] }));
+    await waitFor(() => expect(calls).toHaveLength(1));
+    await new Promise((r) => setTimeout(r, 20));
+    expect(calls).toHaveLength(1);
+    open();
+    await waitFor(() =>
+      expect(calls.map((c) => c.update)).toEqual([{ tags: ["a"] }, { tags: ["a", "b"] }]),
+    );
   });
 
   it("rolls back a failed tags save and reloads the month", async () => {

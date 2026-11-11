@@ -77,6 +77,8 @@ export function useTransactionFieldMutation<
   type Context = { previous: Array<TransactionRow> | undefined };
 
   return useMutation<void, Error, Vars, Context>({
+    // Saves of one field go out one after another, so a quick second tag can't land before the first.
+    ...(column === "note" || column === "tags" ? { scope: { id: `transaction-${column}` } } : {}),
     mutationFn: async ({ tx, value }) => {
       const patch =
         column === "category" ? categoryPatch(value as string | null) : { [column]: value };

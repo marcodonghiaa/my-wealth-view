@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { NoteEditor, TagEditor } from "./note-tags-editor";
 
@@ -100,6 +101,20 @@ describe("TagEditor", () => {
     fireEvent.keyDown(input, { key: "," });
     expect(onSave).toHaveBeenCalledTimes(1);
     expect(input).toHaveValue("");
+  });
+
+  // polish-3 #1: fails_when=the field locks while a tag saves (keys typed meanwhile are lost),
+  // or the next tag is built on the list from before the save
+  it("keeps taking tags while one is saving", async () => {
+    const onSave = vi.fn();
+    const tags = ["trip"]; // the same list until the save's update reaches the cache
+    const { rerender } = render(<TagEditor tags={tags} onSave={onSave} saving={false} />);
+    const input = screen.getByLabelText("Add a tag");
+    await userEvent.type(input, "a,");
+    rerender(<TagEditor tags={tags} onSave={onSave} saving={true} />);
+    expect(input).toBeEnabled();
+    await userEvent.type(input, "b,");
+    expect(onSave.mock.calls).toEqual([[["trip", "a"]], [["trip", "a", "b"]]]);
   });
 
   it("removes a tag", () => {
