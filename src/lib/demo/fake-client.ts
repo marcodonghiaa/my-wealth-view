@@ -903,15 +903,24 @@ export const resetDemoClient = () => {
 
 onDemoExit(resetDemoClient);
 
-/** Like the my_transaction_tags function: every tag on live rows, most used first. */
+/**
+ * Like the my_transaction_tags function: every tag on live rows, most used first. Tags that differ
+ * only in case count as one, shown in the spelling used most.
+ */
 export function demoTagCounts(rows: Array<Row>): Array<{ tag: string; uses: number }> {
-  const uses = new Map<string, number>();
+  const groups = new Map<string, Map<string, number>>();
   for (const r of rows) {
     if (r["deleted_at"]) continue;
-    for (const t of (r["tags"] as Array<string> | undefined) ?? [])
-      uses.set(t, (uses.get(t) ?? 0) + 1);
+    for (const t of (r["tags"] as Array<string> | undefined) ?? []) {
+      const spellings = groups.get(t.toLowerCase()) ?? new Map<string, number>();
+      spellings.set(t, (spellings.get(t) ?? 0) + 1);
+      groups.set(t.toLowerCase(), spellings);
+    }
   }
-  return [...uses]
-    .map(([tag, n]) => ({ tag, uses: n }))
+  return [...groups.values()]
+    .map((spellings) => {
+      const [tag] = [...spellings].sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1))[0]!;
+      return { tag, uses: [...spellings.values()].reduce((a, b) => a + b, 0) };
+    })
     .sort((a, b) => b.uses - a.uses || a.tag.localeCompare(b.tag));
 }

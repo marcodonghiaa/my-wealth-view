@@ -792,6 +792,13 @@ describe("demo tag suggestions", () => {
       { tag: "trip", uses: 1 },
     ]);
   });
+
+  // polish-3 #6: fails_when=the demo lists "Trip" and "trip" apart while the database merges them
+  it("counts tags that differ only in case as one, in the spelling used most", () => {
+    expect(demoTagCounts([{ tags: ["Trip"] }, { tags: ["trip"] }, { tags: ["trip"] }])).toEqual([
+      { tag: "trip", uses: 3 },
+    ]);
+  });
 });
 
 // protects=the demo shows notes and tags on some rows; fails_when=no demo row has a tag
