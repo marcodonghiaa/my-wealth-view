@@ -1,6 +1,7 @@
 import "./lib/error-capture";
 
 import { consumeLastCapturedError } from "./lib/error-capture";
+import { contentSecurityPolicy } from "./lib/csp";
 import { renderErrorPage } from "./lib/error-page";
 
 type ServerEntry = {
@@ -48,18 +49,9 @@ function isH3SwallowedErrorBody(body: string): boolean {
 // so these can't be left to an Nginx/Caddy layer that may not exist.
 function withSecurityHeaders(response: Response): Response {
   const headers = new Headers(response.headers);
-  // script-src allows 'unsafe-inline' because TanStack Start SSR injects a
-  // per-request inline hydration script whose content (and therefore hash)
-  // varies every render -- a nonce would need framework-level SSR changes
-  // beyond this pass. Still blocks remote script inclusion, framing, and
-  // MIME-sniffing, which is the bulk of the practical risk here.
   headers.set(
     "Content-Security-Policy",
-    "default-src 'self'; script-src 'self' 'unsafe-inline'; " +
-      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
-      "font-src 'self' https://fonts.gstatic.com; " +
-      "img-src 'self' data: https:; connect-src 'self' https://*.supabase.co; " +
-      "frame-ancestors 'none'; base-uri 'self'; object-src 'none'",
+    contentSecurityPolicy(import.meta.env["VITE_SUPABASE_URL"]),
   );
   headers.set("X-Frame-Options", "DENY");
   headers.set("X-Content-Type-Options", "nosniff");
