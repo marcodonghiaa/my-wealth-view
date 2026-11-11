@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 import type { TransactionRow } from "@/lib/transactions";
 import { CategoryPicker, TypePicker } from "./pickers";
 import { SplitEditor } from "./split-editor";
+import { setLocaleOverride } from "@/lib/locale";
 import { WorthItPrompt, WorthItSpotlight } from "./worth-it";
 
 const render = (ui: React.ReactElement) => rtlRender(ui, { wrapper: queryWrapper() });
@@ -131,6 +132,22 @@ describe("SplitEditor", () => {
     await userEvent.type(share, "6,25");
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
     expect(onSave).toHaveBeenCalledWith(6.25, null);
+  });
+
+  it("polish-4 #2 fills the share box with the chosen decimal mark", async () => {
+    setLocaleOverride("it-IT");
+    try {
+      const onSave = vi.fn();
+      render(<SplitEditor tx={tx({ amount: 23.78 })} onSave={onSave} saving={false} />);
+      await open();
+      expect(await screen.findByLabelText(/Your share/)).toHaveValue("23,78");
+      await userEvent.click(screen.getByRole("button", { name: "Split in 3" }));
+      expect(screen.getByLabelText(/Your share/)).toHaveValue("7,93");
+      await userEvent.click(screen.getByRole("button", { name: "Save" }));
+      expect(onSave).toHaveBeenCalledWith(7.93, null);
+    } finally {
+      setLocaleOverride("");
+    }
   });
 
   // protects=quick ÷2/÷3 splits; fails_when=the preset share is wrong or not saved

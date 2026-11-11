@@ -5,8 +5,13 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { formatAmountPlain, formatMoney, type TransactionRow } from "@/lib/transactions";
 import { evenShare, joinNames, parseNames } from "@/lib/splits";
 import { parseOwed } from "@/lib/account-types";
+import { numberFormat } from "@/lib/locale";
 
 const QUICK_SPLITS = [2, 3, 4];
+
+// The share box speaks the chosen decimal mark, without thousands marks so parseOwed reads it back.
+const shareText = (value: number) =>
+  numberFormat({ maximumFractionDigits: 2, useGrouping: false }).format(value);
 
 const pill = (on: boolean) =>
   `inline-flex min-h-9 items-center rounded-sm border px-3 text-sm transition-colors ${
@@ -33,7 +38,7 @@ export function SplitEditor({
 }) {
   const [open, setOpen] = useState(false);
   const fullAmount = Math.abs(tx.amount ?? 0);
-  const [shareInput, setShareInput] = useState(() => String(tx.personal_amount ?? fullAmount));
+  const [shareInput, setShareInput] = useState(() => shareText(tx.personal_amount ?? fullAmount));
   const [shareError, setShareError] = useState(false);
   const [people, setPeople] = useState(() => parseNames(tx.owed_by));
   const [newName, setNewName] = useState<string | null>(null);
@@ -61,7 +66,7 @@ export function SplitEditor({
       open={open}
       onOpenChange={(next) => {
         if (next) {
-          setShareInput(String(tx.personal_amount ?? fullAmount));
+          setShareInput(shareText(tx.personal_amount ?? fullAmount));
           setPeople(parseNames(tx.owed_by));
           setNewName(null);
         }
@@ -126,7 +131,7 @@ export function SplitEditor({
                 key={n}
                 type="button"
                 aria-label={`Split in ${n}`}
-                onClick={() => setShareInput(String(evenShare(fullAmount, n)))}
+                onClick={() => setShareInput(shareText(evenShare(fullAmount, n)))}
                 className={`${pill(parseOwed(shareInput) === evenShare(fullAmount, n))} flex-1 justify-center`}
               >
                 ÷{n}
