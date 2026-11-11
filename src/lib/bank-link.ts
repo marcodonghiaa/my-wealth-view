@@ -1,7 +1,7 @@
 import { bankOf } from "@/components/bank-badge";
 
 // Countries offered in the Connect a bank form: the EEA and the UK, where Enable Banking
-// connects banks under PSD2. Alphabetical; a country without banks just shows an empty list.
+// connects banks under PSD2. Alphabetical; a country without banks says so in the bank list.
 export const COUNTRIES: Array<{ code: string; name: string }> = [
   { code: "AT", name: "Austria" },
   { code: "BE", name: "Belgium" },

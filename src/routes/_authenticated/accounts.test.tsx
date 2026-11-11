@@ -113,6 +113,21 @@ describe("connect a bank", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Connect a bank" }));
     expect(screen.getByLabelText("Country")).toHaveValue("PL");
   });
+
+  // protects=a country with no supported banks says so; fails_when=the bank list sits empty on
+  // "Select a bank…" with submit disabled and no reason
+  it("says when a country has no banks", async () => {
+    invoke.mockResolvedValue({ data: { banks: [] }, error: null });
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <Page />
+      </QueryClientProvider>,
+    );
+    fireEvent.click(await screen.findByRole("button", { name: "Connect a bank" }));
+    expect(
+      await screen.findByRole("option", { name: "No banks for this country" }),
+    ).toBeInTheDocument();
+  });
 });
 
 describe("bank redirect with a one-time code", () => {

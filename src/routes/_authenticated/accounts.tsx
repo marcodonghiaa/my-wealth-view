@@ -393,7 +393,11 @@ function AccountsPage() {
                     disabled={banksQuery.isPending || banksQuery.isError}
                   >
                     <option value="">
-                      {banksQuery.isPending ? "Loading banks…" : "Select a bank…"}
+                      {banksQuery.isPending
+                        ? "Loading banks…"
+                        : banksQuery.isSuccess && banks.length === 0
+                          ? "No banks for this country"
+                          : "Select a bank…"}
                     </option>
                     {banks.map((b) => (
                       <option key={b.name} value={b.name}>
