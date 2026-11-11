@@ -134,6 +134,40 @@ export function startOfMonth(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth(), 1);
 }
 
+/** Deep-link filters for /transactions, e.g. from a Spending category row. */
+export interface TransactionsSearch {
+  /** A category name, or UNCATEGORIZED for rows without one. */
+  category?: string;
+  /** "YYYY-MM". */
+  month?: string;
+}
+
+const MONTH_PARAM = /^(\d{4})-(0[1-9]|1[0-2])$/;
+
+/** Keeps only well-formed params, so a hand-edited URL never breaks the page. */
+export function parseTransactionsSearch(raw: Record<string, unknown>): TransactionsSearch {
+  const out: TransactionsSearch = {};
+  const category = raw["category"];
+  if (typeof category === "string" && category.trim()) out.category = category.trim();
+  const month = raw["month"];
+  if (typeof month === "string" && MONTH_PARAM.test(month)) out.month = month;
+  return out;
+}
+
+/** The "YYYY-MM" param for a month. */
+export function monthParam(month: Date): string {
+  return `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, "0")}`;
+}
+
+/** The month a "YYYY-MM" param names; the current month when absent or in the future. */
+export function monthFromParam(param: string | undefined, now = new Date()): Date {
+  const current = startOfMonth(now);
+  const match = param ? MONTH_PARAM.exec(param) : null;
+  if (!match) return current;
+  const month = new Date(Number(match[1]), Number(match[2]) - 1, 1);
+  return month > current ? current : month;
+}
+
 export function formatMoney(value: number, currency: string): string {
   try {
     return numberFormat({
@@ -149,6 +183,10 @@ export function formatMoney(value: number, currency: string): string {
 }
 
 export const formatEur = (value: number): string => formatMoney(value, "EUR");
+
+/** A change in euros with its sign spelled out: "+€1.00", "−€1.00" (true minus). */
+export const formatSignedEur = (value: number): string =>
+  `${value >= 0 ? "+" : "−"}${formatEur(Math.abs(value))}`;
 
 export const formatUsd = (value: number): string => formatMoney(value, "USD");
 
@@ -264,3 +302,52 @@ export const ADDED_TRANSACTION_QUERIES = [
   "category-transactions",
   "accounts",
 ] as const;
+/** Rows in their given order, cut into runs that share a booking date (the phone list's day groups). */
+export function groupByDay(
+  rows: Array<TransactionRow>,
+): Array<{ day: string | null; rows: Array<TransactionRow> }> {
+  const groups: Array<{ day: string | null; rows: Array<TransactionRow> }> = [];
+  for (const row of rows) {
+    const last = groups.at(-1);
+    if (last && last.day === row.booking_date) last.rows.push(row);
+    else groups.push({ day: row.booking_date, rows: [row] });
+  }
+  return groups;
+}
+
+/** A day group's heading: "Today", "Yesterday", else "Mon 9 Nov" (with the year when not this one). */
+export function formatDayHeading(bookingDate: string | null, now: Date = new Date()): string {
+  if (!bookingDate) return "No date";
+  const date = new Date(`${bookingDate}T00:00:00`);
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const days = Math.round((today.getTime() - date.getTime()) / 86_400_000);
+  if (days === 0) return "Today";
+  if (days === 1) return "Yesterday";
+  return date
+    .toLocaleDateString(dateLocale(), {
+      weekday: "short",
+      day: "numeric",
+      month: "short",
+      ...(date.getFullYear() === now.getFullYear() ? {} : { year: "numeric" }),
+    })
+    .replace(",", "");
+}
+
+/** How many of the sheet's filters (category, bank, day) narrow the list; search is counted apart. */
+export function activeFilterCount({
+  category,
+  bank,
+  day,
+}: {
+  category: string;
+  bank: string;
+  day: string;
+}): number {
+  return [category !== "all", bank !== "all", day !== ""].filter(Boolean).length;
+}
+
+/** True when an income row's category only repeats its title ("Income · Income"). */
+export const categoryRepeatsTitle = (
+  tx: Pick<TransactionRow, "creditor_name" | "category">,
+): boolean =>
+  !!tx.category?.trim() && incomeTitle(tx).toLowerCase() === tx.category.trim().toLowerCase();

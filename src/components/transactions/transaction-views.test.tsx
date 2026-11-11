@@ -162,3 +162,68 @@ describe("polish-5 #14 long descriptions on desktop", () => {
     expect(cell).toHaveClass("w-full", "max-w-0");
   });
 });
+
+// protects=the table drops the account badge when every row is from one account, and an open
+// "worth it?" is a one-line hint (answered in the sheet), so rows keep one height;
+// fails_when=the badge shows with one account, hides with several, or Yes/No buttons are inline
+describe("Table row noise", () => {
+  const bank = (over: Partial<TransactionViewProps> = {}): TransactionViewProps => {
+    const base = props();
+    return {
+      ...base,
+      tx: {
+        ...base.tx,
+        entry_reference: "bank-2",
+        account_uid: "acc-1",
+        creditor_name: "Zalando",
+        category: "Shopping",
+        amount: 40,
+        signed_amount_eur: -40,
+        credit_debit_indicator: "DBIT",
+        created_at: "2020-01-01T00:00:00Z",
+      },
+      accountLabel: "Revolut EUR",
+      ...over,
+    };
+  };
+  const renderRow = (p: TransactionViewProps) =>
+    render(
+      <table>
+        <tbody>
+          <TransactionRowView {...p} />
+        </tbody>
+      </table>,
+    );
+
+  it("shows the account badge with several accounts", () => {
+    renderRow(bank({ showAccount: true }));
+    expect(screen.getByTitle("Revolut EUR")).toBeInTheDocument();
+  });
+
+  it("hides the account badge with one account", () => {
+    renderRow(bank({ showAccount: false }));
+    expect(screen.queryByTitle("Revolut EUR")).toBeNull();
+  });
+
+  it("puts an open worth-it question on the second line, with no inline buttons", () => {
+    renderRow(bank());
+    expect(screen.getByText("Worth it?")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Yes" })).toBeNull();
+  });
+
+  it("shows a recorded answer in the second line", () => {
+    const p = bank();
+    renderRow({ ...p, tx: { ...p.tx, worth_it: "no" } });
+    expect(screen.getByText(/Not worth it/)).toBeInTheDocument();
+    expect(screen.queryByText("Worth it?")).toBeNull();
+  });
+
+  it("card shows the hint and the recorded answer the same way", () => {
+    const p = bank();
+    const { unmount } = render(<TransactionCardView {...p} />);
+    expect(screen.getByText("Worth it?")).toBeInTheDocument();
+    unmount();
+    render(<TransactionCardView {...p} tx={{ ...p.tx, worth_it: "yes" }} />);
+    expect(screen.getByText("Shopping · Worth it")).toBeInTheDocument();
+  });
+});

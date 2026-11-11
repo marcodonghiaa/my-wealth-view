@@ -231,6 +231,7 @@ export function AccountMenu({ title, accounts }: { title: string; accounts: Arra
 }
 
 // A loan or card the bank doesn't show (or a bank that isn't linked): name and what is owed.
+/** "Add a debt": a quiet last row of an accounts list that opens the dialog. */
 export function AddDebt() {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
@@ -272,7 +273,7 @@ export function AddDebt() {
         if (!next) reset();
       }}
     >
-      <DialogTrigger className="inline-flex min-h-11 items-center gap-1.5 rounded-full px-3 text-sm font-medium text-primary hover:bg-primary/10">
+      <DialogTrigger className="flex min-h-11 w-full items-center gap-2 px-4 py-3 text-left text-sm text-muted-foreground transition-colors hover:bg-accent/40 sm:px-5">
         <Plus className="size-4" />
         Add a debt
       </DialogTrigger>

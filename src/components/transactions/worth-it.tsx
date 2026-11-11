@@ -30,8 +30,8 @@ export function WorthItPrompt({
   }
   if (!isWorthItEligible(tx)) return null;
   return (
+    // Sits in the edit sheet's "Worth it" row, which already asks the question.
     <span className="inline-flex items-center gap-2 text-xs text-muted-foreground">
-      Worth it?
       <button
         type="button"
         onClick={() => onAnswer("yes")}

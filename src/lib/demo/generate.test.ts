@@ -46,12 +46,15 @@ describe("generateDemoData: coverage", () => {
 });
 
 describe("generateDemoData: rolling 90-day window", () => {
-  it("keeps all transactions inside the last 90 days, never in the future", () => {
+  // The window starts on 22 July; bank activity reaches back to the 1st of that month so the
+  // first month is whole (P5 P2-13), and no further.
+  it("keeps all transactions from the 1st of the window's first month, never in the future", () => {
     const { transactions } = generateDemoData(NOON);
     const offsets = transactions.map((t) => dayOffset(t.booking_date!, NOON));
     expect(Math.min(...offsets)).toBeGreaterThanOrEqual(0);
-    expect(Math.max(...offsets)).toBeLessThanOrEqual(89);
     expect(Math.max(...offsets)).toBeGreaterThanOrEqual(80);
+    const earliest = transactions.map((t) => t.booking_date!).sort()[0];
+    expect(earliest! >= "2026-07-01").toBe(true);
   });
 
   it.each([
@@ -127,6 +130,21 @@ describe("generateDemoData: internal consistency", () => {
               .reduce((s, h) => s + h.spend_eur, 0)
           : 0;
       expect(row.spend_eur).toBeCloseTo(bank + shares + history, 1);
+    }
+  });
+
+  // protects=P5 P2-13 the demo's first month is a whole month, so averages built on it (budgets
+  // "Start from my averages") aren't dragged down; fails_when=the 90-day window cuts off the
+  // first month's rent and salary
+  it("every month with bank activity has its rent and its salary", () => {
+    const months = [...new Set(db.transactions.map((t) => t.booking_date!.slice(0, 7)))].sort();
+    expect(months).toEqual(["2026-07", "2026-08", "2026-09", "2026-10"]);
+    for (const m of months) {
+      const refs = db.transactions
+        .filter((t) => t.booking_date!.startsWith(m))
+        .map((t) => t.entry_reference);
+      expect(refs).toContain(`demo-${m}-01-rent`);
+      expect(refs).toContain(`demo-${m}-02-salary`);
     }
   });
 

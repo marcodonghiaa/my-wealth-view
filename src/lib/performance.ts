@@ -1,16 +1,7 @@
 import { formatPercent } from "@/lib/locale";
-import { RANGE_LABEL } from "@/lib/net-worth";
-import type { ChartRange } from "@/lib/net-worth";
 
 // The database picks each holding's prices for a range (holding_performance); lib/trades turns them
 // and your trades into a return.
-
-export type HoldingRange = "1D" | ChartRange;
-export const HOLDING_RANGES: Array<HoldingRange> = ["1D", "1M", "3M", "YTD", "2Y", "ALL"];
-export const HOLDING_RANGE_LABEL: Record<HoldingRange, string> = {
-  "1D": "Past day",
-  ...RANGE_LABEL,
-};
 
 // ok: start price is within a week before the range start. since: first price is after the range
 // start, so measured from start_date. stale: a hole in the prices, no honest number.

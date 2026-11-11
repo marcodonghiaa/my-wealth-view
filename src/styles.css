@@ -114,9 +114,12 @@
   --chart-3: oklch(0.54 0.05 240);
   --chart-4: oklch(0.66 0.05 240);
   --chart-5: oklch(0.78 0.04 240);
-  /* Breakdown donut keeps its own hues (Marco's pick, pre-rebrand) */
+  /* Asset classes: one hue per class on every figure (Net Worth breakdown, Portfolio bar and
+     rows). Stocks, ETFs and funds are blue neighbours, since Net Worth sums them as one row. */
   --alloc-cash: oklch(0.55 0.07 200);
   --alloc-stocks: oklch(0.55 0.15 250);
+  --alloc-etf: oklch(0.68 0.12 228);
+  --alloc-fund: oklch(0.45 0.15 272);
   --alloc-crypto: oklch(0.74 0.14 75);
   --alloc-bonds: oklch(0.55 0.17 310);
   --sidebar: oklch(0.985 0.003 230);
@@ -166,6 +169,8 @@
     --chart-5: oklch(0.44 0.04 240);
     --alloc-cash: oklch(0.75 0.07 200);
     --alloc-stocks: oklch(0.7 0.14 250);
+    --alloc-etf: oklch(0.8 0.1 228);
+    --alloc-fund: oklch(0.62 0.15 272);
     --alloc-crypto: oklch(0.82 0.14 75);
     --alloc-bonds: oklch(0.7 0.16 310);
     --sidebar: oklch(0.15 0.008 240);

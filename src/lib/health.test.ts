@@ -10,6 +10,7 @@ import {
   syncAgeHours,
   syncRows,
   syncState,
+  syncStatus,
   type HealthAccount,
 } from "./health";
 
@@ -171,5 +172,27 @@ describe("aiRow", () => {
     const row = aiRow({ ai: 0, stuck: 1 }, null)!;
     expect(row.detail).toMatch(/^1 transaction still has no category/);
     expect(row.fix).toBeUndefined();
+  });
+});
+
+describe("syncStatus", () => {
+  // protects=the Net Worth freshness line; fails_when=it claims a sync for manual-only data
+  it("is null without a connected bank", () => {
+    expect(syncStatus([acct({ consent_valid_until: null })], NOW)).toBeNull();
+  });
+  it("reads fresh with nothing to fix", () => {
+    expect(syncStatus([acct({})], NOW)).toEqual({ text: "Synced today", attention: 0 });
+  });
+  it("reports the stalest bank and counts the checks that need attention", () => {
+    expect(syncStatus([acct({}), acct({ uid: "u2", snapshot_date: "2026-10-25" })], NOW)).toEqual({
+      text: "Synced 3 days ago",
+      attention: 1,
+    });
+  });
+  it("says when no bank has synced yet", () => {
+    expect(syncStatus([acct({ snapshot_date: null })], NOW)).toEqual({
+      text: "Not synced yet",
+      attention: 1,
+    });
   });
 });

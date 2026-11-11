@@ -1,28 +1,36 @@
 import { dateLocale } from "@/lib/locale";
 import { fetchSplitContacts } from "@/lib/splits";
 import { EmptyState } from "@/components/empty-state";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useSearch } from "@tanstack/react-router";
 import { accountName, bankOf } from "@/components/bank-badge";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Search, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input, Select } from "@/components/ui/field";
+import { SectionTitle } from "@/components/ui/grouped-list";
 import { Alert } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { formatISODate } from "@/lib/date";
 import {
   UNCATEGORIZED,
+  activeFilterCount,
   filterTransactions,
+  formatDayHeading,
+  formatEur,
+  groupByDay,
   selectedOnly,
   isSplitwiseShare,
   shareId,
   listCategories,
   mergeShares,
   nameRefunds,
+  monthFromParam,
+  parseTransactionsSearch,
   startOfMonth,
   type AccountRow,
+  type TransactionsSearch,
   type SplitwiseShare,
   type TransactionRow,
   isSameTx,
@@ -58,6 +66,7 @@ import {
 } from "@/components/transactions/transaction-views";
 import { WorthItSpotlight } from "@/components/transactions/worth-it";
 import { MonthSwitcher } from "@/components/month-switcher";
+import { FilterSheet } from "@/components/transactions/filter-sheet";
 
 export const Route = createFileRoute("/_authenticated/transactions")({
   head: () => ({
@@ -76,8 +85,16 @@ export const Route = createFileRoute("/_authenticated/transactions")({
       { name: "twitter:card", content: "summary" },
     ],
   }),
-  component: TransactionsPage,
+  validateSearch: parseTransactionsSearch,
+  component: TransactionsRoute,
 });
+
+// A new deep link (another category or month) starts the page fresh; the Activity tab, with no
+// params, does too.
+function TransactionsRoute() {
+  const search = useSearch({ from: "/_authenticated/transactions" });
+  return <TransactionsPage key={`${search.category ?? ""}|${search.month ?? ""}`} {...search} />;
+}
 
 async function fetchTransactionsForMonth(month: Date): Promise<Array<TransactionRow>> {
   const start = formatISODate(startOfMonth(month));
@@ -139,6 +156,19 @@ async function fetchSharesForMonth(month: Date): Promise<Array<SplitwiseShare>> 
   return (data ?? []) as Array<SplitwiseShare>;
 }
 
+// The month's money in and out, from the same view as Reports so the figures agree.
+async function fetchInOut(
+  monthKey: string,
+): Promise<{ income_eur: number | null; expenses_eur: number | null } | null> {
+  const { data, error } = await supabase
+    .from("v_income_vs_expenses_monthly")
+    .select("income_eur,expenses_eur")
+    .eq("month", monthKey)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
 async function fetchAccounts(): Promise<Record<string, AccountRow>> {
   const { data, error } = await supabase.from("accounts").select("*");
   if (error) throw error;
@@ -147,12 +177,12 @@ async function fetchAccounts(): Promise<Record<string, AccountRow>> {
   return map;
 }
 
-function TransactionsPage() {
+function TransactionsPage({ category: initialCategory, month: initialMonth }: TransactionsSearch) {
   const [search, setSearch] = useState("");
-  const [category, setCategory] = useState<string>("all");
+  const [category, setCategory] = useState<string>(initialCategory ?? "all");
   const [bank, setBank] = useState<string>("all");
   const [day, setDay] = useState("");
-  const [month, setMonth] = useState(() => startOfMonth(new Date()));
+  const [month, setMonth] = useState(() => monthFromParam(initialMonth));
   const monthKey = useMemo(() => formatISODate(month), [month]);
   const queryClient = useQueryClient();
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -231,6 +261,12 @@ function TransactionsPage() {
   const sharesQuery = useQuery({
     queryKey: ["splitwise-shares", monthKey],
     queryFn: () => fetchSharesForMonth(month),
+    staleTime: 60_000,
+  });
+
+  const inOutQuery = useQuery({
+    queryKey: ["income-vs-expenses", monthKey],
+    queryFn: () => fetchInOut(monthKey),
     staleTime: 60_000,
   });
 
@@ -318,11 +354,33 @@ function TransactionsPage() {
     });
   }
 
+  const filterCount = activeFilterCount({ category, bank, day });
+  const filtersOn = filterCount > 0 || search.trim() !== "";
+  function clearFilters() {
+    setSearch("");
+    setCategory("all");
+    setBank("all");
+    setDay("");
+  }
+  const filterSummary = [
+    category === "all" ? null : category === UNCATEGORIZED ? "Uncategorized" : category,
+    day ? formatDayHeading(day) : null,
+    bank === "all" ? null : bank,
+  ].filter(Boolean);
+
   function goToMonth(next: Date) {
     setSelected(new Set());
     setDay(""); // a day belongs to one month
     setMonth(next);
   }
+
+  // With one account the badge says the same thing on every row.
+  const multiAccount = useMemo(
+    () =>
+      new Set(transactions.filter((tx) => !isSplitwiseShare(tx)).map((tx) => tx.account_uid)).size >
+      1,
+    [transactions],
+  );
 
   const savingShare = (tx: TransactionRow) =>
     updateShare.isPending && updateShare.variables?.id === shareId(tx);
@@ -358,6 +416,7 @@ function TransactionsPage() {
         ? name && updateShare.mutate({ id: shareId(tx), patch: { description: name } })
         : renameTx.mutate({ tx, name }),
     highlighted: tx.entry_reference === highlightRef,
+    showAccount: multiAccount,
     ...(tx.account_uid && accounts[tx.account_uid]?.manual
       ? {
           onSaveAmount: (amount: number) => changeAmount.mutate({ tx, amount }),
@@ -383,6 +442,33 @@ function TransactionsPage() {
     goToMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1));
   }
 
+  const emptyList =
+    transactions.length === 0 ? (
+      <EmptyState
+        title={`No transactions for ${monthLabel}.`}
+        action={
+          <Button variant="quiet" onClick={goToPrevMonth} className="bg-muted">
+            Previous month
+          </Button>
+        }
+      />
+    ) : (
+      <EmptyState
+        title={
+          search.trim() && filterCount === 0
+            ? `Nothing matches “${search.trim()}”.`
+            : "No transactions match your filters."
+        }
+        action={
+          filtersOn && (
+            <Button variant="quiet" onClick={clearFilters} className="bg-muted">
+              Clear {filterCount ? "filters" : "search"}
+            </Button>
+          )
+        }
+      />
+    );
+
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-8 md:py-12">
       <WorthItSpotlight
@@ -393,10 +479,17 @@ function TransactionsPage() {
 
       <header className="mb-8 flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="ios-large-title">Transactions</h1>
+          {/* The phone tab says Activity, so its large title does too; the desktop nav says Transactions. */}
+          <h1 className="ios-large-title">
+            <span className="md:hidden">Activity</span>
+            <span className="hidden md:inline">Transactions</span>
+          </h1>
         </div>
         <div className="flex shrink-0 gap-2">
-          <ImportStatement />
+          {/* A rare setup task: on a phone it lives under More › Import. */}
+          <div className="hidden md:block">
+            <ImportStatement />
+          </div>
           <AddTransaction today={formatISODate(new Date())} />
         </div>
       </header>
@@ -414,16 +507,30 @@ function TransactionsPage() {
       />
 
       <MonthSwitcher
-        className="mb-4"
         label={monthLabel}
         onPrev={goToPrevMonth}
         onNext={goToNextMonth}
         canGoNext={canGoNext}
       />
+      <p className="mt-0.5 mb-4 min-h-5 text-sm text-muted-foreground">
+        {inOutQuery.data && (
+          <>
+            In{" "}
+            <span className="font-figure text-foreground">
+              {formatEur(inOutQuery.data.income_eur ?? 0)}
+            </span>
+            {" · "}
+            Out{" "}
+            <span className="font-figure text-foreground">
+              {formatEur(inOutQuery.data.expenses_eur ?? 0)}
+            </span>
+          </>
+        )}
+      </p>
 
-      {/* Filters */}
-      <div className="mb-4 flex flex-col gap-3 sm:flex-row">
-        <div className="relative flex-1">
+      {/* Filters: search + Filter sheet on a phone, every field inline from md up */}
+      <div className="mb-4 flex gap-3">
+        <div className="relative min-w-0 flex-1">
           <Search className="pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             onGround
@@ -435,48 +542,79 @@ function TransactionsPage() {
             className="pr-4 pl-10"
           />
         </div>
-        <Select
-          onGround
-          value={category}
-          onChange={(e) => setCategory(e.target.value)}
-          aria-label="Filter by category"
-          className="w-auto px-4"
-        >
-          <option value="all">All categories</option>
-          {categories.hasUncategorized && <option value={UNCATEGORIZED}>Uncategorized</option>}
-          {categories.list.map((c) => (
-            <option key={c} value={c}>
-              {c}
-            </option>
-          ))}
-        </Select>
-        {banks.length > 1 && (
+        <div className="md:hidden">
+          <FilterSheet
+            category={category}
+            onCategory={setCategory}
+            categories={categories}
+            bank={bank}
+            onBank={setBank}
+            banks={banks}
+            day={day}
+            onDay={setDay}
+            minDay={formatISODate(month)}
+            maxDay={formatISODate(new Date(month.getFullYear(), month.getMonth() + 1, 0))}
+            count={filterCount}
+            resultCount={filtered.length}
+            onClear={() => {
+              setCategory("all");
+              setBank("all");
+              setDay("");
+            }}
+          />
+        </div>
+        <div className="hidden gap-3 md:flex">
           <Select
             onGround
-            value={bank}
-            onChange={(e) => setBank(e.target.value)}
-            aria-label="Filter by bank"
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            aria-label="Filter by category"
             className="w-auto px-4"
           >
-            <option value="all">All banks</option>
-            {banks.map((b) => (
-              <option key={b} value={b}>
-                {b}
+            <option value="all">All categories</option>
+            {categories.hasUncategorized && <option value={UNCATEGORIZED}>Uncategorized</option>}
+            {categories.list.map((c) => (
+              <option key={c} value={c}>
+                {c}
               </option>
             ))}
           </Select>
-        )}
-        <Input
-          onGround
-          type="date"
-          value={day}
-          min={formatISODate(month)}
-          max={formatISODate(new Date(month.getFullYear(), month.getMonth() + 1, 0))}
-          onChange={(e) => setDay(e.target.value)}
-          aria-label="Filter by day"
-          className="w-auto px-4"
-        />
+          {banks.length > 1 && (
+            <Select
+              onGround
+              value={bank}
+              onChange={(e) => setBank(e.target.value)}
+              aria-label="Filter by bank"
+              className="w-auto px-4"
+            >
+              <option value="all">All banks</option>
+              {banks.map((b) => (
+                <option key={b} value={b}>
+                  {b}
+                </option>
+              ))}
+            </Select>
+          )}
+          <Input
+            onGround
+            type="date"
+            value={day}
+            min={formatISODate(month)}
+            max={formatISODate(new Date(month.getFullYear(), month.getMonth() + 1, 0))}
+            onChange={(e) => setDay(e.target.value)}
+            aria-label="Filter by day"
+            className="w-auto px-4"
+          />
+        </div>
       </div>
+      {filterSummary.length > 0 && (
+        <div className="-mt-2 mb-2 flex items-center justify-between gap-3 text-sm text-muted-foreground md:hidden">
+          <span className="truncate">{filterSummary.join(" · ")}</span>
+          <Button variant="ghost" onClick={clearFilters} className="-mr-3 px-3">
+            Clear
+          </Button>
+        </div>
+      )}
 
       {/* Bulk action bar */}
       {selectedVisible.length > 0 && (
@@ -514,32 +652,34 @@ function TransactionsPage() {
         </div>
       )}
 
-      {/* Register — cards on mobile, table from md up */}
-      <section className="overflow-hidden rounded-lg bg-card">
+      {/* Register: day groups on a phone, one table from md up */}
+      <div className="md:hidden">
         {txQuery.isPending ? (
-          <div className="space-y-3 p-4 md:hidden">
+          <div className="space-y-3 rounded-lg bg-card p-4">
             {Array.from({ length: 6 }).map((_, i) => (
               <Skeleton key={i} className="h-14" />
             ))}
           </div>
         ) : txQuery.isError ? null : filtered.length === 0 ? (
-          <EmptyState
-            className="md:hidden"
-            title={
-              transactions.length === 0
-                ? `No transactions for ${monthLabel}.`
-                : "No transactions match your filters."
-            }
-          />
+          <div className="rounded-lg bg-card">{emptyList}</div>
         ) : (
-          <ul className="divide-y md:hidden">
-            {filtered.map((tx) => (
-              <TransactionCardView key={txId(tx)} {...viewProps(tx)} />
+          <div className="space-y-5">
+            {groupByDay(filtered).map((group) => (
+              <section key={group.day ?? "none"}>
+                <SectionTitle>{formatDayHeading(group.day)}</SectionTitle>
+                <ul className="divide-y divide-hairline overflow-hidden rounded-lg bg-card">
+                  {group.rows.map((tx) => (
+                    <TransactionCardView key={txId(tx)} {...viewProps(tx)} />
+                  ))}
+                </ul>
+              </section>
             ))}
-          </ul>
+          </div>
         )}
+      </div>
 
-        <div className="hidden overflow-x-auto md:block">
+      <section className="hidden overflow-hidden rounded-lg bg-card md:block">
+        <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b text-left text-xs text-muted-foreground">
@@ -573,15 +713,7 @@ function TransactionsPage() {
                 ))
               ) : txQuery.isError ? null : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={5}>
-                    <EmptyState
-                      title={
-                        transactions.length === 0
-                          ? `No transactions for ${monthLabel}.`
-                          : "No transactions match your filters."
-                      }
-                    />
-                  </td>
+                  <td colSpan={5}>{emptyList}</td>
                 </tr>
               ) : (
                 filtered.map((tx) => <TransactionRowView key={txId(tx)} {...viewProps(tx)} />)

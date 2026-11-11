@@ -5,6 +5,8 @@ interface MonthSwitcherProps {
   onPrev: () => void;
   onNext: () => void;
   canGoNext: boolean;
+  /** False at the earliest month the screen offers. Left out: no limit. */
+  canGoPrev?: boolean;
   className?: string;
 }
 
@@ -14,6 +16,7 @@ export function MonthSwitcher({
   onPrev,
   onNext,
   canGoNext,
+  canGoPrev = true,
   className = "",
 }: MonthSwitcherProps) {
   const step =
@@ -26,7 +29,13 @@ export function MonthSwitcher({
       >
         {label}
       </span>
-      <button type="button" onClick={onPrev} aria-label="Previous month" className={step}>
+      <button
+        type="button"
+        onClick={onPrev}
+        disabled={!canGoPrev}
+        aria-label="Previous month"
+        className={step}
+      >
         <ChevronLeft className="size-4" />
       </button>
       <button

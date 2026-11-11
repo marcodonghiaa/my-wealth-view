@@ -116,3 +116,15 @@ export function peopleFrom(rows: Array<SplitRow>): Array<SplitPerson> {
   for (const p of people.values()) if (Math.abs(p.open) < 0.005) p.open = 0;
   return [...people.values()].sort((a, b) => b.open - a.open);
 }
+
+/** The page's one answer: what is owed to you minus what you owe, named by its direction. */
+export function netOwed(
+  owedToYou: number,
+  youOwe: number,
+): { label: "Net owed to you" | "Net you owe"; amount: number } {
+  const net = owedToYou - youOwe;
+  // Under a cent either way is settled, not a debt.
+  return net <= -0.005
+    ? { label: "Net you owe", amount: -net }
+    : { label: "Net owed to you", amount: Math.max(net, 0) };
+}

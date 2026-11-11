@@ -15,6 +15,13 @@ describe("guessColumns", () => {
     });
   });
 
+  // protects=a column named like the app's "Stocks & ETFs" lands there; fails_when=a plain "ETFs"
+  // header maps to nothing and its values end up in Other (polish 5, item 10)
+  it("maps an ETFs column to Stocks & ETFs", () => {
+    expect(guessColumns(["Month", "ETFs"]).stocks).toBe(1);
+    expect(guessColumns(["Month", "Stocks & ETFs"]).stocks).toBe(1);
+  });
+
   it("finds spend columns from Italian headers", () => {
     expect(guessColumns(["Mese", "Categoria", "Importo", "Valuta"])).toMatchObject({
       month: 0,

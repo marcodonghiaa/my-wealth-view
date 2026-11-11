@@ -25,7 +25,7 @@ const SYNONYMS: Record<Role, Array<string>> = {
     "balance",
     "saldo",
   ],
-  stocks: ["stocks", "stock", "azioni", "etf", "equity", "equities"],
+  stocks: ["stocks", "stock", "azioni", "etf", "etfs", "equity", "equities"],
   bonds: ["bonds", "bond", "obbligazioni"],
   crypto: ["crypto", "cripto", "criptovalute"],
   cash: ["cash", "liquidita", "liquidity", "contanti"],

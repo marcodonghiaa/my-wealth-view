@@ -52,6 +52,24 @@ vi.mock("@/integrations/supabase/client", () => ({
     },
   },
 }));
+vi.mock("@tanstack/react-router", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@tanstack/react-router")>()),
+  Link: ({
+    children,
+    to,
+    search,
+    className,
+  }: {
+    children: React.ReactNode;
+    to: string;
+    search?: Record<string, string>;
+    className?: string;
+  }) => (
+    <a href={search ? `${to}?${new URLSearchParams(search)}` : to} className={className}>
+      {children}
+    </a>
+  ),
+}));
 vi.mock("recharts", async (importOriginal) => ({
   ...(await importOriginal<typeof import("recharts")>()),
   ResponsiveContainer: () => null,
@@ -111,8 +129,38 @@ describe("Reports when a figure fails to load", () => {
         <Page />
       </QueryClientProvider>,
     );
-    const card = (await screen.findByText("Income vs expenses")).closest("li")!;
+    const card = (await screen.findByText("Income minus spending")).closest("li")!;
     await waitFor(() => expect(card).toHaveTextContent("—"));
     expect(card).not.toHaveTextContent("€0.00");
+  });
+});
+
+// protects=every Reports row opens the page behind its figure (#7);
+// fails_when=a headline or the Subscriptions row stops being a link
+describe("Reports rows lead to their pages", () => {
+  it("links the headlines and Subscriptions, with plain sublabels", async () => {
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <Page />
+      </QueryClientProvider>,
+    );
+    const href = (text: string) =>
+      screen.getByText(text).closest("a")?.getAttribute("href") ?? null;
+    await screen.findByText("Income minus spending");
+    expect(href("Net worth")).toBe("/");
+    expect(href("Income minus spending")).toBe("/income");
+    expect(href("Not worth it")).toBe("/spending");
+    expect(href("Subscriptions")).toBe("/subscriptions");
+    expect(screen.queryByText("Income vs expenses")).toBeNull();
+    expect(await screen.findByText("0 of 0 rated purchases")).toBeTruthy();
+  });
+
+  it("names the month as the page heading", () => {
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <Page />
+      </QueryClientProvider>,
+    );
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toMatch(/^Report for \w+ \d{4}$/);
   });
 });

@@ -2,8 +2,9 @@ import { formatMoney } from "@/lib/transactions";
 import type { ReviewGroup } from "@/lib/transfer-review";
 import type { ReviewChoice } from "./mutations";
 
+// 44px, 4px corners (no pills); on a phone the two answers share the row under the name.
 const BUTTON =
-  "h-9 shrink-0 rounded-full bg-muted px-3 text-xs font-medium text-foreground transition-colors hover:bg-accent disabled:opacity-50";
+  "min-h-11 flex-1 shrink-0 rounded-sm bg-muted px-3 text-xs font-medium text-foreground transition-colors hover:bg-accent disabled:opacity-50 sm:flex-none";
 
 const countLabel = (direction: ReviewGroup["direction"]) =>
   direction === "mixed" ? "Not a transfer" : `Count as ${direction}`;
@@ -21,7 +22,7 @@ export function ReviewSection({
 }) {
   if (groups.length === 0) return null;
   return (
-    <section className="mb-6 overflow-hidden rounded-2xl bg-card">
+    <section className="mb-6 overflow-hidden rounded-lg bg-card">
       <div className="px-4 py-3 sm:px-5">
         <h2 className="text-sm font-semibold text-foreground">To review</h2>
         <p className="mt-0.5 text-xs text-muted-foreground">
@@ -31,7 +32,7 @@ export function ReviewSection({
       <ul className="divide-y border-t">
         {groups.map((g) => (
           <li key={g.key} className="flex flex-wrap items-center gap-3 px-4 py-3 sm:px-5">
-            <div className="min-w-0 flex-1">
+            <div className="min-w-0 basis-full sm:basis-auto sm:flex-1">
               <div className="truncate text-sm font-medium text-foreground">
                 {g.name?.trim() || "No name"}
               </div>

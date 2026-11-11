@@ -1,12 +1,21 @@
 import { dateLocale } from "@/lib/locale";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState, type ReactNode } from "react";
-import { TrendingUp, TrendingDown, ArrowLeftRight, ThumbsDown } from "lucide-react";
+import { TrendingUp, TrendingDown, ArrowLeftRight, ThumbsDown, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatISODate } from "@/lib/date";
 import { estimatedMonthlyEur, splitSubscriptions } from "@/lib/subscriptions";
-import { formatEur, personalAmountEur, startOfMonth } from "@/lib/transactions";
+import { formatEur, formatSignedEur, personalAmountEur, startOfMonth } from "@/lib/transactions";
+import { fetchIncomeExpenses, incomeExpensesKey, netAfterSpending } from "@/lib/income-expenses";
+import { CategoryRow } from "@/components/spending/category-row";
+import {
+  biggestMover,
+  categorySpend,
+  ratedLabel,
+  sharePercent,
+  type MonthlySpendRow,
+} from "@/lib/spending";
 import { monthNetWorth, withHistory } from "@/lib/net-worth";
 import { fetchHistory, fetchNetWorth, fetchReconstructed } from "@/lib/net-worth-queries";
 import { TONE_TEXT, toneOf, type Tone } from "@/lib/tone";
@@ -18,12 +27,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 export const Route = createFileRoute("/_authenticated/reports")({
   head: () => ({
     meta: [
-      { title: "Monthly Report — Alopex" },
+      { title: "Reports — Alopex" },
       {
         name: "description",
         content: "Net worth change, income vs expenses, and spending for the month.",
       },
-      { property: "og:title", content: "Monthly Report — Alopex" },
+      { property: "og:title", content: "Reports — Alopex" },
       {
         property: "og:description",
         content: "Net worth change, income vs expenses, and spending for the month.",
@@ -39,37 +48,13 @@ function endOfMonth(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth() + 1, 0);
 }
 
-function formatSigned(value: number): string {
-  return `${value >= 0 ? "+" : "−"}${formatEur(Math.abs(value))}`;
-}
-
-interface IncomeExpenseRow {
-  income_eur: number | null;
-  expenses_eur: number | null;
-}
-
-async function fetchIncomeExpenses(monthISO: string): Promise<IncomeExpenseRow | null> {
-  const { data, error } = await supabase
-    .from("v_income_vs_expenses_monthly")
-    .select("income_eur,expenses_eur")
-    .eq("month", monthISO)
-    .maybeSingle();
-  if (error) throw error;
-  return data as IncomeExpenseRow | null;
-}
-
-interface SpendRow {
-  category: string | null;
-  spend_eur: number | null;
-}
-
-async function fetchSpendByCategory(monthISO: string): Promise<Array<SpendRow>> {
+async function fetchSpendByCategory(monthISO: string): Promise<Array<MonthlySpendRow>> {
   const { data, error } = await supabase
     .from("v_spend_by_category_monthly")
     .select("category,spend_eur")
     .eq("month", monthISO);
   if (error) throw error;
-  return (data ?? []) as Array<SpendRow>;
+  return (data ?? []) as Array<MonthlySpendRow>;
 }
 
 interface SubscriptionTotalRow {
@@ -154,7 +139,7 @@ function ReportsPage() {
     [historyQuery.data, liveQuery.data, rebuiltQuery.data],
   );
   const incomeExpensesQuery = useQuery({
-    queryKey: ["reports-income-expenses", monthISO],
+    queryKey: incomeExpensesKey(monthISO),
     queryFn: () => fetchIncomeExpenses(monthISO),
   });
   const spendQuery = useQuery({
@@ -192,46 +177,27 @@ function ReportsPage() {
   );
 
   const topCategories = useMemo(
-    () =>
-      (spendQuery.data ?? [])
-        .filter((r) => r.spend_eur != null && r.spend_eur > 0)
-        .map((r) => ({ category: r.category ?? "Uncategorized", spend_eur: r.spend_eur as number }))
-        .sort((a, b) => b.spend_eur - a.spend_eur)
-        .slice(0, 5),
+    () => categorySpend(spendQuery.data ?? []).slice(0, 5),
     [spendQuery.data],
   );
 
-  const biggestMover = useMemo(() => {
-    if (!prevSpendQuery.data) return null;
-    const prevByCategory = new Map<string, number>();
-    for (const r of prevSpendQuery.data) {
-      prevByCategory.set(r.category ?? "Uncategorized", r.spend_eur ?? 0);
-    }
-    let mover: { category: string; delta: number } | null = null;
-    for (const r of spendQuery.data ?? []) {
-      const category = r.category ?? "Uncategorized";
-      const delta = (r.spend_eur ?? 0) - (prevByCategory.get(category) ?? 0);
-      if (delta > 0 && (!mover || delta > mover.delta)) {
-        mover = { category, delta };
-      }
-    }
-    return mover;
-  }, [spendQuery.data, prevSpendQuery.data]);
+  const biggestMoverRow = useMemo(
+    () => (prevSpendQuery.data ? biggestMover(spendQuery.data ?? [], prevSpendQuery.data) : null),
+    [spendQuery.data, prevSpendQuery.data],
+  );
 
   const monthLabel = month.toLocaleDateString(dateLocale(), { month: "long", year: "numeric" });
   const canGoNext =
     startOfMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1)) <=
     startOfMonth(new Date());
 
-  const income = incomeExpensesQuery.data?.income_eur ?? 0;
-  const expenses = incomeExpensesQuery.data?.expenses_eur ?? 0;
-  const net = income - expenses;
+  const net = netAfterSpending(incomeExpensesQuery.data);
+  const spendTotal = categorySpend(spendQuery.data ?? []).reduce((s, r) => s + r.spend_eur, 0);
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-8 md:py-12">
-      <header className="mb-8">
-        <h1 className="ios-large-title">Monthly Report</h1>
-      </header>
+      {/* One header, as on Spending: the month and its arrows name the page */}
+      <h1 className="sr-only">Report for {monthLabel}</h1>
 
       {loadError && <Alert className="mb-6">Some figures didn't load: {loadError.message}</Alert>}
 
@@ -254,11 +220,12 @@ function ReportsPage() {
               )
             }
             label="Net worth"
+            to="/"
             sublabel={netWorthDelta?.delta ? "change this month" : undefined}
             pending={liveQuery.isPending || historyQuery.isPending || rebuiltQuery.isPending}
             value={
               netWorthDelta?.delta
-                ? formatSigned(netWorthDelta.delta.total)
+                ? formatSignedEur(netWorthDelta.delta.total)
                 : netWorthDelta?.end
                   ? formatEur(netWorthDelta.end.total_eur ?? 0)
                   : "—"
@@ -267,21 +234,19 @@ function ReportsPage() {
           />
           <HeadlineCard
             icon={<ArrowLeftRight className="size-4" />}
-            label="Income vs expenses"
-            sublabel="net"
+            label="Income minus spending"
+            sublabel={undefined}
+            to="/income"
             pending={incomeExpensesQuery.isPending}
             // No row: nothing was recorded that month (or only imported totals), not a net of zero.
-            value={incomeExpensesQuery.data ? formatSigned(net) : "—"}
-            tone={incomeExpensesQuery.data ? toneOf(net) : "neutral"}
+            value={net == null ? "—" : formatSignedEur(net)}
+            tone={net == null ? "neutral" : toneOf(net)}
           />
           <HeadlineCard
             icon={<ThumbsDown className="size-4" />}
             label="Not worth it"
-            sublabel={
-              worthItQuery.data
-                ? `${worthItQuery.data.no} of ${worthItQuery.data.yes + worthItQuery.data.no}`
-                : undefined
-            }
+            sublabel={worthItQuery.data ? ratedLabel(worthItQuery.data) : undefined}
+            to="/spending"
             pending={worthItQuery.isPending}
             value={formatEur(worthItQuery.data?.notWorthItTotal ?? 0)}
             tone="neutral"
@@ -294,31 +259,11 @@ function ReportsPage() {
           <SectionTitle>Net worth by source</SectionTitle>
           <GroupedList>
             <ul className="divide-y divide-hairline">
-              <li className="flex items-center justify-between px-4 py-3 text-sm sm:px-5">
-                <span className="text-foreground">Bank accounts</span>
-                <span className="font-figure text-foreground">
-                  {formatSigned(netWorthDelta.delta.bank)}
-                </span>
-              </li>
-              <li className="flex items-center justify-between px-4 py-3 text-sm sm:px-5">
-                <span className="text-foreground">Portfolio</span>
-                <span className="font-figure text-foreground">
-                  {formatSigned(netWorthDelta.delta.portfolio)}
-                </span>
-              </li>
-              <li className="flex items-center justify-between px-4 py-3 text-sm sm:px-5">
-                <span className="text-foreground">Crypto</span>
-                <span className="font-figure text-foreground">
-                  {formatSigned(netWorthDelta.delta.crypto)}
-                </span>
-              </li>
+              <SourceRow label="Bank accounts" to="/accounts" value={netWorthDelta.delta.bank} />
+              <SourceRow label="Portfolio" to="/portfolio" value={netWorthDelta.delta.portfolio} />
+              <SourceRow label="Crypto" to="/crypto" value={netWorthDelta.delta.crypto} />
               {netWorthDelta.delta.debts !== 0 && (
-                <li className="flex items-center justify-between px-4 py-3 text-sm sm:px-5">
-                  <span className="text-foreground">Debts</span>
-                  <span className="font-figure text-foreground">
-                    {formatSigned(netWorthDelta.delta.debts)}
-                  </span>
-                </li>
+                <SourceRow label="Debts" to="/accounts" value={netWorthDelta.delta.debts} />
               )}
             </ul>
           </GroupedList>
@@ -327,9 +272,10 @@ function ReportsPage() {
 
       <section className="mt-6">
         <SectionTitle>Top spending categories</SectionTitle>
-        {biggestMover && (
+        {biggestMoverRow && (
           <p className="px-4 pb-1.5 text-xs text-muted-foreground">
-            Biggest jump: {biggestMover.category} (+{formatEur(biggestMover.delta)} vs last month)
+            Biggest jump: {biggestMoverRow.category} (+{formatEur(biggestMoverRow.delta)} vs last
+            month)
           </p>
         )}
         <GroupedList>
@@ -340,13 +286,13 @@ function ReportsPage() {
           ) : (
             <ul className="divide-y divide-hairline">
               {topCategories.map((row) => (
-                <li
+                <CategoryRow
                   key={row.category}
-                  className="flex items-center justify-between px-4 py-3 text-sm sm:px-5"
-                >
-                  <span className="font-medium text-foreground">{row.category}</span>
-                  <span className="font-figure text-foreground">{formatEur(row.spend_eur)}</span>
-                </li>
+                  category={row.category}
+                  total={row.spend_eur}
+                  share={sharePercent(row.spend_eur, spendTotal)}
+                  month={month}
+                />
               ))}
             </ul>
           )}
@@ -354,17 +300,36 @@ function ReportsPage() {
       </section>
 
       <section className="mt-6">
-        <GroupedList className="flex items-center justify-between px-4 py-3 sm:px-5">
-          <div>
-            <h2 className="text-[0.9375rem] font-medium text-foreground">Subscriptions</h2>
-            <p className="mt-0.5 text-xs text-muted-foreground">Current, per month</p>
-          </div>
-          <span className="font-figure text-sm text-foreground">
-            {subscriptionsQuery.isPending ? "…" : formatEur(subscriptionsQuery.data ?? 0)}
-          </span>
+        <GroupedList>
+          <Link to="/subscriptions" className={ROW_LINK}>
+            <div className="min-w-0 flex-1">
+              <h2 className="text-[0.9375rem] font-medium text-foreground">Subscriptions</h2>
+              <p className="mt-0.5 text-xs text-muted-foreground">Current, per month</p>
+            </div>
+            <span className="font-figure text-sm text-foreground">
+              {subscriptionsQuery.isPending ? "…" : formatEur(subscriptionsQuery.data ?? 0)}
+            </span>
+            <ChevronRight aria-hidden className="size-4 shrink-0 text-muted-foreground" />
+          </Link>
         </GroupedList>
       </section>
     </div>
+  );
+}
+
+// A row that opens the page behind its figure (Spending's CategoryRow look).
+const ROW_LINK =
+  "flex min-h-11 items-center gap-3 px-4 py-3 text-sm transition-colors hover:bg-accent/40 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring sm:px-5";
+
+function SourceRow({ label, to, value }: { label: string; to: string; value: number }) {
+  return (
+    <li>
+      <Link to={to} className={ROW_LINK}>
+        <span className="flex-1 text-foreground">{label}</span>
+        <span className="font-figure text-foreground">{formatSignedEur(value)}</span>
+        <ChevronRight aria-hidden className="size-4 shrink-0 text-muted-foreground" />
+      </Link>
+    </li>
   );
 }
 
@@ -375,6 +340,7 @@ function HeadlineCard({
   value,
   pending,
   tone,
+  to,
 }: {
   icon: ReactNode;
   label: string;
@@ -382,30 +348,34 @@ function HeadlineCard({
   value: string;
   pending: boolean;
   tone: Tone;
+  to: string;
 }) {
   return (
-    <li className="flex min-h-16 items-center gap-3 px-4 py-3 sm:px-5">
-      <span
-        aria-hidden
-        className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted text-foreground"
-      >
-        {icon}
-      </span>
-      <div className="min-w-0 flex-1">
-        <p className="text-[0.9375rem] font-medium text-foreground">{label}</p>
-        {sublabel && <p className="text-xs text-muted-foreground">{sublabel}</p>}
-      </div>
-      {pending ? (
-        <Skeleton className="h-6 w-24" />
-      ) : (
-        <p
-          className={`font-figure text-lg tracking-[-0.02em] ${
-            tone === "neutral" ? "text-foreground" : TONE_TEXT[tone]
-          }`}
+    <li>
+      <Link to={to} className={`${ROW_LINK} min-h-16`}>
+        <span
+          aria-hidden
+          className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted text-foreground"
         >
-          {value}
-        </p>
-      )}
+          {icon}
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-[0.9375rem] font-medium text-foreground">{label}</p>
+          {sublabel && <p className="text-xs text-muted-foreground">{sublabel}</p>}
+        </div>
+        {pending ? (
+          <Skeleton className="h-6 w-24" />
+        ) : (
+          <p
+            className={`font-figure text-lg tracking-[-0.02em] ${
+              tone === "neutral" ? "text-foreground" : TONE_TEXT[tone]
+            }`}
+          >
+            {value}
+          </p>
+        )}
+        <ChevronRight aria-hidden className="size-4 shrink-0 text-muted-foreground" />
+      </Link>
     </li>
   );
 }
