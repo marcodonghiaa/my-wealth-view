@@ -158,18 +158,27 @@ export function incomeBySource(rows: Array<IncomeTxRow>): Array<Part> {
   return [...by].map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
 }
 
+/** Below a cent the sides are equal; anything left is rounding, not a flow to draw. */
+const CENT = 0.005;
+
 /**
- * Spend per category over the range, largest first. Months whose total has no live spending
- * are left out: there the category view falls back to imported history, which the totals
- * don't count, and the two sides of the diagram would no longer add up.
+ * Spend per category over the range, largest first. A month counts only when its category rows
+ * add up to its total from v_income_vs_expenses_monthly: where the category view falls back to
+ * imported history (a month with no bank spend), the totals don't count it, and the two sides
+ * of the diagram would no longer match. Such a month's spending shows as "Other spending".
  */
 export function spendByCategory(
   rows: Array<MonthlySpendRow & { month: string | null }>,
-  monthsWithSpend: Set<string>,
+  monthTotals: Map<string, number>,
 ): Array<Part> {
+  const monthSum = new Map<string, number>();
+  for (const r of rows)
+    if (r.month) monthSum.set(r.month, (monthSum.get(r.month) ?? 0) + (r.spend_eur ?? 0));
   const by = new Map<string, number>();
   for (const r of rows) {
-    if (!r.month || !monthsWithSpend.has(r.month)) continue;
+    if (!r.month) continue;
+    const total = monthTotals.get(r.month) ?? 0;
+    if (total <= 0 || Math.abs((monthSum.get(r.month) ?? 0) - total) > CENT) continue;
     const v = r.spend_eur ?? 0;
     if (v <= 0) continue;
     const name = r.category ?? UNCATEGORIZED_LABEL;
@@ -177,9 +186,6 @@ export function spendByCategory(
   }
   return [...by].map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
 }
-
-/** Below a cent the sides are equal; anything left is rounding, not a flow to draw. */
-const CENT = 0.005;
 
 /**
  * Keeps the `keep` largest parts and folds the rest into one `rest` part, then tops up `rest`

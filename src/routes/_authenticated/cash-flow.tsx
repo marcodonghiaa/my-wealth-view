@@ -122,14 +122,14 @@ function CashFlowPage() {
   const canGoNext = start < current;
 
   const graph = useMemo(() => {
-    const monthsWithSpend = new Set(
-      monthly.filter((r) => r.month && (r.expenses_eur ?? 0) > 0).map((r) => r.month as string),
+    const monthTotals = new Map(
+      monthly.filter((r) => r.month).map((r) => [r.month as string, r.expenses_eur ?? 0]),
     );
     return buildFlow({
       income: summary.income,
       spending: summary.spending,
       sources: incomeBySource(incomeQuery.data ?? []),
-      categories: spendByCategory(spendQuery.data ?? [], monthsWithSpend),
+      categories: spendByCategory(spendQuery.data ?? [], monthTotals),
     });
   }, [monthly, summary, incomeQuery.data, spendQuery.data]);
 
