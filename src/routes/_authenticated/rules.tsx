@@ -386,13 +386,17 @@ function RuleList({ rules }: { rules: RuleRow[] }) {
   // Each offer's toast id is the rule's, so Undo closes that rule's offer and no other.
   const resortToastId = (rule: RuleRow) => `resort-${rule.id}`;
   const undone = useRef(new WeakSet<RuleRow>());
+  // The offer closes on click; its toast shows "Re-sorting…" until the answer replaces it.
   const resort = useMutation({
-    mutationFn: (retired: RetiredRule) => reapply(true, retired),
-    onSuccess: (result) => {
-      toast.success(`${plural(result.changes)} will be re-sorted at the next sync`);
+    mutationFn: ({ retired }: { retired: RetiredRule; toastId: string }) => reapply(true, retired),
+    onMutate: ({ toastId }) => void toast.loading("Re-sorting…", { id: toastId }),
+    onSuccess: (result, { toastId }) => {
+      toast.success(`${plural(result.changes)} will be re-sorted at the next sync`, {
+        id: toastId,
+      });
       void invalidateAfterReapply(queryClient);
     },
-    onError: (err) => toast.error(err.message),
+    onError: (err, { toastId }) => toast.error(err.message, { id: toastId }),
   });
   const offerResort = async (rule: RuleRow) => {
     if (!rule.set_category || rule.set_category === "Transfer") return; // Transfer rows never change
@@ -408,7 +412,10 @@ function RuleList({ rules }: { rules: RuleRow[] }) {
     toast.info(`${plural(changes)} still filed by this rule`, {
       id: resortToastId(rule),
       description: "Re-sort them: they show as uncategorized until the next sync sorts them again.",
-      action: { label: "Re-sort", onClick: () => resort.mutate(retired) },
+      action: {
+        label: "Re-sort",
+        onClick: () => resort.mutate({ retired, toastId: resortToastId(rule) }),
+      },
     });
   };
 

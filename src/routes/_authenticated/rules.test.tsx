@@ -20,11 +20,13 @@ let search: Record<string, string> = {};
 const toastSuccess = vi.fn();
 const toastInfo = vi.fn((_m: string, _o?: unknown) => "");
 const toastDismiss = vi.fn();
+const toastLoading = vi.fn();
 vi.mock("sonner", () => ({
   toast: {
     success: (m: string, o?: unknown) => (o ? toastSuccess(m, o) : toastSuccess(m)),
     error: (m: string) => toastError(m),
     info: (m: string, o?: unknown) => toastInfo(m, o),
+    loading: (m: string, o?: unknown) => toastLoading(m, o),
     dismiss: (id: unknown) => toastDismiss(id),
   },
 }));
@@ -143,6 +145,7 @@ afterEach(() => {
   toastError.mockReset();
   toastInfo.mockClear();
   toastDismiss.mockReset();
+  toastLoading.mockReset();
 });
 
 const Page = Route.options.component as () => React.JSX.Element;
@@ -858,6 +861,7 @@ describe("re-sorting what a deleted rule filed", () => {
     await waitFor(() =>
       expect(toastSuccess).toHaveBeenCalledWith(
         "3 transactions will be re-sorted at the next sync",
+        { id: "resort-r1" },
       ),
     );
     expect(invoke).toHaveBeenLastCalledWith("reapply-rules", {
@@ -974,6 +978,7 @@ describe("re-sorting what a deleted rule filed", () => {
     await waitFor(() =>
       expect(toastSuccess).toHaveBeenCalledWith(
         "2 transactions will be re-sorted at the next sync",
+        { id: "resort-r1" },
       ),
     );
     (toastSuccess.mock.calls[0]?.[1] as Offer).action.onClick();
@@ -993,11 +998,13 @@ describe("re-sorting what a deleted rule filed", () => {
     await waitFor(() =>
       expect(toastSuccess).toHaveBeenCalledWith(
         "2 transactions will be re-sorted at the next sync",
+        { id: "resort-r1" },
       ),
     );
     const refreshesTransactions = invalidate.mock.calls.some(([filters]) => {
-      const predicate = (filters as { predicate?: (q: { queryKey: unknown[] }) => boolean })
-        ?.predicate;
+      const predicate = (
+        filters as unknown as { predicate?: (q: { queryKey: unknown[] }) => boolean }
+      )?.predicate;
       return predicate?.({ queryKey: ["transactions"] }) === true;
     });
     invalidate.mockRestore();
@@ -1023,5 +1030,25 @@ describe("re-sorting what a deleted rule filed", () => {
         },
       },
     });
+  });
+
+  // Polish 3 #3: the offer closes on click; "Re-sorting…" shows until the answer replaces it.
+  it("shows that it's re-sorting, then the result in the same toast", async () => {
+    let finish: (v: unknown) => void = () => {};
+    invoke.mockResolvedValueOnce(answer(2)).mockReturnValueOnce(new Promise((r) => (finish = r)));
+    renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: "Delete rule for Netflix" }));
+    await waitFor(() => expect(toastInfo).toHaveBeenCalled());
+    (toastInfo.mock.calls[0] as unknown as [string, Offer])[1].action.onClick();
+    expect(toastLoading).toHaveBeenCalledWith("Re-sorting…", { id: "resort-r1" });
+    finish(answer(2));
+    await waitFor(() =>
+      expect(toastSuccess).toHaveBeenCalledWith(
+        "2 transactions will be re-sorted at the next sync",
+        {
+          id: "resort-r1",
+        },
+      ),
+    );
   });
 });
