@@ -175,9 +175,10 @@ export function TwoFactorSection() {
                         Cancel
                       </Button>
                       <Button
-                        disabled={pending}
-                        onClick={() => void remove(a.id)}
-                        className="flex-1 bg-negative text-white"
+                        // aria-disabled, not disabled: the clicked button keeps keyboard focus.
+                        aria-disabled={pending || undefined}
+                        onClick={() => !pending && void remove(a.id)}
+                        className="flex-1 bg-negative text-white aria-disabled:pointer-events-none aria-disabled:opacity-50"
                       >
                         {pending && <Loader2 className="animate-spin" />}
                         Confirm remove

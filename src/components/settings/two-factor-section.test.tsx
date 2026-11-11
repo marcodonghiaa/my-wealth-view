@@ -355,7 +355,13 @@ describe("TwoFactorSection", () => {
     render(<TwoFactorSection />);
     fireEvent.click(await screen.findByRole("button", { name: "Remove Phone" }));
     const confirm = screen.getByRole("button", { name: "Confirm remove" });
+    confirm.focus();
     fireEvent.click(confirm);
+    // aria-disabled, not disabled: the clicked button keeps keyboard focus while it runs.
+    expect(confirm).toHaveAttribute("aria-disabled", "true");
+    expect(confirm).toHaveFocus();
+    fireEvent.click(confirm);
+    expect(lib.removeAuthenticator).toHaveBeenCalledTimes(1);
     expect(screen.getByRole("button", { name: "Cancel" })).toBeDisabled();
     fireEvent.keyDown(confirm, { key: "Escape" });
     expect(screen.getByRole("button", { name: "Confirm remove" })).toBeInTheDocument();
