@@ -54,6 +54,11 @@ export function ApplyToPast({ ruleIds, onDone }: { ruleIds: string; onDone: () =
   // Keyboard users land in the panel; the Rules page puts focus back on its button on close.
   const heading = useRef<HTMLHeadingElement>(null);
   useEffect(() => heading.current?.focus(), []);
+  // Update is disabled while it works, which drops focus to the page; after a failure, back to it.
+  const updateButton = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (apply.isError) updateButton.current?.focus();
+  }, [apply.isError]);
 
   return (
     <div className="mb-8 rounded-lg bg-card p-5 sm:p-6">
@@ -121,7 +126,7 @@ export function ApplyToPast({ ruleIds, onDone }: { ruleIds: string; onDone: () =
             ))}
           </GroupedList>
           <div className="mt-4 flex flex-wrap gap-3">
-            <Button onClick={() => apply.mutate()} disabled={apply.isPending}>
+            <Button ref={updateButton} onClick={() => apply.mutate()} disabled={apply.isPending}>
               {apply.isPending && <Loader2 className="animate-spin" />}
               Update {plural(changes)}
             </Button>

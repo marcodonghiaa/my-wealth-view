@@ -522,6 +522,20 @@ describe("apply to past transactions", () => {
     expect(screen.getByRole("button", { name: "Update 2 transactions" })).toBeTruthy();
   });
 
+  // pass5 #5: the Update button is disabled while it works, so the browser drops focus to the
+  // page; after a failure focus goes back to it, ready to try again
+  it("puts focus back on Update when applying fails", async () => {
+    invoke.mockResolvedValueOnce({ data: { changes: 2, sample: [] }, error: null });
+    invoke.mockResolvedValueOnce({ data: null, error: new Error("boom") });
+    await open();
+    fireEvent.click(await screen.findByRole("button", { name: "Update 2 transactions" }));
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        screen.getByRole("button", { name: "Update 2 transactions" }),
+      ),
+    );
+  });
+
   // Polish pass 4 #2: keyboard focus fell to the page body on open and on close.
   it("moves focus into the preview on open and back to its button on close", async () => {
     invoke.mockResolvedValueOnce({ data: { changes: 0, sample: [] }, error: null });
