@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { MAX_MATCH_TEXT, quoteText } from "@/lib/rules";
+import { readPages } from "@/lib/read-pages";
 import { RULE_COLUMNS, rulesQuery, type RuleRow } from "@/lib/rules-query";
 import {
   incomeWindow,
@@ -11,14 +12,11 @@ import {
   type IncomeTx,
 } from "@/lib/regular-income";
 
-const PAGE = 1000; // PostgREST caps a response at 1000 rows
-
 /** Income credits in the six months ending with `month`, from `transactions` (original names). */
-export async function fetchIncomeWindow(month: Date): Promise<Array<IncomeTx>> {
+export function fetchIncomeWindow(month: Date): Promise<Array<IncomeTx>> {
   const { start, end } = incomeWindow(month);
-  const rows: Array<IncomeTx> = [];
-  for (let from = 0; ; from += PAGE) {
-    const { data, error } = await supabase
+  return readPages<IncomeTx>((from, to) =>
+    supabase
       .from("transactions")
       .select(
         "account_uid,entry_reference,booking_date,merchant_key,creditor_name,remittance_info,amount,currency",
@@ -32,11 +30,8 @@ export async function fetchIncomeWindow(month: Date): Promise<Array<IncomeTx>> {
       .order("booking_date", { ascending: false })
       .order("account_uid", { ascending: true })
       .order("entry_reference", { ascending: true })
-      .range(from, from + PAGE - 1);
-    if (error) throw error;
-    rows.push(...((data ?? []) as Array<IncomeTx>));
-    if ((data ?? []).length < PAGE) return rows;
-  }
+      .range(from, to),
+  );
 }
 
 // Starts with "income" so a category or flow change (which refetches "income") refreshes it.

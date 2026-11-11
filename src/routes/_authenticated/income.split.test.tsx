@@ -44,8 +44,13 @@ vi.mock("@/integrations/supabase/client", () => ({
     auth: { getUser: () => Promise.resolve({ data: { user: { id: "u1" } } }) },
     from: (table: string) => {
       const q: Record<string, unknown> = {};
-      for (const m of ["select", "order", "eq", "gte", "lt", "in", "is", "or", "range", "delete"])
+      let from = 0;
+      for (const m of ["select", "order", "eq", "gte", "lt", "in", "is", "or", "delete"])
         q[m] = () => q;
+      q["range"] = (f: number) => {
+        from = f;
+        return q;
+      };
       q["maybeSingle"] = () => Promise.resolve({ data: null, error: null });
       q["insert"] = (row: Record<string, unknown>) => {
         db.inserts.push(row);
@@ -64,7 +69,7 @@ vi.mock("@/integrations/supabase/client", () => ({
                 error: null,
               }
             : table === "transactions"
-              ? { data: db.windowError ? null : db.window, error: db.windowError }
+              ? { data: db.windowError ? null : db.window.slice(from), error: db.windowError }
               : table === "category_rules"
                 ? { data: db.rules, error: null }
                 : { data: [], error: null },

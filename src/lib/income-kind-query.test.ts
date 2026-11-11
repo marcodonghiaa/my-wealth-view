@@ -69,7 +69,24 @@ describe("fetchIncomeWindow", () => {
     }) as never);
     await fetchIncomeWindow(NOW);
     spy.mockRestore();
-    expect(orders).toEqual(["booking_date", "account_uid", "entry_reference"]);
+    expect(orders.slice(0, 3)).toEqual(["booking_date", "account_uid", "entry_reference"]);
+  });
+
+  // Polish 2 #2: a self-hoster can set PostgREST's max_rows below our page size; a short page
+  // is then not the end, and stopping there would drop regular income without a word.
+  it("reads everything when the server caps pages below 1000 rows", async () => {
+    const all = await fetchIncomeWindow(NOW);
+    expect(all.length).toBeGreaterThan(3);
+    const real = client.current.from.bind(client.current);
+    const spy = vi.spyOn(client.current, "from").mockImplementation(((table: string) => {
+      const q = real(table as never) as unknown as { range: (f: number, t: number) => unknown };
+      const range = q.range.bind(q);
+      q.range = (from: number, to: number) => range(from, Math.min(to, from + 2)); // max_rows 3
+      return q;
+    }) as never);
+    const capped = await fetchIncomeWindow(NOW);
+    spy.mockRestore();
+    expect(capped).toEqual(all);
   });
 
   it("leaves out credits that count as a transfer", async () => {

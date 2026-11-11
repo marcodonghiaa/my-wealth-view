@@ -17,7 +17,12 @@ vi.mock("@/integrations/supabase/client", () => ({
     from: (table: string) => {
       let side = "";
       const q: Record<string, unknown> = {};
-      for (const m of ["select", "order", "gte", "lt", "in", "is", "or", "range"]) q[m] = () => q;
+      let from = 0;
+      for (const m of ["select", "order", "gte", "lt", "in", "is", "or"]) q[m] = () => q;
+      q["range"] = (f: number) => {
+        from = f;
+        return q;
+      };
       q["eq"] = (col: string, v: string) => {
         if (col === "credit_debit_indicator") side = v;
         return q;
@@ -27,7 +32,7 @@ vi.mock("@/integrations/supabase/client", () => ({
           return db.rules === "pending" ? undefined : resolve({ data: db.rules, error: null });
         if (side === "DBIT") db.chargeReads++;
         if (db.error) return resolve({ data: null, error: db.error });
-        resolve({ data: side === "DBIT" ? db.charges : db.income, error: null });
+        resolve({ data: (side === "DBIT" ? db.charges : db.income).slice(from), error: null });
       };
       return q;
     },
