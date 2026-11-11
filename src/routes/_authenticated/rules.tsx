@@ -483,7 +483,7 @@ function RuleList({ rules }: { rules: RuleRow[] }) {
               onClick={() => deleteRule.mutate(rule.id)}
               disabled={deleteRule.isPending}
               aria-label={`Delete rule for ${rule.match_text}`}
-              className="hover:bg-negative/10 hover:text-negative"
+              className="hover:text-negative"
             >
               <Trash2 />
             </Button>

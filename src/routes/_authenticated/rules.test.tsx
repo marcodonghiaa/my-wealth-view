@@ -142,6 +142,14 @@ describe("Rules list", () => {
     expect(remove).toHaveClass("size-11");
   });
 
+  // Polish pass 4 #20: the third look for a delete button; Subscriptions' is ghost + red on hover.
+  it("styles delete like the other lists", async () => {
+    renderPage();
+    const remove = await screen.findByRole("button", { name: "Delete rule for Netflix" });
+    expect(remove).toHaveClass("hover:text-negative");
+    expect(remove).not.toHaveClass("hover:bg-negative/10");
+  });
+
   // Polish pass 4 #7: these were 36px tall.
   it("makes every button on the page at least 44px tall", async () => {
     invoke.mockResolvedValueOnce({ data: null, error: new Error("boom") });
