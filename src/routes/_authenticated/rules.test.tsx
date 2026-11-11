@@ -149,6 +149,16 @@ describe("Rules list", () => {
     }
   });
 
+  // Polish pass 4 #5: "sort" read as ordering, and "the first rule" pointed at an order you can't see.
+  it("says what a rule does and which one wins", async () => {
+    renderPage();
+    expect(
+      await screen.findByText(
+        "Rules set the category or type of new transactions that match, before the AI guesses. If two rules match, the one higher in the list wins.",
+      ),
+    ).toBeTruthy();
+  });
+
   it("counts the rules above the list", async () => {
     renderPage();
     expect(await screen.findByText("3 rules")).toBeTruthy();

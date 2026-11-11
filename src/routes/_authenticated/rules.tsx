@@ -107,8 +107,8 @@ function RulesPage() {
         <div>
           <h1 className="ios-large-title">Rules</h1>
           <p className="mt-1 max-w-prose text-sm text-muted-foreground">
-            Rules sort matching transactions for you, before the AI guesses. The first rule that
-            matches wins.
+            Rules set the category or type of new transactions that match, before the AI guesses. If
+            two rules match, the one higher in the list wins.
           </p>
         </div>
         {!showForm && (
