@@ -487,7 +487,8 @@ export function readStatement(
 
 /** Same transaction whatever the case, spacing or amount format. */
 export function dedupeKey(row: StatementRow): string {
-  const text = row.description.toLowerCase().replace(/\s+/g, " ").trim();
+  // Cleaned and cut like an imported row, so rows stored in full before the cut still match.
+  const text = cleanDescription(row.description).toLowerCase().replace(/\s+/g, " ").trim();
   const currency = row.currency ?? "EUR";
   return `${row.date}|${row.direction}|${row.amount.toFixed(2)}|${currency}|${text}`;
 }

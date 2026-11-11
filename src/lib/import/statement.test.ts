@@ -128,6 +128,17 @@ describe("dedupeKey", () => {
       dedupeKey({ date: "2026-04-25", description: "Coffee", amount: 2.5, direction: "CRDT" }),
     );
   });
+
+  it("polish-5 #1 matches a row stored in full before the 500-character cut and control-character cleaning", () => {
+    const base = { date: "2026-04-25", amount: 2.5, direction: "DBIT" as const };
+    const long = "Shop " + "x".repeat(595);
+    const [imported] = readStatement(`Date,Description,Amount\n2026-04-25,${long},-2.50`).rows;
+    expect(dedupeKey(imported!)).toBe(dedupeKey({ ...base, description: long }));
+    const [clean] = readStatement(
+      `Date,Description,Amount\n2026-04-25,"Caf\u001be\u0085",-2.50`,
+    ).rows;
+    expect(dedupeKey(clean!)).toBe(dedupeKey({ ...base, description: "Caf\u001be\u0085" }));
+  });
 });
 
 describe("parseDay, more formats", () => {
