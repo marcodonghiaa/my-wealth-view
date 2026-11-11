@@ -2,7 +2,7 @@ import { useState, type ReactNode } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Check, ChevronRight, Loader2 } from "lucide-react";
 import { PRIMARY, TINTED } from "@/components/import/splitwise-ui";
-import { money, shortDate } from "@/lib/import/splitwise-format";
+import { money, moneyAmount, shortDate } from "@/lib/import/splitwise-format";
 import { supabase } from "@/integrations/supabase/client";
 import type { ClassifiedRow } from "@/lib/import/splitwise-classify";
 import type { RpcClient } from "@/lib/import/splitwise-commit";
@@ -216,7 +216,7 @@ export function SplitwiseCorrections({
                     ticked={ticked}
                     onToggle={toggle}
                     title={e.row.description.trim()}
-                    meta={`${shortDate(e.row.date)} · was ${was}share ${e.stored.amount.toFixed(2)} → now ${fmt(e.row.costCents, e.row.currency)} total, share ${fmt(e.row.shareCents ?? 0, e.row.currency)}`}
+                    meta={`${shortDate(e.row.date)} · was ${was}share ${moneyAmount(e.stored.amount, e.stored.currency)} → now ${fmt(e.row.costCents, e.row.currency)} total, share ${fmt(e.row.shareCents ?? 0, e.row.currency)}`}
                     note={
                       e.stored.linked_entry_reference
                         ? "Linked to a bank transaction: its personal amount is recalculated."
@@ -238,7 +238,7 @@ export function SplitwiseCorrections({
                   onToggle={toggle}
                   title={s.description.trim()}
                   meta={`${shortDate(s.booking_date)} · your share`}
-                  amount={`${s.amount.toFixed(2)} ${s.currency}`}
+                  amount={moneyAmount(s.amount, s.currency)}
                   note={
                     s.linked_entry_reference
                       ? "Linked to a bank transaction: it counts in full again."

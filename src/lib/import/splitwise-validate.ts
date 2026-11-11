@@ -1,3 +1,4 @@
+import { formatNumber } from "@/lib/locale";
 import { isPaymentRow, type SplitwiseFile, type SplitwiseRow } from "./splitwise-parse";
 
 // Checks that a parsed Splitwise export is internally consistent before anything is imported.
@@ -12,7 +13,7 @@ const ROUNDING_CENTS = 1;
 
 const error = (message: string): Issue => ({ level: "error", message });
 const warning = (message: string): Issue => ({ level: "warning", message });
-const money = (cents: number) => (cents / 100).toFixed(2);
+const money = (cents: number) => formatNumber(cents / 100, 2);
 const sum = (values: Array<number>) => values.reduce((a, b) => a + b, 0);
 
 function checkRow(r: SplitwiseRow, members: Array<string>): Array<Issue> {

@@ -54,6 +54,20 @@ const inApp = (row: StatementRow, description = row.description) => ({
 });
 
 describe("newRows", () => {
+  it("polish-3 #13 asks the app once per date range when given a cache", async () => {
+    const { c, requests } = client([inApp(coffee)]);
+    const cache = new Map();
+    expect(await newRows(c, [coffee, salary], cache)).toEqual([salary]);
+    expect(await newRows(c, [salary, coffee], cache)).toEqual([salary]);
+    expect(requests).toHaveLength(1);
+  });
+
+  it("only treats a row as already there when the currency matches too", async () => {
+    const usd = { ...inApp(coffee), currency: "USD" };
+    expect(await newRows(client([usd]).c, [coffee])).toEqual([coffee]);
+    expect(await newRows(client([usd]).c, [{ ...coffee, currency: "USD" }])).toEqual([]);
+  });
+
   it("leaves out rows already in the app, over the file's date range, deleted rows excluded", async () => {
     const { c, requests } = client([inApp(coffee, "COFFEE")]);
     expect(await newRows(c, [coffee, salary])).toEqual([salary]);
@@ -90,10 +104,25 @@ describe("importStatement", () => {
       p_description: "Coffee",
       p_amount: 2.5,
       p_direction: "DBIT",
+      p_currency: "EUR",
       p_category: null,
       p_source: "Fineco",
     });
     expect(progress).toHaveBeenLastCalledWith(2);
+  });
+
+  it("sends the row's currency and a Transfer category", async () => {
+    const { c, rpc } = client([]);
+    await importStatement(
+      c,
+      [{ ...coffee, currency: "USD", category: "Transfer" }],
+      null,
+      () => {},
+    );
+    expect(rpc).toHaveBeenCalledWith(
+      "add_manual_transaction",
+      expect.objectContaining({ p_currency: "USD", p_category: "Transfer" }),
+    );
   });
 
   it("stops at the first error and says how many were added", async () => {
@@ -101,5 +130,19 @@ describe("importStatement", () => {
     await expect(importStatement(c, [coffee, salary], null, vi.fn(), 1)).rejects.toThrow(
       /1 of 2 added.*boom/,
     );
+  });
+});
+
+describe("RPC types", () => {
+  it("polish-3 #16 the import client only takes add_manual_transaction's real arguments", () => {
+    const typed = (c: StatementClient) =>
+      c.rpc("add_manual_transaction", {
+        p_booking_date: "2026-01-01",
+        p_description: "x",
+        // @ts-expect-error p_amount is a number in the database function
+        p_amount: "1",
+        p_direction: "DBIT",
+      });
+    expect(typeof typed).toBe("function");
   });
 });

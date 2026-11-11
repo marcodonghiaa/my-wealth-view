@@ -1,3 +1,5 @@
+import { dateLocale, numberFormat } from "@/lib/locale";
+
 export interface TransactionRow {
   entry_reference: string;
   account_uid: string | null;
@@ -167,12 +169,17 @@ export function monthFromParam(param: string | undefined, now = new Date()): Dat
 }
 
 export function formatMoney(value: number, currency: string): string {
-  return new Intl.NumberFormat("en-IE", {
-    style: "currency",
-    currency,
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value);
+  try {
+    return numberFormat({
+      style: "currency",
+      currency,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(value);
+  } catch {
+    // A code Intl rejects ("", "EURO") stays as text instead of blanking the page.
+    return `${numberFormat({ minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value)} ${currency}`.trim();
+  }
 }
 
 export const formatEur = (value: number): string => formatMoney(value, "EUR");
@@ -185,17 +192,24 @@ export const formatUsd = (value: number): string => formatMoney(value, "USD");
 
 /** Amount without a currency symbol — the Currency column states it instead. */
 export function formatAmountPlain(value: number): string {
-  return new Intl.NumberFormat("en-IE", {
+  return numberFormat({
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
     signDisplay: "never",
   }).format(Math.abs(value));
 }
 
+/** "+€40.00" / "−€25.00": an explicit plus and a real minus, as in the transaction list. */
+export const formatSignedMoney = (value: number, currency: string): string =>
+  `${value >= 0 ? "+" : "−"}${formatMoney(Math.abs(value), currency)}`;
+
 /** Signed amount in the transaction's own currency. */
 export function nativeSignedAmount(tx: TransactionRow): number | null {
   if (tx.amount == null) return null;
-  const sign = (tx.signed_amount_eur ?? tx.amount) < 0 ? -1 : 1;
+  // Without a EUR value yet (no exchange rate), debit/credit says which way the money went.
+  const ind = tx.credit_debit_indicator;
+  const fallback = ind === "DBIT" ? -1 : ind === "CRDT" ? 1 : tx.amount;
+  const sign = (tx.signed_amount_eur ?? fallback) < 0 ? -1 : 1;
   return sign * Math.abs(tx.amount);
 }
 
@@ -213,7 +227,7 @@ export const personalAmountEur = (
 export function formatBookingDateShort(bookingDate: string | null, now: Date = new Date()): string {
   if (!bookingDate) return "—";
   const date = new Date(`${bookingDate}T00:00:00`);
-  return date.toLocaleDateString("en-GB", {
+  return date.toLocaleDateString(dateLocale(), {
     day: "numeric",
     month: "short",
     ...(date.getFullYear() === now.getFullYear() ? {} : { year: "numeric" }),
@@ -222,7 +236,7 @@ export function formatBookingDateShort(bookingDate: string | null, now: Date = n
 
 export function formatBookingDate(bookingDate: string | null): string {
   return bookingDate
-    ? new Date(`${bookingDate}T00:00:00`).toLocaleDateString("en-GB", {
+    ? new Date(`${bookingDate}T00:00:00`).toLocaleDateString(dateLocale(), {
         day: "numeric",
         month: "short",
         year: "numeric",
@@ -279,6 +293,15 @@ export function selectedOnly(
   return shown.filter((tx) => !isSplitwiseShare(tx) && selected.has(txId(tx)));
 }
 
+/** Queries to refresh after adding transactions: a new source is also a new account. */
+export const ADDED_TRANSACTION_QUERIES = [
+  "transactions",
+  "transfers",
+  "income",
+  "spend-by-category",
+  "category-transactions",
+  "accounts",
+] as const;
 /** Rows in their given order, cut into runs that share a booking date (the phone list's day groups). */
 export function groupByDay(
   rows: Array<TransactionRow>,
@@ -301,7 +324,7 @@ export function formatDayHeading(bookingDate: string | null, now: Date = new Dat
   if (days === 0) return "Today";
   if (days === 1) return "Yesterday";
   return date
-    .toLocaleDateString("en-GB", {
+    .toLocaleDateString(dateLocale(), {
       weekday: "short",
       day: "numeric",
       month: "short",

@@ -1,7 +1,7 @@
 import { Button, buttonVariants } from "@/components/ui/button";
-import { fieldClass } from "@/components/ui/field";
+import { Input, Select } from "@/components/ui/field";
 import { cn } from "@/lib/utils";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { FileUp, Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -15,14 +15,19 @@ import {
 } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import {
+  NO_COLUMNS,
   readStatement,
+  type DateOrder,
   type Statement,
   type StatementColumns,
+  type StatementOptions,
   type StatementRow,
 } from "@/lib/import/statement";
+import { decodeCsv, parseCsv, MAX_CHARS } from "@/lib/import/parse-csv";
+import { formatDay } from "@/lib/date";
 import { importStatement, newRows, type StatementClient } from "@/lib/import/statement-commit";
 import { readStatementPdf } from "@/lib/import/statement-pdf";
-import { formatMoney } from "@/lib/transactions";
+import { ADDED_TRANSACTION_QUERIES, formatMoney } from "@/lib/transactions";
 
 const client = supabase as unknown as StatementClient;
 
@@ -32,20 +37,11 @@ const FIELD_LABELS: Array<[keyof StatementColumns, string]> = [
   ["amount", "Amount (+/−)"],
   ["in", "Money in"],
   ["out", "Money out"],
+  ["direction", "In/out marker (D/C, Soll/Haben…)"],
 ];
 
-const NO_COLUMNS: StatementColumns = {
-  date: null,
-  description: null,
-  amount: null,
-  in: null,
-  out: null,
-};
-
-const field = fieldClass();
-
 // The bank's name from a file like "Fineco_movimenti_2026.csv", as the default source.
-const sourceFromFile = (name: string) => /^[A-Za-z]+/.exec(name)?.[0] ?? "";
+const sourceFromFile = (name: string) => (/^[A-Za-z]+/.exec(name)?.[0] ?? "").slice(0, 60);
 
 // Adds the transactions of a bank statement saved as CSV. Rows already in the app are left out,
 // so importing the same file twice adds nothing.
@@ -56,51 +52,86 @@ export function ImportStatement() {
   const [statement, setStatement] = useState<Statement | null>(null);
   const [headers, setHeaders] = useState<Array<string>>([]);
   const [columns, setColumns] = useState<StatementColumns | null>(null);
+  // Columns picked by hand; until then the reader finds them (or a known export) itself.
+  const [picked, setPicked] = useState<StatementColumns | undefined>(undefined);
+  const [options, setOptions] = useState<StatementOptions>({});
   const [fresh, setFresh] = useState<Array<StatementRow> | null>(null);
   const [source, setSource] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState<number | null>(null);
   const [readingPdf, setReadingPdf] = useState(false);
+  // Each read checks the app for duplicates over the network; only the latest may show.
+  const readId = useRef(0);
+  // What the app already has per date range, so picking columns or options doesn't ask again.
+  const inApp = useRef(new Map<string, Map<string, number>>());
+  const [checking, setChecking] = useState(false);
 
   function reset() {
+    // A new file (or closing) makes any read still in flight stale.
+    readId.current++;
+    inApp.current.clear();
+    setChecking(false);
     setText(null);
     setStatement(null);
     setHeaders([]);
     setColumns(null);
+    setPicked(undefined);
+    setOptions({});
     setFresh(null);
     setSource("");
     setError(null);
     setProgress(null);
+    setReadingPdf(false);
   }
 
-  async function read(csv: string, picked?: StatementColumns) {
+  async function read(csv: string, cols?: StatementColumns, opts: StatementOptions = {}) {
+    const id = ++readId.current;
     setError(null);
     setFresh(null);
     try {
-      const result = readStatement(csv, picked);
+      const result = readStatement(csv, cols, opts);
+      setChecking(true);
+      const rows = await newRows(client, result.rows, inApp.current);
+      if (id !== readId.current) return;
       setStatement(result);
       setHeaders(result.headers);
       setColumns(result.columns);
-      setFresh(await newRows(client, result.rows));
+      setFresh(rows);
     } catch (err) {
+      if (id !== readId.current) return;
       setStatement(null);
       setError(err instanceof Error ? err.message : "Couldn't read the file.");
+    } finally {
+      if (id === readId.current) setChecking(false);
     }
   }
 
   async function handlePdf(file: File) {
+    const id = ++readId.current;
     setReadingPdf(true);
     try {
       const rows = await readStatementPdf(
         (name, opts) => supabase.functions.invoke(name, opts),
         file,
       );
-      setStatement({ headers: [], columns: NO_COLUMNS, rows, skipped: 0 });
-      setFresh(await newRows(client, rows));
+      const fresh = await newRows(client, rows);
+      if (id !== readId.current) return;
+      setStatement({
+        headers: [],
+        columns: NO_COLUMNS,
+        rows,
+        skipped: 0,
+        unknownCurrencies: [],
+        preset: null,
+        dateOrder: "DMY",
+        decimal: null,
+      });
+      setFresh(fresh);
     } catch (err) {
+      if (id !== readId.current) return;
       setError(err instanceof Error ? err.message : "Couldn't read the PDF.");
     } finally {
-      setReadingPdf(false);
+      if (id === readId.current) setReadingPdf(false);
     }
   }
 
@@ -112,11 +143,19 @@ export function ImportStatement() {
       setError("Use a CSV or PDF. Excel files: File → Save as → CSV first.");
       return;
     }
-    const csv = await file.text();
+    // At most 4 bytes a character: anything bigger is over the limit, so don't load it.
+    if (file.size > MAX_CHARS * 4) {
+      setError("The file is too large (limit is 2 MB). Is it the right file?");
+      return;
+    }
+    const csv = decodeCsv(await file.arrayBuffer());
     setText(csv);
     // Headers for the column pickers, even when the columns can't be guessed.
-    const firstLine = csv.replace(/^\uFEFF/, "").split(/\r?\n/)[0] ?? "";
-    setHeaders(firstLine.split(/[;,\t]/).map((h) => h.trim()));
+    try {
+      setHeaders(parseCsv(csv).headers);
+    } catch {
+      // The read below shows why the file can't be used.
+    }
     await read(csv);
   }
 
@@ -127,7 +166,15 @@ export function ImportStatement() {
       [key]: value === "" ? null : Number(value),
     };
     setColumns(next);
-    void read(text, next);
+    setPicked(next);
+    void read(text, next, options);
+  }
+
+  function setOption(next: StatementOptions) {
+    if (!text) return;
+    const merged = { ...options, ...next };
+    setOptions(merged);
+    void read(text, picked, merged);
   }
 
   async function handleImport() {
@@ -137,22 +184,26 @@ export function ImportStatement() {
     try {
       const added = await importStatement(client, fresh, source.trim() || null, setProgress);
       toast.success(`${added} transaction${added === 1 ? "" : "s"} imported`);
-      for (const k of [
-        "transactions",
-        "transfers",
-        "income",
-        "spend-by-category",
-        "category-transactions",
-        "accounts",
-      ]) {
-        void queryClient.invalidateQueries({ queryKey: [k] });
-      }
       setOpen(false);
       reset();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Import failed.");
       setProgress(null);
-      void queryClient.invalidateQueries({ queryKey: ["transactions"] });
+      // Some rows were saved before the error: check again so a retry adds only the rest.
+      setFresh(null);
+      // The app changed: check again from scratch.
+      inApp.current.clear();
+      const message = err instanceof Error ? err.message : "Import failed.";
+      if (statement) {
+        const left = await newRows(client, statement.rows).catch(() => null);
+        setFresh(left);
+        // Without the check a retry could add the saved rows twice, so it stays off.
+        if (!left) setError(`${message} Couldn't check what was saved: pick the file again.`);
+      }
+    } finally {
+      // Rows saved before an error are in the app too, maybe on a new account.
+      for (const k of ADDED_TRANSACTION_QUERIES)
+        void queryClient.invalidateQueries({ queryKey: [k] });
     }
   }
 
@@ -197,7 +248,9 @@ export function ImportStatement() {
 
           {text && headers.length > 0 && (
             <details open={!statement} className="rounded-lg bg-card p-3 text-sm">
-              <summary className="cursor-pointer text-muted-foreground">Columns</summary>
+              <summary className="-m-3 min-h-11 cursor-pointer p-3 text-muted-foreground">
+                Columns
+              </summary>
               <div className="mt-2 grid gap-2 sm:grid-cols-2">
                 {FIELD_LABELS.map(([key, label]) => (
                   <label
@@ -205,11 +258,10 @@ export function ImportStatement() {
                     className="block min-w-0 space-y-1 text-xs text-muted-foreground"
                   >
                     <span>{label}</span>
-                    <select
+                    <Select
                       aria-label={`${label} column`}
                       value={columns?.[key] ?? ""}
                       onChange={(e) => pick(key, e.target.value)}
-                      className={field}
                     >
                       <option value="">—</option>
                       {headers.map((h, i) => (
@@ -217,35 +269,88 @@ export function ImportStatement() {
                           {h || `Column ${i + 1}`}
                         </option>
                       ))}
-                    </select>
+                    </Select>
                   </label>
                 ))}
               </div>
             </details>
           )}
 
+          {text && statement && (
+            <div className="space-y-2 rounded-lg bg-card p-3 text-xs text-muted-foreground">
+              <p>
+                {statement.preset ? `Read as an export from ${statement.preset}. ` : ""}
+                {statement.decimal &&
+                  `Amounts use ${statement.decimal === "," ? "a decimal comma" : "a decimal point"}.`}
+              </p>
+              <div className="flex flex-wrap items-end gap-x-4 gap-y-2">
+                <label className="block space-y-1">
+                  <span>Date order</span>
+                  <Select
+                    value={statement.dateOrder}
+                    onChange={(e) => setOption({ dateOrder: e.target.value as DateOrder })}
+                    className="w-auto"
+                  >
+                    <option value="DMY">Day first (31/12)</option>
+                    <option value="MDY">Month first (12/31)</option>
+                  </Select>
+                </label>
+                {/* Only a bare signed amount can be flipped; in/out or debit/credit columns say it already. */}
+                {statement.columns.amount != null && statement.columns.direction == null && (
+                  <label className="flex min-h-11 items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={options.invert ?? false}
+                      onChange={(e) => setOption({ invert: e.target.checked })}
+                    />
+                    <span>Spending is written as positive</span>
+                  </label>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* One live region: screen readers hear "Checking…" and then the count that replaces it. */}
+          {(checking || (statement && fresh)) && (
+            <p
+              role="status"
+              className={checking ? "text-xs text-muted-foreground" : "text-sm text-foreground"}
+            >
+              {checking
+                ? "Checking for duplicates…"
+                : statement &&
+                  fresh &&
+                  `${fresh.length} new transaction${fresh.length === 1 ? "" : "s"}${
+                    duplicates > 0 ? `, ${duplicates} already here` : ""
+                  }${
+                    statement.skipped > 0
+                      ? `, ${statement.skipped} other line${statement.skipped === 1 ? "" : "s"} skipped`
+                      : ""
+                  }.`}
+            </p>
+          )}
           {statement && fresh && (
             <>
-              <p className="text-sm text-foreground">
-                {fresh.length} new transaction{fresh.length === 1 ? "" : "s"}
-                {duplicates > 0 && `, ${duplicates} already here`}
-                {statement.skipped > 0 &&
-                  `, ${statement.skipped} other line${statement.skipped === 1 ? "" : "s"} skipped`}
-                .
-              </p>
+              {statement.unknownCurrencies.length > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  Skipped because the currency isn't clear:{" "}
+                  {statement.unknownCurrencies.slice(0, 3).join(", ")}. Use a code like USD in the
+                  file.
+                </p>
+              )}
               {fresh.length > 0 && (
                 <ul className="divide-y overflow-hidden rounded-lg bg-card text-sm">
                   {fresh.slice(0, 5).map((r, i) => (
                     <li key={i} className="flex items-center justify-between gap-3 px-3 py-2">
                       <span className="min-w-0 truncate">
-                        <span className="text-muted-foreground">{r.date} · </span>
+                        <span className="text-muted-foreground">{formatDay(r.date)} · </span>
                         {r.description}
                       </span>
                       <span
                         className={`font-figure whitespace-nowrap ${r.direction === "CRDT" ? "text-positive" : ""}`}
                       >
                         {r.direction === "CRDT" ? "+" : "−"}
-                        {formatMoney(r.amount, "EUR")}
+                        {formatMoney(r.amount, r.currency ?? "EUR")}
                       </span>
                     </li>
                   ))}
@@ -256,12 +361,12 @@ export function ImportStatement() {
               )}
               <label className="block space-y-1 text-xs text-muted-foreground">
                 <span>From</span>
-                <input
+                <Input
                   aria-label="From"
+                  maxLength={60}
                   placeholder="Manual"
                   value={source}
                   onChange={(e) => setSource(e.target.value)}
-                  className={field}
                 />
               </label>
             </>

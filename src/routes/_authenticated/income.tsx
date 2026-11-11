@@ -1,3 +1,4 @@
+import { dateLocale } from "@/lib/locale";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -84,7 +85,7 @@ function IncomePage() {
   const rows = incomeQuery.data ?? [];
   const total = rows.reduce((sum, r) => sum + Math.abs(r.signed_amount_eur ?? 0), 0);
 
-  const monthLabel = month.toLocaleDateString("en-GB", { month: "long", year: "numeric" });
+  const monthLabel = month.toLocaleDateString(dateLocale(), { month: "long", year: "numeric" });
   const canGoNext =
     startOfMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1)) <=
     startOfMonth(new Date());
@@ -146,7 +147,7 @@ function IncomePage() {
                   <div className="truncate font-medium text-foreground">{incomeTitle(r)}</div>
                   <div className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground">
                     {r.booking_date
-                      ? new Date(`${r.booking_date}T00:00:00`).toLocaleDateString("en-GB", {
+                      ? new Date(`${r.booking_date}T00:00:00`).toLocaleDateString(dateLocale(), {
                           day: "numeric",
                           month: "short",
                         })

@@ -12,6 +12,7 @@ import {
   fetchSplitContacts,
   fetchSplits,
   joinNames,
+  money,
   netOwed,
   NO_NAME,
   owedEur,
@@ -113,6 +114,12 @@ describe("fetching splits", () => {
     const refs = (await fetchSplits()).map((r) => r.entry_reference);
     expect(refs).not.toContain(first!.entry_reference);
     expect(refs).not.toContain(second!.entry_reference);
+  });
+});
+
+describe("money with a bad currency code", () => {
+  it("#7 writes it as text instead of throwing", () => {
+    expect(money(12.5, "XX1")).toBe("12.50 XX1");
   });
 });
 

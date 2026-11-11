@@ -46,6 +46,20 @@ describe("TransfersSection", () => {
     expect(onRestore).toHaveBeenCalledWith(debit);
   });
 
+  it("polish-5 #10 writes amounts with a real minus and a plus, like the list above", () => {
+    const credit = transfer({
+      entry_reference: "r2",
+      signed_amount_eur: 40,
+      amount: 40,
+      credit_debit_indicator: "CRDT",
+    });
+    render(
+      <TransfersSection rows={[transfer({}), credit]} savingId={undefined} onRestore={vi.fn()} />,
+    );
+    expect(screen.getByText("−€25.00")).toBeTruthy();
+    expect(screen.getByText("+€40.00")).toBeTruthy();
+  });
+
   it("disables the button of the row being saved", () => {
     render(<TransfersSection rows={[transfer({})]} savingId="a1|r1" onRestore={vi.fn()} />);
     expect(

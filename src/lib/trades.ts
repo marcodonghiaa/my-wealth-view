@@ -1,5 +1,6 @@
 import { RETURN_NOISE_BAND } from "@/lib/performance";
 import type { PerformanceRow } from "@/lib/performance";
+import { normalizeNumber } from "@/lib/locale";
 
 // Total return the way a broker works it out, from your trades:
 //   gain   = value now + everything sold - everything bought (so profit already taken counts)
@@ -139,7 +140,10 @@ export function summarizeTrades(rows: Array<MeasuredRow>, topN = 2): TradeSummar
 /** Today in the browser's own timezone, as YYYY-MM-DD. */
 export const localToday = () => new Date().toLocaleDateString("en-CA");
 
-/** "12,5", "12.5", "1.234,56" and "1,234.56" all read as you'd expect. Null if not a number >= 0. */
+/**
+ * A number from a file: "12,5", "12.5", "1.234,56" and "1,234.56" all read as you'd expect, the same
+ * for every viewer (a lone mark is the decimal). Null if not a number >= 0.
+ */
 export function parseAmount(input: string): number | null {
   let text = input.trim().replace(/\s/g, "");
   const comma = text.lastIndexOf(",");
@@ -149,6 +153,14 @@ export function parseAmount(input: string): number | null {
   } else {
     text = text.replace(",", ".");
   }
+  if (!/^\d+(\.\d+)?$/.test(text)) return null;
+  const value = Number(text);
+  return Number.isFinite(value) ? value : null;
+}
+
+/** A number typed in a box, read in the chosen format (see normalizeNumber). */
+export function parseTypedAmount(input: string): number | null {
+  const text = normalizeNumber(input);
   if (!/^\d+(\.\d+)?$/.test(text)) return null;
   const value = Number(text);
   return Number.isFinite(value) ? value : null;

@@ -163,9 +163,9 @@ describe("SplitwisePanel", () => {
     fireEvent.change(await screen.findByLabelText(/Which one are you/), { target: { value: "0" } });
     const summary = await screen.findByRole("heading", { name: "In this file" });
     const text = summary.parentElement?.textContent ?? "";
-    expect(text).toMatch(/Paid by others · 1your share 15\.00 USD/);
-    expect(text).toMatch(/Paid by you · 1your share 10\.00 USD of 20\.00 USD/);
-    expect(text).toMatch(/Settle-upspaid 5\.00 USD/);
+    expect(text).toMatch(/Paid by others · 1your share US\$15\.00/);
+    expect(text).toMatch(/Paid by you · 1your share US\$10\.00 of US\$20\.00/);
+    expect(text).toMatch(/Settle-upspaid US\$5\.00/);
   });
 
   // protects=the next step is only offered when it can work; fails_when=Continue shows before

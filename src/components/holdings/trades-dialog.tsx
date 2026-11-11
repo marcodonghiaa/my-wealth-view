@@ -1,3 +1,4 @@
+import { formatQuantity, inputNumber } from "@/lib/locale";
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Pencil, Trash2 } from "lucide-react";
@@ -14,7 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input, Select } from "@/components/ui/field";
 import { formatDay } from "@/lib/date";
-import { localToday, netShares, parseAmount } from "@/lib/trades";
+import { localToday, netShares, parseTypedAmount } from "@/lib/trades";
 import { parseQuantity } from "@/lib/holdings";
 import { formatEur } from "@/lib/transactions";
 import type { SavedTrade } from "@/lib/use-performance";
@@ -31,8 +32,8 @@ const blank = (): Form => ({ side: "buy", date: localToday(), shares: "", price:
 
 function validate(form: Form) {
   const shares = parseQuantity(form.shares);
-  const price = parseAmount(form.price);
-  const fee = form.fee.trim() === "" ? 0 : parseAmount(form.fee);
+  const price = parseTypedAmount(form.price);
+  const fee = form.fee.trim() === "" ? 0 : parseTypedAmount(form.fee);
   if (!form.date) return { error: "Pick the date of the trade." };
   if (form.date > localToday()) return { error: "The date can't be in the future." };
   if (shares == null) return { error: "Shares must be a number above zero." };
@@ -139,9 +140,8 @@ export function TradesDialog({
         <DialogHeader>
           <DialogTitle>{name}</DialogTitle>
           <DialogDescription>
-            Trades add up to {net.toLocaleString("en-IE", { maximumFractionDigits: 8 })}; you hold{" "}
-            {quantity.toLocaleString("en-IE", { maximumFractionDigits: 8 })}. Prices are per share,
-            in EUR.
+            Trades add up to {formatQuantity(net, 8)}; you hold {formatQuantity(quantity, 8)}.
+            Prices are per share, in EUR.
           </DialogDescription>
         </DialogHeader>
 
@@ -214,7 +214,7 @@ export function TradesDialog({
               <li key={t.id} className="flex items-center gap-2 px-3 py-1">
                 <span className="min-w-0 flex-1">
                   <span className="font-medium text-foreground">
-                    {t.side === "buy" ? "Bought" : "Sold"} {t.shares}
+                    {t.side === "buy" ? "Bought" : "Sold"} {formatQuantity(t.shares, 8)}
                   </span>{" "}
                   at {formatEur(t.price_eur)}
                   <span className="block text-xs text-muted-foreground">
@@ -232,9 +232,9 @@ export function TradesDialog({
                     setForm({
                       side: t.side,
                       date: t.trade_date,
-                      shares: String(t.shares),
-                      price: String(t.price_eur),
-                      fee: t.fee_eur ? String(t.fee_eur) : "",
+                      shares: inputNumber(t.shares),
+                      price: inputNumber(t.price_eur),
+                      fee: t.fee_eur ? inputNumber(t.fee_eur) : "",
                     });
                   }}
                 >

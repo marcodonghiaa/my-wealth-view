@@ -1,3 +1,4 @@
+import { formatPercent } from "@/lib/locale";
 import { Link } from "@tanstack/react-router";
 import { Cell, Pie, PieChart, ResponsiveContainer } from "recharts";
 import {
@@ -159,7 +160,7 @@ export function AllocationChart({
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium text-foreground">{label}</p>
                 <p className="font-figure text-xs text-muted-foreground">
-                  {((value / gross) * 100).toFixed(1)}%
+                  {formatPercent(value / gross)}
                 </p>
               </div>
               <p className="font-figure text-sm text-foreground">{format(value)}</p>

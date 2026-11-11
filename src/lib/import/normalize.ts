@@ -1,19 +1,31 @@
 // Turns the messy text people have in spreadsheets into clean values for the import.
 
-const MONTH_NAMES: Array<Array<string>> = [
-  ["jan", "january", "gen", "gennaio"],
-  ["feb", "february", "febbraio"],
-  ["mar", "march", "marzo"],
-  ["apr", "april", "aprile"],
-  ["may", "mag", "maggio"],
-  ["jun", "june", "giu", "giugno"],
-  ["jul", "july", "lug", "luglio"],
-  ["aug", "august", "ago", "agosto"],
-  ["sep", "sept", "september", "set", "settembre"],
-  ["oct", "october", "ott", "ottobre"],
-  ["nov", "november", "novembre"],
-  ["dec", "december", "dic", "dicembre"],
+// Lower-case, accents removed. English, Italian, German, French, Spanish, Dutch.
+export const MONTH_NAMES: Array<Array<string>> = [
+  ["jan", "january", "gen", "gennaio", "januar", "janv", "janvier", "ene", "enero", "januari"],
+  ["feb", "february", "febbraio", "februar", "fevr", "fevrier", "febrero", "februari"],
+  ["mar", "march", "marzo", "marz", "mrz", "mars", "maart", "mrt"],
+  ["apr", "april", "aprile", "avr", "avril", "abr", "abril"],
+  ["may", "mag", "maggio", "mai", "mayo", "mei"],
+  ["jun", "june", "giu", "giugno", "juni", "juin", "junio"],
+  ["jul", "july", "lug", "luglio", "juli", "juil", "juillet", "julio"],
+  ["aug", "august", "ago", "agosto", "aout", "augustus"],
+  ["sep", "sept", "september", "set", "settembre", "septembre", "septiembre", "setiembre"],
+  ["oct", "october", "ott", "ottobre", "okt", "oktober", "octobre", "octubre"],
+  ["nov", "november", "novembre", "noviembre"],
+  ["dec", "december", "dic", "dicembre", "dez", "dezember", "decembre", "diciembre"],
 ];
+
+/** The month (1-12) a name means in any of MONTH_NAMES' languages, or null. "März", "déc." work. */
+export function monthNumber(name: string): number | null {
+  const key = name
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/\.$/, "");
+  const index = MONTH_NAMES.findIndex((names) => names.includes(key));
+  return index === -1 ? null : index + 1;
+}
 
 const EXCEL_EPOCH_MS = Date.UTC(1899, 11, 30);
 const DAY_MS = 86_400_000;
@@ -21,7 +33,7 @@ const DAY_MS = 86_400_000;
 // amount like "1500" is never mistaken for a date.
 const EXCEL_SERIAL_RANGE = [20_000, 80_000] as const;
 
-const pad = (n: number) => String(n).padStart(2, "0");
+export const pad = (n: number) => String(n).padStart(2, "0");
 const validMonth = (m: number) => m >= 1 && m <= 12;
 const validDay = (d: number) => d >= 1 && d <= 31;
 const ym = (year: number, month: number) => `${year}-${pad(month)}`;
@@ -52,29 +64,92 @@ export function parseMonth(raw: string): string | null {
     return index === -1 ? null : ym(Number(m[2]), index + 1);
   }
 
-  if (/^\d{5}$/.test(s)) {
-    const serial = Number(s);
-    if (serial < EXCEL_SERIAL_RANGE[0] || serial > EXCEL_SERIAL_RANGE[1]) return null;
-    const d = new Date(EXCEL_EPOCH_MS + serial * DAY_MS);
-    return ym(d.getUTCFullYear(), d.getUTCMonth() + 1);
-  }
+  const d = excelDay(s);
+  return d ? ym(d.getUTCFullYear(), d.getUTCMonth() + 1) : null;
+}
 
-  return null;
+/** An Excel day number ("46137") as a UTC date, or null for anything else. */
+export function excelDay(text: string): Date | null {
+  if (!/^\d{5}$/.test(text)) return null;
+  const serial = Number(text);
+  if (serial < EXCEL_SERIAL_RANGE[0] || serial > EXCEL_SERIAL_RANGE[1]) return null;
+  return new Date(EXCEL_EPOCH_MS + serial * DAY_MS);
 }
 
 const THOUSANDS_GROUPS = /^\d{1,3}([.,]\d{3})+$/;
 
+export type DecimalMark = "," | ".";
+
+/**
+ * Strips what banks put around a number and reads its sign: "(12.50)", "12,50-", "+3", "EUR 4",
+ * "−7" (typographic minus), "12.50 CR" / "12.50 DR". More than one sign makes it unreadable.
+ */
+function unwrap(raw: string): { body: string; negative: boolean } {
+  let s = raw
+    .replace(/[\u2212\u2013]/g, "-")
+    .replace(/[€$£\s'’]/g, "")
+    .replace(/^[A-Za-z]{3}(?=[\d+\-(.,])/, "")
+    .replace(/(?<=[\d)-])[A-Za-z]{3}$/, "");
+  let signs = 0;
+  let negative = false;
+  const flag = (minus: boolean) => {
+    signs++;
+    negative = minus;
+  };
+  const crdr = /^(.*?)(CR|DR)$/i.exec(s);
+  if (crdr) {
+    flag(crdr[2]!.toUpperCase() === "DR");
+    s = crdr[1] ?? "";
+  }
+  const paren = /^\((.*)\)$/.exec(s);
+  if (paren) {
+    flag(true);
+    s = paren[1] ?? "";
+  }
+  if (s.endsWith("-")) {
+    flag(true);
+    s = s.slice(0, -1);
+  }
+  if (s.startsWith("-")) {
+    flag(true);
+    s = s.slice(1);
+  } else if (s.startsWith("+")) {
+    flag(false);
+    s = s.slice(1);
+  }
+  return { body: signs > 1 ? "x" : s, negative };
+}
+
 /**
  * Reads an amount written the European way (1.234,56) or the English way (1,234.56).
- * A single separator followed by exactly three digits ("1,234") is read as thousands, except
- * after a leading zero ("0.125"). Returns null when the text is not a clean number.
+ * With `decimal` (the file's decimal mark, see detectDecimal) the other mark is always thousands.
+ * Without it, a single separator followed by exactly three digits ("1,234") is read as thousands,
+ * except after a leading zero ("0.125"). Returns null when the text is not a clean number.
  */
-export function parseAmount(raw: string): number | null {
-  const s = raw.replace(/[€$£\s]/g, "");
-  if (!/^-?[\d.,]+$/.test(s)) return null;
-  const negative = s.startsWith("-");
-  const body = negative ? s.slice(1) : s;
+export function parseAmount(raw: string, decimal?: DecimalMark): number | null {
+  const { body, negative } = unwrap(raw);
+  if (!/^[\d.,]+$/.test(body)) return null;
+  const value = decimal ? withMark(body, decimal) : guessMark(body);
+  if (value === null || !Number.isFinite(value)) return null;
+  return negative ? -value : value;
+}
 
+function withMark(body: string, decimal: DecimalMark): number | null {
+  const parts = body.split(decimal);
+  if (parts.length > 2) return null;
+  const thousands = decimal === "," ? "." : ",";
+  const raw = parts[0] ?? "";
+  // "3.99" in a decimal-comma file is not 399: thousands marks must split groups of three.
+  if (raw.includes(thousands) && !new RegExp(`^\\d{1,3}(\\${thousands}\\d{3})+$`).test(raw)) {
+    return null;
+  }
+  const whole = raw.split(thousands).join("");
+  const fraction = parts[1] ?? "";
+  if (!/^\d*$/.test(whole) || !/^\d*$/.test(fraction) || whole + fraction === "") return null;
+  return Number(`${whole || "0"}.${fraction || "0"}`);
+}
+
+function guessMark(body: string): number | null {
   const sepPos = Math.max(body.lastIndexOf("."), body.lastIndexOf(","));
   let intPart = body;
   let fraction = "";
@@ -98,8 +173,28 @@ export function parseAmount(raw: string): number | null {
     if (!THOUSANDS_GROUPS.test(intPart)) return null;
     intPart = intPart.replace(/[.,]/g, "");
   }
+  return Number(fraction ? `${intPart}.${fraction}` : intPart);
+}
 
-  const value = Number(fraction ? `${intPart}.${fraction}` : intPart);
-  if (!Number.isFinite(value)) return null;
-  return negative ? -value : value;
+/**
+ * The decimal mark a column of amounts uses, from the cells that can only be read one way
+ * ("12,50", "1.234,5", "3.99"). Undefined when no cell tells (only "1,234" or "12").
+ */
+export function detectDecimal(cells: Array<string>): DecimalMark | undefined {
+  let comma = 0;
+  let dot = 0;
+  for (const raw of cells) {
+    const { body } = unwrap(raw);
+    const pos = Math.max(body.lastIndexOf("."), body.lastIndexOf(","));
+    if (pos === -1) continue;
+    const mark = body[pos] as DecimalMark;
+    const after = body.slice(pos + 1);
+    const both = body.includes(mark === "." ? "," : ".");
+    if (both || (/^\d{1,2}$/.test(after) && body.split(mark).length === 2)) {
+      if (mark === ",") comma++;
+      else dot++;
+    }
+  }
+  if (comma === dot) return undefined;
+  return comma > dot ? "," : ".";
 }

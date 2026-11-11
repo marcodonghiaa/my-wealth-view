@@ -1,3 +1,4 @@
+import { inputNumber } from "@/lib/locale";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/field";
 import { useState } from "react";
@@ -19,7 +20,7 @@ export function AmountEditor({
   saving: boolean;
 }) {
   const [open, setOpen] = useState(false);
-  const [input, setInput] = useState(String(amount));
+  const [input, setInput] = useState(() => inputNumber(amount));
   const [error, setError] = useState<string | null>(null);
 
   function save() {
@@ -34,7 +35,7 @@ export function AmountEditor({
       open={open}
       onOpenChange={(next) => {
         if (next) {
-          setInput(String(amount));
+          setInput(inputNumber(amount));
           setError(null);
         }
         setOpen(next);

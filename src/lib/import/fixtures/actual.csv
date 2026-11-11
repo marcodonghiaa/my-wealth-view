@@ -1,0 +1,4 @@
+Account,Date,Payee,Notes,Category,Amount,Split_Amount,Cleared
+Checking,2026-01-15,Grocery Store,weekly shop,Food,-54.32,0,Cleared
+Checking,2026-01-31,,Salary January,Income,2500,0,Cleared
+Checking,2026-01-20,Electric Co,,Bills,-61.07,0,Not cleared
