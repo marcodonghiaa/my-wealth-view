@@ -50,7 +50,7 @@ describe("isLooseMatch", () => {
 describe("Make a rule shortcut", () => {
   it("opens Rules filled in with the name and the new category", () => {
     const navigate = vi.fn();
-    const action = makeRuleAction(" BAR ROMA ", "Dine Out", navigate);
+    const action = makeRuleAction(" BAR ROMA ", "Dine Out", navigate, []);
     expect(action?.label).toBe("Make a rule");
     action?.onClick();
     expect(navigate).toHaveBeenCalledWith({
@@ -80,8 +80,14 @@ describe("Make a rule shortcut", () => {
   });
 
   it("offers nothing without a name or a category", () => {
-    expect(makeRuleAction("  ", "Dine Out", vi.fn())).toBeUndefined();
-    expect(makeRuleAction("BAR", null, vi.fn())).toBeUndefined();
+    expect(makeRuleAction("  ", "Dine Out", vi.fn(), [])).toBeUndefined();
+    expect(makeRuleAction("BAR", null, vi.fn(), [])).toBeUndefined();
+  });
+
+  // Rules left-open #3: while the rules load (or if they fail), "no data" was read as
+  // "no rules", so the button showed for names a saved rule already sorts.
+  it("offers nothing until the rules have loaded", () => {
+    expect(makeRuleAction("BAR ROMA", "Dine Out", vi.fn(), undefined)).toBeUndefined();
   });
 });
 

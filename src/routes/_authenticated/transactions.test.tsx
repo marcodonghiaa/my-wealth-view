@@ -116,6 +116,19 @@ describe("Make a rule in the transaction sheet", () => {
     );
   });
 
+  // Rules left-open #3: if the rules can't load, we can't tell the name is covered, so no button
+  it("leaves it out when the rules fail to load", async () => {
+    rows["v_transactions_eur"] = [bankRow];
+    failTable = "category_rules";
+    try {
+      renderPage();
+      const sheet = await openSheet(/Poste Italiane/);
+      expect(within(sheet).queryByRole("button", { name: "Make a rule" })).toBeNull();
+    } finally {
+      failTable = null;
+    }
+  });
+
   // pass5 #2: the sheet's overlay covers the toast, so a change made in the sheet gets no toast
   // button (the sheet has its own); an inline change in the table keeps it
   it("puts Make a rule on the toast only when the change wasn't made in the sheet", async () => {
