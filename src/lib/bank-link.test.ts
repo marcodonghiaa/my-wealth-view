@@ -1,5 +1,13 @@
 import { describe, it, expect } from "vitest";
-import { COUNTRIES, linkErrorMessage, linkedMessage, pendingLink, renewTarget } from "./bank-link";
+import {
+  COUNTRIES,
+  countriesFor,
+  defaultCountry,
+  linkErrorMessage,
+  linkedMessage,
+  pendingLink,
+  renewTarget,
+} from "./bank-link";
 
 describe("linkedMessage", () => {
   it("names the bank and the currencies found", () => {
@@ -55,26 +63,38 @@ describe("renewTarget", () => {
   });
 
   it("returns null when the stored country is not in the form's list", () => {
-    expect(renewTarget("Revolut", [row("Revolut EUR", "Revolut", "LT")])).toBeNull();
+    expect(renewTarget("Revolut", [row("Revolut EUR", "Revolut", "US")])).toBeNull();
+  });
+
+  it("prefills a Lithuanian bank (Revolut)", () => {
+    expect(renewTarget("Revolut", [row("Revolut EUR", "Revolut", "LT")])).toEqual({
+      bankName: "Revolut",
+      country: "LT",
+    });
   });
 
   it("returns null when no row matches the bank", () => {
     expect(renewTarget("Wise", [row("Revolut EUR", "Revolut", "IE")])).toBeNull();
   });
 
-  it("lists the 10 form countries", () => {
-    expect(COUNTRIES.map((c) => c.code)).toEqual([
-      "IT",
-      "DE",
-      "FR",
-      "ES",
-      "GB",
-      "NL",
-      "BE",
-      "AT",
-      "PT",
-      "IE",
-    ]);
+  // protects=every country Enable Banking covers can be picked (the landing promises 31);
+  // fails_when=a country such as Lithuania (Revolut's bank) is missing from the form
+  it("lists the 31 EEA and UK countries, Lithuania included", () => {
+    expect(COUNTRIES).toHaveLength(31);
+    expect(new Set(COUNTRIES.map((c) => c.code)).size).toBe(31);
+    expect(COUNTRIES.map((c) => c.code)).toEqual(
+      expect.arrayContaining(["LT", "PL", "SE", "IT", "GB"]),
+    );
+  });
+
+  // protects=country names follow the UI language, in that language's alphabetical order, so the
+  // Italian UI needs no translated list; fails_when=names stay English or keep the English order
+  it("names and sorts the countries in the given language", () => {
+    const it = countriesFor("it");
+    expect(it.find((c) => c.code === "DE")?.name).toBe("Germania");
+    const names = it.map((c) => c.name);
+    expect(names).toEqual([...names].sort((a, b) => a.localeCompare(b, "it")));
+    expect(COUNTRIES.find((c) => c.code === "GB")?.name).toBe("United Kingdom");
   });
 });
 
@@ -115,5 +135,23 @@ describe("linkErrorMessage for complete-bank-consent replies", () => {
     expect(linkErrorMessage(new URLSearchParams({ bank_link_error: "Not signed in" }))).toBe(
       "Not signed in",
     );
+  });
+});
+
+describe("defaultCountry", () => {
+  it("takes the region of the first browser language in the list", () => {
+    expect(defaultCountry(["en", "de-AT", "fr-FR"])).toBe("AT");
+  });
+
+  it("infers the country of a bare language", () => {
+    expect(defaultCountry(["it"])).toBe("IT");
+    expect(defaultCountry(["sv"])).toBe("SE");
+  });
+
+  // protects=no country is pre-picked for the user by accident; fails_when=en-US or ja browsers
+  // start on whichever country sorts first (Austria) (polish 4, P2-3)
+  it("picks no country when no listed region is found", () => {
+    expect(defaultCountry(["en-US", "ja", "not a tag!"])).toBe("");
+    expect(defaultCountry([])).toBe("");
   });
 });

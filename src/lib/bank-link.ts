@@ -1,18 +1,67 @@
 import { bankOf } from "@/components/bank-badge";
 
-// Countries offered in the Connect a bank form, in display order.
-export const COUNTRIES: Array<{ code: string; name: string }> = [
-  { code: "IT", name: "Italy" },
-  { code: "DE", name: "Germany" },
-  { code: "FR", name: "France" },
-  { code: "ES", name: "Spain" },
-  { code: "GB", name: "UK" },
-  { code: "NL", name: "Netherlands" },
-  { code: "BE", name: "Belgium" },
-  { code: "AT", name: "Austria" },
-  { code: "PT", name: "Portugal" },
-  { code: "IE", name: "Ireland" },
+// Countries offered in the Connect a bank form: the EEA and the UK, where Enable Banking
+// connects banks under PSD2. A country without banks says so in the bank list.
+const COUNTRY_CODES = [
+  "AT",
+  "BE",
+  "BG",
+  "HR",
+  "CY",
+  "CZ",
+  "DK",
+  "EE",
+  "FI",
+  "FR",
+  "DE",
+  "GR",
+  "HU",
+  "IS",
+  "IE",
+  "IT",
+  "LV",
+  "LI",
+  "LT",
+  "LU",
+  "MT",
+  "NL",
+  "NO",
+  "PL",
+  "PT",
+  "RO",
+  "SK",
+  "SI",
+  "ES",
+  "SE",
+  "GB",
 ];
+
+// The countries named in the given language and sorted in its alphabetical order, so a translated
+// UI needs no list of its own.
+export function countriesFor(lang: string): Array<{ code: string; name: string }> {
+  const names = new Intl.DisplayNames([lang], { type: "region" });
+  return COUNTRY_CODES.map((code) => ({ code, name: names.of(code) ?? code })).sort((a, b) =>
+    a.name.localeCompare(b.name, lang),
+  );
+}
+
+// The UI is English for now.
+export const COUNTRIES = countriesFor("en");
+
+// The form's first country: the region of the browser's language (de-AT -> AT, a bare "it" ->
+// IT, "sv" -> SE) when it is in the list, else "" so the user picks one.
+export function defaultCountry(languages: readonly string[]): string {
+  for (const lang of languages) {
+    let region: string | undefined;
+    try {
+      region = new Intl.Locale(lang).maximize().region;
+    } catch {
+      continue; // not a valid language tag
+    }
+    if (region && COUNTRIES.some((c) => c.code === region)) return region;
+  }
+  return "";
+}
 
 // Toast text after the bank-consent-callback redirect or the complete-bank-consent reply:
 // "Revolut: EUR, GBP, USD" when it names the bank and currencies, else the account count.
