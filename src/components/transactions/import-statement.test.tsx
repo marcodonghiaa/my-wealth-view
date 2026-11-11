@@ -171,7 +171,7 @@ describe("ImportStatement", () => {
       "CARD_PAYMENT,Current,2026-03-02 09:00:00,2026-03-03 10:00:00,Coffee,-3.20,0.00,EUR,COMPLETED,1",
     ].join("\n");
     upload("revolut.csv", revolut);
-    expect(await screen.findByText(/Read as a Revolut export/)).toBeInTheDocument();
+    expect(await screen.findByText(/Read as an export from Revolut/)).toBeInTheDocument();
     expect(screen.getByText("−€3.20")).toBeInTheDocument();
     fireEvent.click(screen.getByLabelText("Spending is written as positive"));
     expect(await screen.findByText("+€3.20")).toBeInTheDocument();
@@ -185,6 +185,14 @@ describe("ImportStatement", () => {
     expect(await screen.findByText(/2 new transactions/)).toBeInTheDocument();
     expect(screen.getByText("−€3.80")).toBeInTheDocument();
     expect(screen.queryByLabelText("Spending is written as positive")).toBeNull();
+  });
+
+  it("polish-5 #7 names a preset without a/an grammar slips", async () => {
+    upload(
+      "actual.csv",
+      "Account,Date,Payee,Notes,Category,Amount,Split_Amount,Cleared\nChecking,2026-01-15,Grocery,,Food,-54.32,0,Cleared",
+    );
+    expect(await screen.findByText(/Read as an export from Actual Budget\./)).toBeInTheDocument();
   });
 
   it("polish-4 #12 gives the Columns toggle a 44px tap target", async () => {

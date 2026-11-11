@@ -279,7 +279,7 @@ export function ImportStatement() {
           {text && statement && (
             <div className="space-y-2 rounded-lg bg-card p-3 text-xs text-muted-foreground">
               <p>
-                {statement.preset ? `Read as a ${statement.preset} export. ` : ""}
+                {statement.preset ? `Read as an export from ${statement.preset}. ` : ""}
                 {statement.decimal &&
                   `Amounts use ${statement.decimal === "," ? "a decimal comma" : "a decimal point"}.`}
               </p>
