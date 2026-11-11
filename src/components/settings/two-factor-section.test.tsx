@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render as renderPlain, screen, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
 
 const lib = vi.hoisted(() => ({
   listAuthenticators: vi.fn(),
@@ -203,6 +203,10 @@ describe("TwoFactorSection", () => {
   // protects=keyboard and screen-reader users keep their place (WCAG 2.4.3);
   // fails_when=focus falls to the page body after setup starts, finishes or a remove
   it("moves focus to the code field, then back to the section heading", async () => {
+    vi.stubGlobal("matchMedia", () => ({ matches: true })); // a mouse: see the touch-screen test
+    onTestFinished(() => {
+      vi.unstubAllGlobals();
+    });
     lib.listAuthenticators
       .mockResolvedValueOnce([])
       .mockResolvedValue([{ id: "f1", name: "Phone" }]);
@@ -314,5 +318,21 @@ describe("TwoFactorSection", () => {
     await screen.findByAltText(/QR code/);
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
     expect(screen.getByRole("heading", { name: "Two-step sign-in" })).toHaveFocus();
+  });
+
+  // fails_when=on a touch screen the code field grabs focus, opening the keyboard over the QR code
+  it("doesn't focus the code field on a touch screen", async () => {
+    const coarse = vi.fn().mockReturnValue({ matches: false });
+    vi.stubGlobal("matchMedia", coarse);
+    try {
+      lib.listAuthenticators.mockResolvedValue([]);
+      render(<TwoFactorSection />);
+      fireEvent.click(await screen.findByRole("button", { name: "Set up two-step sign-in" }));
+      await screen.findByAltText(/QR code/);
+      expect(coarse).toHaveBeenCalledWith("(pointer: fine)");
+      expect(screen.getByLabelText("Authenticator code")).not.toHaveFocus();
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });

@@ -15,6 +15,9 @@ import {
 
 const AUTHENTICATORS_KEY = ["mfa-authenticators"];
 
+// Only with a mouse: on a touch screen focusing the code field opens the keyboard over the QR code.
+const finePointer = () => window.matchMedia?.("(pointer: fine)").matches ?? true;
+
 const message = (err: unknown, fallback: string) =>
   err instanceof Error && err.message ? err.message : fallback;
 
@@ -222,7 +225,7 @@ export function TwoFactorSection() {
               </label>
               <CodeInput
                 id="enroll-code"
-                autoFocus
+                autoFocus={finePointer()}
                 value={code}
                 onChange={(e) => setCode(e.target.value)}
                 aria-invalid={shownError ? true : undefined}
