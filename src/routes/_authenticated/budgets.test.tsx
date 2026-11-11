@@ -853,4 +853,16 @@ describe("Budgets page", () => {
     expect(await screen.findByRole("button", { name: "Start from my averages" })).toBeTruthy();
     expect(screen.queryByRole("alert")).toBeNull();
   });
+
+  // protects=P5 P2-2 "Over budget" is followed by the amount over, not a negative figure;
+  // fails_when=the headline reads "Over budget -€20.00"
+  it("shows the amount over budget without a minus sign", async () => {
+    db["category_budgets"] = [
+      { category: "Groceries", month: "2026-11-01", amount: 100, rollover: false },
+    ];
+    renderPage();
+    const headline = (await screen.findByText("Over budget")).closest("section")!;
+    expect(headline.textContent).toContain("€20.00");
+    expect(headline.textContent).not.toMatch(/[-−]/);
+  });
 });

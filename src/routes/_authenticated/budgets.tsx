@@ -321,7 +321,8 @@ function BudgetsPage() {
               {totalAvailable - totalSpent < 0 ? "Over budget" : "Left to spend"}
             </p>
             <div className="mt-1">
-              <HeadlineFigure value={totalAvailable - totalSpent} currency="EUR" />
+              {/* The label says which way; the figure is the amount. */}
+              <HeadlineFigure value={Math.abs(totalAvailable - totalSpent)} currency="EUR" />
             </div>
             <p className="mt-2 text-sm text-muted-foreground">
               <span className="font-figure text-foreground">{formatEur(totalSpent)}</span> spent of{" "}
