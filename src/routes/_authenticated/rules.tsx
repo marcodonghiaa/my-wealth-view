@@ -104,10 +104,10 @@ function RulesPage() {
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-8 md:py-12">
-      <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
+      <header className="mb-8 flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="ios-large-title">Rules</h1>
-          <p className="mt-1 max-w-prose text-sm text-muted-foreground">
+          <p className="mt-0.5 max-w-prose text-sm text-muted-foreground">
             Rules set the category or type of new transactions that match, before the AI guesses. If
             two rules match, the one higher in the list wins.
           </p>

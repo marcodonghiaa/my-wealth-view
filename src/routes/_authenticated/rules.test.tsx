@@ -207,6 +207,15 @@ describe("Rules list", () => {
     ).toBeTruthy();
   });
 
+  // Polish pass 4 #23: New rule lined up with the subtitle's last line, unlike Who owes you.
+  it("lines New rule up with the title, like Who owes you", async () => {
+    renderPage();
+    const header = (await screen.findByRole("heading", { name: "Rules", level: 1 })).closest(
+      "header",
+    );
+    expect(header).toHaveClass("items-start");
+  });
+
   it("counts the rules above the list", async () => {
     renderPage();
     expect(await screen.findByText("3 rules")).toBeTruthy();
