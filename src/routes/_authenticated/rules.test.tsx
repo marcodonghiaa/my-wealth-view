@@ -946,4 +946,20 @@ describe("re-sorting what a deleted rule filed", () => {
     expect(toastDismiss).toHaveBeenCalledTimes(1);
     expect(toastDismiss).toHaveBeenCalledWith("resort-r1");
   });
+
+  // Polish 1 #3: Transfer rows never change, so deleting a Transfer rule asks nothing.
+  it("doesn't ask for a Transfer rule", async () => {
+    inserted.push({
+      match_field: "creditor_name",
+      match_text: "Savings",
+      match_mode: "word",
+      set_category: "Transfer",
+      set_transaction_type: null,
+      priority: 100,
+    });
+    renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: "Delete rule for Savings" }));
+    await waitFor(() => expect(toastSuccess).toHaveBeenCalled());
+    expect(invoke).not.toHaveBeenCalled();
+  });
 });
