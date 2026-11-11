@@ -273,6 +273,16 @@ describe("notes and tags", () => {
     expect(p.onSaveTags).toHaveBeenCalledWith(["trip", "work"]);
   });
 
+  // fails_when=a search that matches a note shows a phone card with no visible reason
+  it("card shows the note too", () => {
+    render(
+      <ul>
+        <TransactionCardView {...bankRow()} />
+      </ul>,
+    );
+    expect(screen.getByText("Paid for two")).toBeInTheDocument();
+  });
+
   it("table row shows the note under the name", () => {
     render(
       <table>

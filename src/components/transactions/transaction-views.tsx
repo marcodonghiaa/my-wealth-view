@@ -354,6 +354,9 @@ export function TransactionCardView(props: TransactionViewProps) {
           </span>
           <WorthItHint tx={tx} />
         </p>
+        {tx.note && (
+          <p className="mt-0.5 truncate text-xs text-muted-foreground italic">{tx.note}</p>
+        )}
       </div>
       <AmountText tx={tx} />
     </>
