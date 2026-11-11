@@ -114,6 +114,16 @@ describe("Cash flow page", () => {
     expect(screen.getByRole("button", { name: "Next year" })).toBeDisabled();
   });
 
+  // Polish 1 #6: Year → Month comes back to this month, not January.
+  it("comes back to this month from Year view", async () => {
+    renderPage();
+    await waitFor(() => expect(row("Income")).toHaveTextContent("€3,000.00"));
+    fireEvent.click(screen.getByRole("radio", { name: "Year" }));
+    fireEvent.click(screen.getByRole("radio", { name: "Month" }));
+    await waitFor(() => expect(row("Income")).toHaveTextContent("€3,000.00"));
+    expect(screen.getByRole("button", { name: "Next month" })).toBeDisabled();
+  });
+
   // protects=the switcher stops at the first month with data and at the current period
   it("stops at the start of history and at today", async () => {
     renderPage();

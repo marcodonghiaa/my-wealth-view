@@ -13,6 +13,7 @@ import {
   periodStart,
   shiftPeriod,
   shortPeriodLabel,
+  switchPeriod,
   spendByCategory,
   summarize,
   trend,
@@ -147,8 +148,7 @@ function CashFlowPage() {
 
   function changePeriod(next: Period) {
     setPeriod(next);
-    // Keep the moment you were looking at: March in Month view becomes Q1, then that year.
-    setStart(periodStart(start, next));
+    setStart(switchPeriod(start, period, next, new Date()));
   }
 
   return (

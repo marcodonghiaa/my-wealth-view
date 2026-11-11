@@ -20,6 +20,19 @@ export function shiftPeriod(start: Date, period: Period, n: number): Date {
   return new Date(start.getFullYear(), start.getMonth() + n * MONTHS_IN[period], 1);
 }
 
+/**
+ * Where a period switch lands. Wider: the period holding the one you were on. Narrower: today's
+ * month or quarter when the period you were on holds today, else its last one, so Year → Month
+ * never drops you on a January before your data.
+ */
+export function switchPeriod(start: Date, from: Period, to: Period, today: Date): Date {
+  if (MONTHS_IN[to] >= MONTHS_IN[from]) return periodStart(start, to);
+  const end = shiftPeriod(start, from, 1);
+  const anchor =
+    today >= start && today < end ? today : new Date(end.getFullYear(), end.getMonth() - 1, 1);
+  return periodStart(anchor, to);
+}
+
 /** "November 2026", "Q4 2026" or "2026". */
 export function periodLabel(start: Date, period: Period, locale?: string): string {
   if (period === "year") return String(start.getFullYear());

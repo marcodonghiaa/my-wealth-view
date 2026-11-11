@@ -15,6 +15,7 @@ import {
   savingsRate,
   shiftPeriod,
   shortPeriodLabel,
+  switchPeriod,
   spendByCategory,
   summarize,
   topParts,
@@ -52,6 +53,28 @@ describe("periods", () => {
     expect(shortPeriodLabel(d(2026, 11), "month", "en-GB")).toBe("Nov");
     expect(shortPeriodLabel(d(2026, 4), "quarter")).toBe("Q2 '26");
     expect(shortPeriodLabel(d(2025, 1), "year")).toBe("2025");
+  });
+});
+
+// Polish 1 #6: Year → Month landed on January, possibly before any data.
+describe("switchPeriod", () => {
+  const today = d(2026, 11, 11);
+  it("widens to the period that holds the one you were on", () => {
+    expect(switchPeriod(d(2026, 3), "month", "quarter", today)).toEqual(d(2026, 1));
+    expect(switchPeriod(d(2026, 4), "quarter", "year", today)).toEqual(d(2026, 1));
+  });
+  it("narrows to today's month or quarter when the period holds today", () => {
+    expect(switchPeriod(d(2026, 1), "year", "month", today)).toEqual(d(2026, 11));
+    expect(switchPeriod(d(2026, 1), "year", "quarter", today)).toEqual(d(2026, 10));
+    expect(switchPeriod(d(2026, 10), "quarter", "month", today)).toEqual(d(2026, 11));
+  });
+  it("narrows to the last month or quarter of a past period", () => {
+    expect(switchPeriod(d(2025, 1), "year", "month", today)).toEqual(d(2025, 12));
+    expect(switchPeriod(d(2025, 1), "year", "quarter", today)).toEqual(d(2025, 10));
+    expect(switchPeriod(d(2026, 4), "quarter", "month", today)).toEqual(d(2026, 6));
+  });
+  it("keeps the period when it doesn't change", () => {
+    expect(switchPeriod(d(2026, 4), "quarter", "quarter", today)).toEqual(d(2026, 4));
   });
 });
 
