@@ -95,6 +95,8 @@ describe("sign-in with two-step", () => {
     render(<AuthPage />);
     await screen.findByLabelText("Authenticator code");
     expect(screen.queryByLabelText("Email")).not.toBeInTheDocument();
+    // A full 44px touch target, like the other sign-in buttons.
+    expect(screen.getByRole("button", { name: "Use a different account" })).toHaveClass("min-h-11");
     fireEvent.click(screen.getByRole("button", { name: "Use a different account" }));
     // This browser only: switching account here must not sign the user out on other devices.
     expect(auth.signOut).toHaveBeenCalledWith({ scope: "local" });

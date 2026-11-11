@@ -197,6 +197,13 @@ describe("TwoFactorSection", () => {
     await waitFor(() => expect(heading).toHaveFocus());
   });
 
+  // protects=touch targets of at least 44px (DESIGN.md); fails_when=the bin is a 36px small button
+  it("gives the remove bin a full-size touch target", async () => {
+    lib.listAuthenticators.mockResolvedValue([{ id: "a", name: "Phone" }]);
+    render(<TwoFactorSection />);
+    expect(await screen.findByRole("button", { name: "Remove Phone" })).toHaveClass("size-11");
+  });
+
   it("says when the list can't load", async () => {
     lib.listAuthenticators.mockRejectedValue(new Error("network down"));
     render(<TwoFactorSection />);

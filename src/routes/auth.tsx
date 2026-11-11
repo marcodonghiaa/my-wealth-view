@@ -258,7 +258,7 @@ function AuthPage() {
                     setCode("");
                     setError(null);
                   }}
-                  className="w-full text-center text-sm text-muted-foreground transition-colors hover:text-foreground"
+                  className="min-h-11 w-full text-center text-sm text-muted-foreground transition-colors hover:text-foreground"
                 >
                   Use a different account
                 </button>

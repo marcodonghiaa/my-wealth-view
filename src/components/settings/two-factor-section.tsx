@@ -123,7 +123,7 @@ export function TwoFactorSection() {
                   </span>
                   <Button
                     variant="ghost"
-                    size="sm"
+                    size="icon"
                     aria-label={`Remove ${a.name}`}
                     disabled={pending}
                     onClick={() => setConfirmRemove(a.id)}
