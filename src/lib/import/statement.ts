@@ -343,18 +343,19 @@ interface Recipe {
   unknownCurrencies?: Set<string>;
 }
 
+// Tabs and newlines become spaces; other control characters (Postgres rejects U+0000) go.
+// Cut at 500 characters, not UTF-16 units, so an emoji is never split in half.
+const cleanDescription = (text: string) =>
+  Array.from(text.replace(/\s+/g, " ").replace(/\p{Cc}/gu, ""))
+    .slice(0, 500)
+    .join("");
+
 function readRow(row: Array<string>, r: Recipe): StatementRow | null {
   if (r.skip(row)) return null;
   const c = r.columns;
   const date = parseDay(cell(row, c.date), r.dateOrder);
   const description = [c.description, ...r.descriptionAlt]
-    // Tabs and newlines become spaces; other control characters (Postgres rejects U+0000) go.
-    .map((i) =>
-      cell(row, i)
-        .replace(/\s+/g, " ")
-        .replace(/\p{Cc}/gu, "")
-        .slice(0, 500),
-    )
+    .map((i) => cleanDescription(cell(row, i)))
     .find((text) => text !== "");
   if (!date || !description) return null;
   const amount = (i: number | null | undefined) => parseAmount(cell(row, i), r.decimal);

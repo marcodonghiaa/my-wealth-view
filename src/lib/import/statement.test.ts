@@ -257,6 +257,13 @@ describe("untrusted values in a file", () => {
     expect(rows[1]!.description).toHaveLength(500);
   });
 
+  it("polish-5 #12 never cuts an emoji in half at 500 characters", () => {
+    const csv = `Date,Description,Amount\n2026-01-03,${"e".repeat(499)}😀tail,-2.00`;
+    const [row] = readStatement(csv).rows;
+    expect(row!.description).toBe("e".repeat(499) + "😀");
+    expect(() => encodeURIComponent(row!.description)).not.toThrow();
+  });
+
   it("polish-3 #15 doesn't read a German Valuta (value date) column as the currency", () => {
     const csv =
       "Buchungstag;Valuta;Verwendungszweck;Betrag\n02.01.2026;03.01.2026;Bäcker;-2,50\n04.01.2026;04.01.2026;Gehalt;1500,00";
