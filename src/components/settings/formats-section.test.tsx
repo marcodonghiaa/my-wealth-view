@@ -18,6 +18,16 @@ describe("FormatsSection", () => {
     expect(screen.getByText("3 Mar 2026")).toBeInTheDocument();
   });
 
+  it("polish-4 #8 says Automatic follows the browser, and only a picked format is saved", () => {
+    const { unmount } = render(<FormatsSection reload={() => {}} />);
+    expect(screen.getByText(/Follows your browser \(English \(UK\)\)/)).toBeInTheDocument();
+    expect(screen.queryByText(/Saved on this device/)).toBeNull();
+    unmount();
+    setLocaleOverride("de-DE");
+    render(<FormatsSection reload={() => {}} />);
+    expect(screen.getByText(/Saved on this device/)).toBeInTheDocument();
+  });
+
   it("saves the choice and reloads so every figure uses it", () => {
     const reload = vi.fn();
     render(<FormatsSection reload={reload} />);

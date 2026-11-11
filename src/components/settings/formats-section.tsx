@@ -1,8 +1,14 @@
 import { useState } from "react";
 import { Select } from "@/components/ui/field";
 import { formatDay } from "@/lib/date";
-import { LOCALE_CHOICES, localeOverride, setLocaleOverride } from "@/lib/locale";
+import { LOCALE_CHOICES, appLocale, localeOverride, setLocaleOverride } from "@/lib/locale";
 import { formatMoney } from "@/lib/transactions";
+
+// The browser's format by its name in the menu, else its tag ("pt-BR").
+const browserFormat = () => {
+  const locale = appLocale();
+  return LOCALE_CHOICES.find(([code]) => code === locale)?.[1] ?? locale;
+};
 
 // How numbers and dates are written. Follows the browser unless picked here (this device only).
 export function FormatsSection({
@@ -41,8 +47,8 @@ export function FormatsSection({
           <span className="font-figure text-foreground">
             {/* A real minus, as in the transaction list. */}−{formatMoney(1234.5, "EUR")}
           </span>{" "}
-          on <span className="text-foreground">{formatDay("2026-03-03")}</span>. Saved on this
-          device.
+          on <span className="text-foreground">{formatDay("2026-03-03")}</span>.{" "}
+          {value ? "Saved on this device." : `Follows your browser (${browserFormat()}).`}
         </p>
         {failed && (
           <p role="alert" className="text-sm text-negative">
