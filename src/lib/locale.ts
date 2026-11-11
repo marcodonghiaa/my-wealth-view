@@ -86,7 +86,8 @@ export function numberFormat(options: Intl.NumberFormatOptions = {}): Intl.Numbe
 /**
  * A typed number as plain "1234.5", read in the chosen format. With both marks the last one is the
  * decimal. A lone mark is the decimal unless it's this format's thousands mark in 3-digit groups:
- * "1.250" is 1250 in Italian, "1,250" is 1250 in English, and "0.5" / "12,5" stay decimals.
+ * "1.250.000" is 1250000 in Italian, "0.5" / "12,5" stay decimals, and a single group such as
+ * "1.250" in Italian or "1,250" in English is refused (empty) as it could mean either.
  */
 export function normalizeNumber(input: string): string {
   const text = input.trim().replace(/[\s']/g, "");
@@ -100,7 +101,9 @@ export function normalizeNumber(input: string): string {
     .formatToParts(1.5)
     .find((p) => p.type === "decimal")?.value;
   const grouped = new RegExp(`^[1-9]\\d{0,2}(\\${mark}\\d{3})+$`).test(text);
-  return mark !== decimal && grouped ? text.split(mark).join("") : text.replace(mark, ".");
+  if (mark === decimal || !grouped) return text.replace(mark, ".");
+  // One group ("1.125" in Italian) could be 1125 or a typed decimal: refuse rather than guess.
+  return text.split(mark).length > 2 ? text.split(mark).join("") : "";
 }
 
 /** A number to put back in an input box: the chosen decimal mark, no grouping, Latin digits. */

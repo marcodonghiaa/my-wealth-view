@@ -187,20 +187,29 @@ describe("thousands marks (polish-4 #3)", () => {
 
 describe("polish-5 #4 typed numbers follow the chosen format", () => {
   const parsers = { parseTypedAmount, parseQuantity, parseOwed };
+  it.each(Object.entries(parsers))("%s reads thousands marks in the chosen format", (_n, parse) => {
+    setLocaleOverride("it-IT");
+    expect(parse("1.250.000")).toBe(1250000);
+    expect(parse("1.250,5")).toBe(1250.5);
+    expect(parse("12,5")).toBe(12.5);
+    expect(parse("0.5")).toBe(0.5);
+    setLocaleOverride("en-GB");
+    expect(parse("1,250,000")).toBe(1250000);
+    expect(parse("1,250.5")).toBe(1250.5);
+    expect(parse("12.5")).toBe(12.5);
+    expect(parse("0,5")).toBe(0.5);
+    expect(parse("1,2,3")).toBeNull();
+  });
+
+  // "1.125" under Italian could be 1125 or a dot typed for 1,125: a wrong guess silently stores
+  // 1000× the value, so a lone thousands mark with one group is refused, not guessed.
   it.each(Object.entries(parsers))(
-    "%s reads 1.250 as 1250 under it-IT and 1,250 under en-GB",
+    "polish-5 #4 audit: %s refuses 1.125 / 1,125 instead of guessing",
     (_n, parse) => {
       setLocaleOverride("it-IT");
-      expect(parse("1.250")).toBe(1250);
-      expect(parse("1.250,5")).toBe(1250.5);
-      expect(parse("12,5")).toBe(12.5);
-      expect(parse("0.5")).toBe(0.5);
+      expect(parse("1.125")).toBeNull();
       setLocaleOverride("en-GB");
-      expect(parse("1,250")).toBe(1250);
-      expect(parse("1,250.5")).toBe(1250.5);
-      expect(parse("12.5")).toBe(12.5);
-      expect(parse("0,5")).toBe(0.5);
-      expect(parse("1,2,3")).toBeNull();
+      expect(parse("1,125")).toBeNull();
     },
   );
 });
