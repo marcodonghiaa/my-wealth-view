@@ -36,6 +36,35 @@ describe("NoteEditor draft", () => {
   });
 });
 
+describe("closing the sheet", () => {
+  // protects=Esc or X never loses an unsaved note or half-typed tag; fails_when=only blur saves
+  it("saves a changed note once when the editor goes away without a blur", () => {
+    const onSave = vi.fn();
+    const { unmount } = render(<NoteEditor note="old" onSave={onSave} saving={false} />);
+    fireEvent.change(screen.getByLabelText("Note"), { target: { value: "new" } });
+    unmount();
+    expect(onSave).toHaveBeenCalledWith("new");
+  });
+
+  it("does not save twice when blur already saved", () => {
+    const onSave = vi.fn();
+    const { unmount } = render(<NoteEditor note="old" onSave={onSave} saving={false} />);
+    const field = screen.getByLabelText("Note");
+    fireEvent.change(field, { target: { value: "new" } });
+    fireEvent.blur(field);
+    unmount();
+    expect(onSave).toHaveBeenCalledTimes(1);
+  });
+
+  it("adds a half-typed tag when the editor goes away", () => {
+    const onSave = vi.fn();
+    const { unmount } = render(<TagEditor tags={["trip"]} onSave={onSave} saving={false} />);
+    fireEvent.change(screen.getByLabelText("Add a tag"), { target: { value: "food" } });
+    unmount();
+    expect(onSave).toHaveBeenCalledWith(["trip", "food"]);
+  });
+});
+
 describe("TagEditor", () => {
   it("adds a tag on Enter and on comma, skipping repeats", () => {
     const onSave = vi.fn();

@@ -1,4 +1,4 @@
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { X } from "lucide-react";
 import { fieldClass } from "@/components/ui/field";
 import { cn } from "@/lib/utils";
@@ -13,7 +13,8 @@ import {
 
 /**
  * Free text about a transaction. Saved when the field loses focus, if it changed. The field keeps
- * what the user typed: a failed save rolls the note back, and the next blur tries again.
+ * what the user typed: a failed save rolls the note back, and the next blur tries again. Closing
+ * the sheet (Esc, X) can remove the field with no blur, so a change not yet sent is saved then.
  */
 export function NoteEditor({
   note,
@@ -25,6 +26,17 @@ export function NoteEditor({
   saving: boolean;
 }) {
   const [input, setInput] = useState(note ?? "");
+  const sent = useRef<string | null>(null);
+  const latest = useRef({ input, note, onSave });
+  latest.current = { input, note, onSave };
+  useEffect(
+    () => () => {
+      const { input, note, onSave } = latest.current;
+      const next = normalizeNote(input);
+      if (next !== (note ?? null) && next !== sent.current) onSave(next);
+    },
+    [],
+  );
 
   return (
     <textarea
@@ -37,7 +49,10 @@ export function NoteEditor({
       onChange={(e) => setInput(e.target.value)}
       onBlur={() => {
         const next = normalizeNote(input);
-        if (next !== (note ?? null)) onSave(next);
+        if (next !== (note ?? null)) {
+          sent.current = next;
+          onSave(next);
+        }
       }}
       className={cn(fieldClass(), "h-auto min-h-11 resize-y py-2.5")}
     />
@@ -72,6 +87,13 @@ export function TagEditor({
     setInput("");
     if (next.length !== current.length) onSave(next);
   }
+
+  // Closing the sheet can remove the field with no blur: keep a half-typed tag then too.
+  const latestAdd = useRef(() => {});
+  latestAdd.current = () => {
+    if (input.trim()) add();
+  };
+  useEffect(() => () => latestAdd.current(), []);
 
   const offered = suggestions.filter((s) => !current.some((t) => sameTag(t, s)));
 
