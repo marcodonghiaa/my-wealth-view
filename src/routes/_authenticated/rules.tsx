@@ -149,7 +149,7 @@ function RulesPage() {
         <GroupedList>
           <EmptyState
             title="No rules yet"
-            hint="Make one here, or from a transaction after you change its category."
+            hint="Use New rule above, or change a transaction's category and pick Make a rule. For example: Name has the word “Netflix” → Entertainment."
           />
         </GroupedList>
       ) : (

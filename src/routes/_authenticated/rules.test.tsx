@@ -485,6 +485,12 @@ describe("rules list states", () => {
     db.rules = "empty";
     renderPage();
     expect(await screen.findByText("No rules yet")).toBeTruthy();
+    // Polish pass 4 #15: "Make one here" didn't say how, and gave no example.
+    expect(
+      screen.getByText(
+        "Use New rule above, or change a transaction's category and pick Make a rule. For example: Name has the word “Netflix” → Entertainment.",
+      ),
+    ).toBeTruthy();
   });
 });
 
