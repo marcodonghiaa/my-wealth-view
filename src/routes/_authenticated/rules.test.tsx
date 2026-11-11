@@ -296,7 +296,10 @@ describe("apply to past transactions", () => {
     invoke.mockResolvedValueOnce({ data: null, error: new Error("boom") });
     invoke.mockResolvedValueOnce({ data: { changes: 0, sample: [] }, error: null });
     await open();
-    expect(await screen.findByRole("alert")).toHaveTextContent("Couldn't apply your rules");
+    // Polish pass 4 #4: it said "Couldn't apply… try again" next to Try again, while only checking.
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      /^Couldn't check your transactions\.$/,
+    );
     fireEvent.click(screen.getByRole("button", { name: "Try again" }));
     expect(await screen.findByText(/Nothing to change/)).toBeTruthy();
   });
@@ -322,7 +325,7 @@ describe("apply to past transactions", () => {
     await open();
     fireEvent.click(await screen.findByRole("button", { name: "Update 2 transactions" }));
     await waitFor(() =>
-      expect(toastError).toHaveBeenCalledWith(expect.stringMatching(/Couldn't apply/)),
+      expect(toastError).toHaveBeenCalledWith("Couldn't update your transactions."),
     );
     expect(screen.getByRole("button", { name: "Update 2 transactions" })).toBeTruthy();
   });

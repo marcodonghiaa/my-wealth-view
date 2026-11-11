@@ -21,7 +21,10 @@ async function reapply(apply: boolean): Promise<ReapplyResult> {
     body: { apply },
   });
   if (error || !data) {
-    throw new Error(await functionErrorMessage(error, "Couldn't apply your rules, try again"));
+    const fallback = apply
+      ? "Couldn't update your transactions."
+      : "Couldn't check your transactions.";
+    throw new Error(await functionErrorMessage(error, fallback));
   }
   return data;
 }
