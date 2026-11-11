@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Loader2, ShieldCheck, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CodeInput, Input } from "@/components/ui/field";
@@ -34,6 +34,9 @@ export function TwoFactorSection() {
   const [code, setCode] = useState("");
   const [confirmRemove, setConfirmRemove] = useState<string | null>(null);
   const reload = () => queryClient.invalidateQueries({ queryKey: AUTHENTICATORS_KEY });
+  // After a step's buttons disappear, keyboard and screen-reader users land back on the section.
+  const heading = useRef<HTMLHeadingElement>(null);
+  const backToSection = () => heading.current?.focus();
   const shownError =
     error ??
     (authenticators.isError && !authenticators.isFetching
@@ -66,6 +69,7 @@ export function TwoFactorSection() {
       setEnrollment(null);
       setName("");
       await reload();
+      backToSection();
     }, "That code didn't work. Try the next one.");
   };
 
@@ -80,6 +84,7 @@ export function TwoFactorSection() {
       await removeAuthenticator(id);
       setConfirmRemove(null);
       await reload();
+      backToSection();
     }, "Couldn't remove the authenticator.");
 
   const on = (list?.length ?? 0) > 0;
@@ -88,7 +93,12 @@ export function TwoFactorSection() {
     <section id="two-step" aria-labelledby="two-step-heading" className="scroll-mt-6">
       <div className="max-w-sm space-y-4 rounded-lg bg-card p-5">
         <div>
-          <h3 id="two-step-heading" className="text-[0.9375rem] font-medium text-foreground">
+          <h3
+            id="two-step-heading"
+            ref={heading}
+            tabIndex={-1}
+            className="outline-none text-[0.9375rem] font-medium text-foreground"
+          >
             Two-step sign-in
           </h3>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -171,7 +181,12 @@ export function TwoFactorSection() {
               <label htmlFor="enroll-code" className="text-xs font-medium text-muted-foreground">
                 Authenticator code
               </label>
-              <CodeInput id="enroll-code" value={code} onChange={(e) => setCode(e.target.value)} />
+              <CodeInput
+                id="enroll-code"
+                autoFocus
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+              />
             </div>
             <div className="flex gap-2">
               <Button type="submit" disabled={pending} className="flex-1">
@@ -212,7 +227,7 @@ export function TwoFactorSection() {
         )}
 
         {loadFailed && (
-          <Button variant="quiet" onClick={() => void authenticators.refetch()}>
+          <Button variant="quiet" onClick={() => void authenticators.refetch().then(backToSection)}>
             Try again
           </Button>
         )}

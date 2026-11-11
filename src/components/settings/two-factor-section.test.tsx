@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render as renderPlain, screen } from "@testing-library/react";
+import { fireEvent, render as renderPlain, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const lib = vi.hoisted(() => ({
@@ -176,6 +176,25 @@ describe("TwoFactorSection", () => {
     fireEvent.keyDown(screen.getByRole("button", { name: "Confirm remove" }), { key: "Escape" });
     expect(screen.queryByRole("button", { name: "Confirm remove" })).toBeNull();
     expect(lib.removeAuthenticator).not.toHaveBeenCalled();
+  });
+
+  // protects=keyboard and screen-reader users keep their place (WCAG 2.4.3);
+  // fails_when=focus falls to the page body after setup starts, finishes or a remove
+  it("moves focus to the code field, then back to the section heading", async () => {
+    lib.listAuthenticators
+      .mockResolvedValueOnce([])
+      .mockResolvedValue([{ id: "f1", name: "Phone" }]);
+    render(<TwoFactorSection />);
+    fireEvent.click(await screen.findByRole("button", { name: "Set up two-step sign-in" }));
+    await waitFor(() => expect(screen.getByLabelText("Authenticator code")).toHaveFocus());
+    fireEvent.change(screen.getByLabelText("Authenticator code"), { target: { value: "123456" } });
+    fireEvent.click(screen.getByRole("button", { name: "Turn on" }));
+    const heading = screen.getByRole("heading", { name: "Two-step sign-in" });
+    await waitFor(() => expect(heading).toHaveFocus());
+    fireEvent.click(screen.getByRole("button", { name: "Remove Phone" }));
+    fireEvent.click(screen.getByRole("button", { name: "Confirm remove" }));
+    await waitFor(() => expect(lib.removeAuthenticator).toHaveBeenCalled());
+    await waitFor(() => expect(heading).toHaveFocus());
   });
 
   it("says when the list can't load", async () => {
