@@ -311,7 +311,9 @@ describe("TwoFactorSection", () => {
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
     expect(bin).toHaveFocus();
     fireEvent.click(bin);
-    fireEvent.keyDown(screen.getByRole("button", { name: "Confirm remove" }), { key: "Escape" });
+    const confirm = screen.getByRole("button", { name: "Confirm remove" });
+    confirm.focus();
+    fireEvent.keyDown(confirm, { key: "Escape" });
     expect(screen.queryByRole("button", { name: "Confirm remove" })).toBeNull();
     expect(bin).toHaveFocus();
     fireEvent.click(screen.getByRole("button", { name: "Add another authenticator" }));
