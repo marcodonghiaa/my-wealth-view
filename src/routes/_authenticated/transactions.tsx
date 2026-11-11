@@ -396,12 +396,16 @@ function TransactionsPage({ category: initialCategory, month: initialMonth }: Tr
 
   const filterCount = activeFilterCount({ category, bank, day, tag });
   const filtersOn = filterCount > 0 || search.trim() !== "";
-  function clearFilters() {
-    setSearch("");
+  // The phone filter sheet clears its own fields; search sits outside it.
+  function clearSheetFilters() {
     setCategory("all");
     setBank("all");
     setDay("");
     setTag("");
+  }
+  function clearFilters() {
+    setSearch("");
+    clearSheetFilters();
   }
   const filterSummary = [
     category === "all" ? null : category === UNCATEGORIZED ? "Uncategorized" : category,
@@ -613,12 +617,7 @@ function TransactionsPage({ category: initialCategory, month: initialMonth }: Tr
             maxDay={formatISODate(new Date(month.getFullYear(), month.getMonth() + 1, 0))}
             count={filterCount}
             resultCount={filtered.length}
-            onClear={() => {
-              setCategory("all");
-              setBank("all");
-              setDay("");
-              setTag("");
-            }}
+            onClear={clearSheetFilters}
           />
         </div>
         <div className="hidden gap-3 md:flex">

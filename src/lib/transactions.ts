@@ -377,7 +377,7 @@ export const MAX_NOTE_LENGTH = 2000;
 const cutChars = (s: string, max: number): string => Array.from(s).slice(0, max).join("");
 
 /** One tag as typed: composed (NFC), invisible format characters dropped, trimmed, inner spaces collapsed, cut to the length limit. */
-export const cleanTag = (raw: string): string =>
+const cleanTag = (raw: string): string =>
   cutChars(
     raw
       .normalize("NFC")

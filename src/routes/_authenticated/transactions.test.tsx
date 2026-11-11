@@ -385,7 +385,6 @@ describe("Transactions page tag filter", () => {
     fireEvent.change(screen.getByLabelText("Filter by tag"), { target: { value: "trip" } });
     expect(screen.queryAllByText("Cafe Beta")).toHaveLength(0);
     expect(screen.getAllByText("Hotel Alpha").length).toBeGreaterThan(0);
-    delete rows["v_transactions_eur"];
   });
 
   // fails_when=removing the last use of the selected tag leaves the filter on and the list empty
