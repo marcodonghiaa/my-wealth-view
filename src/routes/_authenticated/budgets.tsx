@@ -534,7 +534,9 @@ function BudgetLineRow({
       <div className="flex items-center justify-between gap-3">
         <span className="flex min-w-0 items-center gap-2 font-medium text-foreground">
           <CategoryAvatar category={line.category} />
-          <span className="truncate">{line.category}</span>
+          <span className="line-clamp-2 [overflow-wrap:anywhere]" title={line.category}>
+            {line.category}
+          </span>
         </span>
         <span className={`shrink-0 ${over ? "text-negative" : "text-foreground"}`}>
           <span className="font-figure">{formatEur(Math.abs(line.left))}</span>{" "}

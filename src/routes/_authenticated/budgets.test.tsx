@@ -977,4 +977,16 @@ describe("Budgets page", () => {
     expect(scrolled).toHaveBeenCalledWith({ block: "nearest" });
     expect(screen.getByText("Roll over").className).toContain("ml-auto");
   });
+
+  // protects=P5 P2-9 a long category name can be read in its budget row;
+  // fails_when=the name is cut to one short line with no title
+  it("lets a long category name wrap to two lines, with its full name as a title", async () => {
+    const long = "Household repairs and garden supplies 40";
+    db["category_budgets"] = [{ category: long, month: "2026-11-01", amount: 50, rollover: false }];
+    renderPage();
+    await screen.findByRole("button", { name: /^Change budget for Household/ });
+    const name = screen.getByTitle(long);
+    expect(name.textContent).toBe(long);
+    expect(name.className).toContain("line-clamp-2");
+  });
 });
