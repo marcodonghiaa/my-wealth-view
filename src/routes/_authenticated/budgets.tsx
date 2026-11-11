@@ -503,9 +503,9 @@ function BudgetLineRow({
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
-    // A blank or mistyped amount never removes the budget: Remove does that.
+    // A blank, mistyped or zero amount never removes the budget: Remove does that.
     const amount = parseAmount(draft);
-    if (amount == null) return setInvalid(true);
+    if (amount == null || amount <= 0) return setInvalid(true);
     setInvalid(false);
     // The editor stays open with the typed amount until the save went through.
     onSave(amount, line.rollover, close);
@@ -585,7 +585,8 @@ function BudgetLineRow({
                 role="alert"
                 className="basis-full text-negative"
               >
-                Type an amount below 10 million, like 250.
+                Type an amount above 0 and below 10 million, like 250. To delete the budget, use
+                Remove.
               </span>
             )}
           </form>

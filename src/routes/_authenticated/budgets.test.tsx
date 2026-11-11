@@ -865,4 +865,21 @@ describe("Budgets page", () => {
     expect(headline.textContent).toContain("€20.00");
     expect(headline.textContent).not.toMatch(/[-−]/);
   });
+
+  // protects=P5 P2-3 only Remove removes: a typed 0 is refused like in the Add form;
+  // fails_when=saving 0 in the editor silently deletes the budget
+  it("refuses 0 in the editor and points to Remove", async () => {
+    db["category_budgets"] = [
+      { category: "Groceries", month: "2026-11-01", amount: 300, rollover: false },
+    ];
+    renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: /Change budget for Groceries/ }));
+    fireEvent.change(screen.getByLabelText("Budget for Groceries"), { target: { value: "0" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect((await screen.findByRole("alert")).textContent).toBe(
+      "Type an amount above 0 and below 10 million, like 250. To delete the budget, use Remove.",
+    );
+    expect(upserts).toHaveLength(0);
+    expect(screen.getByLabelText("Budget for Groceries")).toBeTruthy();
+  });
 });
