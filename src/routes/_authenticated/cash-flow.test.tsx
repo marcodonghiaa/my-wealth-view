@@ -105,6 +105,8 @@ describe("Cash flow page", () => {
     // Polish 1 #4: the overspend is drawn as money taken from savings.
     const chart = await screen.findByRole("img", { name: /^Cash flow for/ });
     expect(within(chart).getByText("From savings")).toBeInTheDocument();
+    // Polish 3 #7: read out as money taken from savings, not "−€500.00 saved".
+    expect(chart).toHaveAccessibleName(/€500\.00 taken from savings\.$/);
   });
 
   // protects=switching to Year sums every month of that year

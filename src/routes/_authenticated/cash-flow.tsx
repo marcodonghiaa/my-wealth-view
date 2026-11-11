@@ -253,7 +253,11 @@ function CashFlowPage() {
               graph={graph}
               label={`Cash flow for ${label}: ${formatEur(summary.income)} in, ${formatEur(
                 summary.spending,
-              )} out, ${formatSignedEur(summary.net)} saved.`}
+              )} out, ${
+                summary.net < 0
+                  ? `${formatEur(-summary.net)} taken from savings`
+                  : `${formatSignedEur(summary.net)} saved`
+              }.`}
             />
           )}
         </GroupedList>
