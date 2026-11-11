@@ -1009,4 +1009,30 @@ describe("Budgets page", () => {
     const input = screen.getByLabelText("Budget for Groceries") as HTMLInputElement;
     expect([input.selectionStart, input.selectionEnd]).toEqual([0, input.value.length]);
   });
+
+  // protects=P5 P2-12 the month switcher stops a year back, or at the first budget if older;
+  // fails_when=Previous month goes back for ever, years before any data
+  it("stops going back a year before this month, or at the first budget", async () => {
+    renderPage();
+    const prev = (await screen.findByRole("button", {
+      name: "Previous month",
+    })) as HTMLButtonElement;
+    for (let i = 0; i < 12; i++) fireEvent.click(prev);
+    expect(await screen.findByText("November 2025")).toBeTruthy();
+    expect(prev.disabled).toBe(true);
+  });
+
+  it("goes back as far as the first budget when that is more than a year ago", async () => {
+    db["category_budgets"] = [
+      { category: "Groceries", month: "2025-09-01", amount: 300, rollover: false },
+    ];
+    renderPage();
+    const prev = (await screen.findByRole("button", {
+      name: "Previous month",
+    })) as HTMLButtonElement;
+    await screen.findByRole("button", { name: /Change budget for Groceries/ });
+    for (let i = 0; i < 14; i++) fireEvent.click(prev);
+    expect(await screen.findByText("September 2025")).toBeTruthy();
+    expect(prev.disabled).toBe(true);
+  });
 });

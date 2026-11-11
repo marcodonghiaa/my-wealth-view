@@ -224,6 +224,13 @@ function BudgetsPage() {
   const canGoNext =
     startOfMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1)) <=
     startOfMonth(new Date());
+  // Back as far as a year, or the first budget if that is older: not into years without data.
+  const thisMonthIso = formatISODate(startOfMonth(new Date()));
+  const earliestMonth = rows.reduce(
+    (a, r) => (r.month < a ? r.month : a),
+    addMonths(thisMonthIso, -12),
+  );
+  const canGoPrev = monthIso > earliestMonth;
   const loading = budgetsQuery.isPending || (budgetsQuery.isSuccess && spendQuery.isPending);
   const error = budgetsQuery.error ?? spendQuery.error;
 
@@ -282,6 +289,7 @@ function BudgetsPage() {
         onPrev={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))}
         onNext={() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))}
         canGoNext={canGoNext}
+        canGoPrev={canGoPrev}
       />
 
       {/* Option A from polish pass 1: a past-month change holds onward, so say so up front. */}
