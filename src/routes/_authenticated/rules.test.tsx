@@ -100,6 +100,8 @@ vi.mock("@/integrations/supabase/client", () => {
 
 import { Route } from "./rules";
 vi.spyOn(Route, "useSearch").mockImplementation((() => search) as never);
+const navigate = vi.fn();
+vi.spyOn(Route, "useNavigate").mockImplementation((() => navigate) as never);
 
 // Shared mock state goes back to defaults after every test, even one that fails half-way.
 afterEach(() => {
@@ -114,6 +116,7 @@ afterEach(() => {
     insertError: null,
   });
   invoke.mockReset();
+  navigate.mockReset();
   toastSuccess.mockReset();
   toastError.mockReset();
 });
@@ -317,6 +320,23 @@ describe("match modes", () => {
     renderPage();
     expect(await screen.findByLabelText("Text to look for")).toHaveValue("BAR ROMA");
     expect(screen.getByLabelText("Set category")).toHaveValue("Dine Out");
+  });
+
+  // Polish pass 4 #13: a filled-in form gave no hint of what it would save.
+  it("sums up the rule it will save", async () => {
+    search = { text: "BAR ROMA", category: "Dine Out" };
+    renderPage();
+    expect(await screen.findByText("Name has the word “BAR ROMA” → Dine Out")).toBeTruthy();
+    fireEvent.change(screen.getByLabelText("Set type"), { target: { value: "Subscription" } });
+    expect(screen.getByText("Name has the word “BAR ROMA” → Dine Out, Subscription")).toBeTruthy();
+  });
+
+  // Polish pass 4 #13: the link's text stayed in the address, so Back reopened the form.
+  it("drops the link's text from the address when the form closes", async () => {
+    search = { text: "BAR ROMA", category: "Dine Out" };
+    renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: "Cancel" }));
+    expect(navigate).toHaveBeenCalledWith({ search: {}, replace: true });
   });
 });
 

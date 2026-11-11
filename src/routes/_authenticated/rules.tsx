@@ -90,6 +90,7 @@ const CHIP = "rounded-sm bg-muted px-2 py-0.5 text-xs font-medium";
 
 function RulesPage() {
   const prefill = Route.useSearch();
+  const navigate = Route.useNavigate();
   const [showForm, setShowForm] = useState(!!prefill.text);
   // Focus goes back to "New rule" when the form closes, not to the top of the page.
   const newRuleButton = useRef<HTMLButtonElement>(null);
@@ -123,7 +124,11 @@ function RulesPage() {
         <RuleForm
           initialText={prefill.text ?? ""}
           initialCategory={prefill.category ?? ""}
-          onClose={() => setShowForm(false)}
+          onClose={() => {
+            setShowForm(false);
+            // Back or a refresh must not open the filled-in form again.
+            if (prefill.text || prefill.category) void navigate({ search: {}, replace: true });
+          }}
         />
       )}
 
@@ -319,6 +324,13 @@ function RuleForm({
           </div>
         </div>
       </fieldset>
+
+      {matchText.trim() && (shownCategory || type) && (
+        <p className="mt-6 text-sm break-words">
+          {ruleCondition(matchField, matchMode)} {quoteText(matchText.trim())} →{" "}
+          {[shownCategory, type].filter(Boolean).join(", ")}
+        </p>
+      )}
 
       <div className="mt-6 flex flex-wrap items-center gap-3">
         <Button type="submit" disabled={addRule.isPending}>
