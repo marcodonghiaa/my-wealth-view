@@ -608,6 +608,8 @@ function AddBudget({
 }) {
   const [category, setCategory] = useState("");
   const [amount, setAmount] = useState("");
+  // Whether the amount is the user's own: a suggestion follows the category, a typed one stays.
+  const [typed, setTyped] = useState(false);
   const [invalid, setInvalid] = useState(false);
   if (categories.length === 0) return null;
 
@@ -620,6 +622,7 @@ function AddBudget({
     onAdd(category, value);
     setCategory("");
     setAmount("");
+    setTyped(false);
   }
 
   return (
@@ -638,7 +641,7 @@ function AddBudget({
             onChange={(e) => {
               setCategory(e.target.value);
               const s = suggestions.get(e.target.value);
-              if (s && !amount) setAmount(String(s));
+              if (!typed) setAmount(s ? String(s) : "");
             }}
           >
             <option value="">Category…</option>
@@ -657,6 +660,7 @@ function AddBudget({
             aria-describedby={invalid ? "add-budget-error" : undefined}
             onChange={(e) => {
               setAmount(e.target.value);
+              setTyped(e.target.value !== "");
               setInvalid(false);
             }}
             className="sm:w-40"

@@ -774,4 +774,24 @@ describe("Budgets page", () => {
     const options = [...(screen.getByLabelText("Category") as HTMLSelectElement).options];
     expect(options.map((o) => o.value)).toContain("Groceries");
   });
+
+  // protects=P5 P1-1 the suggested amount follows the category until the user types one;
+  // fails_when=a second category is saved with the first category's average
+  it("keeps the suggested amount in step with the category", async () => {
+    renderPage();
+    const category = await screen.findByLabelText("Category");
+    const amount = screen.getByLabelText("Monthly budget in euros") as HTMLInputElement;
+    fireEvent.change(category, { target: { value: "Groceries" } });
+    expect(amount.value).toBe("310");
+    // Dine Out: 81 in one of two months with spending, 40.5 on average, rounded up to 50.
+    fireEvent.change(category, { target: { value: "Dine Out" } });
+    expect(amount.value).toBe("50");
+    // No history: nothing to suggest, so nothing left over from the last category.
+    fireEvent.change(category, { target: { value: "Health" } });
+    expect(amount.value).toBe("");
+    // Typed by the user: kept when the category changes.
+    fireEvent.change(amount, { target: { value: "75" } });
+    fireEvent.change(category, { target: { value: "Groceries" } });
+    expect(amount.value).toBe("75");
+  });
 });
