@@ -363,8 +363,9 @@ describe("Budgets page", () => {
     fireEvent.click(amount());
     fireEvent.change(screen.getByLabelText("Budget for Groceries"), { target: { value: "280" } });
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
-    expect(document.activeElement).toBe(amount());
     await waitFor(() => expect(upserts).toHaveLength(1));
+    // The editor closes once the save went through (P5 P1-2), then focus is back on the amount.
+    await waitFor(() => expect(document.activeElement).toBe(amount()));
 
     fireEvent.click(await screen.findByRole("button", { name: /now €280.00/ }));
     fireEvent.click(screen.getByRole("button", { name: "Remove" }));
@@ -793,5 +794,39 @@ describe("Budgets page", () => {
     fireEvent.change(amount, { target: { value: "75" } });
     fireEvent.change(category, { target: { value: "Groceries" } });
     expect(amount.value).toBe("75");
+  });
+
+  // protects=P5 P1-2 a failed save keeps what was typed and says why in plain words;
+  // fails_when=the form is emptied or the editor closes before the save succeeded
+  it("keeps what was typed when a save fails", async () => {
+    db["category_budgets"] = [
+      { category: "Groceries", month: "2026-11-01", amount: 300, rollover: false },
+    ];
+    failUpsert = "TypeError: Failed to fetch";
+    renderPage();
+    const category = (await screen.findByLabelText("Category")) as HTMLSelectElement;
+    const amount = screen.getByLabelText("Monthly budget in euros") as HTMLInputElement;
+    fireEvent.change(category, { target: { value: "Health" } });
+    fireEvent.change(amount, { target: { value: "123" } });
+    fireEvent.click(screen.getByRole("button", { name: "Add" }));
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith("Couldn't save the budget", {
+        description: "Can't reach your database. Check your connection and try again.",
+      }),
+    );
+    expect(category.value).toBe("Health");
+    expect(amount.value).toBe("123");
+
+    fireEvent.click(screen.getByRole("button", { name: /Change budget for Groceries/ }));
+    fireEvent.change(screen.getByLabelText("Budget for Groceries"), { target: { value: "555" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(toast.error).toHaveBeenCalledTimes(2));
+    expect((screen.getByLabelText("Budget for Groceries") as HTMLInputElement).value).toBe("555");
+
+    // The retry goes through and only then the editor closes.
+    failUpsert = null;
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(screen.queryByLabelText("Budget for Groceries")).toBeNull());
+    expect(await screen.findByRole("button", { name: /now €555\.00/ })).toBeTruthy();
   });
 });

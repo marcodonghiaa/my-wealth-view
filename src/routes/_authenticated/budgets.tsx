@@ -113,6 +113,12 @@ async function fetchIncomeByMonth(from: string, to: string): Promise<Map<string,
   return new Map(rows.map((r) => [String(r.month), Number(r.income_eur ?? 0)]));
 }
 
+/** A browser's network failure, in words a person can act on. */
+const readable = (message: string) =>
+  /failed to fetch|networkerror|load failed/i.test(message)
+    ? "Can't reach your database. Check your connection and try again."
+    : message;
+
 function readSpread(): boolean {
   try {
     return window.localStorage.getItem(SPREAD_KEY) === "1";
@@ -191,7 +197,8 @@ function BudgetsPage() {
     },
     // Returned, so the save stays pending until the saved budgets are back on screen.
     onSuccess: () => queryClient.invalidateQueries({ queryKey: BUDGETS_KEY }),
-    onError: (err: Error) => toast.error("Couldn't save the budget", { description: err.message }),
+    onError: (err: Error) =>
+      toast.error("Couldn't save the budget", { description: readable(err.message) }),
   });
 
   const totalAvailable = lines.reduce((s, l) => s + l.available, 0);
@@ -307,8 +314,10 @@ function BudgetsPage() {
                   key={line.category}
                   line={line}
                   busy={save.isPending}
-                  onSave={(amount, rollover) =>
-                    save.mutate([{ category: line.category, amount, rollover }])
+                  onSave={(amount, rollover, done) =>
+                    save.mutate([{ category: line.category, amount, rollover }], {
+                      onSuccess: () => done?.(),
+                    })
                   }
                 />
               ))}
@@ -376,7 +385,9 @@ function BudgetsPage() {
             categories={addable}
             suggestions={suggestions}
             busy={save.isPending}
-            onAdd={(category, amount) => save.mutate([{ category, amount, rollover: false }])}
+            onAdd={(category, amount, done) =>
+              save.mutate([{ category, amount, rollover: false }], { onSuccess: done })
+            }
           />
 
           <section className="mt-6" aria-label="Income">
@@ -444,7 +455,8 @@ function BudgetLineRow({
 }: {
   line: BudgetLine;
   busy: boolean;
-  onSave: (amount: number, rollover: boolean) => void;
+  /** `done` runs once the save has succeeded. */
+  onSave: (amount: number, rollover: boolean, done?: () => void) => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
@@ -471,8 +483,8 @@ function BudgetLineRow({
     const amount = parseAmount(draft);
     if (amount == null) return setInvalid(true);
     setInvalid(false);
-    close();
-    onSave(amount, line.rollover);
+    // The editor stays open with the typed amount until the save went through.
+    onSave(amount, line.rollover, close);
   }
 
   return (
@@ -604,7 +616,8 @@ function AddBudget({
   categories: ReadonlyArray<string>;
   suggestions: ReadonlyMap<string, number>;
   busy: boolean;
-  onAdd: (category: string, amount: number) => void;
+  /** `done` runs once the save has succeeded. */
+  onAdd: (category: string, amount: number, done: () => void) => void;
 }) {
   const [category, setCategory] = useState("");
   const [amount, setAmount] = useState("");
@@ -619,10 +632,12 @@ function AddBudget({
     if (!category) return;
     if (value == null || value <= 0) return setInvalid(true);
     setInvalid(false);
-    onAdd(category, value);
-    setCategory("");
-    setAmount("");
-    setTyped(false);
+    // The form keeps what was typed until the save went through.
+    onAdd(category, value, () => {
+      setCategory("");
+      setAmount("");
+      setTyped(false);
+    });
   }
 
   return (
