@@ -136,6 +136,7 @@ export function firstMonth(rows: Array<MonthlyFlowRow>): string | null {
 
 /** One incoming payment, as v_transactions_eur gives it for flow_type = income. */
 export interface IncomeTxRow {
+  payer_name?: string | null;
   creditor_name: string | null;
   category: string | null;
   personal_signed_amount_eur: number | null;

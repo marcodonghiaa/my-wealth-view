@@ -122,6 +122,28 @@ describe("firstMonth", () => {
 });
 
 describe("incomeBySource", () => {
+  it("names each source by its payer when the bank gives one", () => {
+    expect(
+      incomeBySource([
+        {
+          payer_name: "Acme Srl",
+          creditor_name: "Me",
+          category: "Income",
+          personal_signed_amount_eur: 2000,
+        },
+        {
+          payer_name: "Client B",
+          creditor_name: "Me",
+          category: "Income",
+          personal_signed_amount_eur: 500,
+        },
+      ]),
+    ).toEqual([
+      { name: "Acme Srl", value: 2000 },
+      { name: "Client B", value: 500 },
+    ]);
+  });
+
   it("groups by payer, falls back to category, skips non-positive rows", () => {
     expect(
       incomeBySource([

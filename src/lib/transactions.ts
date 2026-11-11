@@ -33,8 +33,14 @@ export const txId = (tx: TxKey): string => `${tx.account_uid ?? ""}|${tx.entry_r
 export const isSameTx = (a: TxKey | undefined, b: TxKey): boolean => !!a && txId(a) === txId(b);
 
 // Income rows have no merchant name when the bank sends none; never show a bare dash.
-export const incomeTitle = (tx: Pick<TransactionRow, "creditor_name" | "category">): string =>
-  tx.creditor_name?.trim() || tx.category?.trim() || "Unlabelled income";
+/**
+ * What an incoming payment is called: who paid (payer_name, the bank's debtor name or the name
+ * you gave the row), else the creditor, else the category. On a credit the creditor is often you.
+ */
+export const incomeTitle = (
+  tx: Pick<TransactionRow, "creditor_name" | "category"> & { payer_name?: string | null },
+): string =>
+  tx.payer_name?.trim() || tx.creditor_name?.trim() || tx.category?.trim() || "Unlabelled income";
 
 // A card refund arrives without a merchant; name it after the charge it reverses so the
 // pair reads as two linked entries.

@@ -87,7 +87,7 @@ async function fetchIncomeRows(from: string, to: string): Promise<Array<IncomeTx
   // "Other income", so the figures never disagree.
   const { data, error } = await supabase
     .from("v_transactions_eur")
-    .select("creditor_name,category,personal_signed_amount_eur")
+    .select("payer_name,creditor_name,category,personal_signed_amount_eur")
     .eq("flow_type", "income")
     .gt("personal_signed_amount_eur", 0)
     .gte("booking_date", from)

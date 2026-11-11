@@ -48,6 +48,7 @@ interface IncomeRow {
   booking_date: string | null;
   category: string | null;
   creditor_name: string | null;
+  payer_name: string | null;
   currency: string | null;
   amount: number | null;
   signed_amount_eur: number | null;
@@ -59,7 +60,7 @@ async function fetchIncomeForMonth(month: Date): Promise<Array<IncomeRow>> {
   const { data, error } = await supabase
     .from("v_transactions_eur")
     .select(
-      "entry_reference,account_uid,booking_date,category,creditor_name,currency,amount,signed_amount_eur",
+      "entry_reference,account_uid,booking_date,category,creditor_name,payer_name,currency,amount,signed_amount_eur",
     )
     .eq("flow_type", "income")
     .gte("booking_date", start)
