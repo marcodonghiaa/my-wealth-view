@@ -196,7 +196,7 @@ function RuleForm({
       void queryClient.invalidateQueries({ queryKey: ["category-rules"] });
       onClose();
     },
-    onError: (err) => setFormError(err instanceof Error ? err.message : "Failed to add rule"),
+    onError: () => setFormError("Couldn't save the rule. Try again."),
   });
 
   function handleSubmit(e: React.FormEvent) {
@@ -362,9 +362,9 @@ function RuleList({ rules }: { rules: RuleRow[] }) {
       );
       return { previous };
     },
-    onError: (err, _id, ctx) => {
+    onError: (_err, _id, ctx) => {
       if (ctx?.previous) queryClient.setQueryData(["category-rules"], ctx.previous);
-      toast.error(err instanceof Error ? err.message : "Failed to delete rule");
+      toast.error("Couldn't delete the rule. Try again.");
     },
     onSuccess: () => toast.success("Rule deleted"),
     onSettled: () => void queryClient.invalidateQueries({ queryKey: ["category-rules"] }),

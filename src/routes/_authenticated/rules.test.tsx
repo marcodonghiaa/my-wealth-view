@@ -437,12 +437,14 @@ describe("deleting a rule", () => {
   });
 
   it("puts the rule back and shows the error when the delete fails", async () => {
-    db.deleteError = new Error("Couldn't delete");
+    db.deleteError = new Error("permission denied for table category_rules");
     renderPage();
     const remove = await screen.findByRole("button", { name: "Delete rule for Netflix" });
     db.rules = "pending"; // the refetch after the failure never lands: only the rollback restores it
     fireEvent.click(remove);
-    await waitFor(() => expect(toastError).toHaveBeenCalledWith("Couldn't delete"));
+    await waitFor(() =>
+      expect(toastError).toHaveBeenCalledWith("Couldn't delete the rule. Try again."),
+    );
     expect(screen.getByText("“Netflix”")).toBeTruthy();
   });
 });
@@ -468,7 +470,10 @@ describe("adding a rule", () => {
     db.insertError = new Error("Rule text is too long");
     renderPage();
     await fillAndSave();
-    expect(await screen.findByRole("alert")).toHaveTextContent("Rule text is too long");
+    // Polish pass 4 #9: the database's own message showed here.
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Couldn't save the rule. Try again.",
+    );
     expect(screen.getByLabelText("Text")).toHaveValue("Spotify");
   });
 });
