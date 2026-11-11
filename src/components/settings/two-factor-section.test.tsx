@@ -11,9 +11,12 @@ const lib = vi.hoisted(() => ({
 vi.mock("@/lib/mfa", () => ({
   ...lib,
   defaultAuthenticatorName: (taken: Array<string>) => `Authenticator ${taken.length + 1}`,
+  retryUnlessRefused: (count: number) => count < 3,
 }));
 
 import { TwoFactorSection } from "./two-factor-section";
+
+const LOAD_FAILED = "Couldn't check right now. Check your connection and try again.";
 
 const render = (ui: React.ReactElement) =>
   renderPlain(
@@ -61,9 +64,10 @@ describe("TwoFactorSection", () => {
   it("on a load error shows the error and a retry, not Off", async () => {
     lib.listAuthenticators
       .mockRejectedValueOnce(new Error("Failed to fetch"))
+      .mockRejectedValueOnce(new Error("Failed to fetch"))
       .mockResolvedValueOnce([{ id: "f1", name: "Phone" }]);
     render(<TwoFactorSection />);
-    expect(await screen.findByRole("alert")).toHaveTextContent("Failed to fetch");
+    expect(await screen.findByText(LOAD_FAILED, {}, { timeout: 3000 })).toBeInTheDocument();
     expect(screen.queryByText(/^Off\./)).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Set up two-step sign-in" })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Try again" }));
@@ -145,22 +149,25 @@ describe("TwoFactorSection", () => {
   it("says so when the list can't refresh after a change", async () => {
     lib.listAuthenticators
       .mockResolvedValueOnce([{ id: "a", name: "Phone" }])
+      .mockRejectedValueOnce(new Error("Failed to fetch"))
       .mockRejectedValueOnce(new Error("Failed to fetch"));
     render(<TwoFactorSection />);
     fireEvent.click(await screen.findByRole("button", { name: "Remove Phone" }));
     fireEvent.click(screen.getByRole("button", { name: "Confirm remove" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent("Failed to fetch");
+    expect(await screen.findByRole("alert", {}, { timeout: 3000 })).toHaveTextContent(
+      "Failed to fetch",
+    );
   });
 
-  // Behaviour check (react-query resets a data-less query to pending on refetch), not a regression test.
-  it("shows the retry is running", async () => {
+  // fails_when=Try again vanishes while it retries, so the card jumps and shows no progress
+  it("keeps Try again in place, busy, while it retries", async () => {
     lib.listAuthenticators
+      .mockRejectedValueOnce(new Error("Failed to fetch"))
       .mockRejectedValueOnce(new Error("Failed to fetch"))
       .mockReturnValueOnce(new Promise(() => {}));
     render(<TwoFactorSection />);
-    fireEvent.click(await screen.findByRole("button", { name: "Try again" }));
-    expect(await screen.findByText("Checking…")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
+    fireEvent.click(await screen.findByRole("button", { name: "Try again" }, { timeout: 3000 }));
+    expect(await screen.findByRole("button", { name: "Try again" })).toBeDisabled();
   });
 
   // protects=an accidental bin tap can be undone, and removing the last one says what it does;
@@ -231,9 +238,13 @@ describe("TwoFactorSection", () => {
     expect(screen.getByRole("button", { name: "Cancel" })).toHaveClass("bg-background");
   });
 
-  it("says when the list can't load", async () => {
+  // fails_when=a failed load retries 3 times (about 8s) or shows the failure twice, once raw
+  it("tries once more, then says it once in plain words", async () => {
     lib.listAuthenticators.mockRejectedValue(new Error("network down"));
     render(<TwoFactorSection />);
-    expect(await screen.findByRole("alert")).toHaveTextContent("network down");
+    expect(await screen.findByText(LOAD_FAILED, {}, { timeout: 3000 })).toBeInTheDocument();
+    expect(lib.listAuthenticators).toHaveBeenCalledTimes(2);
+    expect(screen.queryByText("network down")).toBeNull();
+    expect(screen.queryByRole("alert")).toBeNull();
   });
 });

@@ -8,6 +8,7 @@ import {
   finishEnrollment,
   listAuthenticators,
   removeAuthenticator,
+  retryUnlessRefused,
   startEnrollment,
   type Enrollment,
 } from "@/lib/mfa";
@@ -23,10 +24,18 @@ const message = (err: unknown, fallback: string) =>
  */
 export function TwoFactorSection() {
   const queryClient = useQueryClient();
-  const authenticators = useQuery({ queryKey: AUTHENTICATORS_KEY, queryFn: listAuthenticators });
+  // One retry, not React Query's three: a failure shows in about a second instead of eight.
+  const authenticators = useQuery({
+    queryKey: AUTHENTICATORS_KEY,
+    queryFn: listAuthenticators,
+    retry: (count, err) => count < 1 && retryUnlessRefused(count, err),
+  });
   // On a failed load the list stays unknown: showing "Off" could mislead a user who has one.
   const list = authenticators.data ?? null;
-  const loadFailed = authenticators.isError && list === null;
+  // Stays true while Try again is running, so the button stays put and shows it's busy.
+  const loadFailed =
+    list === null &&
+    (authenticators.isError || (authenticators.errorUpdateCount > 0 && authenticators.isFetching));
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [name, setName] = useState("");
@@ -39,7 +48,7 @@ export function TwoFactorSection() {
   const backToSection = () => heading.current?.focus();
   const shownError =
     error ??
-    (authenticators.isError && !authenticators.isFetching
+    (authenticators.isError && list !== null && !authenticators.isFetching
       ? message(authenticators.error, "Couldn't load your authenticators.")
       : null);
 
@@ -104,7 +113,7 @@ export function TwoFactorSection() {
           <p className="mt-1 text-sm text-muted-foreground">
             {list === null
               ? loadFailed
-                ? "Couldn't check right now."
+                ? "Couldn't check right now. Check your connection and try again."
                 : "Checking…"
               : on
                 ? "On. Sign-in asks for a code from your authenticator app."
@@ -227,7 +236,12 @@ export function TwoFactorSection() {
         )}
 
         {loadFailed && (
-          <Button variant="secondary" onClick={() => void authenticators.refetch().then(backToSection)}>
+          <Button
+            variant="secondary"
+            disabled={authenticators.isFetching}
+            onClick={() => void authenticators.refetch().then(backToSection)}
+          >
+            {authenticators.isFetching && <Loader2 className="animate-spin" />}
             Try again
           </Button>
         )}
