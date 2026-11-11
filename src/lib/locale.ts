@@ -103,6 +103,14 @@ export function normalizeNumber(input: string): string {
   return mark !== decimal && grouped ? text.split(mark).join("") : text.replace(mark, ".");
 }
 
+/** A number to put back in an input box: the chosen decimal mark, no grouping, Latin digits. */
+export const inputNumber = (value: number, maxDigits = 20): string =>
+  numberFormat({
+    maximumFractionDigits: maxDigits,
+    useGrouping: false,
+    numberingSystem: "latn",
+  }).format(value);
+
 /** Whether people in this locale write the month before the day (03/25/2026). */
 export const monthFirst = (locale: string = appLocale()): boolean => /^en-US\b/.test(locale);
 

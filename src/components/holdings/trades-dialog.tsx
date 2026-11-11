@@ -1,4 +1,4 @@
-import { formatQuantity } from "@/lib/locale";
+import { formatQuantity, inputNumber } from "@/lib/locale";
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Pencil, Trash2 } from "lucide-react";
@@ -232,9 +232,9 @@ export function TradesDialog({
                     setForm({
                       side: t.side,
                       date: t.trade_date,
-                      shares: String(t.shares),
-                      price: String(t.price_eur),
-                      fee: t.fee_eur ? String(t.fee_eur) : "",
+                      shares: inputNumber(t.shares),
+                      price: inputNumber(t.price_eur),
+                      fee: t.fee_eur ? inputNumber(t.fee_eur) : "",
                     });
                   }}
                 >
