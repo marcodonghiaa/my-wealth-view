@@ -61,7 +61,11 @@ export function ApplyToPast({ ruleIds, onDone }: { ruleIds: string; onDone: () =
   }, [apply.isError]);
 
   return (
-    <div className="mb-8 rounded-lg bg-card p-5 sm:p-6">
+    <div
+      className="mb-8 rounded-lg bg-card p-5 sm:p-6"
+      // Escape closes it, like the rule form; not mid-update, same as Close and Cancel.
+      onKeyDown={(e) => e.key === "Escape" && !apply.isPending && onDone()}
+    >
       <div className="flex items-start justify-between gap-3">
         <div>
           <h3 ref={heading} tabIndex={-1} className="text-[0.9375rem] font-medium outline-none">

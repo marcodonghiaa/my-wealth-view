@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider, focusManager } from "@tanstack/react-query";
 
 const invoke = vi.fn();
@@ -547,6 +547,27 @@ describe("apply to past transactions", () => {
       expect(document.activeElement).toBe(
         screen.getByRole("button", { name: "Apply to past transactions" }),
       ),
+    );
+  });
+
+  // pass5 #6: Escape closed the rule form but not this panel
+  it("closes on Escape, but not while it is updating", async () => {
+    invoke.mockResolvedValueOnce({ data: { changes: 2, sample: [] }, error: null });
+    invoke.mockReturnValueOnce(new Promise(() => {})); // the update never finishes
+    await open();
+    const update = await screen.findByRole("button", { name: "Update 2 transactions" });
+    fireEvent.click(update);
+    await waitFor(() => expect(update).toBeDisabled());
+    fireEvent.keyDown(update, { key: "Escape" });
+    expect(screen.getByRole("heading", { name: "Apply to past transactions" })).toBeTruthy();
+    cleanup();
+    invoke.mockResolvedValueOnce({ data: { changes: 0, sample: [] }, error: null });
+    await open();
+    fireEvent.keyDown(await screen.findByRole("heading", { name: "Apply to past transactions" }), {
+      key: "Escape",
+    });
+    await waitFor(() =>
+      expect(screen.queryByRole("heading", { name: "Apply to past transactions" })).toBeNull(),
     );
   });
 
