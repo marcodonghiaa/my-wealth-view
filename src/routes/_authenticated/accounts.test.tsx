@@ -135,6 +135,28 @@ describe("connect a bank", () => {
     expect(screen.getByLabelText("Country")).toHaveValue("PL");
   });
 
+  // protects=a failed bank list says so, is announced and can be retried; fails_when=the disabled
+  // select still reads "Select a bank…" and only changing country tries again (polish 5, item 4)
+  it("says the bank list failed and retries it", async () => {
+    invoke.mockResolvedValue({ data: { error: "Bank list unavailable" }, error: null });
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <Page />
+      </QueryClientProvider>,
+    );
+    fireEvent.click(await screen.findByRole("button", { name: "Connect a bank" }));
+    expect(await screen.findByRole("alert", {}, { timeout: 4000 })).toHaveTextContent(
+      "Bank list unavailable",
+    );
+    expect(screen.getByRole("option", { name: "Couldn't load banks" })).toBeInTheDocument();
+    invoke.mockResolvedValue({
+      data: { banks: [{ name: "Sample Bank", logo: null }] },
+      error: null,
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+    expect(await screen.findByRole("option", { name: "Sample Bank" })).toBeInTheDocument();
+  });
+
   // protects=long country names ("United Kingdom") stay readable; fails_when=the country select
   // gets a fixed width again, which clipped "United Kingdom" at 640-767px (polish 4, P1-1)
   it("sizes the country select to its longest name, not a fixed width", async () => {

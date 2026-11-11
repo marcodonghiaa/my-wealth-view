@@ -225,6 +225,7 @@ function AccountsPage() {
     },
     enabled: showConnectForm && bankCountry !== "",
     staleTime: 10 * 60_000,
+    retry: 1, // a failure shows with a Retry button instead of after ~7s of silent retries
   });
   const banks = banksQuery.data ?? [];
   const noBanks = banksQuery.isSuccess && banks.length === 0;
@@ -399,9 +400,11 @@ function AccountsPage() {
                         ? "Choose a country first"
                         : banksQuery.isPending
                           ? "Loading banks…"
-                          : noBanks
-                            ? "No banks for this country"
-                            : "Select a bank…"}
+                          : banksQuery.isError
+                            ? "Couldn't load banks"
+                            : noBanks
+                              ? "No banks for this country"
+                              : "Select a bank…"}
                     </option>
                     {banks.map((b) => (
                       <option key={b.name} value={b.name}>
@@ -415,9 +418,18 @@ function AccountsPage() {
                     </p>
                   )}
                   {banksQuery.isError && (
-                    <p className="mt-1 break-words text-xs text-negative">
-                      {banksQuery.error.message}
-                    </p>
+                    <div role="alert" className="mt-1 flex flex-wrap items-center gap-x-1">
+                      <p className="break-words text-xs text-negative">
+                        {banksQuery.error.message}
+                      </p>
+                      <Button
+                        variant="ghost"
+                        onClick={() => void banksQuery.refetch()}
+                        className="px-3 text-xs text-primary hover:bg-primary/10 hover:text-primary"
+                      >
+                        Retry
+                      </Button>
+                    </div>
                   )}
                 </div>
               </div>
