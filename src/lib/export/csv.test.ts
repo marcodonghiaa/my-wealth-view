@@ -12,6 +12,16 @@ describe("toCsv", () => {
     expect(line?.replace(/^"/, "").startsWith("'")).toBe(true);
   });
 
+  // polish-2 #5: some spreadsheets trim leading spaces on import and then run the formula
+  it.each([" =1", "  +SUM(A1)", "\u00a0@cmd"])("quotes %j, a formula behind spaces", (text) => {
+    const [, line] = body(toCsv(["a"], [{ a: text }]));
+    expect(line?.replace(/^"/, "").startsWith("'")).toBe(true);
+  });
+
+  it("leaves text that only starts with spaces alone", () => {
+    expect(body(toCsv(["a"], [{ a: " hello" }]))[1]).toBe(`" hello"`);
+  });
+
   // polish-2 #4: the tag list is joined before the escape runs, so a first tag "=cmd" is quoted too
   it("quotes a joined tag list that starts with a formula", () => {
     expect(body(toCsv(["tags"], [{ tags: ["=cmd", "x"] }]))[1]).toBe(`"'=cmd, x"`);

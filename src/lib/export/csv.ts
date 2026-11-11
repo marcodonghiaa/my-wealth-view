@@ -14,13 +14,16 @@ const cell = (v: unknown, column: string): string | number | boolean =>
         ? JSON.stringify(v)
         : (v as string | number | boolean);
 
+const FORMULA = /^(\s*[=+\-@]|[\t\r])/;
+
 /**
- * One CSV. Text starting with = + - @ (or a tab/return) gets a leading quote so a spreadsheet
- * never runs it as a formula; real numbers stay numbers, so -12.5 is untouched.
+ * One CSV. Text starting with = + - @ (or a tab/return), also behind spaces that a spreadsheet
+ * may trim on import, gets a leading quote so it never runs as a formula; real numbers stay
+ * numbers, so -12.5 is untouched.
  */
 export function toCsv(columns: ReadonlyArray<string>, rows: ReadonlyArray<ExportRow>): string {
   const data = rows.map((r) => columns.map((c) => cell(r[c], c)));
-  return BOM + Papa.unparse({ fields: [...columns], data }, { escapeFormulae: true });
+  return BOM + Papa.unparse({ fields: [...columns], data }, { escapeFormulae: FORMULA });
 }
 
 const columnsOf = (rows: ReadonlyArray<ExportRow>, skip: ReadonlyArray<string>) =>
