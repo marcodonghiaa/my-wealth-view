@@ -486,3 +486,14 @@ describe("trendEnd", () => {
     );
   });
 });
+
+// Polish 3 #9: a tiny income makes the rate meaningless; cap what it shows.
+describe("formatRate below −999%", () => {
+  afterEach(() => setLocaleOverride(""));
+  it("shows a floor instead of a huge number", () => {
+    expect(formatRate(savingsRate(0.01, 500))).toBe("< −999%");
+    expect(formatRate(-9.99)).toBe("−999%");
+    setLocaleOverride("de-DE");
+    expect(formatRate(-50)).toMatch(/^< −999\s%$/);
+  });
+});
