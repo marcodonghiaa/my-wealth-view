@@ -1,3 +1,4 @@
+import { inputNumber } from "@/lib/locale";
 import { useState } from "react";
 import { useMutation, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { Loader2, Pencil, Plus } from "lucide-react";
@@ -52,7 +53,7 @@ async function setBalance(uid: string, amount: number): Promise<void> {
 
 function OwedForm({ account, onDone }: { account: MenuAccount; onDone: () => void }) {
   const queryClient = useQueryClient();
-  const [value, setValue] = useState(String(Math.abs(account.amount ?? 0)));
+  const [value, setValue] = useState(() => inputNumber(Math.abs(account.amount ?? 0)));
   const [error, setError] = useState<string | null>(null);
   const save = useMutation({
     mutationFn: (amount: number) => setBalance(account.uid, amount),
