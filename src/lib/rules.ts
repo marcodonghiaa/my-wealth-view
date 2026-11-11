@@ -15,13 +15,13 @@ export const MATCH_MODES = [
     value: "exact",
     label: "Exact",
     phrase: "is exactly",
-    hint: "Matches only when the whole text is this, ignoring case.",
+    hint: "Matches only when the whole name or description is exactly this, ignoring case: “Netflix” finds “NETFLIX”, not “Netflix Italia”.",
   },
   {
     value: "contains",
-    label: "Anywhere",
+    label: "Contains",
     phrase: "contains",
-    hint: "Matches it anywhere, even inside other words.",
+    hint: "Matches it anywhere, even inside other words: “bar” finds “Barclays” too.",
   },
 ] as const;
 export type MatchMode = (typeof MATCH_MODES)[number]["value"];

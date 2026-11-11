@@ -265,7 +265,7 @@ function RuleForm({
 
         <div>
           <label htmlFor="rule-match-text" className={LABEL}>
-            Text
+            Text to look for
           </label>
           <Input
             id="rule-match-text"

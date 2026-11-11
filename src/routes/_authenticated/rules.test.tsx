@@ -156,7 +156,7 @@ describe("Rules list", () => {
   it("names every field of the new-rule form", async () => {
     renderPage();
     await openForm();
-    expect(screen.getByLabelText("Text")).toHaveAttribute("type", "text");
+    expect(screen.getByLabelText("Text to look for")).toHaveAttribute("type", "text");
     expect(screen.getByRole("radiogroup", { name: "Look in" })).toBeTruthy();
     expect(screen.getByRole("radiogroup", { name: "Match" })).toBeTruthy();
     for (const label of ["Set category", "Set type"]) {
@@ -183,7 +183,7 @@ describe("Rules list", () => {
     renderPage();
     await openForm();
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
-    expect(screen.queryByLabelText("Text")).toBeNull();
+    expect(screen.queryByLabelText("Text to look for")).toBeNull();
     expect(screen.getByRole("button", { name: "New rule" })).toBeTruthy();
   });
 
@@ -192,7 +192,7 @@ describe("Rules list", () => {
     await openForm();
     fireEvent.click(screen.getByRole("button", { name: "Add rule" }));
     expect(screen.getByRole("alert")).toHaveTextContent("Type the text to look for.");
-    fireEvent.change(screen.getByLabelText("Text"), { target: { value: "Spotify" } });
+    fireEvent.change(screen.getByLabelText("Text to look for"), { target: { value: "Spotify" } });
     fireEvent.click(screen.getByRole("button", { name: "Add rule" }));
     expect(screen.getByRole("alert")).toHaveTextContent("Pick a category, a type, or both.");
     expect(inserted).toHaveLength(0);
@@ -206,7 +206,7 @@ describe("form message", () => {
     await openForm();
     fireEvent.click(screen.getByRole("button", { name: "Add rule" }));
     expect(screen.getByRole("alert")).toBeTruthy();
-    fireEvent.change(screen.getByLabelText("Text"), { target: { value: "Spotify" } });
+    fireEvent.change(screen.getByLabelText("Text to look for"), { target: { value: "Spotify" } });
     expect(screen.queryByRole("alert")).toBeNull();
   });
 });
@@ -215,9 +215,9 @@ describe("form focus and keys", () => {
   it("focuses Text on open; Escape closes and focus returns to New rule", async () => {
     renderPage();
     await openForm();
-    expect(screen.getByLabelText("Text")).toHaveFocus();
-    fireEvent.keyDown(screen.getByLabelText("Text"), { key: "Escape" });
-    expect(screen.queryByLabelText("Text")).toBeNull();
+    expect(screen.getByLabelText("Text to look for")).toHaveFocus();
+    fireEvent.keyDown(screen.getByLabelText("Text to look for"), { key: "Escape" });
+    expect(screen.queryByLabelText("Text to look for")).toBeNull();
     expect(screen.getByRole("button", { name: "New rule" })).toHaveFocus();
   });
 
@@ -252,6 +252,31 @@ describe("match modes", () => {
     expect(screen.getByText("“Mum”").parentElement).toHaveTextContent("has the word “Mum”");
   });
 
+  // Polish pass 4 #12: vague hints, and "Anywhere" in the picker but "contains" in the list.
+  it("explains each mode with an example, in the list's words", async () => {
+    renderPage();
+    await openForm();
+    expect(screen.getAllByRole("radio").map((r) => r.textContent)).toEqual([
+      "Name",
+      "Description",
+      "Either",
+      "Whole word",
+      "Exact",
+      "Contains",
+    ]);
+    fireEvent.change(screen.getByLabelText("Text to look for"), { target: { value: "Netflix" } });
+    fireEvent.click(screen.getByRole("radio", { name: "Exact" }));
+    expect(
+      screen.getByText(
+        "Matches only when the whole name or description is exactly this, ignoring case: “Netflix” finds “NETFLIX”, not “Netflix Italia”.",
+      ),
+    ).toBeTruthy();
+    fireEvent.click(screen.getByRole("radio", { name: "Contains" }));
+    expect(
+      screen.getByText("Matches it anywhere, even inside other words: “bar” finds “Barclays” too."),
+    ).toBeTruthy();
+  });
+
   it("saves new rules as whole-word matches by default", async () => {
     renderPage();
     await openForm();
@@ -259,9 +284,9 @@ describe("match modes", () => {
       "aria-checked",
       "true",
     );
-    fireEvent.change(screen.getByLabelText("Text"), { target: { value: "bar" } });
+    fireEvent.change(screen.getByLabelText("Text to look for"), { target: { value: "bar" } });
     expect(screen.queryByText(/is in “Barclays”/)).toBeNull();
-    fireEvent.click(screen.getByRole("radio", { name: "Anywhere" }));
+    fireEvent.click(screen.getByRole("radio", { name: "Contains" }));
     expect(screen.getByText(/is in “Barclays”/)).toBeTruthy();
     fireEvent.click(screen.getByRole("radio", { name: "Whole word" }));
     fireEvent.change(screen.getByLabelText("Set type"), { target: { value: "Subscription" } });
@@ -284,13 +309,13 @@ describe("match modes", () => {
     expect(validate({ text: "a".repeat(300) }).text).toHaveLength(200);
     renderPage();
     await openForm();
-    expect(screen.getByLabelText("Text")).toHaveAttribute("maxLength", "200");
+    expect(screen.getByLabelText("Text to look for")).toHaveAttribute("maxLength", "200");
   });
 
   it("opens the form filled in when coming from a transaction", async () => {
     search = { text: "BAR ROMA", category: "Dine Out" };
     renderPage();
-    expect(await screen.findByLabelText("Text")).toHaveValue("BAR ROMA");
+    expect(await screen.findByLabelText("Text to look for")).toHaveValue("BAR ROMA");
     expect(screen.getByLabelText("Set category")).toHaveValue("Dine Out");
   });
 });
@@ -507,7 +532,7 @@ describe("deleting a rule", () => {
 describe("adding a rule", () => {
   const fillAndSave = async () => {
     await openForm();
-    fireEvent.change(screen.getByLabelText("Text"), { target: { value: "Spotify" } });
+    fireEvent.change(screen.getByLabelText("Text to look for"), { target: { value: "Spotify" } });
     fireEvent.change(screen.getByLabelText("Set type"), { target: { value: "Subscription" } });
     fireEvent.click(screen.getByRole("button", { name: "Add rule" }));
   };
@@ -517,7 +542,7 @@ describe("adding a rule", () => {
     await screen.findByText("“Netflix”");
     const reads = db.rulesReads;
     await fillAndSave();
-    await waitFor(() => expect(screen.queryByLabelText("Text")).toBeNull());
+    await waitFor(() => expect(screen.queryByLabelText("Text to look for")).toBeNull());
     await waitFor(() => expect(db.rulesReads).toBeGreaterThan(reads));
   });
 
@@ -529,7 +554,7 @@ describe("adding a rule", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "Couldn't save the rule. Try again.",
     );
-    expect(screen.getByLabelText("Text")).toHaveValue("Spotify");
+    expect(screen.getByLabelText("Text to look for")).toHaveValue("Spotify");
   });
 });
 
@@ -576,7 +601,7 @@ describe("preview after the rules change", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Apply to past transactions" }));
     await screen.findByRole("button", { name: "Update 2 transactions" });
     await openForm();
-    fireEvent.change(screen.getByLabelText("Text"), { target: { value: "Spotify" } });
+    fireEvent.change(screen.getByLabelText("Text to look for"), { target: { value: "Spotify" } });
     fireEvent.change(screen.getByLabelText("Set category"), { target: { value: "Entertainment" } });
     fireEvent.click(screen.getByRole("button", { name: "Add rule" }));
     expect(await screen.findByText("“Spotify”")).toBeTruthy();
