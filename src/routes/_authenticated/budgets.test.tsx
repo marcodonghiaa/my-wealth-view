@@ -8,6 +8,7 @@ const upsertCalls: Array<{ rows: Array<Row>; opts: unknown }> = [];
 const upserts = upsertCalls;
 let failTable: string | null = null;
 let failUpsert: string | null = null;
+let failMessage = "relation does not exist";
 // When set, reads of category_budgets wait for it: holds a refetch open.
 let holdBudgets: Promise<void> | null = null;
 // Spend reads under way right now, and the most there were at once.
@@ -49,8 +50,7 @@ vi.mock("@/integrations/supabase/client", () => ({
         return Promise.resolve({ error: null });
       };
       q["then"] = (resolve: (v: unknown) => void) => {
-        if (table === failTable)
-          return resolve({ data: null, error: { message: "relation does not exist" } });
+        if (table === failTable) return resolve({ data: null, error: { message: failMessage } });
         const answer = () => {
           let rows = (db[table] ?? []).filter((r) => filters.every((f) => f(r)));
           for (const c of [...sorts].reverse()) rows = [...rows].sort((a, b) => cmp(a[c], b[c]));
@@ -98,6 +98,7 @@ beforeEach(() => {
   upserts.length = 0;
   failTable = null;
   failUpsert = null;
+  failMessage = "relation does not exist";
   holdBudgets = null;
   spendReads.now = spendReads.most = 0;
   toast.error.mockClear();
@@ -828,5 +829,25 @@ describe("Budgets page", () => {
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
     await waitFor(() => expect(screen.queryByLabelText("Budget for Groceries")).toBeNull());
     expect(await screen.findByRole("button", { name: /now €555\.00/ })).toBeTruthy();
+  });
+
+  // protects=P5 P1-3 an unreachable database is reported fast, as that, with a way to retry;
+  // fails_when=the page retries for many seconds, advises a migration, or offers no retry
+  it("says when the database can't be reached and lets the user try again", async () => {
+    failTable = "category_budgets";
+    failMessage = "TypeError: Failed to fetch";
+    // The app's own query client (default retries), not the test one.
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <Page />
+      </QueryClientProvider>,
+    );
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toContain("Can't reach your database");
+    expect(alert.textContent).not.toContain("UPGRADING.md");
+    failTable = null;
+    fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+    expect(await screen.findByRole("button", { name: "Start from my averages" })).toBeTruthy();
+    expect(screen.queryByRole("alert")).toBeNull();
   });
 });

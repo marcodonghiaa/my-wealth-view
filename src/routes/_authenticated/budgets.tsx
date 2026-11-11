@@ -113,11 +113,20 @@ async function fetchIncomeByMonth(from: string, to: string): Promise<Map<string,
   return new Map(rows.map((r) => [String(r.month), Number(r.income_eur ?? 0)]));
 }
 
+const UNREACHABLE = "Can't reach your database. Check your connection and try again.";
+const isNetworkFailure = (message: string) =>
+  /failed to fetch|networkerror|load failed/i.test(message);
 /** A browser's network failure, in words a person can act on. */
-const readable = (message: string) =>
-  /failed to fetch|networkerror|load failed/i.test(message)
-    ? "Can't reach your database. Check your connection and try again."
-    : message;
+const readable = (message: string) => (isNetworkFailure(message) ? UNREACHABLE : message);
+const loadFailure = (what: string, message: string) =>
+  isNetworkFailure(message)
+    ? `Couldn't load ${what}. ${UNREACHABLE}`
+    : `Couldn't load ${what}: ${message}.`;
+/** The budgets table isn't there yet: an install or update that skipped the migration. */
+const isMissingTable = (error: { code?: string; message: string }) =>
+  error.code === "PGRST205" ||
+  error.code === "42P01" ||
+  /does not exist|schema cache/i.test(error.message);
 
 function readSpread(): boolean {
   try {
@@ -141,7 +150,9 @@ function BudgetsPage() {
   const [spread, setSpread] = useState<boolean>(readSpread);
   const monthIso = formatISODate(month);
 
-  const budgetsQuery = useQuery({ queryKey: BUDGETS_KEY, queryFn: fetchBudgets });
+  // No automatic retries: a failure shows at once, with "Try again" (the client already retries
+  // a dropped connection itself).
+  const budgetsQuery = useQuery({ queryKey: BUDGETS_KEY, queryFn: fetchBudgets, retry: false });
   const rows = useMemo(() => budgetsQuery.data ?? [], [budgetsQuery.data]);
   // Recent months for every category (averages, unbudgeted spend); older months only for the
   // budgeted categories, as far back as their first budget (rollover).
@@ -158,6 +169,7 @@ function BudgetsPage() {
         ])
       ).flat(),
     enabled: budgetsQuery.isSuccess,
+    retry: false,
     // A new budget changes the categories in the key: keep this month's page on screen while
     // its history loads. Another month always starts from its own data.
     placeholderData: (previous, previousQuery) =>
@@ -240,8 +252,18 @@ function BudgetsPage() {
       {error && (
         <Alert className="mb-6">
           {budgetsQuery.error
-            ? `Couldn't load budgets: ${error.message}. If this is a new install or an update, apply the latest database migration (see UPGRADING.md in the Alopex backend repository).`
-            : `Couldn't load spending: ${error.message}.`}
+            ? isMissingTable(budgetsQuery.error)
+              ? `Couldn't load budgets: ${error.message}. If this is a new install or an update, apply the latest database migration (see UPGRADING.md in the Alopex backend repository).`
+              : loadFailure("budgets", error.message)
+            : loadFailure("spending", error.message)}
+          <Button
+            variant="quiet"
+            size="sm"
+            className="mt-2 block min-h-11"
+            onClick={() => void (budgetsQuery.error ? budgetsQuery : spendQuery).refetch()}
+          >
+            Try again
+          </Button>
         </Alert>
       )}
 
