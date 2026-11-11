@@ -1,5 +1,6 @@
 import { categoryColor } from "@/lib/categories";
 import { formatISODate } from "@/lib/date";
+import { formatPercent } from "@/lib/locale";
 import { incomeTitle } from "@/lib/transactions";
 import { UNCATEGORIZED_LABEL, type MonthlySpendRow } from "@/lib/spending";
 
@@ -77,11 +78,12 @@ export function savingsRate(income: number, spending: number): number | null {
   return income > 0 ? (income - spending) / income : null;
 }
 
-/** "25%", "−12%"; a dash when there is no rate. */
+/** "25%" ("25 %" in de-DE), "−12%"; a dash when there is no rate. Locale from Settings. */
 export function formatRate(rate: number | null): string {
   if (rate == null) return "—";
-  const pct = Math.round(rate * 100);
-  return pct < 0 ? `−${Math.abs(pct)}%` : `${pct}%`;
+  // Signed only below zero, with a real minus; a rate that rounds to 0% shows none.
+  const negative = Math.round(rate * 100) < 0;
+  return formatPercent(negative ? rate : Math.abs(rate), { digits: 0, signed: negative });
 }
 
 const inRange = (month: string | null, from: string, to: string): month is string =>

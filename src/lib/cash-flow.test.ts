@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
+import { setLocaleOverride } from "@/lib/locale";
 import {
   buildFlow,
   fitLabel,
@@ -79,6 +80,17 @@ describe("switchPeriod", () => {
 });
 
 describe("savingsRate / formatRate", () => {
+  afterEach(() => setLocaleOverride(""));
+  // Polish 1 #8: the rate follows the number format chosen in Settings, like every other percent.
+  it("formats the rate in the chosen locale", () => {
+    setLocaleOverride("de-DE");
+    expect(formatRate(0.254)).toBe("25\u00a0%");
+    expect(formatRate(-0.2)).toBe("−20\u00a0%");
+  });
+  it("shows no minus for a rate that rounds to zero", () => {
+    setLocaleOverride("en-GB");
+    expect(formatRate(-0.004)).toBe("0%");
+  });
   it("is the share of income kept", () => {
     expect(savingsRate(2000, 1500)).toBe(0.25);
   });
