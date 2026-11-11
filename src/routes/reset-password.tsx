@@ -134,6 +134,7 @@ export function ResetPasswordPage() {
                   </label>
                   <CodeInput
                     id="reset-mfa-code"
+                    aria-invalid={error ? true : undefined}
                     aria-describedby={error ? "reset-code-hint reset-error" : "reset-code-hint"}
                     value={code}
                     onChange={(e) => setCode(e.target.value)}

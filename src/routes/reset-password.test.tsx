@@ -80,6 +80,7 @@ describe("ResetPasswordPage", () => {
     expect(screen.getByLabelText("Authenticator code")).toHaveAccessibleDescription(
       /type the 6-digit code.*Invalid TOTP code entered/,
     );
+    expect(screen.getByLabelText("Authenticator code")).toHaveAttribute("aria-invalid", "true");
     expect(updateUser).not.toHaveBeenCalled();
     expect(navigate).not.toHaveBeenCalled();
   });
