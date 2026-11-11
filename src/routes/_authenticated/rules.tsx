@@ -383,7 +383,8 @@ function RuleList({ rules }: { rules: RuleRow[] }) {
 
   // After a delete, the rows that rule filed keep its category (no other rule explains them,
   // so "Apply to past transactions" can't fix them). Offer to send them back to the next sync.
-  const resortToast = useRef<string | number>(undefined);
+  // Each offer's toast id is the rule's, so Undo closes that rule's offer and no other.
+  const resortToastId = (rule: RuleRow) => `resort-${rule.id}`;
   const undone = useRef(new WeakSet<RuleRow>());
   const resort = useMutation({
     mutationFn: (retired: RetiredRule) => reapply(true, retired),
@@ -404,7 +405,8 @@ function RuleList({ rules }: { rules: RuleRow[] }) {
       return; // only an offer: the delete itself worked
     }
     if (!changes || undone.current.has(rule)) return;
-    resortToast.current = toast.info(`${plural(changes)} still filed by this rule`, {
+    toast.info(`${plural(changes)} still filed by this rule`, {
+      id: resortToastId(rule),
       description: "Re-sort them: they show as uncategorized until the next sync sorts them again.",
       action: { label: "Re-sort", onClick: () => resort.mutate(retired) },
     });
@@ -435,7 +437,7 @@ function RuleList({ rules }: { rules: RuleRow[] }) {
       const restorable = rule && length >= 1 && length <= MAX_MATCH_TEXT;
       const undo = () => {
         undone.current.add(rule!);
-        if (resortToast.current !== undefined) toast.dismiss(resortToast.current);
+        toast.dismiss(resortToastId(rule!));
         restoreRule.mutate(rule!);
       };
       toast.success("Rule deleted", restorable ? { action: { label: "Undo", onClick: undo } } : {});

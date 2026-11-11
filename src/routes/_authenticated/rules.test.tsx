@@ -18,7 +18,7 @@ const db = {
 let search: Record<string, string> = {};
 
 const toastSuccess = vi.fn();
-const toastInfo = vi.fn((_m: string, _o?: unknown) => "resort-toast");
+const toastInfo = vi.fn((_m: string, _o?: unknown) => "");
 const toastDismiss = vi.fn();
 vi.mock("sonner", () => ({
   toast: {
@@ -845,6 +845,7 @@ describe("re-sorting what a deleted rule filed", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Delete rule for Netflix" }));
     await waitFor(() =>
       expect(toastInfo).toHaveBeenCalledWith("3 transactions still filed by this rule", {
+        id: "resort-r1",
         description:
           "Re-sort them: they show as uncategorized until the next sync sorts them again.",
         action: { label: "Re-sort", onClick: expect.any(Function) },
@@ -908,7 +909,7 @@ describe("re-sorting what a deleted rule filed", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Delete rule for Netflix" }));
     await waitFor(() => expect(toastInfo).toHaveBeenCalled());
     (toastSuccess.mock.calls[0]?.[1] as Offer).action.onClick();
-    expect(toastDismiss).toHaveBeenCalledWith("resort-toast");
+    expect(toastDismiss).toHaveBeenCalledWith("resort-r1");
   });
 
   it("says so when re-sorting fails", async () => {
@@ -922,5 +923,27 @@ describe("re-sorting what a deleted rule filed", () => {
     await waitFor(() =>
       expect(toastError).toHaveBeenCalledWith("Couldn't update your transactions."),
     );
+  });
+
+  // Polish 1 #1: one shared toast handle meant Undo on the first of two deletes closed the
+  // second rule's offer and left the restored rule's offer up.
+  it("Undo closes that rule's own offer when two rules were deleted", async () => {
+    inserted.push({
+      match_field: "creditor_name",
+      match_text: "Bar",
+      match_mode: "word",
+      set_category: "Dine Out",
+      set_transaction_type: null,
+      priority: 100,
+    });
+    invoke.mockResolvedValue(answer(2));
+    renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: "Delete rule for Netflix" }));
+    await waitFor(() => expect(toastInfo).toHaveBeenCalledTimes(1));
+    fireEvent.click(await screen.findByRole("button", { name: "Delete rule for Bar" }));
+    await waitFor(() => expect(toastInfo).toHaveBeenCalledTimes(2));
+    (toastSuccess.mock.calls[0]?.[1] as Offer).action.onClick(); // Undo Netflix
+    expect(toastDismiss).toHaveBeenCalledTimes(1);
+    expect(toastDismiss).toHaveBeenCalledWith("resort-r1");
   });
 });
