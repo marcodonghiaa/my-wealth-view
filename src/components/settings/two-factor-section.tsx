@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
-import { Loader2, ShieldCheck, Trash2 } from "lucide-react";
+import { Check, Copy, Loader2, ShieldCheck, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CodeInput, Input } from "@/components/ui/field";
 import {
@@ -42,6 +42,7 @@ export function TwoFactorSection() {
   const [enrollment, setEnrollment] = useState<Enrollment | null>(null);
   const [code, setCode] = useState("");
   const [confirmRemove, setConfirmRemove] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
   const reload = () => queryClient.invalidateQueries({ queryKey: AUTHENTICATORS_KEY });
   // After a step's buttons disappear, keyboard and screen-reader users land back on the section.
   const heading = useRef<HTMLHeadingElement>(null);
@@ -68,6 +69,7 @@ export function TwoFactorSection() {
     run(async () => {
       setEnrollment(await startEnrollment(name));
       setCode("");
+      setCopied(false);
     }, "Couldn't start the setup.");
 
   const finish = (e: React.FormEvent) => {
@@ -183,10 +185,26 @@ export function TwoFactorSection() {
               alt="QR code for your authenticator app"
               className="mx-auto size-44 rounded-sm bg-white p-2"
             />
-            <p className="text-xs text-muted-foreground">
-              Can't scan? Enter this key by hand:{" "}
-              <code className="break-all font-mono text-foreground">{enrollment.secret}</code>
-            </p>
+            <div className="space-y-1.5">
+              <p className="text-xs text-muted-foreground">Can't scan? Enter this key by hand:</p>
+              <div className="flex items-center gap-2">
+                <code className="flex-1 font-mono text-sm tracking-wide text-foreground">
+                  {enrollment.secret.match(/.{1,4}/g)?.join(" ")}
+                </code>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() =>
+                    void navigator.clipboard
+                      ?.writeText(enrollment.secret)
+                      .then(() => setCopied(true), () => undefined)
+                  }
+                >
+                  {copied ? <Check /> : <Copy />}
+                  {copied ? "Copied" : "Copy key"}
+                </Button>
+              </div>
+            </div>
             <div className="space-y-1.5">
               <label htmlFor="enroll-code" className="text-xs font-medium text-muted-foreground">
                 Authenticator code

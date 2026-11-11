@@ -50,7 +50,7 @@ describe("TwoFactorSection", () => {
     fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Phone" } });
     fireEvent.click(screen.getByRole("button", { name: "Set up two-step sign-in" }));
     expect(await screen.findByAltText(/QR code/)).toBeInTheDocument();
-    expect(screen.getByText("JBSWY3DP")).toBeInTheDocument();
+    expect(screen.getByText("JBSW Y3DP")).toBeInTheDocument();
     expect(lib.startEnrollment).toHaveBeenCalledWith("Phone");
     fireEvent.change(screen.getByLabelText("Authenticator code"), { target: { value: "123456" } });
     fireEvent.click(screen.getByRole("button", { name: "Turn on" }));
@@ -271,5 +271,18 @@ describe("TwoFactorSection", () => {
     expect(lib.listAuthenticators).toHaveBeenCalledTimes(2);
     expect(screen.queryByText("network down")).toBeNull();
     expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  // fails_when=the hand-typed key wraps mid-group or can't be copied whole
+  it("shows the key in groups of four and copies it without the spaces", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+    lib.listAuthenticators.mockResolvedValue([]);
+    render(<TwoFactorSection />);
+    fireEvent.click(await screen.findByRole("button", { name: "Set up two-step sign-in" }));
+    expect(await screen.findByText("JBSW Y3DP")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Copy key" }));
+    expect(writeText).toHaveBeenCalledWith("JBSWY3DP");
+    expect(await screen.findByRole("button", { name: "Copied" })).toBeInTheDocument();
   });
 });
