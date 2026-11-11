@@ -1,5 +1,6 @@
 import { categoryColor } from "@/lib/categories";
 import { formatISODate } from "@/lib/date";
+import type { IncomeExpenseRow } from "@/lib/income-expenses";
 import { formatPercent } from "@/lib/locale";
 import { incomeTitle } from "@/lib/transactions";
 import { UNCATEGORIZED_LABEL, type MonthlySpendRow } from "@/lib/spending";
@@ -56,11 +57,10 @@ export function periodRange(start: Date, period: Period): { from: string; to: st
 }
 
 /** A month's row of v_income_vs_expenses_monthly, with its month. */
-export interface MonthlyFlowRow {
-  month: string | null;
-  income_eur: number | null;
-  expenses_eur: number | null;
-}
+export type MonthlyFlowRow = IncomeExpenseRow & { month: string | null };
+
+/** A row of v_spend_by_category_monthly, with its month. */
+export type MonthlyCategoryRow = MonthlySpendRow & { month: string | null };
 
 export interface FlowSummary {
   income: number;
@@ -184,7 +184,7 @@ const CENT = 0.005;
  * of the diagram would no longer match. Such a month's spending shows as "Other spending".
  */
 export function spendByCategory(
-  rows: Array<MonthlySpendRow & { month: string | null }>,
+  rows: Array<MonthlyCategoryRow>,
   monthTotals: Map<string, number>,
 ): Array<Part> {
   const monthSum = new Map<string, number>();

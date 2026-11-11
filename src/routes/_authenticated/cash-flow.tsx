@@ -19,10 +19,10 @@ import {
   trend,
   trimLeadingEmpty,
   type IncomeTxRow,
+  type MonthlyCategoryRow,
   type MonthlyFlowRow,
   type Period,
 } from "@/lib/cash-flow";
-import type { MonthlySpendRow } from "@/lib/spending";
 import {
   formatEur,
   formatSignedEur,
@@ -80,17 +80,14 @@ async function fetchMonthlyFlow(): Promise<Array<MonthlyFlowRow>> {
   return (data ?? []) as Array<MonthlyFlowRow>;
 }
 
-async function fetchCategorySpend(
-  from: string,
-  to: string,
-): Promise<Array<MonthlySpendRow & { month: string | null }>> {
+async function fetchCategorySpend(from: string, to: string): Promise<Array<MonthlyCategoryRow>> {
   const { data, error } = await supabase
     .from("v_spend_by_category_monthly")
     .select("month,category,spend_eur")
     .gte("month", from)
     .lt("month", to);
   if (error) throw error;
-  return (data ?? []) as Array<MonthlySpendRow & { month: string | null }>;
+  return (data ?? []) as Array<MonthlyCategoryRow>;
 }
 
 async function fetchIncomeRows(from: string, to: string): Promise<Array<IncomeTxRow>> {
