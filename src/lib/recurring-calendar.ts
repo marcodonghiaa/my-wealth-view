@@ -29,7 +29,18 @@ export interface ChargeTx {
   merchant_key: string | null;
   amount: number | null;
   currency: string | null;
+  /** 'Subscription' when the AI tagged it; the stream detector builds tagged streams from these. */
+  transaction_type?: string | null;
 }
+
+// A charge belongs to a stream when it is tagged Subscription or costs within 10% of the usual
+// amount (the detector's own band), so a one-off purchase at the same shop never counts as paid.
+const AMOUNT_BAND = 0.1;
+const belongs = (c: ChargeTx, s: Stream) => {
+  if (c.transaction_type === "Subscription") return true;
+  const usual = Math.abs(s.typical_amount ?? 0);
+  return Math.abs(Math.abs(c.amount ?? 0) - usual) <= usual * AMOUNT_BAND;
+};
 
 const DAY_MS = 86_400_000;
 const parse = (iso: string) => new Date(`${iso}T00:00:00`);
@@ -85,7 +96,8 @@ export function monthBounds(month: Date): { start: string; end: string } {
 }
 
 /**
- * Charges in `month` for `streams`: each charge from a stream's name and account is ticked (when
+ * Charges in `month` for `streams`: each charge from a stream's name and account that belongs to
+ * it (tagged Subscription, or near its usual amount) is ticked (when
  * several streams share them, as PayPal or Apple do, the one with the nearest usual amount takes
  * it); from this month on, the dates still expected are added, late once past `today`.
  */
@@ -104,7 +116,10 @@ export function billEntries(
     if (!c.booking_date || c.booking_date < start || c.booking_date >= end) continue;
     const amount = Math.abs(c.amount ?? 0);
     const owner = streams
-      .filter((s) => s.merchant_key === c.merchant_key && s.account_uid === c.account_uid)
+      .filter(
+        (s) =>
+          s.merchant_key === c.merchant_key && s.account_uid === c.account_uid && belongs(c, s),
+      )
       .sort(
         (a, b) =>
           Math.abs(Math.abs(a.typical_amount ?? 0) - amount) -

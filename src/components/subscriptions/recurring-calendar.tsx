@@ -34,7 +34,7 @@ async function fetchCharges(month: Date, keys: Array<string>): Promise<Array<Cha
   const { start, end } = monthBounds(month);
   const { data, error } = await supabase
     .from("transactions")
-    .select("account_uid,entry_reference,booking_date,merchant_key,amount,currency")
+    .select("account_uid,entry_reference,booking_date,merchant_key,amount,currency,transaction_type")
     .eq("credit_debit_indicator", "DBIT")
     .eq("flow_type", "spend")
     .is("deleted_at", null)

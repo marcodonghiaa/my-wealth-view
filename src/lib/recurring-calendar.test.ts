@@ -153,6 +153,37 @@ describe("billEntries", () => {
     );
     expect(out.map((e) => e.status)).toEqual(["upcoming"]);
   });
+  it("doesn't tick a one-off purchase at the same merchant (Polish #1)", () => {
+    const s = stream({ merchant_key: "amazon", display_name: "Prime", typical_amount: 4.99 });
+    const out = billEntries(
+      [s],
+      [
+        charge("2026-11-04", {
+          merchant_key: "amazon",
+          amount: 63.2,
+          transaction_type: "One-time",
+        }),
+      ],
+      NOV,
+      TODAY,
+    );
+    expect(out.map((e) => `${e.date} ${e.status}`)).toEqual(["2026-11-05 late"]);
+  });
+  it("ticks a charge tagged Subscription, or one within 10% of the usual amount", () => {
+    const s = stream({ merchant_key: "amazon", display_name: "Prime", typical_amount: 4.99 });
+    const tagged = charge("2026-11-05", {
+      merchant_key: "amazon",
+      amount: 6.99,
+      transaction_type: "Subscription",
+    });
+    const near = charge("2026-11-05", {
+      merchant_key: "amazon",
+      amount: 5.4,
+      transaction_type: null,
+    });
+    expect(billEntries([s], [tagged], NOV, TODAY)[0]?.status).toBe("done");
+    expect(billEntries([s], [near], NOV, TODAY)[0]?.status).toBe("done");
+  });
   it("gives a shared name's charge to the stream with the nearest usual amount", () => {
     const a = stream({
       id: "a",
