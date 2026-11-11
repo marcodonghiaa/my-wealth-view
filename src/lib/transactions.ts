@@ -164,7 +164,10 @@ export function formatAmountPlain(value: number): string {
 /** Signed amount in the transaction's own currency. */
 export function nativeSignedAmount(tx: TransactionRow): number | null {
   if (tx.amount == null) return null;
-  const sign = (tx.signed_amount_eur ?? tx.amount) < 0 ? -1 : 1;
+  // Without a EUR value yet (no exchange rate), debit/credit says which way the money went.
+  const ind = tx.credit_debit_indicator;
+  const fallback = ind === "DBIT" ? -1 : ind === "CRDT" ? 1 : tx.amount;
+  const sign = (tx.signed_amount_eur ?? fallback) < 0 ? -1 : 1;
   return sign * Math.abs(tx.amount);
 }
 

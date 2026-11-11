@@ -104,9 +104,16 @@ describe("nativeSignedAmount", () => {
     expect(nativeSignedAmount(tx({ amount: 10, signed_amount_eur: 9 }))).toBe(10);
   });
 
-  it("falls back to the amount's own sign when EUR is missing", () => {
-    expect(nativeSignedAmount(tx({ amount: -10, signed_amount_eur: null }))).toBe(-10);
-    expect(nativeSignedAmount(tx({ amount: 10, signed_amount_eur: null }))).toBe(10);
+  it("falls back to the amount's own sign when EUR and debit/credit are missing", () => {
+    const none = { signed_amount_eur: null, credit_debit_indicator: null };
+    expect(nativeSignedAmount(tx({ ...none, amount: -10 }))).toBe(-10);
+    expect(nativeSignedAmount(tx({ ...none, amount: 10 }))).toBe(10);
+  });
+
+  it("polish-5 #13 takes the sign from debit/credit when there's no EUR value yet", () => {
+    const usd = { amount: 30, currency: "USD", signed_amount_eur: null };
+    expect(nativeSignedAmount(tx({ ...usd, credit_debit_indicator: "DBIT" }))).toBe(-30);
+    expect(nativeSignedAmount(tx({ ...usd, credit_debit_indicator: "CRDT" }))).toBe(30);
   });
 
   it("is null without an amount", () => {
