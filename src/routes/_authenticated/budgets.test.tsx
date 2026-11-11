@@ -1088,4 +1088,14 @@ describe("Budgets page", () => {
     renderPage();
     expect(await screen.findByText("November 2026")).toBeTruthy();
   });
+
+  // protects=P5 audit note 5: a past month without income isn't described as still to come;
+  // fails_when=a past month says "No income recorded yet"
+  it('says a past month had no income, without "yet"', async () => {
+    db["v_income_vs_expenses_monthly"] = [];
+    window.history.replaceState(null, "", "/budgets?month=2026-09");
+    renderPage();
+    expect(await screen.findByText("No income recorded")).toBeTruthy();
+    expect(screen.queryByText("No income recorded yet")).toBeNull();
+  });
 });

@@ -484,7 +484,9 @@ function BudgetsPage() {
                     Couldn't load income: {incomeQuery.error.message}
                   </span>
                 ) : income === 0 ? (
-                  <span className="text-muted-foreground">No income recorded yet</span>
+                  <span className="text-muted-foreground">
+                    {monthIso < thisMonthIso ? "No income recorded" : "No income recorded yet"}
+                  </span>
                 ) : (
                   <span className="font-figure text-foreground">
                     {income == null ? "—" : formatEur(income)}
