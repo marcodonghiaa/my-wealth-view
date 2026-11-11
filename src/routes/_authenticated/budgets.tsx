@@ -419,7 +419,9 @@ function BudgetsPage() {
               <div className="flex items-center justify-between gap-3 px-4 py-3 text-sm sm:px-5">
                 <span className="font-medium text-foreground">
                   {spread
-                    ? "Income, spread over the year"
+                    ? canGoNext
+                      ? `Income in ${monthLabel}, spread over the year`
+                      : "Income, spread over the year"
                     : canGoNext
                       ? `Income in ${monthLabel}`
                       : "Income this month"}

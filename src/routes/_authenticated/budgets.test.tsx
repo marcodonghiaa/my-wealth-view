@@ -895,4 +895,13 @@ describe("Budgets page", () => {
     expect(screen.queryByText("Budgeted above income")).toBeNull();
     expect(screen.queryByText("Not yet budgeted")).toBeNull();
   });
+
+  // protects=P5 P2-7 a past month keeps its name on the income row when Spread is on
+  it("names the past month on the income row with Spread on too", async () => {
+    window.localStorage.setItem("alopex.budgets.spreadIncome", "1");
+    renderPage();
+    expect(await screen.findByText("Income, spread over the year")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Previous month" }));
+    expect(await screen.findByText("Income in October 2026, spread over the year")).toBeTruthy();
+  });
 });
