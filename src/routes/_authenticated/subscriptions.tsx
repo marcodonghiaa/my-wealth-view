@@ -88,6 +88,8 @@ type View = (typeof VIEWS)[number]["value"];
 function SubscriptionsPage() {
   const queryClient = useQueryClient();
   const [view, setView] = useState<View>("list");
+  // One "today" per visit: a new Date each render would recompute the calendar every time.
+  const [today] = useState(romeToday);
   const query = useRecurringStreams();
 
   const actionMutation = useMutation({
@@ -208,7 +210,7 @@ function SubscriptionsPage() {
         query.isPending ? (
           <Skeleton className="h-96" />
         ) : (
-          <RecurringCalendar streams={active} today={romeToday()} />
+          <RecurringCalendar streams={active} today={today} />
         )
       ) : (
         <>
