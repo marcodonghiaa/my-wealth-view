@@ -114,6 +114,19 @@ describe("connect a bank", () => {
     expect(screen.getByLabelText("Country")).toHaveValue("PL");
   });
 
+  // protects=long country names ("United Kingdom") stay readable; fails_when=the country select
+  // gets a fixed width again, which clipped "United Kingdom" at 640-767px (polish 4, P1-1)
+  it("sizes the country select to its longest name, not a fixed width", async () => {
+    invoke.mockResolvedValue({ data: { banks: [] }, error: null });
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <Page />
+      </QueryClientProvider>,
+    );
+    fireEvent.click(await screen.findByRole("button", { name: "Connect a bank" }));
+    expect(screen.getByLabelText("Country").className).not.toMatch(/(^|\s)(sm:)?w-\d/);
+  });
+
   // protects=a country with no supported banks says so; fails_when=the bank list sits empty on
   // "Select a bank…" with submit disabled and no reason
   it("says when a country has no banks", async () => {

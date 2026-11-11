@@ -373,7 +373,7 @@ function AccountsPage() {
                       setBankCountry(e.target.value);
                       setBankName("");
                     }}
-                    className="sm:w-40"
+                    className="sm:w-auto"
                   >
                     {COUNTRIES.map((c) => (
                       <option key={c.code} value={c.code}>
