@@ -1076,4 +1076,16 @@ describe("Budgets page", () => {
     for (const v of ["3", "32", "325"]) fireEvent.change(input, { target: { value: v } });
     expect(scrolled).toHaveBeenCalledTimes(1);
   });
+
+  // protects=P5 audit note 3: a year the database can't hold never becomes the viewed month;
+  // fails_when=?month=0050-01 opens "January 1950"
+  it("ignores a month in the address before 2000", async () => {
+    window.history.replaceState(null, "", "/budgets?month=0050-01");
+    const first = renderPage();
+    expect(await screen.findByText("November 2026")).toBeTruthy();
+    first.unmount();
+    window.history.replaceState(null, "", "/budgets?month=1999-12");
+    renderPage();
+    expect(await screen.findByText("November 2026")).toBeTruthy();
+  });
 });

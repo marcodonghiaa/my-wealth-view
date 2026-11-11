@@ -134,7 +134,8 @@ const bringIntoView = (el: HTMLElement | null) => el?.scrollIntoView?.({ block: 
 /** The month in the address (?month=YYYY-MM), so a reload stays on it; otherwise this month. */
 function readMonth(): Date {
   const now = startOfMonth(new Date());
-  const m = /^(\d{4})-(0[1-9]|1[0-2])$/.exec(
+  // Budgets start in 2000 (the database's limit too).
+  const m = /^(2\d{3})-(0[1-9]|1[0-2])$/.exec(
     new URLSearchParams(window.location.search).get("month") ?? "",
   );
   if (!m) return now;
