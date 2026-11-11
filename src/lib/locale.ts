@@ -83,6 +83,26 @@ export function numberFormat(options: Intl.NumberFormatOptions = {}): Intl.Numbe
   return format;
 }
 
+/**
+ * A typed number as plain "1234.5", read in the chosen format. With both marks the last one is the
+ * decimal. A lone mark is the decimal unless it's this format's thousands mark in 3-digit groups:
+ * "1.250" is 1250 in Italian, "1,250" is 1250 in English, and "0.5" / "12,5" stay decimals.
+ */
+export function normalizeNumber(input: string): string {
+  const text = input.trim().replace(/[\s']/g, "");
+  const comma = text.lastIndexOf(",");
+  const dot = text.lastIndexOf(".");
+  if (comma >= 0 && dot >= 0)
+    return comma > dot ? text.replace(/\./g, "").replace(",", ".") : text.replace(/,/g, "");
+  const mark = comma >= 0 ? "," : dot >= 0 ? "." : null;
+  if (!mark) return text;
+  const decimal = numberFormat()
+    .formatToParts(1.5)
+    .find((p) => p.type === "decimal")?.value;
+  const grouped = new RegExp(`^[1-9]\\d{0,2}(\\${mark}\\d{3})+$`).test(text);
+  return mark !== decimal && grouped ? text.split(mark).join("") : text.replace(mark, ".");
+}
+
 /** Whether people in this locale write the month before the day (03/25/2026). */
 export const monthFirst = (locale: string = appLocale()): boolean => /^en-US\b/.test(locale);
 

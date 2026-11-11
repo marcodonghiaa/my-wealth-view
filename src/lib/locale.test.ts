@@ -12,6 +12,9 @@ import {
   setLocaleOverride,
 } from "./locale";
 import { formatBookingDate, formatMoney } from "./transactions";
+import { parseAmount } from "./trades";
+import { parseQuantity } from "./holdings";
+import { parseOwed } from "./account-types";
 
 const setBrowser = (language: string) =>
   Object.defineProperty(navigator, "language", { value: language, configurable: true });
@@ -180,4 +183,24 @@ describe("thousands marks (polish-4 #3)", () => {
     expect(formatMoney(3487, "EUR")).toBe("3487,00 €".replace("3487", "3.487"));
     expect(formatNumber(7022.35, 2)).toBe("7.022,35");
   });
+});
+
+describe("polish-5 #4 typed numbers follow the chosen format", () => {
+  const parsers = { parseAmount, parseQuantity, parseOwed };
+  it.each(Object.entries(parsers))(
+    "%s reads 1.250 as 1250 under it-IT and 1,250 under en-GB",
+    (_n, parse) => {
+      setLocaleOverride("it-IT");
+      expect(parse("1.250")).toBe(1250);
+      expect(parse("1.250,5")).toBe(1250.5);
+      expect(parse("12,5")).toBe(12.5);
+      expect(parse("0.5")).toBe(0.5);
+      setLocaleOverride("en-GB");
+      expect(parse("1,250")).toBe(1250);
+      expect(parse("1,250.5")).toBe(1250.5);
+      expect(parse("12.5")).toBe(12.5);
+      expect(parse("0,5")).toBe(0.5);
+      expect(parse("1,2,3")).toBeNull();
+    },
+  );
 });
