@@ -238,11 +238,13 @@ export function TwoFactorSection() {
           </p>
         )}
 
-        <p className="text-xs text-muted-foreground">
-          There are no backup codes. Add a second authenticator (a password manager works) so a lost
-          phone doesn't lock you out. If every one is gone, the owner of this instance can remove
-          them from the Supabase SQL editor (see UPGRADING.md in the backend).
-        </p>
+        {(on || enrollment) && (
+          <p className="text-xs text-muted-foreground">
+            There are no backup codes. Add a second authenticator (a password manager works) so a
+            lost phone doesn't lock you out. If you lose them all, ask the person who runs this app
+            to remove them.
+          </p>
+        )}
       </div>
     </section>
   );

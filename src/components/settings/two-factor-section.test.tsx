@@ -204,6 +204,21 @@ describe("TwoFactorSection", () => {
     expect(await screen.findByRole("button", { name: "Remove Phone" })).toHaveClass("size-11");
   });
 
+  // protects=end users get a recovery note they can act on, when it matters;
+  // fails_when=it points them at the Supabase SQL editor, or shows while two-step is off
+  it("shows a plain-words recovery note only once two-step is on", async () => {
+    lib.listAuthenticators.mockResolvedValueOnce([]);
+    const { unmount } = render(<TwoFactorSection />);
+    await screen.findByText(/^Off\./);
+    expect(screen.queryByText(/backup codes/)).toBeNull();
+    unmount();
+    lib.listAuthenticators.mockResolvedValue([{ id: "a", name: "Phone" }]);
+    render(<TwoFactorSection />);
+    const note = await screen.findByText(/backup codes/);
+    expect(note).toHaveTextContent("ask the person who runs this app");
+    expect(note.textContent).not.toMatch(/SQL|UPGRADING|Supabase/);
+  });
+
   it("says when the list can't load", async () => {
     lib.listAuthenticators.mockRejectedValue(new Error("network down"));
     render(<TwoFactorSection />);
