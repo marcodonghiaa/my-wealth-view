@@ -962,4 +962,22 @@ describe("re-sorting what a deleted rule filed", () => {
     await waitFor(() => expect(toastSuccess).toHaveBeenCalled());
     expect(invoke).not.toHaveBeenCalled();
   });
+
+  // Polish 1 #12: Re-sort, then Undo the delete. The rows are already uncategorized; the
+  // restored rule files them again at the next sync, so Undo just puts the rule back.
+  it("Undo after a re-sort still puts the rule back", async () => {
+    invoke.mockResolvedValue(answer(2));
+    renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: "Delete rule for Netflix" }));
+    await waitFor(() => expect(toastInfo).toHaveBeenCalled());
+    (toastInfo.mock.calls[0] as unknown as [string, Offer])[1].action.onClick();
+    await waitFor(() =>
+      expect(toastSuccess).toHaveBeenCalledWith(
+        "2 transactions will be re-sorted at the next sync",
+      ),
+    );
+    (toastSuccess.mock.calls[0]?.[1] as Offer).action.onClick();
+    await waitFor(() => expect(inserted).toHaveLength(1));
+    expect(toastError).not.toHaveBeenCalled();
+  });
 });
