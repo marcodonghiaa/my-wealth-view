@@ -61,8 +61,12 @@ export function categorizeRow(
 ): Guess {
   const text = norm(row.description);
 
+  // Spaces around a rule's text never counted here (the import trimmed before match modes).
   for (const r of rules) {
-    if (isAppCategory(r.set_category) && textMatches(text, norm(r.match_text), r.match_mode)) {
+    if (
+      isAppCategory(r.set_category) &&
+      textMatches(text, norm(r.match_text).trim(), r.match_mode)
+    ) {
       return { category: r.set_category, source: "rule" };
     }
   }

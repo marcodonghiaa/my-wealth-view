@@ -45,6 +45,15 @@ describe("categorizeRow", () => {
     ).toBe("Health");
   });
 
+  // pass5 #9: the import used to trim a rule's text; dropping that stopped "bar " matching
+  it("ignores spaces around a rule's text, as it did before match modes", () => {
+    const rules = [rule({ match_text: " bar ", match_mode: "contains", set_category: "Health" })];
+    expect(categorizeRow({ description: "Barclays fee", category: "General" }, rules)).toEqual({
+      category: "Health",
+      source: "rule",
+    });
+  });
+
   it("ignores a rule with empty text instead of matching everything", () => {
     const rules = [rule({ match_text: "  ", set_category: "Health" })];
     expect(categorizeRow({ description: "Spesa", category: "General" }, rules).source).not.toBe(
