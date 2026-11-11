@@ -439,7 +439,7 @@ function RuleList({ rules }: { rules: RuleRow[] }) {
     },
     onSuccess: (_data, id, ctx) => {
       const rule = ctx?.previous?.find((r) => r.id === id);
-      if (!rule) return void toast.success("Rule deleted", {});
+      if (!rule) return void toast.success("Rule deleted");
       // Rules from before the 200-character cap can't be saved again, so no Undo for them.
       const length = [...rule.match_text].length;
       const restorable = length >= 1 && length <= MAX_MATCH_TEXT;

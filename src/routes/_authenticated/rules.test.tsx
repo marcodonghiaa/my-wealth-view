@@ -1073,4 +1073,16 @@ describe("re-sorting what a deleted rule filed", () => {
       ),
     );
   });
+
+  // Polish 3 #5: with no cached list there's no rule to restore or check: just "Rule deleted".
+  it("deletes with an empty cache: no Undo, no check", async () => {
+    renderPage();
+    const remove = await screen.findByRole("button", { name: "Delete rule for Netflix" });
+    const read = vi.spyOn(QueryClient.prototype, "getQueryData").mockReturnValue(undefined);
+    fireEvent.click(remove);
+    await waitFor(() => expect(toastSuccess).toHaveBeenCalled());
+    read.mockRestore();
+    expect(toastSuccess).toHaveBeenCalledWith("Rule deleted");
+    expect(invoke).not.toHaveBeenCalled();
+  });
 });
