@@ -165,6 +165,23 @@ describe("success toast action", () => {
 // then reloads the month so a save made just before isn't lost;
 // fails_when=the patch carries other columns, or a failed save leaves the month unreloaded
 describe("note and tags saves", () => {
+  // polish-3 #7: the sheet can save before the month list has loaded
+  it("saves a note with nothing cached yet", async () => {
+    const queryClient = new QueryClient({ defaultOptions: { mutations: { retry: false } } });
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    );
+    const { result } = renderHook(
+      () => useTransactionFieldMutation(queryClient, MONTH, "note", { errorMessage: "fail" }),
+      { wrapper },
+    );
+    await act(() =>
+      result.current.mutateAsync({ tx: { account_uid: "a1", entry_reference: "r1" }, value: "hi" }),
+    );
+    expect(calls[0]?.update).toEqual({ note: "hi" });
+    expect(queryClient.getQueryData(["transactions", MONTH])).toBeUndefined();
+  });
+
   it("sends only the note, for that row", async () => {
     const { queryClient, wrapper, cached } = setup();
     const { result } = renderHook(
