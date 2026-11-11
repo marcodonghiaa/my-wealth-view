@@ -182,3 +182,20 @@ export function aiRow(
 
 export const attentionCount = (rows: Array<HealthRow>) =>
   rows.filter((r) => r.state !== "ok").length;
+
+/**
+ * The one-line freshness sign under the Net Worth figure: when the stalest connected bank last
+ * synced, and how many bank checks need attention. Null without a connected bank (nothing syncs).
+ */
+export function syncStatus(
+  accounts: Array<HealthAccount>,
+  now: Date,
+): { text: string; attention: number } | null {
+  const list = connected(accounts);
+  if (list.length === 0) return null;
+  const attention = attentionCount([...accessRows(list, now), ...syncRows(list, now)]);
+  const dates = list.map((a) => a.snapshot_date).filter((d): d is string => !!d);
+  if (dates.length === 0) return { text: "Not synced yet", attention };
+  const oldest = dates.reduce((a, b) => (a < b ? a : b));
+  return { text: `Synced ${ageText(syncAgeHours(oldest, now))}`, attention };
+}

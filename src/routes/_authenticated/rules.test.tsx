@@ -2,43 +2,47 @@ import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
+const empty = vi.hoisted(() => ({ current: false }));
+
 vi.mock("@/integrations/supabase/client", () => {
   const q: Record<string, unknown> = {};
   for (const m of ["select", "order"]) q[m] = () => q;
   q["then"] = (resolve: (v: unknown) => void) =>
     resolve({
-      data: [
-        {
-          id: "r1",
-          match_field: "creditor_name",
-          match_text: "Netflix",
-          set_category: "Entertainment",
-          set_transaction_type: null,
-          set_flow_type: null,
-          priority: 1,
-          created_at: "2026-10-01T00:00:00Z",
-        },
-        {
-          id: "r2",
-          match_field: "creditor_name",
-          match_text: "Revolut",
-          set_category: null,
-          set_transaction_type: null,
-          set_flow_type: "transfer",
-          priority: 100,
-          created_at: "2026-10-02T00:00:00Z",
-        },
-        {
-          id: "r3",
-          match_field: "creditor_name",
-          match_text: "Mum",
-          set_category: null,
-          set_transaction_type: null,
-          set_flow_type: "spend",
-          priority: 100,
-          created_at: "2026-10-03T00:00:00Z",
-        },
-      ],
+      data: empty.current
+        ? []
+        : [
+            {
+              id: "r1",
+              match_field: "creditor_name",
+              match_text: "Netflix",
+              set_category: "Entertainment",
+              set_transaction_type: null,
+              set_flow_type: null,
+              priority: 1,
+              created_at: "2026-10-01T00:00:00Z",
+            },
+            {
+              id: "r2",
+              match_field: "creditor_name",
+              match_text: "Revolut",
+              set_category: null,
+              set_transaction_type: null,
+              set_flow_type: "transfer",
+              priority: 100,
+              created_at: "2026-10-02T00:00:00Z",
+            },
+            {
+              id: "r3",
+              match_field: "creditor_name",
+              match_text: "Mum",
+              set_category: null,
+              set_transaction_type: null,
+              set_flow_type: "spend",
+              priority: 100,
+              created_at: "2026-10-03T00:00:00Z",
+            },
+          ],
       error: null,
     });
   return { supabase: { from: () => q } };
@@ -88,5 +92,24 @@ describe("flow rules", () => {
     );
     expect(await screen.findByText("Count as transfer")).toBeTruthy();
     expect(screen.getByText("Not a transfer")).toBeTruthy();
+  });
+});
+
+// protects=Rules, newly reachable from More, explains itself when empty and offers the add flow;
+// fails_when=the empty state is a bare "No rules yet." with nowhere to go
+describe("no rules yet", () => {
+  it("shows an example and opens the form from the empty state", async () => {
+    empty.current = true;
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <Page />
+      </QueryClientProvider>,
+    );
+    expect(await screen.findByText(/Example: if the creditor name contains/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Add a rule" }));
+    expect(screen.getByLabelText("contains this text")).toBeTruthy();
+    // Once the form is open, the empty state stops offering it.
+    expect(screen.queryByRole("button", { name: "Add a rule" })).toBeNull();
+    empty.current = false;
   });
 });

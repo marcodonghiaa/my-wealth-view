@@ -1,20 +1,35 @@
 import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
-const { rows } = vi.hoisted(() => ({ rows: { current: [] as Array<unknown> } }));
+const { rows, path } = vi.hoisted(() => ({
+  rows: { current: [] as Array<unknown> },
+  path: { current: "/" },
+}));
 
 vi.mock("@tanstack/react-router", () => ({
   createFileRoute: () => (options: Record<string, unknown>) => ({
     options,
     useRouteContext: () => ({ user: { email: "a@example.com" } }),
   }),
-  Link: ({ children, to }: { children: React.ReactNode; to: string }) => (
-    <a href={to}>{children}</a>
+  Link: ({
+    children,
+    to,
+    "aria-current": current,
+  }: {
+    children: React.ReactNode;
+    to: string;
+    "aria-current"?: "page";
+  }) => (
+    <a href={to} aria-current={current}>
+      {children}
+    </a>
   ),
   Outlet: () => null,
   redirect: vi.fn(),
   useNavigate: () => vi.fn(),
+  useRouterState: ({ select }: { select: (s: { location: { pathname: string } }) => string }) =>
+    select({ location: { pathname: path.current } }),
 }));
 vi.mock("@/integrations/supabase/client", () => ({
   loadDemoClient: vi.fn(),
@@ -25,7 +40,7 @@ vi.mock("@/integrations/supabase/client", () => ({
   },
 }));
 
-import { Route } from "./route";
+import { Route, MORE_GROUPS, TAB_BAR_ITEMS } from "./route";
 
 const Layout = Route.options.component as () => React.JSX.Element;
 const suggested = (id: string) => ({
@@ -82,5 +97,85 @@ describe("sidebar icons", () => {
       b.textContent?.includes("Sign out"),
     )!;
     expect(signOut.querySelector("svg")).not.toBeNull();
+  });
+});
+
+describe("phone tabs and More", () => {
+  const tabBar = () => screen.getByRole("navigation", { name: "Primary" });
+
+  it("has Net Worth, Activity, Spending, Investing and More", () => {
+    rows.current = [];
+    path.current = "/";
+    renderLayout();
+    const labels = [...tabBar().querySelectorAll("a, button")].map((el) => el.textContent);
+    expect(labels).toEqual(["Net Worth", "Activity", "Spending", "Investing", "More"]);
+  });
+
+  it("lights Investing on both Portfolio and Crypto", () => {
+    rows.current = [];
+    for (const p of ["/portfolio", "/crypto"]) {
+      path.current = p;
+      const { unmount } = renderLayout();
+      const current = tabBar().querySelector('[aria-current="page"]');
+      expect(current?.textContent).toBe("Investing");
+      unmount();
+    }
+  });
+
+  it("marks no tab as current on a page that lives in More", () => {
+    rows.current = [];
+    path.current = "/accounts";
+    renderLayout();
+    expect(tabBar().querySelector('[aria-current="page"]')).toBeNull();
+  });
+
+  it("lists in More every page without a tab, Import and Rules included, and none twice", () => {
+    const tabbed = new Set(TAB_BAR_ITEMS.flatMap((t) => t.owns));
+    const more = MORE_GROUPS.flatMap((g) => g.items.map((i) => i.to));
+    expect(more).toEqual(
+      expect.arrayContaining([
+        "/reports",
+        "/accounts",
+        "/income",
+        "/subscriptions",
+        "/splitwise",
+        "/import",
+        "/rules",
+      ]),
+    );
+    expect(more.some((to) => tabbed.has(to))).toBe(false);
+    expect(new Set(more).size).toBe(more.length);
+  });
+
+  it("drops a group from More when all its pages have a tab", () => {
+    expect(MORE_GROUPS.map((g) => g.label)).not.toContain("Investing");
+  });
+
+  // protects=the most-used More pages sit under the thumb first; fails_when=sidebar order leaks in
+  it("leads More with Accounts, Subscriptions and Who owes you, then Tools apart", () => {
+    const [pages, ...rest] = MORE_GROUPS;
+    expect(pages!.label).toBe("");
+    expect(pages!.items.map((i) => i.label)).toEqual([
+      "Accounts",
+      "Subscriptions",
+      "Who owes you",
+      "Reports",
+      "Income",
+    ]);
+    expect(rest.map((g) => g.label)).toEqual(["Tools"]);
+  });
+
+  it("titles only the Tools group in the sheet, and ends with Settings and Sign out", () => {
+    rows.current = [];
+    path.current = "/";
+    renderLayout();
+    fireEvent.click(screen.getByRole("button", { name: "More" }));
+    const sheet = screen.getByRole("navigation", { name: "More" });
+    expect([...sheet.querySelectorAll(".ios-section-title")].map((t) => t.textContent)).toEqual([
+      "Tools",
+    ]);
+    const entries = [...sheet.querySelectorAll("a, button")].map((el) => el.textContent);
+    expect(entries.slice(-2)).toEqual(["Settings", "Sign out"]);
+    expect(sheet).toHaveTextContent("Signed in as a@example.com");
   });
 });

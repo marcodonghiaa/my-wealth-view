@@ -1,6 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  monthFromParam,
+  monthParam,
+  parseTransactionsSearch,
   UNCATEGORIZED,
+  activeFilterCount,
+  formatDayHeading,
+  groupByDay,
   filterTransactions,
   formatAmountPlain,
   formatBookingDate,
@@ -348,5 +354,75 @@ describe("selectedOnly", () => {
     const hidden = tx({ entry_reference: "c", account_uid: "acc" });
     const selected = new Set([txId(a), txId(hidden)]);
     expect(selectedOnly([a, b], selected).map((r) => r.entry_reference)).toEqual(["a"]);
+  });
+});
+
+describe("groupByDay", () => {
+  it("cuts rows into runs of one booking date, keeping their order", () => {
+    const rows = [
+      tx({ entry_reference: "a", booking_date: "2026-10-05" }),
+      tx({ entry_reference: "b", booking_date: "2026-10-05" }),
+      tx({ entry_reference: "c", booking_date: "2026-10-04" }),
+    ];
+    expect(groupByDay(rows).map((g) => [g.day, g.rows.map((r) => r.entry_reference)])).toEqual([
+      ["2026-10-05", ["a", "b"]],
+      ["2026-10-04", ["c"]],
+    ]);
+  });
+
+  it("returns no groups for no rows", () => {
+    expect(groupByDay([])).toEqual([]);
+  });
+});
+
+describe("formatDayHeading", () => {
+  const now = new Date(2026, 10, 10, 15, 0);
+  it("names today and yesterday", () => {
+    expect(formatDayHeading("2026-11-10", now)).toBe("Today");
+    expect(formatDayHeading("2026-11-09", now)).toBe("Yesterday");
+  });
+  it("gives weekday, day and month for older days, and the year only when it differs", () => {
+    expect(formatDayHeading("2026-11-06", now)).toBe("Fri 6 Nov");
+    expect(formatDayHeading("2025-12-31", now)).toBe("Wed 31 Dec 2025");
+  });
+  it("handles a missing date", () => {
+    expect(formatDayHeading(null, now)).toBe("No date");
+  });
+});
+
+describe("activeFilterCount", () => {
+  it("counts each filter that narrows the list", () => {
+    expect(activeFilterCount({ category: "all", bank: "all", day: "" })).toBe(0);
+    expect(activeFilterCount({ category: "Groceries", bank: "all", day: "" })).toBe(1);
+    expect(activeFilterCount({ category: "Groceries", bank: "Fineco", day: "2026-11-01" })).toBe(3);
+  });
+});
+
+describe("transactions deep-link params", () => {
+  it("keeps a trimmed category and a YYYY-MM month", () => {
+    expect(parseTransactionsSearch({ category: " Housing ", month: "2026-10" })).toEqual({
+      category: "Housing",
+      month: "2026-10",
+    });
+  });
+
+  it("drops blank, non-string and malformed values", () => {
+    expect(parseTransactionsSearch({ category: "  ", month: "2026-1" })).toEqual({});
+    expect(parseTransactionsSearch({ category: 3, month: 202610 })).toEqual({});
+  });
+
+  it("formats a month as YYYY-MM", () => {
+    expect(monthParam(new Date(2026, 0, 15))).toBe("2026-01");
+  });
+
+  const now = new Date(2026, 10, 10);
+  it("reads a month param as the first of that month", () => {
+    expect(monthFromParam("2026-03", now)).toEqual(new Date(2026, 2, 1));
+  });
+
+  it("falls back to this month when absent, malformed or in the future", () => {
+    expect(monthFromParam(undefined, now)).toEqual(new Date(2026, 10, 1));
+    expect(monthFromParam("nope", now)).toEqual(new Date(2026, 10, 1));
+    expect(monthFromParam("2027-01", now)).toEqual(new Date(2026, 10, 1));
   });
 });

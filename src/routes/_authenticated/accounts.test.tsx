@@ -95,6 +95,38 @@ describe("debts", () => {
     expect(screen.getAllByText("€1,000.00").length).toBeGreaterThan(0);
     expect(screen.getByRole("button", { name: "Add a debt" })).toBeInTheDocument();
   });
+
+  // protects=balances come first; setup is a quiet last row (#13);
+  // fails_when=Connect a bank or Add a debt sits above the accounts again
+  const follows = (a: Element, b: Element) =>
+    !!(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+
+  it("puts Connect a bank and Add a debt after the bank accounts", async () => {
+    rows.v_bank_accounts_latest = [account({})];
+    renderPage();
+    const add = await screen.findByRole("button", { name: "Add a debt" });
+    const row = screen.getByText("Demo Bank");
+    const connect = screen.getByRole("button", { name: "Connect a bank" });
+    expect(follows(row, connect)).toBe(true);
+    expect(follows(connect, add)).toBe(true);
+  });
+
+  it("puts Add a debt after the debts once there are some", async () => {
+    rows.v_bank_accounts_latest = [
+      account({
+        uid: "c1",
+        label: "Card",
+        account_type: "credit_card",
+        amount: 200,
+        amount_eur: 200,
+      }),
+    ];
+    renderPage();
+    const heading = await screen.findByRole("heading", { name: "Debts" });
+    const add = screen.getByRole("button", { name: "Add a debt" });
+    expect(follows(heading, add)).toBe(true);
+    expect(follows(screen.getAllByText("-€200.00").at(-1)!, add)).toBe(true);
+  });
 });
 
 describe("connect a bank", () => {

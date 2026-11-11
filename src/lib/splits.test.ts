@@ -12,6 +12,7 @@ import {
   fetchSplitContacts,
   fetchSplits,
   joinNames,
+  netOwed,
   NO_NAME,
   owedEur,
   peopleFrom,
@@ -112,5 +113,20 @@ describe("fetching splits", () => {
     const refs = (await fetchSplits()).map((r) => r.entry_reference);
     expect(refs).not.toContain(first!.entry_reference);
     expect(refs).not.toContain(second!.entry_reference);
+  });
+});
+
+// protects=Who owes you leads with the net and names its direction (#10);
+// fails_when=the net sign flips, or a settled balance reads as a debt
+describe("netOwed", () => {
+  it("nets what you owe against what is owed to you", () => {
+    expect(netOwed(269.5, 22)).toEqual({ label: "Net owed to you", amount: 247.5 });
+  });
+  it("says you owe when your side is bigger", () => {
+    expect(netOwed(10, 40)).toEqual({ label: "Net you owe", amount: 30 });
+  });
+  it("treats an even or sub-cent balance as settled", () => {
+    expect(netOwed(5, 5)).toEqual({ label: "Net owed to you", amount: 0 });
+    expect(netOwed(5, 5.004)).toEqual({ label: "Net owed to you", amount: 0 });
   });
 });

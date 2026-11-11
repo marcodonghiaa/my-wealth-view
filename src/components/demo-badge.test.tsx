@@ -17,13 +17,21 @@ describe("DemoBadge", () => {
     expect(screen.getByRole("status").textContent).toBe("Demo, fake data");
   });
 
-  // Regression: at 320px the full badge overlapped the centred "Alopex" title in the
-  // mobile top bar. jsdom has no layout, so check that narrow screens show only "Demo".
-  it("shortens to Demo under 360px but keeps the full text for screen readers", () => {
+  // Regression: the full badge overlapped the centred "Alopex" title in the mobile top bar.
+  // jsdom has no layout, so check that phones show only "Demo".
+  it("shortens to Demo on phones but keeps the full text for screen readers", () => {
     enterDemoMode();
     render(<DemoBadge />);
     const rest = screen.getByText(", fake data");
-    expect(rest.className).toContain("max-[359px]:sr-only");
+    expect(rest.className).toContain("max-md:sr-only");
     expect(rest.className).not.toMatch(/(^|\s)hidden/);
+  });
+
+  it("is inline, never fixed over the page", () => {
+    enterDemoMode();
+    render(<DemoBadge className="ml-auto" />);
+    const badge = screen.getByRole("status");
+    expect(badge.className).not.toContain("fixed");
+    expect(badge.className).toContain("ml-auto");
   });
 });

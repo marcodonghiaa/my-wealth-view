@@ -15,6 +15,7 @@ import { shortHoldingName } from "@/lib/holding-name";
 import { supabase } from "@/integrations/supabase/client";
 import { formatEur } from "@/lib/transactions";
 import { currentValueEur } from "@/lib/holdings";
+import { colorForHoldingType } from "@/lib/asset-colors";
 import { AddHoldingPanel } from "@/components/holdings/add-holding-panel";
 import { SoldHoldings } from "@/components/holdings/sold-holdings";
 import { EditHolding } from "@/components/holdings/edit-holding";
@@ -23,10 +24,17 @@ import { ShareBar } from "@/components/share-bar";
 import { Alert } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { GroupedList } from "@/components/ui/grouped-list";
-import { ValueHistoryChart } from "@/components/value-history";
+import { RangeChange, ValueHistoryChart } from "@/components/value-history";
+import { DetailRow, HoldingRow } from "@/components/holdings/holding-row";
+import { InvestingSwitch } from "@/components/investing-switch";
 import { useValueHistory } from "@/lib/use-value-history";
 import { usePerformance } from "@/lib/use-performance";
-import { PerformanceSummary, ReturnCell } from "@/components/performance/performance-section";
+import {
+  PerformanceNotice,
+  ReturnCell,
+  ReturnText,
+  TradesImport,
+} from "@/components/performance/performance-section";
 import { formatDay } from "@/lib/date";
 
 export const Route = createFileRoute("/_authenticated/portfolio")({
@@ -63,21 +71,6 @@ interface PortfolioRow {
 }
 
 const UNCLASSIFIED = "Other";
-
-// Fixed per-type color so a type keeps its color as holdings change,
-// rather than reassigning colors by array position like the old per-holding pie.
-const TYPE_COLORS: Record<string, string> = {
-  Stock: "var(--color-chart-1)",
-  ETF: "var(--color-chart-2)",
-  Fund: "var(--color-chart-3)",
-  Bond: "var(--color-chart-4)",
-  [UNCLASSIFIED]: "var(--color-chart-5)",
-};
-
-function colorForType(type: string): string {
-  // UNCLASSIFIED is always a key in TYPE_COLORS -- defined right above.
-  return TYPE_COLORS[type] ?? TYPE_COLORS[UNCLASSIFIED]!;
-}
 
 const TYPE_ICONS: Record<string, LucideIcon> = {
   Stock: Building2,
@@ -192,7 +185,8 @@ function PortfolioPage() {
   const perf = usePerformance(history.chartData.at(-1)?.snapshot_date, "stock");
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-8 sm:px-8 md:py-12">
+    <div className="mx-auto max-w-5xl px-4 pt-4 pb-8 sm:px-8 md:py-12">
+      <InvestingSwitch current="/portfolio" />
       <header className="mb-3 text-[0.9375rem] font-medium text-muted-foreground">
         <h1 className="inline">Portfolio</h1>
         {scrubbed && <span> · {formatDay(scrubbed.snapshot_date)}</span>}
@@ -208,7 +202,7 @@ function PortfolioPage() {
         </Alert>
       )}
 
-      {/* Headline: total value and its change over the chart range */}
+      {/* Headline: total value, its change over the chart range, then notices about returns */}
       <section aria-label="Total portfolio value" className="mb-6">
         <div className="min-h-16" aria-live="polite">
           {query.isPending ? (
@@ -217,7 +211,8 @@ function PortfolioPage() {
             <HeadlineFigure value={history.shownEur} currency="EUR" />
           )}
         </div>
-        {!query.isPending && <PerformanceSummary perf={perf} />}
+        {!query.isPending && <RangeChange {...history} />}
+        {!query.isPending && <PerformanceNotice perf={perf} />}
       </section>
 
       {/* Chart: portfolio value over time; scrub it to read any day */}
@@ -231,7 +226,7 @@ function PortfolioPage() {
             shares={groups.map((g) => ({
               label: g.type,
               value: g.totalEur,
-              color: colorForType(g.type),
+              color: colorForHoldingType(g.type),
             }))}
           />
         </div>
@@ -254,7 +249,7 @@ function PortfolioPage() {
           <GroupedList>
             {groups.map((group) => {
               const percent = totalEur > 0 ? (group.totalEur / totalEur) * 100 : 0;
-              const color = colorForType(group.type);
+              const color = colorForHoldingType(group.type);
               const TypeIcon = TYPE_ICONS[group.type] ?? Shapes;
               const isOpen = expanded.has(group.type);
               return (
@@ -368,75 +363,58 @@ function PortfolioPage() {
                         </table>
                       </div>
 
-                      {/* Mobile rows -- divided list, not nested cards */}
-                      <div className="divide-y md:hidden">
-                        {group.holdings.map((row, i) => {
-                          const valueEur = row.value_eur ?? 0;
-                          const rowPercent = totalEur > 0 ? (valueEur / totalEur) * 100 : 0;
-                          return (
-                            <div key={row.isin ?? `${row.name ?? "row"}-${i}`} className="p-4">
-                              <div className="flex items-start justify-between gap-2">
-                                <div className="min-w-0">
-                                  <div
-                                    className="line-clamp-2 font-medium text-foreground"
-                                    title={row.name ?? undefined}
-                                  >
-                                    {row.name ? shortHoldingName(row.name) : "—"}
-                                  </div>
-                                  <div className="mt-0.5 text-xs text-muted-foreground">
-                                    {row.broker_label ?? "—"}
-                                  </div>
-                                </div>
-                                {row.isin && (
-                                  <EditHolding
-                                    target={{ kind: "stock", isin: row.isin }}
-                                    name={row.name ?? row.isin}
-                                    quantity={row.shares ?? 0}
-                                  />
-                                )}
-                              </div>
-                              <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
-                                <div>
-                                  <div className="text-xs text-muted-foreground">Shares</div>
-                                  <div className="font-figure text-foreground">
-                                    {row.shares != null ? formatShares(row.shares) : "—"}
-                                  </div>
-                                </div>
-                                <div>
-                                  <div className="text-xs text-muted-foreground">Price</div>
-                                  <div className="font-figure text-foreground">
-                                    {row.price != null && row.currency
-                                      ? formatMoney(row.price, row.currency)
-                                      : "—"}
-                                  </div>
-                                </div>
-                                <div>
-                                  <div className="text-xs text-muted-foreground">Return</div>
-                                  <div>
-                                    <ReturnCell
-                                      perf={perf}
-                                      holdingKey={row.isin}
-                                      name={row.name ?? row.isin ?? ""}
-                                      quantity={row.shares ?? 0}
-                                    />
-                                  </div>
-                                </div>
-                                <div>
-                                  <div className="text-xs text-muted-foreground">Value</div>
-                                  <div className="font-figure text-foreground">
-                                    {formatEur(valueEur)}
-                                  </div>
-                                </div>
-                                <div>
-                                  <div className="text-xs text-muted-foreground">% of total</div>
-                                  <div className="font-figure text-foreground">
-                                    {rowPercent.toFixed(1)}%
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })}
+                      {/* Mobile rows: name and shares left, value and return right */}
+                      <div className="divide-y divide-hairline md:hidden">
+                        {group.holdings.map((row, i) => (
+                          <HoldingRow
+                            key={row.isin ?? `${row.name ?? "row"}-${i}`}
+                            name={row.name ? shortHoldingName(row.name) : "—"}
+                            title={row.name ?? undefined}
+                            amount={
+                              <>
+                                <span className="font-figure">
+                                  {row.shares != null ? formatShares(row.shares) : "—"}
+                                </span>{" "}
+                                shares{row.broker_label ? ` · ${row.broker_label}` : ""}
+                              </>
+                            }
+                            value={formatEur(row.value_eur ?? 0)}
+                            returnText={<ReturnText perf={perf} holdingKey={row.isin} />}
+                          >
+                            <DetailRow label="Price">
+                              <span className="font-figure">
+                                {row.price != null && row.currency
+                                  ? formatMoney(row.price, row.currency)
+                                  : "—"}
+                              </span>
+                            </DetailRow>
+                            <DetailRow label="Return">
+                              <ReturnCell
+                                perf={perf}
+                                holdingKey={row.isin}
+                                name={row.name ?? row.isin ?? ""}
+                                quantity={row.shares ?? 0}
+                              />
+                            </DetailRow>
+                            <DetailRow label="Shares">
+                              <span className="font-figure">
+                                {row.shares != null ? formatShares(row.shares) : "—"}
+                              </span>
+                              {row.isin && (
+                                <EditHolding
+                                  target={{ kind: "stock", isin: row.isin }}
+                                  name={row.name ?? row.isin}
+                                  quantity={row.shares ?? 0}
+                                />
+                              )}
+                            </DetailRow>
+                            {row.isin && (
+                              <DetailRow label="ISIN">
+                                <span className="font-figure break-all">{row.isin}</span>
+                              </DetailRow>
+                            )}
+                          </HoldingRow>
+                        ))}
                       </div>
                     </>
                   )}
@@ -446,6 +424,8 @@ function PortfolioPage() {
           </GroupedList>
         </>
       )}
+
+      {!query.isPending && <TradesImport perf={perf} />}
 
       <SoldHoldings
         items={(query.data ?? []).flatMap((row) =>

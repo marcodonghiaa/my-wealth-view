@@ -7,6 +7,14 @@ vi.mock("recharts", async (importOriginal) => ({
   ResponsiveContainer: () => null,
 }));
 
+vi.mock("@tanstack/react-router", () => ({
+  Link: ({ to, children, ...rest }: { to: string; children: React.ReactNode }) => (
+    <a href={to} {...rest}>
+      {children}
+    </a>
+  ),
+}));
+
 import { AllocationChart } from "./allocation-chart";
 
 const live = (liabilities_eur?: number) => ({
@@ -38,5 +46,37 @@ describe("AllocationChart", () => {
   it("has no debts line without debts", () => {
     render(<AllocationChart history={[]} snapshots={[live()]} />);
     expect(screen.queryByText("Debts")).not.toBeInTheDocument();
+  });
+
+  // protects=each breakdown row leads to the page behind its number; fails_when=rows go nowhere
+  it("links each class to its page and debts to accounts", () => {
+    render(<AllocationChart history={[]} snapshots={[{ ...live(300), crypto_total_eur: 50 }]} />);
+    const href = (name: RegExp) => screen.getByRole("link", { name }).getAttribute("href");
+    expect(href(/^Stocks & ETFs/)).toBe("/portfolio");
+    expect(href(/^Crypto/)).toBe("/crypto");
+    expect(href(/^Cash/)).toBe("/accounts");
+    expect(href(/^Debts/)).toBe("/accounts");
+  });
+
+  it("leaves the unallocated row unlinked", () => {
+    render(
+      <AllocationChart
+        history={[
+          {
+            snapshot_date: "2025-01-31",
+            stocks_eur: 0,
+            bonds_eur: 0,
+            crypto_eur: 0,
+            cash_eur: 0,
+            other_eur: 100,
+            liabilities_eur: 0,
+            total_eur: 100,
+          },
+        ]}
+        snapshots={[]}
+      />,
+    );
+    expect(screen.getByText("Unallocated")).toBeInTheDocument();
+    expect(screen.queryByRole("link")).toBeNull();
   });
 });

@@ -326,146 +326,6 @@ function AccountsPage() {
           </div>
         ))}
 
-        {/* Connect a bank — collapsed by default. */}
-        <form onSubmit={handleConnectBank} className="mb-4 rounded-lg bg-card">
-          <button
-            type="button"
-            onClick={() => setShowConnectForm((v) => !v)}
-            className="flex min-h-11 w-full items-center justify-between gap-3 p-5 text-left"
-            aria-expanded={showConnectForm}
-          >
-            <h3 className="flex items-center gap-2 text-sm font-medium text-foreground">
-              <Link2 className="size-4 text-primary" />
-              Connect a bank
-            </h3>
-            <ChevronDown
-              className={`size-4 shrink-0 text-muted-foreground transition-transform ${showConnectForm ? "rotate-180" : ""}`}
-            />
-          </button>
-          {showConnectForm && (
-            <div className="px-5 pb-5">
-              <ol
-                ref={connectStepsRef}
-                tabIndex={-1}
-                className="mb-4 list-decimal space-y-2 pl-5 text-sm text-foreground focus:outline-none"
-              >
-                <li>
-                  <a
-                    href="https://enablebanking.com/cp/applications"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="font-medium text-primary hover:underline"
-                  >
-                    Approve in Enable Banking <span aria-hidden="true">↗</span>
-                    <span className="sr-only">(opens in new tab)</span>
-                  </a>
-                  <p className="mt-0.5 text-xs text-muted-foreground">
-                    Once per bank: in your app, use Link accounts and pick this bank. Already done?
-                    Skip.
-                  </p>
-                </li>
-                <li>Pick the bank below, then Approve here and sign in with your bank.</li>
-              </ol>
-              <div className="grid gap-3 sm:grid-cols-[auto_1fr]">
-                <div>
-                  <label htmlFor="acc-country" className="mb-1 block text-xs text-muted-foreground">
-                    Country
-                  </label>
-                  <Select
-                    id="acc-country"
-                    value={bankCountry}
-                    onChange={(e) => {
-                      setBankCountry(e.target.value);
-                      setBankName("");
-                    }}
-                    className="sm:w-auto"
-                  >
-                    {bankCountry === "" && <option value="">Choose a country…</option>}
-                    {COUNTRIES.map((c) => (
-                      <option key={c.code} value={c.code}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </Select>
-                </div>
-                <div>
-                  <label htmlFor="acc-bank" className="mb-1 block text-xs text-muted-foreground">
-                    Bank
-                  </label>
-                  <Select
-                    id="acc-bank"
-                    value={bankName}
-                    onChange={(e) => setBankName(e.target.value)}
-                    disabled={banksQuery.isPending || banksQuery.isError || noBanks}
-                  >
-                    <option value="">
-                      {bankCountry === ""
-                        ? "Choose a country first"
-                        : banksQuery.isPending
-                          ? "Loading banks…"
-                          : banksQuery.isError
-                            ? "Couldn't load banks"
-                            : noBanks
-                              ? "No banks for this country"
-                              : "Select a bank…"}
-                    </option>
-                    {banks.map((b) => (
-                      <option key={b.name} value={b.name}>
-                        {b.name}
-                      </option>
-                    ))}
-                  </Select>
-                  {bankGone && !noBanks && (
-                    <p role="status" className="mt-1 text-xs text-muted-foreground">
-                      {bankName} isn't listed for this country anymore. Pick your bank again.
-                    </p>
-                  )}
-                  {noBanks && (
-                    <p role="status" className="mt-1 text-xs text-muted-foreground">
-                      No banks listed for this country yet. Try another country.
-                    </p>
-                  )}
-                  {banksQuery.isError && (
-                    <div role="alert" className="mt-1 flex flex-wrap items-center gap-x-1">
-                      <p className="break-words text-xs text-negative">
-                        {banksQuery.error.message}
-                      </p>
-                      <Button
-                        variant="ghost"
-                        onClick={() => void banksQuery.refetch()}
-                        className="px-3 text-xs text-primary hover:bg-primary/10 hover:text-primary"
-                      >
-                        Retry
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              </div>
-              <div className="mt-4 flex items-center gap-3">
-                <Button
-                  type="submit"
-                  disabled={connectBank.isPending || !banks.some((b) => b.name === bankName)}
-                >
-                  {connectBank.isPending ? (
-                    <Loader2 className="size-4 animate-spin" />
-                  ) : (
-                    <Link2 className="size-4" />
-                  )}
-                  {connectBank.isPending ? "Connecting…" : "Approve here"}
-                </Button>
-                {connectError && <p className="text-sm text-negative">{connectError}</p>}
-              </div>
-              <p className="mt-3 text-xs text-muted-foreground">You sign in on your bank's site.</p>
-            </div>
-          )}
-        </form>
-        {/* No debts yet: adding one starts the Debts group. */}
-        {!bankQuery.isPending && debts.length === 0 && (
-          <div className="-mt-2 mb-2 flex justify-end">
-            <AddDebt />
-          </div>
-        )}
-
         <div className="overflow-hidden rounded-lg bg-card">
           {bankQuery.isPending ? (
             <div className="space-y-3 p-4">
@@ -549,6 +409,150 @@ function AccountsPage() {
               })}
             </ul>
           )}
+          {/* Setup sits after the balances: a quiet last row, not the first thing on every visit. */}
+          <form onSubmit={handleConnectBank} className="border-t border-hairline">
+            <button
+              type="button"
+              onClick={() => setShowConnectForm((v) => !v)}
+              className="flex min-h-11 w-full items-center justify-between gap-3 px-4 py-3 text-left sm:px-5"
+              aria-expanded={showConnectForm}
+            >
+              <h3 className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Link2 className="size-4" />
+                Connect a bank
+              </h3>
+              <ChevronDown
+                className={`size-4 shrink-0 text-muted-foreground transition-transform ${showConnectForm ? "rotate-180" : ""}`}
+              />
+            </button>
+            {showConnectForm && (
+              <div className="px-4 pb-5 sm:px-5">
+                <ol
+                  ref={connectStepsRef}
+                  tabIndex={-1}
+                  className="mb-4 list-decimal space-y-2 pl-5 text-sm text-foreground focus:outline-none"
+                >
+                  <li>
+                    <a
+                      href="https://enablebanking.com/cp/applications"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="font-medium text-primary hover:underline"
+                    >
+                      Approve in Enable Banking <span aria-hidden="true">↗</span>
+                      <span className="sr-only">(opens in new tab)</span>
+                    </a>
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      Once per bank: in your app, use Link accounts and pick this bank. Already
+                      done? Skip.
+                    </p>
+                  </li>
+                  <li>Pick the bank below, then Approve here and sign in with your bank.</li>
+                </ol>
+                <div className="grid gap-3 sm:grid-cols-[auto_1fr]">
+                  <div>
+                    <label
+                      htmlFor="acc-country"
+                      className="mb-1 block text-xs text-muted-foreground"
+                    >
+                      Country
+                    </label>
+                    <Select
+                      id="acc-country"
+                      value={bankCountry}
+                      onChange={(e) => {
+                        setBankCountry(e.target.value);
+                        setBankName("");
+                      }}
+                      className="sm:w-auto"
+                    >
+                      {bankCountry === "" && <option value="">Choose a country…</option>}
+                      {COUNTRIES.map((c) => (
+                        <option key={c.code} value={c.code}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </Select>
+                  </div>
+                  <div>
+                    <label htmlFor="acc-bank" className="mb-1 block text-xs text-muted-foreground">
+                      Bank
+                    </label>
+                    <Select
+                      id="acc-bank"
+                      value={bankName}
+                      onChange={(e) => setBankName(e.target.value)}
+                      disabled={banksQuery.isPending || banksQuery.isError || noBanks}
+                    >
+                      <option value="">
+                        {bankCountry === ""
+                          ? "Choose a country first"
+                          : banksQuery.isPending
+                            ? "Loading banks…"
+                            : banksQuery.isError
+                              ? "Couldn't load banks"
+                              : noBanks
+                                ? "No banks for this country"
+                                : "Select a bank…"}
+                      </option>
+                      {banks.map((b) => (
+                        <option key={b.name} value={b.name}>
+                          {b.name}
+                        </option>
+                      ))}
+                    </Select>
+                    {bankGone && !noBanks && (
+                      <p role="status" className="mt-1 text-xs text-muted-foreground">
+                        {bankName} isn't listed for this country anymore. Pick your bank again.
+                      </p>
+                    )}
+                    {noBanks && (
+                      <p role="status" className="mt-1 text-xs text-muted-foreground">
+                        No banks listed for this country yet. Try another country.
+                      </p>
+                    )}
+                    {banksQuery.isError && (
+                      <div role="alert" className="mt-1 flex flex-wrap items-center gap-x-1">
+                        <p className="break-words text-xs text-negative">
+                          {banksQuery.error.message}
+                        </p>
+                        <Button
+                          variant="ghost"
+                          onClick={() => void banksQuery.refetch()}
+                          className="px-3 text-xs text-primary hover:bg-primary/10 hover:text-primary"
+                        >
+                          Retry
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="mt-4 flex items-center gap-3">
+                  <Button
+                    type="submit"
+                    disabled={connectBank.isPending || !banks.some((b) => b.name === bankName)}
+                  >
+                    {connectBank.isPending ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : (
+                      <Link2 className="size-4" />
+                    )}
+                    {connectBank.isPending ? "Connecting…" : "Approve here"}
+                  </Button>
+                  {connectError && <p className="text-sm text-negative">{connectError}</p>}
+                </div>
+                <p className="mt-3 text-xs text-muted-foreground">
+                  You sign in on your bank's site.
+                </p>
+              </div>
+            )}
+          </form>
+          {/* No debts yet: adding one starts the Debts group. */}
+          {!bankQuery.isPending && debts.length === 0 && (
+            <div className="border-t border-hairline">
+              <AddDebt />
+            </div>
+          )}
         </div>
       </section>
 
@@ -556,12 +560,9 @@ function AccountsPage() {
         <section className="mb-10">
           <div className="mb-4 flex items-center justify-between gap-3">
             <h2 className="text-lg font-semibold text-foreground">Debts</h2>
-            <div className="flex items-center gap-1">
-              <AddDebt />
-              <span className="font-figure text-sm font-medium text-foreground">
-                {formatEur(totalDebtEur)}
-              </span>
-            </div>
+            <span className="font-figure text-sm font-medium text-foreground">
+              {formatEur(totalDebtEur)}
+            </span>
           </div>
           <ul className="divide-y overflow-hidden rounded-lg bg-card">
             {debts.map((a) => {
@@ -596,6 +597,9 @@ function AccountsPage() {
                 </li>
               );
             })}
+            <li>
+              <AddDebt />
+            </li>
           </ul>
         </section>
       )}

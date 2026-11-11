@@ -13,10 +13,18 @@ import { ShareBar } from "@/components/share-bar";
 import { Alert } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { GroupedList } from "@/components/ui/grouped-list";
-import { ValueHistoryChart } from "@/components/value-history";
+import { RangeChange, ValueHistoryChart } from "@/components/value-history";
+import { DetailRow, HoldingRow } from "@/components/holdings/holding-row";
+import { InvestingSwitch } from "@/components/investing-switch";
+import { EmptyState } from "@/components/empty-state";
 import { useValueHistory } from "@/lib/use-value-history";
 import { usePerformance } from "@/lib/use-performance";
-import { PerformanceSummary, ReturnCell } from "@/components/performance/performance-section";
+import {
+  PerformanceNotice,
+  ReturnCell,
+  ReturnText,
+  TradesImport,
+} from "@/components/performance/performance-section";
 import { formatDay } from "@/lib/date";
 import { formatEur, formatUsd } from "@/lib/transactions";
 
@@ -153,7 +161,8 @@ function CryptoPage() {
   const perf = usePerformance(history.chartData.at(-1)?.snapshot_date, "crypto");
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-8 sm:px-8 md:py-12">
+    <div className="mx-auto max-w-5xl px-4 pt-4 pb-8 sm:px-8 md:py-12">
+      <InvestingSwitch current="/crypto" />
       <header className="mb-3 text-[0.9375rem] font-medium text-muted-foreground">
         <h1 className="inline">Crypto</h1>
         {scrubbed && <span> · {formatDay(scrubbed.snapshot_date)}</span>}
@@ -167,7 +176,7 @@ function CryptoPage() {
         <Alert className="mb-6">Couldn't load your crypto history: {history.error.message}</Alert>
       )}
 
-      {/* Headline: total value and its change over the chart range */}
+      {/* Headline: total value, its change over the chart range, then notices about returns */}
       <section aria-label="Total crypto value" className="mb-6">
         <div className="min-h-16" aria-live="polite">
           {query.isPending ? (
@@ -176,7 +185,8 @@ function CryptoPage() {
             <HeadlineFigure value={history.shownEur} currency="EUR" />
           )}
         </div>
-        {!query.isPending && <PerformanceSummary perf={perf} />}
+        {!query.isPending && <RangeChange {...history} />}
+        {!query.isPending && <PerformanceNotice perf={perf} />}
       </section>
 
       {/* Chart: crypto value over time; scrub it to read any day */}
@@ -205,9 +215,11 @@ function CryptoPage() {
           <Skeleton className="h-64" />
         </>
       ) : assets.length === 0 ? (
-        <div className="flex h-48 items-center justify-center rounded-lg bg-card text-sm text-muted-foreground">
-          No coins yet. Search for your first one below.
-        </div>
+        <EmptyState
+          className="rounded-lg bg-card"
+          title="No coins yet."
+          hint="Search for your first one below."
+        />
       ) : (
         <>
           {/* Desktop table */}
@@ -221,7 +233,6 @@ function CryptoPage() {
                     <th className="px-4 py-3 font-medium sm:px-5">Price</th>
                     <th className="px-4 py-3 text-right font-medium sm:px-5">Return</th>
                     <th className="px-4 py-3 text-right font-medium sm:px-5">Value</th>
-                    <th className="px-4 py-3 text-right font-medium sm:px-5">% of total</th>
                     <th className="w-14 px-2 py-3">
                       <span className="sr-only">Edit</span>
                     </th>
@@ -229,7 +240,6 @@ function CryptoPage() {
                 </thead>
                 <tbody className="divide-y">
                   {assets.map((asset, i) => {
-                    const percent = totalEur > 0 ? (asset.valueEur / totalEur) * 100 : 0;
                     return (
                       <tr key={asset.symbol}>
                         <td className="px-4 py-3 sm:px-5">
@@ -274,9 +284,6 @@ function CryptoPage() {
                         <td className="px-4 py-3 text-right font-figure text-foreground sm:px-5">
                           {formatEur(asset.valueEur)}
                         </td>
-                        <td className="px-4 py-3 text-right font-figure text-foreground sm:px-5">
-                          {percent.toFixed(1)}%
-                        </td>
                         <td className="px-2 py-1 text-right">
                           <AssetEdits asset={asset} />
                         </td>
@@ -288,73 +295,56 @@ function CryptoPage() {
             </div>
           </section>
 
-          {/* Mobile cards */}
+          {/* Mobile rows: coin and amount left, value and return right; tap for price and edit */}
           <GroupedList className="md:hidden">
-            {assets.map((asset, i) => {
-              const percent = totalEur > 0 ? (asset.valueEur / totalEur) * 100 : 0;
-              return (
-                <div key={asset.symbol} className="p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex min-w-0 flex-1 items-center gap-3">
-                      <CoinAvatar symbol={asset.symbol} color={assetColors[i]} />
-                      <div className="min-w-0">
-                        <div className="font-medium text-foreground">{asset.name}</div>
-                        <div className="mt-0.5 text-xs text-muted-foreground">{asset.symbol}</div>
-                      </div>
-                    </div>
-                    <AssetEdits asset={asset} />
-                  </div>
-
-                  {asset.bySource.length > 1 && (
-                    <div className="mt-2 flex flex-wrap gap-1.5">
-                      {asset.bySource.map((s) => (
-                        <span
-                          key={s.source}
-                          className="inline-flex items-center rounded-sm bg-muted px-2 py-0.5 text-xs text-muted-foreground"
-                        >
-                          {s.source}: {formatAmount(s.amount)}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-
-                  <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-                    <div>
-                      <div className="text-xs text-muted-foreground">Amount</div>
-                      <div className="font-figure text-foreground">
-                        {formatAmount(asset.amount)} {asset.symbol}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-xs text-muted-foreground">Price</div>
-                      <div className="font-figure text-foreground">{formatPrice(asset)}</div>
-                    </div>
-                    <div>
-                      <div className="text-xs text-muted-foreground">Return</div>
-                      <div>
-                        <ReturnCell
-                          perf={perf}
-                          holdingKey={asset.symbol}
-                          name={asset.name}
-                          quantity={asset.amount}
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-xs text-muted-foreground">Value</div>
-                      <div className="font-figure text-foreground">{formatEur(asset.valueEur)}</div>
-                    </div>
-                    <div>
-                      <div className="text-xs text-muted-foreground">% of total</div>
-                      <div className="font-figure text-foreground">{percent.toFixed(1)}%</div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+            {assets.map((asset, i) => (
+              <HoldingRow
+                key={asset.symbol}
+                avatar={<CoinAvatar symbol={asset.symbol} color={assetColors[i]} />}
+                name={asset.name}
+                amount={
+                  <span className="font-figure">
+                    {formatAmount(asset.amount)} {asset.symbol}
+                  </span>
+                }
+                value={formatEur(asset.valueEur)}
+                returnText={<ReturnText perf={perf} holdingKey={asset.symbol} />}
+              >
+                <DetailRow label="Price">
+                  <span className="font-figure">{formatPrice(asset)}</span>
+                </DetailRow>
+                <DetailRow label="Return">
+                  <ReturnCell
+                    perf={perf}
+                    holdingKey={asset.symbol}
+                    name={asset.name}
+                    quantity={asset.amount}
+                  />
+                </DetailRow>
+                {/* One line per source; the ones you entered yourself can be edited. */}
+                {asset.bySource.map((s) => (
+                  <DetailRow key={s.source} label={s.source}>
+                    <span className="font-figure">
+                      {formatAmount(s.amount)} {asset.symbol}
+                    </span>
+                    {isEditableCryptoSource(s.source) && (
+                      <EditHolding
+                        target={{ kind: "crypto", symbol: asset.symbol, source: s.source }}
+                        name={
+                          asset.bySource.length > 1 ? `${asset.name} (${s.source})` : asset.name
+                        }
+                        quantity={s.amount}
+                      />
+                    )}
+                  </DetailRow>
+                ))}
+              </HoldingRow>
+            ))}
           </GroupedList>
         </>
       )}
+
+      {!query.isPending && <TradesImport perf={perf} />}
 
       {/* Coinbase coins come back on their own when the sync sees them again. */}
       <SoldHoldings
