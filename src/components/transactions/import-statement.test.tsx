@@ -177,6 +177,16 @@ describe("ImportStatement", () => {
     expect(await screen.findByText("+€3.20")).toBeInTheDocument();
   });
 
+  it("polish-5 #6 hides the sign flip when a debit/credit column decides the sign", async () => {
+    upload(
+      "bank.csv",
+      "Date,Description,Amount,Soll/Haben\n2026-02-03,Bakery,3.80,S\n2026-02-04,Salary,100,H",
+    );
+    expect(await screen.findByText(/2 new transactions/)).toBeInTheDocument();
+    expect(screen.getByText("−€3.80")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Spending is written as positive")).toBeNull();
+  });
+
   it("polish-4 #12 gives the Columns toggle a 44px tap target", async () => {
     upload("Fineco_movimenti.csv", CSV);
     expect(await screen.findByText("Columns")).toHaveClass("min-h-11");

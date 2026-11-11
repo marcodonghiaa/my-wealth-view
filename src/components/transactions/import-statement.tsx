@@ -295,8 +295,8 @@ export function ImportStatement() {
                     <option value="MDY">Month first (12/31)</option>
                   </Select>
                 </label>
-                {/* Only a single signed amount can be flipped; in/out columns say it already. */}
-                {statement.columns.amount != null && (
+                {/* Only a bare signed amount can be flipped; in/out or debit/credit columns say it already. */}
+                {statement.columns.amount != null && statement.columns.direction == null && (
                   <label className="flex min-h-11 items-center gap-2">
                     <input
                       type="checkbox"
