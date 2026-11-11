@@ -138,6 +138,16 @@ export function trend(
   return bars;
 }
 
+/**
+ * Where the trend of `count` bars ends: the current period, unless the one on screen is older
+ * than that window, then the window starts at it, so its bar is always there to highlight.
+ */
+export function trendEnd(start: Date, current: Date, period: Period, count: number): Date {
+  return start < shiftPeriod(current, period, -(count - 1))
+    ? shiftPeriod(start, period, count - 1)
+    : current;
+}
+
 /** Drops the empty periods before the first one with data, so a new install isn't a row of gaps. */
 export function trimLeadingEmpty(bars: Array<TrendBar>): Array<TrendBar> {
   const first = bars.findIndex((b) => b.months > 0);

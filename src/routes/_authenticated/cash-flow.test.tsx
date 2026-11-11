@@ -260,4 +260,22 @@ describe("Cash flow page", () => {
     await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("boom"));
     expect(screen.getByRole("img", { name: /^Cash flow for/ })).toBeInTheDocument();
   });
+
+  // Polish 3 #6: a month older than the trend's window still has its bar, highlighted.
+  it("highlights an old month in the trend", async () => {
+    tables["v_income_vs_expenses_monthly"]!.push({
+      month: monthISO(-14),
+      income_eur: 500,
+      expenses_eur: 100,
+    });
+    search = { month: monthISO(-14).slice(0, 7) };
+    renderPage();
+    await waitFor(() => expect(row("Income")).toHaveTextContent("€500.00"));
+    const trend = screen.getByRole("img", { name: /^Saved per month/ });
+    const solid = () => trend.querySelectorAll('.recharts-bar-rectangle path[fill-opacity="1"]');
+    await waitFor(() =>
+      expect(trend.querySelectorAll(".recharts-bar-rectangle path").length).toBeGreaterThan(0),
+    );
+    expect(solid().length).toBe(1);
+  });
 });

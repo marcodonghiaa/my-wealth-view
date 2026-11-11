@@ -25,6 +25,7 @@ import {
   topParts,
   trend,
   trimLeadingEmpty,
+  trendEnd,
   type MonthlyFlowRow,
 } from "./cash-flow";
 
@@ -467,4 +468,21 @@ it("the longest Sankey label fits in its margin on desktop and phone", () => {
     const room = Math.min(l.outsideLeft ? l.left : Infinity, l.right) - SANKEY_LAYOUT_GAP;
     expect(l.chars * CAPITAL_PX).toBeLessThanOrEqual(room);
   }
+});
+
+// Polish 3 #6: the trend always holds the period on screen.
+describe("trendEnd", () => {
+  const now = new Date(2026, 10, 1);
+  it("ends today while the selected period is in the last bars", () => {
+    expect(trendEnd(new Date(2025, 11, 1), now, "month", 12)).toEqual(now);
+  });
+  it("moves back with an older period, which stays the first bar", () => {
+    const start = new Date(2024, 0, 1);
+    const end = trendEnd(start, now, "month", 12);
+    expect(end).toEqual(new Date(2024, 11, 1));
+    expect(trend([], "month", end, 12)[0]!.start).toEqual(start);
+    expect(trendEnd(new Date(2020, 0, 1), new Date(2026, 0, 1), "year", 5)).toEqual(
+      new Date(2024, 0, 1),
+    );
+  });
 });

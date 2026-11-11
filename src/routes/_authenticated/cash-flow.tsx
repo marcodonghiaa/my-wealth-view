@@ -18,6 +18,7 @@ import {
   summarize,
   trend,
   trimLeadingEmpty,
+  trendEnd,
   type IncomeTxRow,
   type MonthlyCategoryRow,
   type MonthlyFlowRow,
@@ -147,7 +148,10 @@ function CashFlowPage() {
     categories: spendByCategory(spendQuery.data ?? [], monthTotals),
   });
 
-  const bars = trimLeadingEmpty(trend(monthly, period, current, TREND_COUNT[period]));
+  const count = TREND_COUNT[period];
+  const bars = trimLeadingEmpty(
+    trend(monthly, period, trendEnd(start, current, period, count), count),
+  );
 
   const label = periodLabel(start, period, locale);
   const pending = monthlyQuery.isPending;
