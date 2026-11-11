@@ -16,8 +16,11 @@ const OWN_WORDS: Record<string, string> = {
   mfa_verification_failed: "That code didn't work. Try the next one.",
   mfa_factor_name_conflict: "You already have an authenticator with that name. Pick another.",
 };
+const TOO_MANY_TRIES = "Too many tries. Please wait a minute, then type the newest code.";
 const inOwnWords = (error: unknown): unknown => {
-  const text = OWN_WORDS[String((error as { code?: unknown } | null)?.code)];
+  const e = error as { code?: unknown; status?: unknown } | null;
+  if (e?.status === 429) return new Error(TOO_MANY_TRIES);
+  const text = OWN_WORDS[String(e?.code)];
   return text ? new Error(text) : error;
 };
 
@@ -52,7 +55,7 @@ export async function verifyMfaCode(input: string): Promise<void> {
     if (!verifyError) return;
     // Supabase allows about 15 code checks a minute per IP: stop instead of spending more.
     if (verifyError.status === 429) {
-      throw new Error("Too many tries. Please wait a minute, then type the newest code.");
+      throw new Error(TOO_MANY_TRIES);
     }
     last = verifyError;
   }

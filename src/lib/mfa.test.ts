@@ -178,6 +178,15 @@ describe("enrollment", () => {
       expect.objectContaining({ friendlyName: "Authenticator 1" }),
     );
   });
+  // fails_when=hitting the code-check limit during setup shows Supabase's raw text
+  it("says to wait at the rate limit while finishing setup", async () => {
+    mfa.challengeAndVerify.mockResolvedValue({
+      error: new AuthApiError("Request rate limit reached", 429, "over_request_rate_limit"),
+    });
+    await expect(finishEnrollment("f1", "123456")).rejects.toThrow(
+      "Too many tries. Please wait a minute, then type the newest code.",
+    );
+  });
   it("explains a name already in use", async () => {
     mfa.listFactors.mockResolvedValue({ data: { all: [], totp: [] }, error: null });
     mfa.enroll.mockResolvedValue({
