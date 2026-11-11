@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import { formatISODate } from "@/lib/date";
 import { dateLocale } from "@/lib/locale";
+import { readPages } from "@/lib/read-pages";
 import { formatMoney, startOfMonth } from "@/lib/transactions";
 import { REGULAR_RULE, regularSources } from "@/lib/regular-income";
 import { useIncomeRules, useIncomeWindow } from "@/lib/income-kind-query";
@@ -28,23 +29,29 @@ type Stream = Tables<"recurring_streams">;
 export const MONTHS_AHEAD = 12;
 const CHIPS_PER_DAY = 3;
 
-/** This month's charges from the streams' names, from `transactions` (spend only). */
+/** This month's charges from the streams' names, from `transactions` (spend only). The names are
+ * matched here, not in the query: postgrest-js doesn't escape a quote inside an in() value. */
 async function fetchCharges(month: Date, keys: Array<string>): Promise<Array<ChargeTx>> {
   if (keys.length === 0) return [];
   const { start, end } = monthBounds(month);
-  const { data, error } = await supabase
-    .from("transactions")
-    .select(
-      "account_uid,entry_reference,booking_date,merchant_key,amount,currency,transaction_type",
-    )
-    .eq("credit_debit_indicator", "DBIT")
-    .eq("flow_type", "spend")
-    .is("deleted_at", null)
-    .in("merchant_key", keys)
-    .gte("booking_date", start)
-    .lt("booking_date", end);
-  if (error) throw error;
-  return (data ?? []) as Array<ChargeTx>;
+  const rows = await readPages<ChargeTx>((from, to) =>
+    supabase
+      .from("transactions")
+      .select(
+        "account_uid,entry_reference,booking_date,merchant_key,amount,currency,transaction_type",
+      )
+      .eq("credit_debit_indicator", "DBIT")
+      .eq("flow_type", "spend")
+      .is("deleted_at", null)
+      .gte("booking_date", start)
+      .lt("booking_date", end)
+      .order("booking_date", { ascending: true })
+      .order("account_uid", { ascending: true })
+      .order("entry_reference", { ascending: true })
+      .range(from, to),
+  );
+  const wanted = new Set(keys);
+  return rows.filter((c) => c.merchant_key !== null && wanted.has(c.merchant_key));
 }
 
 const statusLabel = (e: CalendarEntry) =>

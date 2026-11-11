@@ -18,7 +18,13 @@ vi.mock("@/integrations/supabase/client", () => ({
       let side = "";
       const q: Record<string, unknown> = {};
       let from = 0;
-      for (const m of ["select", "order", "gte", "lt", "in", "is", "or"]) q[m] = () => q;
+      let broken = false;
+      for (const m of ["select", "order", "gte", "lt", "is", "or"]) q[m] = () => q;
+      // postgrest-js never escapes `"` in an in() value, so PostgREST rejects the request.
+      q["in"] = (_col: string, values: Array<string>) => {
+        broken = values.some((v) => v.includes('"'));
+        return q;
+      };
       q["range"] = (f: number) => {
         from = f;
         return q;
@@ -32,6 +38,7 @@ vi.mock("@/integrations/supabase/client", () => ({
           return db.rules === "pending" ? undefined : resolve({ data: db.rules, error: null });
         if (side === "DBIT") db.chargeReads++;
         if (db.error) return resolve({ data: null, error: db.error });
+        if (broken) return resolve({ data: null, error: { message: "failed to parse filter" } });
         resolve({ data: (side === "DBIT" ? db.charges : db.income).slice(from), error: null });
       };
       return q;
@@ -119,6 +126,26 @@ describe("RecurringCalendar", () => {
     expect(
       screen.getByRole("gridcell", { name: /^27 November: Acme Payroll \+€2,000\.00 expected$/ }),
     ).toBeTruthy();
+  });
+
+  // Polish 2 #1: a payee name with a quote went into the URL unescaped and broke the read.
+  it("ticks a charge whose payee name has quotes and commas", async () => {
+    const key = 'bar "da mario", roma';
+    db.charges = [
+      {
+        account_uid: "acc",
+        entry_reference: "c1",
+        booking_date: "2026-11-05",
+        merchant_key: key,
+        amount: 10,
+        currency: "EUR",
+      },
+    ];
+    renderCal([stream({ merchant_key: key, display_name: "Bar da Mario" })]);
+    expect(
+      await screen.findByRole("gridcell", { name: /^5 November: Bar da Mario €10\.00 paid$/ }),
+    ).toBeTruthy();
+    expect(screen.queryByText(/Couldn't load the calendar/)).toBeNull();
   });
 
   it("calls a past unpaid date not seen yet", async () => {
