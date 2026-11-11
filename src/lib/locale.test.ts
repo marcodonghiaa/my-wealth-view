@@ -34,7 +34,7 @@ describe("appLocale", () => {
     setBrowser("en-US");
     setLocaleOverride("it-IT");
     expect(localeOverride()).toBe("it-IT");
-    expect(formatMoney(1234.5, "EUR")).toBe("1234,50\u00a0€");
+    expect(formatMoney(1234.5, "EUR")).toBe("1.234,50\u00a0€");
     expect(formatDay("2026-03-03")).toBe("3 Mar 2026");
   });
 
@@ -171,5 +171,13 @@ describe("appLocale on a busy page", () => {
     for (let i = 0; i < 100; i++) formatNumber(i, 2);
     expect(getItem.mock.calls.length).toBeLessThanOrEqual(1);
     expect(formatNumber(1.5, 2)).toBe("1,50");
+  });
+});
+
+describe("thousands marks (polish-4 #3)", () => {
+  it("groups 4-digit amounts too, so a column of figures lines up in every locale", () => {
+    setLocaleOverride("it-IT");
+    expect(formatMoney(3487, "EUR")).toBe("3487,00 €".replace("3487", "3.487"));
+    expect(formatNumber(7022.35, 2)).toBe("7.022,35");
   });
 });

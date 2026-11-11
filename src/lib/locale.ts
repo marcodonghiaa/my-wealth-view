@@ -76,7 +76,8 @@ export function numberFormat(options: Intl.NumberFormatOptions = {}): Intl.Numbe
   const key = `${locale}|${JSON.stringify(options)}`;
   let format = formats.get(key);
   if (!format) {
-    format = new Intl.NumberFormat(locale, options);
+    // Italian, Spanish and Polish leave 4-digit numbers ungrouped (3487 next to 10.891): true means always.
+    format = new Intl.NumberFormat(locale, { useGrouping: true, ...options });
     formats.set(key, format);
   }
   return format;
