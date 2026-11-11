@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   COUNTRIES,
+  countriesFor,
   defaultCountry,
   linkErrorMessage,
   linkedMessage,
@@ -84,6 +85,16 @@ describe("renewTarget", () => {
     expect(COUNTRIES.map((c) => c.code)).toEqual(
       expect.arrayContaining(["LT", "PL", "SE", "IT", "GB"]),
     );
+  });
+
+  // protects=country names follow the UI language, in that language's alphabetical order, so the
+  // Italian UI needs no translated list; fails_when=names stay English or keep the English order
+  it("names and sorts the countries in the given language", () => {
+    const it = countriesFor("it");
+    expect(it.find((c) => c.code === "DE")?.name).toBe("Germania");
+    const names = it.map((c) => c.name);
+    expect(names).toEqual([...names].sort((a, b) => a.localeCompare(b, "it")));
+    expect(COUNTRIES.find((c) => c.code === "GB")?.name).toBe("United Kingdom");
   });
 });
 

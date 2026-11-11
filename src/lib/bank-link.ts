@@ -1,40 +1,52 @@
 import { bankOf } from "@/components/bank-badge";
 
 // Countries offered in the Connect a bank form: the EEA and the UK, where Enable Banking
-// connects banks under PSD2. Alphabetical; a country without banks says so in the bank list.
-export const COUNTRIES: Array<{ code: string; name: string }> = [
-  { code: "AT", name: "Austria" },
-  { code: "BE", name: "Belgium" },
-  { code: "BG", name: "Bulgaria" },
-  { code: "HR", name: "Croatia" },
-  { code: "CY", name: "Cyprus" },
-  { code: "CZ", name: "Czechia" },
-  { code: "DK", name: "Denmark" },
-  { code: "EE", name: "Estonia" },
-  { code: "FI", name: "Finland" },
-  { code: "FR", name: "France" },
-  { code: "DE", name: "Germany" },
-  { code: "GR", name: "Greece" },
-  { code: "HU", name: "Hungary" },
-  { code: "IS", name: "Iceland" },
-  { code: "IE", name: "Ireland" },
-  { code: "IT", name: "Italy" },
-  { code: "LV", name: "Latvia" },
-  { code: "LI", name: "Liechtenstein" },
-  { code: "LT", name: "Lithuania" },
-  { code: "LU", name: "Luxembourg" },
-  { code: "MT", name: "Malta" },
-  { code: "NL", name: "Netherlands" },
-  { code: "NO", name: "Norway" },
-  { code: "PL", name: "Poland" },
-  { code: "PT", name: "Portugal" },
-  { code: "RO", name: "Romania" },
-  { code: "SK", name: "Slovakia" },
-  { code: "SI", name: "Slovenia" },
-  { code: "ES", name: "Spain" },
-  { code: "SE", name: "Sweden" },
-  { code: "GB", name: "UK" },
+// connects banks under PSD2. A country without banks says so in the bank list.
+const COUNTRY_CODES = [
+  "AT",
+  "BE",
+  "BG",
+  "HR",
+  "CY",
+  "CZ",
+  "DK",
+  "EE",
+  "FI",
+  "FR",
+  "DE",
+  "GR",
+  "HU",
+  "IS",
+  "IE",
+  "IT",
+  "LV",
+  "LI",
+  "LT",
+  "LU",
+  "MT",
+  "NL",
+  "NO",
+  "PL",
+  "PT",
+  "RO",
+  "SK",
+  "SI",
+  "ES",
+  "SE",
+  "GB",
 ];
+
+// The countries named in the given language and sorted in its alphabetical order, so a translated
+// UI needs no list of its own.
+export function countriesFor(lang: string): Array<{ code: string; name: string }> {
+  const names = new Intl.DisplayNames([lang], { type: "region" });
+  return COUNTRY_CODES.map((code) => ({ code, name: names.of(code) ?? code })).sort((a, b) =>
+    a.name.localeCompare(b.name, lang),
+  );
+}
+
+// The UI is English for now.
+export const COUNTRIES = countriesFor("en");
 
 // The form's first country: the region of the browser's language (de-AT -> AT, a bare "it" ->
 // IT, "sv" -> SE) when it is in the list, else the first one listed.
