@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { functionErrorMessage } from "@/lib/function-error";
 import type { RuleRow } from "@/lib/rules-query";
 
-export type ReapplyResult = {
+type ReapplyResult = {
   changes: number;
   sample: Array<{ name: string; from: string | null; to: string | null }>;
 };
