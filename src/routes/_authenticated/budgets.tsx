@@ -311,7 +311,7 @@ function BudgetsPage() {
               suggestions.size > 0
                 ? `Start from what you usually spend: your average of the last ${
                     averageMonths === 1 ? "month" : `${averageMonths} months`
-                  }, per category. You can change each one after.`
+                  }, per category. You can change each one afterwards.`
                 : "Add a budget for a category below."
             }
             action={
@@ -415,6 +415,11 @@ function BudgetsPage() {
                   ))}
                 </ul>
               </GroupedList>
+              {unbudgeted.some((s) => s.category === "Uncategorized") && (
+                <p className="mt-2 px-4 text-[0.8125rem] text-muted-foreground sm:px-5">
+                  Uncategorized spending can't have a budget: give it a category first.
+                </p>
+              )}
             </section>
           )}
 
@@ -572,6 +577,8 @@ function BudgetLineRow({
               aria-describedby={invalid ? `budget-error-${line.category}` : undefined}
               inputMode="decimal"
               autoFocus
+              // Selected, so typing replaces the old amount.
+              onFocus={(e) => e.target.select()}
               // Narrow on a phone so Save, Cancel and Remove fit beside it at 375px.
               className="min-h-11 w-24 sm:w-32"
               value={draft}

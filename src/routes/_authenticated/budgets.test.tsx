@@ -989,4 +989,24 @@ describe("Budgets page", () => {
     expect(name.textContent).toBe(long);
     expect(name.className).toContain("line-clamp-2");
   });
+
+  // protects=P5 P2-15 small copy and input details;
+  // fails_when=the hint reads "after", Uncategorized has no explanation, or the old amount isn't
+  // selected for typing over
+  it("explains Uncategorized, says afterwards, and selects the amount for typing over", async () => {
+    db["v_spend_by_category_monthly"]!.push({
+      month: "2026-11-01",
+      category: "Uncategorized",
+      spend_eur: 51,
+    });
+    renderPage();
+    expect(await screen.findByText(/You can change each one afterwards\./)).toBeTruthy();
+    expect(
+      screen.getByText("Uncategorized spending can't have a budget: give it a category first."),
+    ).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Start from my averages" }));
+    fireEvent.click(await screen.findByRole("button", { name: /Change budget for Groceries/ }));
+    const input = screen.getByLabelText("Budget for Groceries") as HTMLInputElement;
+    expect([input.selectionStart, input.selectionEnd]).toEqual([0, input.value.length]);
+  });
 });
