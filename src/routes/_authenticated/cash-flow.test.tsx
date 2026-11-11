@@ -96,6 +96,9 @@ describe("Cash flow page", () => {
     fireEvent.click(screen.getByRole("button", { name: "Previous month" }));
     await waitFor(() => expect(row("Savings rate")).toHaveTextContent("−50%"));
     expect(screen.getByText("Spent more than came in")).toBeInTheDocument();
+    // Polish 1 #4: the overspend is drawn as money taken from savings.
+    const chart = await screen.findByRole("img", { name: /^Cash flow for/ });
+    expect(within(chart).getByText("From savings")).toBeInTheDocument();
   });
 
   // protects=switching to Year sums every month of that year
