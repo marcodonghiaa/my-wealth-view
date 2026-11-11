@@ -88,6 +88,13 @@ export function TwoFactorSection() {
   const cancel = () => {
     setError(null);
     setEnrollment(null);
+    backToSection();
+  };
+
+  // Cancel and Esc remove the focused button with the panel: put focus back on the row's bin.
+  const closeConfirm = (inRow: HTMLElement) => {
+    setConfirmRemove(null);
+    inRow.closest("li")?.querySelector("button")?.focus();
   };
 
   const remove = (id: string) =>
@@ -131,7 +138,7 @@ export function TwoFactorSection() {
               <li
                 key={a.id}
                 className="space-y-2 text-sm"
-                onKeyDown={(e) => e.key === "Escape" && setConfirmRemove(null)}
+                onKeyDown={(e) => e.key === "Escape" && closeConfirm(e.currentTarget)}
               >
                 <div className="flex items-center justify-between gap-3">
                   <span className="flex min-w-0 items-center gap-2">
@@ -157,7 +164,7 @@ export function TwoFactorSection() {
                     <div className="flex gap-2">
                       <Button
                         variant="secondary"
-                        onClick={() => setConfirmRemove(null)}
+                        onClick={(e) => closeConfirm(e.currentTarget)}
                         className="flex-1"
                       >
                         Cancel

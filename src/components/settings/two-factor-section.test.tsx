@@ -297,4 +297,22 @@ describe("TwoFactorSection", () => {
     expect(screen.getByText("Setting up…")).toBeInTheDocument();
     expect(screen.queryByText(/^On\./)).toBeNull();
   });
+
+  // fails_when=Cancel or Esc removes the focused button and focus falls to the page body
+  it("keeps focus in place when a remove or a setup is cancelled", async () => {
+    lib.listAuthenticators.mockResolvedValue([{ id: "a", name: "Phone" }]);
+    render(<TwoFactorSection />);
+    const bin = await screen.findByRole("button", { name: "Remove Phone" });
+    fireEvent.click(bin);
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(bin).toHaveFocus();
+    fireEvent.click(bin);
+    fireEvent.keyDown(screen.getByRole("button", { name: "Confirm remove" }), { key: "Escape" });
+    expect(screen.queryByRole("button", { name: "Confirm remove" })).toBeNull();
+    expect(bin).toHaveFocus();
+    fireEvent.click(screen.getByRole("button", { name: "Add another authenticator" }));
+    await screen.findByAltText(/QR code/);
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(screen.getByRole("heading", { name: "Two-step sign-in" })).toHaveFocus();
+  });
 });
