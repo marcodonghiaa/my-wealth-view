@@ -27,6 +27,7 @@ import {
   shareId,
   listCategories,
   listTags,
+  sameTag,
   mergeShares,
   nameRefunds,
   monthFromParam,
@@ -339,6 +340,8 @@ function TransactionsPage({ category: initialCategory, month: initialMonth }: Tr
   const categories = useMemo(() => listCategories(transactions), [transactions]);
   // Only tags on this month's rows, so every option matches something.
   const tags = useMemo(() => listTags(transactions), [transactions]);
+  // Removing the last use of the selected tag turns the filter off, so the list isn't left empty.
+  if (tag && !txQuery.isPending && !tags.some((t) => sameTag(t, tag))) setTag("");
 
   const accounts = useMemo(() => accountsQuery.data ?? {}, [accountsQuery.data]);
   const bankFor = useCallback(
