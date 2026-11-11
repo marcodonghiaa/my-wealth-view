@@ -103,3 +103,10 @@ describe("tags are composed (NFC)", () => {
     expect(normalizeNote("cafe\u0301")).toBe("café");
   });
 });
+
+// polish-1 #11: a tag never holds a comma.
+describe("tags split at commas", () => {
+  it("turns 'a, b' into two tags", () => {
+    expect(normalizeTags(["a, b", "c,", ","])).toEqual(["a", "b", "c"]);
+  });
+});

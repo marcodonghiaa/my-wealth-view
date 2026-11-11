@@ -61,8 +61,8 @@ export function TagEditor({
   const [input, setInput] = useState("");
   const full = current.length >= MAX_TAGS;
 
-  function add() {
-    const next = normalizeTags([...current, input]);
+  function add(text = input) {
+    const next = normalizeTags([...current, text]);
     setInput("");
     if (next.length !== current.length) onSave(next);
   }
@@ -102,12 +102,9 @@ export function TagEditor({
         disabled={saving || full}
         placeholder={full ? `Up to ${MAX_TAGS} tags` : "Add a tag"}
         onChange={(e) => {
-          // A comma ends a tag, like Enter.
-          if (e.target.value.endsWith(",")) {
-            setInput(e.target.value.slice(0, -1));
-            return;
-          }
-          setInput(e.target.value);
+          // A comma ends a tag, like Enter. Some phone keyboards send it with no key event.
+          if (e.target.value.endsWith(",")) add(e.target.value);
+          else setInput(e.target.value);
         }}
         onKeyDown={(e) => {
           if (e.key === "Enter" || e.key === ",") {

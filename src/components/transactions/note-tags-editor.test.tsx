@@ -62,3 +62,25 @@ describe("TagEditor", () => {
     expect(screen.getByLabelText("Add a tag")).toBeDisabled();
   });
 });
+
+// polish-1 #11: a comma always ends a tag, also when it arrives without a key event (Android
+// keyboards) or inside pasted text; a tag never holds a comma (the export joins tags with ", ").
+describe("TagEditor commas", () => {
+  it("adds the tag when a comma arrives through typing alone", () => {
+    const onSave = vi.fn();
+    render(<TagEditor tags={[]} onSave={onSave} saving={false} />);
+    const input = screen.getByLabelText("Add a tag");
+    fireEvent.change(input, { target: { value: "work," } });
+    expect(onSave).toHaveBeenLastCalledWith(["work"]);
+    expect(input).toHaveValue("");
+  });
+
+  it("splits pasted text at commas", () => {
+    const onSave = vi.fn();
+    render(<TagEditor tags={["trip"]} onSave={onSave} saving={false} />);
+    const input = screen.getByLabelText("Add a tag");
+    fireEvent.change(input, { target: { value: "work, food" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+    expect(onSave).toHaveBeenLastCalledWith(["trip", "work", "food"]);
+  });
+});

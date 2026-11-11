@@ -382,11 +382,11 @@ export const cleanTag = (raw: string): string =>
     MAX_TAG_LENGTH,
   ).trim();
 
-/** Tags to save: cleaned, no blanks, no repeats (ignoring case, first spelling wins), at most 20. */
+/** Tags to save: split at commas, cleaned, no blanks, no repeats (ignoring case, first spelling wins), at most 20. */
 export function normalizeTags(raw: Array<string>): Array<string> {
   const seen = new Set<string>();
   const out: Array<string> = [];
-  for (const t of raw.map(cleanTag)) {
+  for (const t of raw.flatMap((r) => r.split(",")).map(cleanTag)) {
     const key = t.toLowerCase();
     if (!t || seen.has(key)) continue;
     seen.add(key);
