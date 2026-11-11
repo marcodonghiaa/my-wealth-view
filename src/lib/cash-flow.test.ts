@@ -311,6 +311,7 @@ describe("buildFlow", () => {
     const color = (name: string) => g.nodes.find((n) => n.name === name)?.color;
     expect(color("Groceries")).toBe(categoryColor("Groceries"));
     expect(color(OTHER_SPENDING)).toBe(categoryColor(null));
+    expect(color(FROM_SAVINGS)).toBe("var(--color-negative)");
   });
 
   it("is empty with no money in or out", () => {
@@ -343,6 +344,9 @@ describe("buildFlow", () => {
     expect(into).toBe(3000);
     expect(out).toBe(3000);
     expect(g.links.find((l) => g.nodes[l.target]!.name === SAVED)?.value).toBe(1000);
+    // Money in and money kept share the gain colour.
+    expect(g.nodes[0]!.color).toBe("var(--color-positive)");
+    expect(g.nodes.find((n) => n.name === SAVED)?.color).toBe("var(--color-positive)");
   });
 
   it("draws from savings when spending beats income", () => {

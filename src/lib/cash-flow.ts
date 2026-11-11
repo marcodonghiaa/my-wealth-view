@@ -308,5 +308,10 @@ export function buildFlow({
 export function fitLabel(name: string, max: number): string {
   // Count what the reader sees: an emoji or a letter with its accent is one character.
   const chars = Array.from(new Intl.Segmenter().segment(name), (g) => g.segment);
-  return chars.length > max ? `${chars.slice(0, max - 1).join("").trimEnd()}…` : name;
+  return chars.length > max
+    ? `${chars
+        .slice(0, max - 1)
+        .join("")
+        .trimEnd()}…`
+    : name;
 }
