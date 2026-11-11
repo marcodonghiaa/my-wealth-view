@@ -1,6 +1,14 @@
-import { createFileRoute, Outlet, Link, redirect, useNavigate } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  Outlet,
+  Link,
+  redirect,
+  useNavigate,
+  useRouterState,
+} from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import {
+  Target,
   TrendingUp,
   Landmark,
   Receipt,
@@ -15,6 +23,9 @@ import {
   ArrowDownLeft,
   Users,
   Settings,
+  Upload,
+  ListFilter,
+  ChevronRight,
   type LucideIcon,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -24,6 +35,7 @@ import { needsMfaCode } from "@/lib/mfa";
 import { backHereSearch } from "@/lib/next-url";
 import { registerDashboardOrigin } from "@/lib/register-origin";
 import { MadeWith } from "@/components/made-with";
+import { cn } from "@/lib/utils";
 import { GroupedList } from "@/components/ui/grouped-list";
 import { BrandMark } from "@/components/brand-mark";
 import { TrustNote } from "@/components/trust-note";
@@ -87,6 +99,7 @@ const NAV_GROUPS: Array<NavGroup> = [
       { label: "Transactions", icon: Receipt, to: "/transactions" },
       { label: "Income", icon: ArrowDownLeft, to: "/income" },
       { label: "Spending", icon: PieChart, to: "/spending" },
+      { label: "Budgets", icon: Target, to: "/budgets" },
       { label: "Subscriptions", icon: Repeat, to: "/subscriptions" },
       { label: "Who owes you", icon: Users, to: "/splitwise" },
     ],
@@ -98,16 +111,55 @@ const NAV_GROUPS: Array<NavGroup> = [
       { label: "Crypto", icon: Bitcoin, to: "/crypto" },
     ],
   },
+  {
+    label: "Tools",
+    items: [
+      { label: "Import", icon: Upload, to: "/import" },
+      { label: "Rules", icon: ListFilter, to: "/rules" },
+    ],
+  },
 ];
 
 // iOS HIG: bottom tabs max 5, icon + label, current tab visually distinct.
-// The 5th slot opens the full nav (Sheet) rather than a 6th route.
-const TAB_BAR_ITEMS: Array<{ label: string; icon: LucideIcon; to: string }> = [
-  { label: "Net Worth", icon: TrendingUp, to: "/" },
-  { label: "Transactions", icon: Receipt, to: "/transactions" },
-  { label: "Spending", icon: PieChart, to: "/spending" },
-  { label: "Portfolio", icon: Briefcase, to: "/portfolio" },
+// The 5th slot opens More (Sheet) with every page that has no tab. A tab also lights up for the
+// pages it owns (Investing covers Portfolio and Crypto, switched inside the page).
+export const TAB_BAR_ITEMS: Array<{
+  label: string;
+  icon: LucideIcon;
+  to: string;
+  owns: Array<string>;
+}> = [
+  { label: "Net Worth", icon: TrendingUp, to: "/", owns: ["/"] },
+  { label: "Activity", icon: Receipt, to: "/transactions", owns: ["/transactions"] },
+  { label: "Spending", icon: PieChart, to: "/spending", owns: ["/spending"] },
+  { label: "Investing", icon: Briefcase, to: "/portfolio", owns: ["/portfolio", "/crypto"] },
 ];
+
+const TAB_PATHS = new Set(TAB_BAR_ITEMS.flatMap((t) => t.owns));
+
+// The pages people open most from More come first; the rest keep their sidebar order.
+const MORE_FIRST = ["/accounts", "/subscriptions", "/splitwise"];
+const moreRank = (to: string) => {
+  const i = MORE_FIRST.indexOf(to);
+  return i < 0 ? MORE_FIRST.length : i;
+};
+
+/**
+ * The More sheet lists only the pages without a tab, so nothing appears twice on a phone.
+ * Pages form one untitled list (most used first); Tools stays its own titled group.
+ */
+export const MORE_GROUPS: Array<NavGroup> = (() => {
+  const untabbed = NAV_GROUPS.map((g) => ({
+    ...g,
+    items: g.items.filter((i) => !TAB_PATHS.has(i.to)),
+  }));
+  const tools = untabbed.filter((g) => g.label === "Tools");
+  const pages = untabbed
+    .filter((g) => g.label !== "Tools")
+    .flatMap((g) => g.items)
+    .sort((a, b) => moreRank(a.to) - moreRank(b.to));
+  return [{ label: "", items: pages }, ...tools].filter((g) => g.items.length > 0);
+})();
 
 // Desktop sidebar (DESIGN.md "Navigation"): 18px line icon + label, 4px corners; hover and
 // active take the sidebar accent fill, active adds weight 500.
@@ -123,11 +175,17 @@ const TAB_LINK_ACTIVE =
   "flex flex-col items-center justify-center gap-0.5 border-t-2 border-ember text-foreground transition-opacity active:opacity-60";
 const TAB_LABEL = "text-[0.6875rem] font-medium";
 
+// More sheet rows: 44px+ grouped-list rows; the current page takes the accent fill and weight 500.
+const SHEET_ROW =
+  "flex min-h-11 items-center gap-3 px-4 py-2.5 text-left text-[0.9375rem] text-foreground active:bg-accent";
+const SHEET_ROW_ACTIVE = `${SHEET_ROW} bg-accent font-medium`;
+
 function AuthenticatedLayout() {
   const { user } = Route.useRouteContext();
   const navigate = useNavigate();
   const [signingOut, setSigningOut] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const pathname = useRouterState({ select: (st) => st.location.pathname });
   const streams = useRecurringStreams().data;
   const badges: Record<string, number> = {
     Subscriptions: streams ? groupStreams(streams, romeToday()).toReview.length : 0,
@@ -168,6 +226,7 @@ function AuthenticatedLayout() {
           <span className="text-[0.9375rem] font-semibold tracking-tight text-sidebar-foreground">
             Alopex
           </span>
+          <DemoBadge className="ml-auto" />
         </div>
 
         <nav className="flex-1 space-y-5 overflow-y-auto px-3 py-3">
@@ -229,6 +288,7 @@ function AuthenticatedLayout() {
       <div className="glass fixed inset-x-0 top-0 z-30 flex h-[calc(2.75rem+env(safe-area-inset-top))] items-center justify-center border-b pt-[env(safe-area-inset-top)] md:hidden">
         <BrandMark className="mr-2 size-5" />
         <span className="font-sans text-[0.9375rem] font-semibold text-foreground">Alopex</span>
+        <DemoBadge className="absolute left-3 top-[calc(0.5625rem+env(safe-area-inset-top))]" />
       </div>
 
       {/* Mobile bottom tab bar: max 5 items, icon + label, current tab marked by an Ember top rule. */}
@@ -236,18 +296,20 @@ function AuthenticatedLayout() {
         aria-label="Primary"
         className="glass fixed inset-x-0 bottom-0 z-30 grid h-[calc(3.25rem+env(safe-area-inset-bottom))] grid-cols-5 border-t pb-[env(safe-area-inset-bottom)] md:hidden"
       >
-        {TAB_BAR_ITEMS.map((item) => (
-          <Link
-            key={item.label}
-            to={item.to}
-            activeOptions={{ exact: true }}
-            className={TAB_LINK}
-            activeProps={{ className: TAB_LINK_ACTIVE }}
-          >
-            <item.icon className="size-6" />
-            <span className={TAB_LABEL}>{item.label}</span>
-          </Link>
-        ))}
+        {TAB_BAR_ITEMS.map((item) => {
+          const active = item.owns.includes(pathname);
+          return (
+            <Link
+              key={item.label}
+              to={item.to}
+              aria-current={active ? "page" : undefined}
+              className={active ? TAB_LINK_ACTIVE : TAB_LINK}
+            >
+              <item.icon className="size-6" />
+              <span className={TAB_LABEL}>{item.label}</span>
+            </Link>
+          );
+        })}
         <button
           type="button"
           onClick={() => setMenuOpen(true)}
@@ -255,7 +317,7 @@ function AuthenticatedLayout() {
           aria-label={
             badges["Subscriptions"] ? `More, ${badges["Subscriptions"]} to review` : "More"
           }
-          className={TAB_LINK}
+          className={TAB_PATHS.has(pathname) ? TAB_LINK : TAB_LINK_ACTIVE}
         >
           <span className="relative">
             <MoreHorizontal className="size-6" />
@@ -276,13 +338,13 @@ function AuthenticatedLayout() {
         >
           <div aria-hidden className="mx-auto mt-2 h-1 w-9 rounded-md bg-muted-foreground/40" />
           <SheetHeader className="px-5 pt-3 pb-2 text-left">
-            <SheetTitle className="ios-large-title !text-2xl">Menu</SheetTitle>
+            <SheetTitle className="ios-large-title !text-2xl">More</SheetTitle>
           </SheetHeader>
 
-          <nav className="space-y-5 px-4 pt-2 pb-3">
-            {NAV_GROUPS.map((group) => (
-              <div key={group.label}>
-                <div className="ios-section-title">{group.label}</div>
+          <nav aria-label="More" className="space-y-5 px-4 pt-2 pb-4">
+            {MORE_GROUPS.map((group) => (
+              <div key={group.label || "pages"}>
+                {group.label && <div className="ios-section-title">{group.label}</div>}
                 <GroupedList>
                   {group.items.map((item) => (
                     <Link
@@ -290,43 +352,41 @@ function AuthenticatedLayout() {
                       to={item.to}
                       activeOptions={{ exact: true }}
                       onClick={() => setMenuOpen(false)}
-                      className="flex min-h-11 items-center gap-3 px-4 py-2.5 text-[0.9375rem] text-foreground active:bg-accent"
-                      activeProps={{
-                        className:
-                          "flex min-h-11 items-center gap-3 px-4 py-2.5 text-[0.9375rem] font-medium text-primary active:bg-accent",
-                      }}
+                      className={SHEET_ROW}
+                      activeProps={{ className: SHEET_ROW_ACTIVE }}
                     >
                       <item.icon className="size-5 shrink-0" />
                       {item.label}
                       <NavBadge count={badges[item.label]} />
+                      <ChevronRight
+                        aria-hidden
+                        className={`size-4 shrink-0 text-muted-foreground ${badges[item.label] ? "" : "ml-auto"}`}
+                      />
                     </Link>
                   ))}
                 </GroupedList>
               </div>
             ))}
 
+            {/* Settings, then the way out last and apart; the email says whose data this is. */}
             <div>
-              <div className="ios-section-title">Account</div>
               <GroupedList>
-                <div className="truncate px-4 py-3 text-sm text-muted-foreground">{user.email}</div>
                 <Link
                   to="/settings"
                   onClick={() => setMenuOpen(false)}
-                  className="flex min-h-11 items-center gap-3 px-4 py-2.5 text-[0.9375rem] text-foreground active:bg-accent"
-                  activeProps={{
-                    className:
-                      "flex min-h-11 items-center gap-3 px-4 py-2.5 text-[0.9375rem] font-medium text-primary active:bg-accent",
-                  }}
+                  className={SHEET_ROW}
+                  activeProps={{ className: SHEET_ROW_ACTIVE }}
                 >
                   <Settings className="size-5 shrink-0" />
                   Settings
+                  <ChevronRight
+                    aria-hidden
+                    className="ml-auto size-4 shrink-0 text-muted-foreground"
+                  />
                 </Link>
                 {demo ? (
-                  <a
-                    href={GET_YOUR_OWN_URL}
-                    className="flex min-h-11 w-full items-center gap-3 px-4 py-2.5 text-[0.9375rem] text-foreground active:bg-accent"
-                  >
-                    <Download className="size-5" />
+                  <a href={GET_YOUR_OWN_URL} className={SHEET_ROW}>
+                    <Download className="size-5 shrink-0" />
                     Get your own
                   </a>
                 ) : (
@@ -334,19 +394,20 @@ function AuthenticatedLayout() {
                     type="button"
                     onClick={handleSignOut}
                     disabled={signingOut}
-                    className="flex min-h-11 w-full items-center gap-3 px-4 py-2.5 text-[0.9375rem] text-negative active:bg-accent disabled:opacity-50"
+                    className={cn(SHEET_ROW, "w-full text-negative disabled:opacity-50")}
                   >
-                    <LogOut className="size-5" />
+                    <LogOut className="size-5 shrink-0" />
                     {signingOut ? "Signing out…" : "Sign out"}
                   </button>
                 )}
               </GroupedList>
+              <p className="truncate px-4 pt-1.5 text-xs text-muted-foreground">
+                Signed in as {user.email}
+              </p>
             </div>
           </nav>
         </SheetContent>
       </Sheet>
-
-      <DemoBadge />
 
       {/* Main content */}
       <main className="min-w-0 flex-1 pt-[calc(2.75rem+env(safe-area-inset-top))] pb-[calc(3.25rem+env(safe-area-inset-bottom))] md:pt-0 md:pb-0 md:pl-64">

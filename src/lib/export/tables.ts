@@ -13,6 +13,7 @@ export const EXPORT_TABLES = [
   { name: "net_worth_history", order: ["snapshot_date"] },
   { name: "net_worth_reconstructed", order: ["snapshot_date", "source"] },
   { name: "spend_history", order: ["month", "category"] },
+  { name: "category_budgets", order: ["category", "month"] },
   { name: "splitwise_balances", order: ["group_name", "person"] },
   { name: "splitwise_expenses", order: ["id"] },
   { name: "recurring_streams", order: ["stream_key"] },

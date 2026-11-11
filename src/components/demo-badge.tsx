@@ -1,15 +1,20 @@
 import { isDemoMode } from "@/lib/demo/mode";
+import { cn } from "@/lib/utils";
 
 // Always visible while exploring the demo: nothing here is real and nothing is saved.
-export function DemoBadge() {
+// It sits inline (mobile top bar, desktop sidebar header) so it never covers page figures.
+export function DemoBadge({ className }: { className?: string }) {
   if (!isDemoMode()) return null;
   return (
     <div
       role="status"
-      className="pointer-events-none fixed top-[calc(0.6rem+env(safe-area-inset-top))] right-3 z-50 md:top-3 rounded-md border border-rule bg-card px-2 py-1 font-figure text-[11px] uppercase tracking-wide text-foreground"
+      className={cn(
+        "rounded-md border border-rule bg-card px-2 py-1 font-figure text-[11px] uppercase tracking-wide text-foreground",
+        className,
+      )}
     >
-      {/* Under 360px the full text runs into the centred "Alopex" title; screen readers still hear it. */}
-      Demo<span className="max-[359px]:sr-only">, fake data</span>
+      {/* On a phone the top bar has room for "Demo" only; screen readers still hear it all. */}
+      Demo<span className="max-md:sr-only">, fake data</span>
     </div>
   );
 }

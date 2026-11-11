@@ -159,7 +159,9 @@ function RulesPage() {
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-8 md:py-12">
       <header className="mb-8">
         <h1 className="ios-large-title">Rules</h1>
-        <p className="mt-0.5 text-sm text-muted-foreground">Matched before AI categorization.</p>
+        <p className="mt-0.5 text-sm text-muted-foreground">
+          Categorize matching transactions automatically. Rules run before AI categorization.
+        </p>
       </header>
 
       {/* Add rule form — collapsed by default so it doesn't push the
@@ -364,19 +366,30 @@ function RulesPage() {
         ) : rulesQuery.isError ? (
           <Alert className="m-5">Failed to load rules.</Alert>
         ) : rules.length === 0 ? (
-          <div className="p-8 text-center text-sm text-muted-foreground">No rules yet.</div>
+          <div className="px-5 py-8 text-center text-sm text-muted-foreground">
+            <p>No rules yet.</p>
+            <p className="mt-1">
+              Example: if the creditor name contains “spotify”, set the category to Subscriptions.
+            </p>
+            {!showForm && (
+              <Button variant="quiet" className="mt-4 bg-muted" onClick={() => setShowForm(true)}>
+                <Plus className="size-4" />
+                Add a rule
+              </Button>
+            )}
+          </div>
         ) : (
           <ul className="divide-y">
             {rules.map((rule) => (
-              <li key={rule.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 px-5 py-3.5">
-                <div className="min-w-0 flex-1">
+              <li key={rule.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 px-5 py-3.5">
+                <div className="min-w-0 basis-full sm:basis-0 sm:flex-1">
                   <p className="text-sm">
                     <span className="text-muted-foreground">{fieldLabel(rule.match_field)}</span>{" "}
                     contains{" "}
                     <span className="font-medium text-foreground">“{rule.match_text}”</span>
                   </p>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
                   {rule.set_category && (
                     <span className="rounded-sm bg-muted px-2.5 py-0.5 text-xs font-medium text-foreground">
                       {rule.set_category}
@@ -398,7 +411,7 @@ function RulesPage() {
                     onClick={() => deleteRule.mutate(rule.id)}
                     disabled={deleteRule.isPending}
                     aria-label={`Delete rule for ${rule.match_text}`}
-                    className="-m-2 hover:bg-negative/10 hover:text-negative"
+                    className="-m-2 ml-auto hover:bg-negative/10 hover:text-negative"
                   >
                     <Trash2 />
                   </Button>

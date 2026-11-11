@@ -209,7 +209,7 @@ A cold neutral world: snow ground, cold ink for controls, one warm Ember accent,
 ### Named Rules
 **The One Tint Rule.** Ink is the only colour a control may wear (white on dark). Ember is the only accent, and it is a line, a dot or a count, never a filled control.
 
-**The Meaning-Only Rule.** Green and red appear only for a gain, a loss, or a destructive action. A positive number that is not a change stays in ink.
+**The Meaning-Only Rule.** Green and red appear only for a gain, a loss, or a destructive action. Going over a budget counts as a loss, so an overspent budget is red. A positive number that is not a change stays in ink.
 
 **The One Hue Rule.** Categories differ by lightness, not hue. No rainbow legends.
 
