@@ -1,6 +1,7 @@
 import { createFileRoute, Outlet, Link, redirect, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import {
+  Target,
   TrendingUp,
   Landmark,
   Receipt,
@@ -87,6 +88,7 @@ const NAV_GROUPS: Array<NavGroup> = [
       { label: "Transactions", icon: Receipt, to: "/transactions" },
       { label: "Income", icon: ArrowDownLeft, to: "/income" },
       { label: "Spending", icon: PieChart, to: "/spending" },
+      { label: "Budgets", icon: Target, to: "/budgets" },
       { label: "Subscriptions", icon: Repeat, to: "/subscriptions" },
       { label: "Who owes you", icon: Users, to: "/splitwise" },
     ],
