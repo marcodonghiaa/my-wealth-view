@@ -56,6 +56,19 @@ describe("closing the sheet", () => {
     expect(onSave).not.toHaveBeenCalled();
   });
 
+  // polish-3 #2: fails_when=a note whose save failed is dropped when the sheet closes
+  it("retries a failed note when the editor goes away", () => {
+    const onSave = vi.fn();
+    const { rerender, unmount } = render(<NoteEditor note="old" onSave={onSave} saving={false} />);
+    const field = screen.getByLabelText("Note");
+    fireEvent.change(field, { target: { value: "oldx" } });
+    fireEvent.blur(field);
+    rerender(<NoteEditor note="oldx" onSave={onSave} saving={true} />);
+    rerender(<NoteEditor note="old" onSave={onSave} saving={false} />);
+    unmount();
+    expect(onSave.mock.calls).toEqual([["oldx"], ["oldx"]]);
+  });
+
   it("does not save twice when blur already saved", () => {
     const onSave = vi.fn();
     const { unmount } = render(<NoteEditor note="old" onSave={onSave} saving={false} />);

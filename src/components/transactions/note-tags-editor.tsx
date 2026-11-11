@@ -29,7 +29,12 @@ export function NoteEditor({
   const [input, setInput] = useState(note ?? "");
   const [edited, setEdited] = useState(false);
   if (!edited && input !== (note ?? "")) setInput(note ?? "");
+  // What blur last sent, so closing right after doesn't send it twice. Forgotten once the save
+  // settles: a failed one rolled the note back, and closing then tries again.
   const sent = useRef<string | null>(null);
+  useEffect(() => {
+    if (!saving) sent.current = null;
+  }, [saving]);
   const latest = useRef({ input, edited, note, onSave });
   latest.current = { input, edited, note, onSave };
   useEffect(
