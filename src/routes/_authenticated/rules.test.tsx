@@ -136,6 +136,18 @@ describe("Rules list", () => {
     expect(remove).toHaveClass("size-11");
   });
 
+  // Polish pass 4 #7: these were 36px tall.
+  it("makes every button on the page at least 44px tall", async () => {
+    invoke.mockResolvedValueOnce({ data: null, error: new Error("boom") });
+    renderPage();
+    const apply = await screen.findByRole("button", { name: "Apply to past transactions" });
+    expect(apply).toHaveClass("min-h-11");
+    await openForm();
+    for (const radio of screen.getAllByRole("radio")) expect(radio).toHaveClass("min-h-11");
+    fireEvent.click(apply);
+    expect(await screen.findByRole("button", { name: "Try again" })).toHaveClass("min-h-11");
+  });
+
   // Regression: the form's labels weren't tied to their fields, so screen readers read the
   // match-text box and the pickers with no name.
   it("names every field of the new-rule form", async () => {

@@ -136,7 +136,7 @@ function RulesPage() {
       ) : rulesQuery.isError ? (
         <div className="flex flex-wrap items-center gap-3">
           <Alert>Failed to load rules.</Alert>
-          <Button variant="quiet" size="sm" onClick={() => void rulesQuery.refetch()}>
+          <Button variant="quiet" onClick={() => void rulesQuery.refetch()}>
             Try again
           </Button>
         </div>
@@ -376,7 +376,7 @@ function RuleList({ rules }: { rules: RuleRow[] }) {
         className="items-center"
         action={
           hasCategoryRules && !checking ? (
-            <Button ref={applyButton} variant="quiet" size="sm" onClick={() => setChecking(true)}>
+            <Button ref={applyButton} variant="quiet" onClick={() => setChecking(true)}>
               Apply to past transactions
             </Button>
           ) : undefined

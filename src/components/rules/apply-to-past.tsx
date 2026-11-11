@@ -88,7 +88,7 @@ export function ApplyToPast({ ruleIds, onDone }: { ruleIds: string; onDone: () =
           <p role="alert" className="text-sm text-negative">
             {preview.error.message}
           </p>
-          <Button variant="quiet" size="sm" onClick={() => void preview.refetch()}>
+          <Button variant="quiet" onClick={() => void preview.refetch()}>
             Try again
           </Button>
         </div>
