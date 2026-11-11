@@ -211,6 +211,8 @@ describe("Cash flow page", () => {
     await screen.findByRole("alert");
     expect(row("Income")).toHaveTextContent("—");
     expect(row("Spending")).toHaveTextContent("—");
+    // Re-audit: no "No income this period" claim when we simply don't know.
+    expect(screen.queryByText("No income this period")).toBeNull();
     expect(screen.queryByText(/€0\.00/)).toBeNull();
     expect(screen.queryByRole("img", { name: /^Saved per/ })).toBeNull();
     expect(screen.queryByText(/^Nothing came in or went out/)).toBeNull();

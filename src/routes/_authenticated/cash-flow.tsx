@@ -201,7 +201,13 @@ function CashFlowPage() {
           <SummaryRow label="Spending" pending={pending} value={money(summary.spending)} />
           <SummaryRow
             label="Savings rate"
-            hint={summary.savingsRate == null ? "No income this period" : "Share of income kept"}
+            hint={
+              noTotals
+                ? "Didn't load"
+                : summary.savingsRate == null
+                  ? "No income this period"
+                  : "Share of income kept"
+            }
             pending={pending}
             value={formatRate(summary.savingsRate)}
             toneClass={
