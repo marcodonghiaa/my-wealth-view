@@ -428,13 +428,15 @@ function BudgetsPage() {
                   <span className="text-negative">
                     Couldn't load income: {incomeQuery.error.message}
                   </span>
+                ) : income === 0 ? (
+                  <span className="text-muted-foreground">No income recorded yet</span>
                 ) : (
                   <span className="font-figure text-foreground">
                     {income == null ? "—" : formatEur(income)}
                   </span>
                 )}
               </div>
-              {lines.length > 0 && income != null && (
+              {lines.length > 0 && income != null && income > 0 && (
                 <div className="flex items-center justify-between gap-3 px-4 py-3 text-sm sm:px-5">
                   <span className="text-muted-foreground">
                     {income - totalBudget < 0 ? "Budgeted above income" : "Not yet budgeted"}

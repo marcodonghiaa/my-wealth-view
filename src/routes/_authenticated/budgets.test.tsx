@@ -882,4 +882,17 @@ describe("Budgets page", () => {
     expect(upserts).toHaveLength(0);
     expect(screen.getByLabelText("Budget for Groceries")).toBeTruthy();
   });
+
+  // protects=P5 P2-4 someone who records no income isn't told they budgeted above it;
+  // fails_when=zero income shows €0.00 and a red "Budgeted above income"
+  it("says no income is recorded instead of comparing budgets with zero", async () => {
+    db["v_income_vs_expenses_monthly"] = [];
+    db["category_budgets"] = [
+      { category: "Groceries", month: "2026-11-01", amount: 300, rollover: false },
+    ];
+    renderPage();
+    expect(await screen.findByText("No income recorded yet")).toBeTruthy();
+    expect(screen.queryByText("Budgeted above income")).toBeNull();
+    expect(screen.queryByText("Not yet budgeted")).toBeNull();
+  });
 });
