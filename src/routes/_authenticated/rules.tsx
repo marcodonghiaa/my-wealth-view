@@ -339,6 +339,13 @@ function RuleForm({
 function RuleList({ rules }: { rules: RuleRow[] }) {
   const queryClient = useQueryClient();
   const [checking, setChecking] = useState(false);
+  // Focus goes back to "Apply to past transactions" when the preview closes.
+  const applyButton = useRef<HTMLButtonElement>(null);
+  const wasChecking = useRef(false);
+  useEffect(() => {
+    if (wasChecking.current && !checking) applyButton.current?.focus();
+    wasChecking.current = checking;
+  }, [checking]);
   const hasCategoryRules = rules.some((r) => r.set_category);
 
   const deleteRule = useMutation({
@@ -369,7 +376,7 @@ function RuleList({ rules }: { rules: RuleRow[] }) {
         className="items-center"
         action={
           hasCategoryRules && !checking ? (
-            <Button variant="quiet" size="sm" onClick={() => setChecking(true)}>
+            <Button ref={applyButton} variant="quiet" size="sm" onClick={() => setChecking(true)}>
               Apply to past transactions
             </Button>
           ) : undefined

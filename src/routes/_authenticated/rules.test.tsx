@@ -327,6 +327,20 @@ describe("apply to past transactions", () => {
     expect(screen.getByRole("button", { name: "Update 2 transactions" })).toBeTruthy();
   });
 
+  // Polish pass 4 #2: keyboard focus fell to the page body on open and on close.
+  it("moves focus into the preview on open and back to its button on close", async () => {
+    invoke.mockResolvedValueOnce({ data: { changes: 0, sample: [] }, error: null });
+    await open();
+    const heading = await screen.findByRole("heading", { name: "Apply to past transactions" });
+    await waitFor(() => expect(document.activeElement).toBe(heading));
+    fireEvent.click(screen.getByRole("button", { name: "Close" }));
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        screen.getByRole("button", { name: "Apply to past transactions" }),
+      ),
+    );
+  });
+
   it("is not offered when no rule sets a category", async () => {
     onlyFlowRules.current = true;
     renderPage();

@@ -1,5 +1,6 @@
 // "Apply to past transactions" on the Rules page: a preview of what your rules would change,
 // then the update (supabase/functions/reapply-rules).
+import { useEffect, useRef } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowRight, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
@@ -47,12 +48,17 @@ export function ApplyToPast({ ruleIds, onDone }: { ruleIds: string; onDone: () =
     onError: (err) => toast.error(err.message),
   });
   const changes = preview.data?.changes ?? 0;
+  // Keyboard users land in the panel; the Rules page puts focus back on its button on close.
+  const heading = useRef<HTMLHeadingElement>(null);
+  useEffect(() => heading.current?.focus(), []);
 
   return (
     <div className="mb-4 rounded-lg bg-card p-5">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h3 className="text-[0.9375rem] font-medium">Apply to past transactions</h3>
+          <h3 ref={heading} tabIndex={-1} className="text-[0.9375rem] font-medium outline-none">
+            Apply to past transactions
+          </h3>
           <p className="mt-0.5 text-sm text-muted-foreground">
             Categories you picked yourself never change.
           </p>
