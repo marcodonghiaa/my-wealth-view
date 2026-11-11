@@ -36,6 +36,7 @@ import {
   type TransactionsSearch,
   type SplitwiseShare,
   type TransactionRow,
+  type TransferRow,
   isSameTx,
   txId,
 } from "@/lib/transactions";
@@ -118,13 +119,13 @@ async function fetchTransactionsForMonth(month: Date): Promise<Array<Transaction
 }
 
 // Transfers are left out of spending and income; they are listed on request so a wrong one can be moved back.
-async function fetchTransfersForMonth(month: Date): Promise<Array<TransactionRow>> {
+async function fetchTransfersForMonth(month: Date): Promise<Array<TransferRow>> {
   const start = formatISODate(startOfMonth(month));
   const end = formatISODate(new Date(month.getFullYear(), month.getMonth() + 1, 1));
   const { data, error } = await supabase
     .from("v_transactions_eur")
     .select(
-      "entry_reference,account_uid,booking_date,category,transaction_type,creditor_name,currency,amount,signed_amount_eur,credit_debit_indicator,created_at,worth_it,personal_amount,owed_by,flow_type,refund_of,note,tags",
+      "entry_reference,account_uid,booking_date,category,transaction_type,creditor_name,currency,amount,signed_amount_eur,credit_debit_indicator,created_at,worth_it,personal_amount,owed_by,flow_type,refund_of",
     )
     .gte("booking_date", start)
     .lt("booking_date", end)
@@ -133,7 +134,7 @@ async function fetchTransfersForMonth(month: Date): Promise<Array<TransactionRow
     .order("booking_date", { ascending: false })
     .order("entry_reference", { ascending: false });
   if (error) throw error;
-  return (data ?? []) as Array<TransactionRow>;
+  return (data ?? []) as Array<TransferRow>;
 }
 
 // Transfers the sync paired on its own, waiting for a yes or no.

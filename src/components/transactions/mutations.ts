@@ -10,6 +10,7 @@ import {
   txId,
   type SplitwiseShare,
   type TransactionRow,
+  type TransferRow,
   type TxKey,
 } from "@/lib/transactions";
 
@@ -335,8 +336,8 @@ export function restorePatch(tx: Pick<TransactionRow, "credit_debit_indicator" |
 // Puts a transaction marked as a transfer back into spending or income. The row leaves the
 // transfers list at once; the month's totals are refetched.
 export function useFlowMutation(queryClient: QueryClient, monthKey: string) {
-  type Vars = { tx: TransactionRow };
-  type Context = { previous: Array<TransactionRow> | undefined };
+  type Vars = { tx: TransferRow };
+  type Context = { previous: Array<TransferRow> | undefined };
   const key = ["transfers", monthKey];
 
   return useMutation<void, Error, Vars, Context>({

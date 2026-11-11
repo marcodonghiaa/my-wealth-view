@@ -7,6 +7,8 @@ let failTable: string | null = null;
 // Rows the mocked views return (empty unless a test sets them).
 const rows: Record<string, Array<Record<string, unknown>>> = {};
 let tableData: Record<string, unknown> = {};
+// Every select the page sends, to check which columns each query asks for.
+const selects: Array<{ table: string; cols: string }> = [];
 let rpcResult: { data: unknown; error: { message: string } | null } = { data: [], error: null };
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
@@ -29,6 +31,10 @@ vi.mock("@/integrations/supabase/client", () => ({
       ]) {
         q[m] = () => q;
       }
+      q["select"] = (cols: string) => {
+        selects.push({ table, cols });
+        return q;
+      };
       q["then"] = (resolve: (v: unknown) => void) =>
         resolve(
           table === failTable
@@ -331,6 +337,17 @@ describe("Activity deep link", () => {
 
 // protects=the tag filter keeps only rows with that tag; fails_when=the filter ignores tags
 describe("Transactions page tag filter", () => {
+  // protects=only the list that shows notes and tags fetches them;
+  // fails_when=the transfers query also selects note and tags
+  it("fetches note and tags for the month list only", async () => {
+    selects.length = 0;
+    renderPage();
+    await screen.findAllByText(/No transactions for/);
+    const views = selects.filter((s) => s.table === "v_transactions_eur").map((s) => s.cols);
+    expect(views.length).toBeGreaterThan(1);
+    expect(views.filter((c) => c.includes("note,tags"))).toHaveLength(1);
+  });
+
   // protects=a failing tag-suggestions call is reported in the console, not hidden;
   // fails_when=fetchTagSuggestions swallows the error
   it("logs a failed suggestions call and still shows the page", async () => {

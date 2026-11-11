@@ -22,6 +22,9 @@ export interface TransactionRow {
   tags: Array<string>;
 }
 
+// A row in the Transfers list, which never shows notes or tags, so doesn't fetch them.
+export type TransferRow = Omit<TransactionRow, "note" | "tags">;
+
 // The euro columns of v_transactions_eur; `amount` and `personal_amount` are in the card's own currency.
 export interface EurRow {
   personal_signed_amount_eur: number | null;
@@ -209,7 +212,7 @@ export const formatSignedMoney = (value: number, currency: string): string =>
   `${value >= 0 ? "+" : "−"}${formatMoney(Math.abs(value), currency)}`;
 
 /** Signed amount in the transaction's own currency. */
-export function nativeSignedAmount(tx: TransactionRow): number | null {
+export function nativeSignedAmount(tx: TransferRow): number | null {
   if (tx.amount == null) return null;
   // Without a EUR value yet (no exchange rate), debit/credit says which way the money went.
   const ind = tx.credit_debit_indicator;
