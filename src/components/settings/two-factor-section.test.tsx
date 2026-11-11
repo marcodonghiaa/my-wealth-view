@@ -181,7 +181,11 @@ describe("TwoFactorSection", () => {
       .mockReturnValueOnce(new Promise(() => {}));
     render(<TwoFactorSection />);
     fireEvent.click(await screen.findByRole("button", { name: "Try again" }, { timeout: 3000 }));
-    expect(await screen.findByRole("button", { name: "Try again" })).toBeDisabled();
+    // aria-disabled, not disabled: a disabled button drops keyboard focus to the page body.
+    expect(await screen.findByRole("button", { name: "Try again" })).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
   });
 
   // protects=an accidental bin tap can be undone, and removing the last one says what it does;
@@ -320,6 +324,47 @@ describe("TwoFactorSection", () => {
     await screen.findByAltText(/QR code/);
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
     expect(screen.getByRole("heading", { name: "Two-step sign-in" })).toHaveFocus();
+  });
+
+  // fails_when=over plain http (no clipboard API) Copy key shows but does nothing when tapped
+  it("hides Copy key where the browser gives no clipboard", async () => {
+    Object.defineProperty(navigator, "clipboard", { value: undefined, configurable: true });
+    lib.listAuthenticators.mockResolvedValue([]);
+    render(<TwoFactorSection />);
+    fireEvent.click(await screen.findByRole("button", { name: "Set up two-step sign-in" }));
+    expect(await screen.findByText("JBSW Y3DP")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Copy key" })).toBeNull();
+  });
+
+  // fails_when=a retry that fails again moves focus away from the Try again button still on screen
+  it("keeps focus on Try again when the retry fails again", async () => {
+    lib.listAuthenticators.mockRejectedValue(new Error("Failed to fetch"));
+    render(<TwoFactorSection />);
+    const retry = await screen.findByRole("button", { name: "Try again" }, { timeout: 3000 });
+    retry.focus();
+    fireEvent.click(retry);
+    await waitFor(() => expect(lib.listAuthenticators).toHaveBeenCalledTimes(4), { timeout: 3000 });
+    await waitFor(() => expect(retry).not.toHaveAttribute("aria-disabled"));
+    expect(screen.getByRole("button", { name: "Try again" })).toHaveFocus();
+  });
+
+  // fails_when=Cancel or Esc hides the confirm while the remove still runs, dropping focus
+  it("keeps the confirm open while a remove is running", async () => {
+    lib.listAuthenticators.mockResolvedValue([{ id: "a", name: "Phone" }]);
+    lib.removeAuthenticator.mockReturnValue(new Promise(() => {}));
+    render(<TwoFactorSection />);
+    fireEvent.click(await screen.findByRole("button", { name: "Remove Phone" }));
+    const confirm = screen.getByRole("button", { name: "Confirm remove" });
+    confirm.focus();
+    fireEvent.click(confirm);
+    // aria-disabled, not disabled: the clicked button keeps keyboard focus while it runs.
+    expect(confirm).toHaveAttribute("aria-disabled", "true");
+    expect(confirm).toHaveFocus();
+    fireEvent.click(confirm);
+    expect(lib.removeAuthenticator).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("button", { name: "Cancel" })).toBeDisabled();
+    fireEvent.keyDown(confirm, { key: "Escape" });
+    expect(screen.getByRole("button", { name: "Confirm remove" })).toBeInTheDocument();
   });
 
   // fails_when=on a touch screen the code field grabs focus, opening the keyboard over the QR code
