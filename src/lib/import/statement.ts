@@ -459,7 +459,7 @@ export function readStatement(
         : genericRecipe(lines[start]!, columns, lines.slice(start + 1));
   }
   if (!base || !usable(base.columns)) {
-    throw new Error("Couldn't find the date, description and amount columns. Pick them below.");
+    throw new Error("Couldn't find the date, description and amount columns. Pick them above.");
   }
   const body = lines.slice(start + 1);
   const c = base.columns;

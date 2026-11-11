@@ -134,7 +134,13 @@ describe("ImportStatement", () => {
 
   it("lets you pick the columns when they can't be guessed", async () => {
     upload("x.csv", "Quando,Cosa,Quanto\n2026-04-25,Coffee,-2.50");
-    expect(await screen.findByRole("alert")).toHaveTextContent(/pick them/i);
+    const alert = await screen.findByRole("alert");
+    // polish-4 #5: the pickers sit above the message, and it says so.
+    expect(alert).toHaveTextContent(/pick them above/i);
+    expect(
+      screen.getByLabelText("Date column").compareDocumentPosition(alert) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
     fireEvent.change(screen.getByLabelText("Date column"), { target: { value: "0" } });
     fireEvent.change(screen.getByLabelText("Description column"), { target: { value: "1" } });
     fireEvent.change(screen.getByLabelText("Amount (+/−) column"), { target: { value: "2" } });
