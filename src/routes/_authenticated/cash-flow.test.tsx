@@ -147,6 +147,19 @@ describe("Cash flow page", () => {
     expect(screen.queryByText(/^Nothing came in or went out/)).toBeNull();
   });
 
+  // Polish 1 #5: a failed breakdown shows an error in the card, not one big "Other" band.
+  it.each(["v_spend_by_category_monthly", "v_transactions_eur"])(
+    "shows an error instead of the diagram when %s fails",
+    async (table) => {
+      failTable = table;
+      renderPage();
+      await screen.findByRole("alert");
+      await waitFor(() => expect(row("Income")).toHaveTextContent("€3,000.00"));
+      expect(screen.queryByRole("img", { name: /^Cash flow for/ })).toBeNull();
+      expect(screen.getByText("The breakdown didn't load.")).toBeInTheDocument();
+    },
+  );
+
   it("says when figures fail to load", async () => {
     failTable = "v_spend_by_category_monthly";
     renderPage();

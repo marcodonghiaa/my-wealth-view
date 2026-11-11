@@ -216,6 +216,11 @@ function CashFlowPage() {
             <p className="px-2 py-8 text-center text-sm text-muted-foreground">
               The totals didn't load.
             </p>
+          ) : spendQuery.isError || incomeQuery.isError ? (
+            // Drawing without the breakdown would lump everything into one "Other" band.
+            <p className="px-2 py-8 text-center text-sm text-muted-foreground">
+              The breakdown didn't load.
+            </p>
           ) : graph.nodes.length === 0 ? (
             <p className="px-2 py-8 text-center text-sm text-muted-foreground">
               Nothing came in or went out in {label}.
