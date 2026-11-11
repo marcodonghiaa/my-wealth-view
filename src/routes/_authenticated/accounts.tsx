@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { assertHttpsUrl } from "@/lib/consent-url";
 import {
   COUNTRIES,
+  defaultCountry,
   linkErrorMessage,
   linkedMessage,
   pendingLink,
@@ -202,7 +203,9 @@ function AccountsPage() {
   // Connect-a-bank form state
   const [showConnectForm, setShowConnectForm] = useState(false);
   const [bankName, setBankName] = useState("");
-  const [bankCountry, setBankCountry] = useState("IT");
+  const [bankCountry, setBankCountry] = useState(() =>
+    defaultCountry(navigator.languages ?? [navigator.language]),
+  );
   const [connectError, setConnectError] = useState<string | null>(null);
   const connectStepsRef = useRef<HTMLOListElement>(null);
 
@@ -220,10 +223,15 @@ function AccountsPage() {
       if (!data?.banks) throw new Error(data?.error ?? "No bank list returned");
       return data.banks;
     },
-    enabled: showConnectForm,
+    enabled: showConnectForm && bankCountry !== "",
     staleTime: 10 * 60_000,
+    retry: 1, // a failure shows with a Retry button instead of after ~7s of silent retries
   });
   const banks = banksQuery.data ?? [];
+  const noBanks = banksQuery.isSuccess && banks.length === 0;
+  // Renew prefills the bank it linked; the list may no longer have it.
+  const bankGone =
+    banksQuery.isSuccess && bankName !== "" && !banks.some((b) => b.name === bankName);
 
   const connectBank = useMutation({
     mutationFn: async (input: { bankName: string; country: string }) => {
@@ -456,8 +464,9 @@ function AccountsPage() {
                         setBankCountry(e.target.value);
                         setBankName("");
                       }}
-                      className="sm:w-28"
+                      className="sm:w-auto"
                     >
+                      {bankCountry === "" && <option value="">Choose a country…</option>}
                       {COUNTRIES.map((c) => (
                         <option key={c.code} value={c.code}>
                           {c.name}
@@ -473,10 +482,18 @@ function AccountsPage() {
                       id="acc-bank"
                       value={bankName}
                       onChange={(e) => setBankName(e.target.value)}
-                      disabled={banksQuery.isPending || banksQuery.isError}
+                      disabled={banksQuery.isPending || banksQuery.isError || noBanks}
                     >
                       <option value="">
-                        {banksQuery.isPending ? "Loading banks…" : "Select a bank…"}
+                        {bankCountry === ""
+                          ? "Choose a country first"
+                          : banksQuery.isPending
+                            ? "Loading banks…"
+                            : banksQuery.isError
+                              ? "Couldn't load banks"
+                              : noBanks
+                                ? "No banks for this country"
+                                : "Select a bank…"}
                       </option>
                       {banks.map((b) => (
                         <option key={b.name} value={b.name}>
@@ -484,10 +501,29 @@ function AccountsPage() {
                         </option>
                       ))}
                     </Select>
-                    {banksQuery.isError && (
-                      <p className="mt-1 break-words text-xs text-negative">
-                        {banksQuery.error.message}
+                    {bankGone && !noBanks && (
+                      <p role="status" className="mt-1 text-xs text-muted-foreground">
+                        {bankName} isn't listed for this country anymore. Pick your bank again.
                       </p>
+                    )}
+                    {noBanks && (
+                      <p role="status" className="mt-1 text-xs text-muted-foreground">
+                        No banks listed for this country yet. Try another country.
+                      </p>
+                    )}
+                    {banksQuery.isError && (
+                      <div role="alert" className="mt-1 flex flex-wrap items-center gap-x-1">
+                        <p className="break-words text-xs text-negative">
+                          {banksQuery.error.message}
+                        </p>
+                        <Button
+                          variant="ghost"
+                          onClick={() => void banksQuery.refetch()}
+                          className="px-3 text-xs text-primary hover:bg-primary/10 hover:text-primary"
+                        >
+                          Retry
+                        </Button>
+                      </div>
                     )}
                   </div>
                 </div>

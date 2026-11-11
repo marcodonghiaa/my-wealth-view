@@ -45,6 +45,8 @@ describe("ImportWizard", () => {
     upload("Month,Stocks,Bonds\n2024-02,0.1,0.2\n");
     expect(await screen.findByRole("columnheader", { name: "Month end" })).toBeTruthy();
     expect(screen.getByRole("columnheader", { name: "Liabilities" })).toBeTruthy();
+    // Same name as the Net Worth chart, so ETFs read the same everywhere.
+    expect(screen.getByRole("columnheader", { name: "Stocks & ETFs" })).toBeTruthy();
     const cells = screen.getAllByRole("cell").map((c) => c.textContent);
     expect(cells[0]).toBe("2024-02-29");
     expect(cells[1]).toMatch(/0[.,]30/);

@@ -16,17 +16,18 @@ import {
   type HistoryRow,
   type NetWorthRow,
   type ReconstructedRow,
+  STOCKS_LABEL,
 } from "@/lib/net-worth";
 import { formatEur } from "@/lib/transactions";
 import { ASSET_COLORS } from "@/lib/asset-colors";
 import type { ReactNode } from "react";
 
-// Each class leads to the page that explains it. "Stocks & funds" is everything in the portfolio
+// Each class leads to the page that explains it. The stocks row is everything in the portfolio
 // that isn't a bond (stocks, ETFs, funds), so it reads as the sum of those rows on Portfolio.
 const CLASSES = [
   {
     key: "stocks_eur",
-    label: "Stocks & funds",
+    label: STOCKS_LABEL,
     color: ASSET_COLORS.stock,
     icon: Building2,
     to: "/portfolio",

@@ -18,6 +18,7 @@ import { MAX_CHARS, parseCsv, type ParsedCsv } from "@/lib/import/parse-csv";
 import { CATEGORIES } from "@/lib/categories";
 import { planNetWorth, planSpend } from "@/lib/import/plan";
 import type { AppCategory } from "@/lib/import/suggest-category";
+import { STOCKS_LABEL } from "@/lib/net-worth";
 import { formatEur } from "@/lib/transactions";
 
 const KINDS: Array<{ value: ImportKind; label: string }> = [
@@ -29,7 +30,7 @@ const ROLES_BY_KIND: Record<ImportKind, Array<{ role: Role; label: string; requi
   net_worth: [
     { role: "month", label: "Month", required: true },
     { role: "total", label: "Total", required: false },
-    { role: "stocks", label: "Stocks", required: false },
+    { role: "stocks", label: STOCKS_LABEL, required: false },
     { role: "bonds", label: "Bonds", required: false },
     { role: "crypto", label: "Crypto", required: false },
     { role: "cash", label: "Cash", required: false },
@@ -47,7 +48,7 @@ const PREVIEW_COLUMNS: Record<ImportKind, Array<[string, string]>> = {
   net_worth: [
     ["snapshot_date", "Month end"],
     ["total_eur", "Total"],
-    ["stocks_eur", "Stocks"],
+    ["stocks_eur", STOCKS_LABEL],
     ["bonds_eur", "Bonds"],
     ["crypto_eur", "Crypto"],
     ["cash_eur", "Cash"],
