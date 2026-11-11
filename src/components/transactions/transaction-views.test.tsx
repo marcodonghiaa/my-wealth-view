@@ -124,6 +124,19 @@ describe("Bank card rows", () => {
     expect(await screen.findByLabelText(/Change category for Uber/)).toBeInTheDocument();
     expect(screen.getByRole("checkbox")).toBeInTheDocument();
   });
+
+  // protects=on a phone the sheet covers the toast, so Make a rule must be in the sheet itself
+  it("offers Make a rule in the sheet, next to the category", async () => {
+    const onClick = vi.fn();
+    render(
+      <ul>
+        <TransactionCardView {...bankProps()} makeRule={{ label: "Make a rule", onClick }} />
+      </ul>,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /Uber/ }));
+    await userEvent.click(await screen.findByRole("button", { name: /Make a rule/ }));
+    expect(onClick).toHaveBeenCalledOnce();
+  });
 });
 
 // protects=only transactions added by hand get an amount editor: bank amounts are the bank's

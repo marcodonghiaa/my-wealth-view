@@ -1,7 +1,9 @@
 import { dateLocale } from "@/lib/locale";
 import { fetchSplitContacts } from "@/lib/splits";
 import { EmptyState } from "@/components/empty-state";
-import { createFileRoute, useSearch } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router";
+import { makeRuleAction } from "@/lib/rules";
+import { rulesQuery } from "@/lib/rules-query";
 import { accountName, bankOf } from "@/components/bank-badge";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -187,9 +189,15 @@ function TransactionsPage({ category: initialCategory, month: initialMonth }: Tr
   const queryClient = useQueryClient();
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
+  const navigate = useNavigate();
+  // "Make a rule" (toast and sheet); not offered when a saved rule already sorts the name.
+  const rules = useQuery(rulesQuery).data;
+  const ruleAction = (name: string | null | undefined, category: string | null) =>
+    makeRuleAction(name, category, navigate, rules);
   const updateCategory = useTransactionFieldMutation(queryClient, monthKey, "category", {
     errorMessage: "Couldn't save category",
     successMessage: (value) => `Saved — ${value}`,
+    successAction: ({ tx, value }) => ruleAction(tx.creditor_name, value),
   });
 
   const updateType = useTransactionFieldMutation(queryClient, monthKey, "transaction_type", {
@@ -397,10 +405,10 @@ function TransactionsPage({ category: initialCategory, month: initialMonth }: Tr
     savingCategory: isSplitwiseShare(tx)
       ? savingShare(tx)
       : updateCategory.isPending && isSameTx(updateCategory.variables?.tx, tx),
-    onSelectCategory: (next) =>
+    onSelectCategory: (next, o) =>
       isSplitwiseShare(tx)
         ? updateShare.mutate({ id: shareId(tx), patch: { category: next } })
-        : updateCategory.mutate({ tx, value: next }),
+        : updateCategory.mutate({ tx, value: next, noAction: !!o?.inSheet }),
     savingType: updateType.isPending && isSameTx(updateType.variables?.tx, tx),
     onSelectType: (next) => updateType.mutate({ tx, value: next }),
     accountLabel: labelFor(tx.account_uid),
@@ -416,6 +424,8 @@ function TransactionsPage({ category: initialCategory, month: initialMonth }: Tr
         ? name && updateShare.mutate({ id: shareId(tx), patch: { description: name } })
         : renameTx.mutate({ tx, name }),
     highlighted: tx.entry_reference === highlightRef,
+    // In the sheet too: on a phone the open sheet covers the toast's button.
+    makeRule: isSplitwiseShare(tx) ? undefined : ruleAction(tx.creditor_name, tx.category),
     showAccount: multiAccount,
     ...(tx.account_uid && accounts[tx.account_uid]?.manual
       ? {

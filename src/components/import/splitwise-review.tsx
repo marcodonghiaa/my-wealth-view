@@ -72,7 +72,7 @@ async function load(rows: Array<ClassifiedRow>, group: string): Promise<Loaded> 
       .limit(PAGE_LIMIT),
     supabase
       .from("category_rules")
-      .select("match_text, set_category, priority")
+      .select("match_text, match_mode, set_category, priority")
       .order("priority", { ascending: true }),
   ]);
 

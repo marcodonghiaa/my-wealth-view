@@ -1,5 +1,6 @@
 import { bankOf } from "@/components/bank-badge";
 import { consentAlerts } from "@/lib/consent-expiry";
+import { plural } from "@/lib/plural";
 
 export type HealthState = "ok" | "warn" | "bad";
 
@@ -159,7 +160,6 @@ export function aiRow(
 ): HealthRow | null {
   if (!counts || (counts.ai === 0 && counts.stuck === 0)) return null;
   const title = "AI categories";
-  const plural = (n: number) => `${n} transaction${n === 1 ? "" : "s"}`;
   if (counts.stuck === 0) {
     return {
       id: "ai",

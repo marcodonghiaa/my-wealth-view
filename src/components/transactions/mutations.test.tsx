@@ -19,6 +19,9 @@ const getUser = vi.fn(async () => ({ data: { user: { id: "u1" } as { id: string 
 let insertError: Error | null = null;
 let existingRule: Array<{ id: string }> = [];
 
+const toastSuccess = vi.hoisted(() => vi.fn());
+vi.mock("sonner", () => ({ toast: { success: toastSuccess, error: vi.fn() } }));
+
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
     rpc: (...args: unknown[]) => rpc(...args),
@@ -118,6 +121,33 @@ beforeEach(() => {
   calls.length = 0;
   insertError = null;
   existingRule = [];
+});
+
+describe("success toast action", () => {
+  // "Make a rule" after a category change: the action gets the row and the new value.
+  it("adds the action the caller builds from the saved row", async () => {
+    toastSuccess.mockReset();
+    const { queryClient, wrapper } = setup();
+    const onClick = vi.fn();
+    const successAction = vi.fn(() => ({ label: "Make a rule", onClick }));
+    const { result } = renderHook(
+      () =>
+        useTransactionFieldMutation(queryClient, MONTH, "category", {
+          errorMessage: "fail",
+          successMessage: (v) => `Saved — ${v}`,
+          successAction,
+        }),
+      { wrapper },
+    );
+    const tx = { account_uid: "a1", entry_reference: "r1", creditor_name: "BAR ROMA" };
+    await act(() => result.current.mutateAsync({ tx, value: "Dine Out" }));
+    expect(successAction).toHaveBeenCalledWith({ tx, value: "Dine Out" });
+    // Polish pass 4 #3: a toast with a button stays up long enough to reach it.
+    expect(toastSuccess).toHaveBeenCalledWith("Saved — Dine Out", {
+      action: { label: "Make a rule", onClick },
+      duration: 8000,
+    });
+  });
 });
 
 describe("transaction mutations are scoped to one account", () => {
@@ -627,6 +657,31 @@ describe("settling a To review group", () => {
       result.current.mutateAsync({ group: group([rr("a1", "r1", "DBIT")], null), choice: "count" }),
     );
     expect(calls.map((c) => c.table)).toEqual(["transactions"]);
+  });
+
+  // Polish pass 2 re-audit: rule text is capped at 200 in the database, so a longer bank name
+  // would make the whole answer fail. The rows are still answered; only the rule is skipped.
+  it("adds no rule for a name longer than a rule can hold", async () => {
+    const result = setupGroup();
+    await act(() =>
+      result.current.mutateAsync({
+        group: group([rr("a1", "r1", "DBIT")], "x".repeat(201)),
+        choice: "count",
+      }),
+    );
+    expect(calls.map((c) => c.table)).toEqual(["transactions"]);
+  });
+
+  // Polish pass 3 #5: the boundary itself, so ">" can't silently become ">=".
+  it("still adds a rule for a name of exactly 200 characters", async () => {
+    const result = setupGroup();
+    await act(() =>
+      result.current.mutateAsync({
+        group: group([rr("a1", "r1", "DBIT")], "x".repeat(200)),
+        choice: "count",
+      }),
+    );
+    expect(calls.find((c) => c.insert)?.insert).toMatchObject({ match_text: "x".repeat(200) });
   });
 
   it("fails when signed out", async () => {

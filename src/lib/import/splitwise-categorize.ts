@@ -1,5 +1,6 @@
 import type { AppCategory } from "./suggest-category";
 import { suggestCategory } from "./suggest-category";
+import { foldText, textMatches } from "@/lib/rules";
 
 // Picks an app category for one Splitwise row from its description: the user's own rules first,
 // then keywords, then the Splitwise category. When nothing recognises it the result is null, so
@@ -7,6 +8,7 @@ import { suggestCategory } from "./suggest-category";
 
 export interface UserRule {
   match_text: string;
+  match_mode?: string | null; // 'word' | 'exact' | 'contains' (older rules: anywhere)
   set_category: string | null;
   priority: number;
 }
@@ -47,8 +49,7 @@ const KEYWORDS: Array<[AppCategory, RegExp]> = [
   ["Shopping", /\b(shop|goodwill|amazon|cloth\w*|abbigliament\w*|cake|gift|regalo|airtag)\b/],
 ];
 
-const norm = (s: string) =>
-  s.normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[’']/g, "").toLowerCase();
+const norm = foldText;
 
 const isAppCategory = (value: string | null): value is AppCategory =>
   value !== null && suggestCategory(value) === value;
@@ -60,9 +61,12 @@ export function categorizeRow(
 ): Guess {
   const text = norm(row.description);
 
+  // Spaces around a rule's text never counted here (the import trimmed before match modes).
   for (const r of rules) {
-    const wanted = norm(r.match_text).trim();
-    if (wanted !== "" && isAppCategory(r.set_category) && text.includes(wanted)) {
+    if (
+      isAppCategory(r.set_category) &&
+      textMatches(text, norm(r.match_text).trim(), r.match_mode)
+    ) {
       return { category: r.set_category, source: "rule" };
     }
   }

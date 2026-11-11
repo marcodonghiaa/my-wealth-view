@@ -7,6 +7,8 @@ interface Option<T extends string> {
 
 interface SegmentedControlProps<T extends string> {
   label: string;
+  /** id of a visible label: the group is named by it instead of `label`, so it's read once. */
+  labelledBy?: string;
   options: Array<Option<T>>;
   value: T;
   onChange: (value: T) => void;
@@ -17,6 +19,7 @@ interface SegmentedControlProps<T extends string> {
 // touch-scrubbed chart), 36px from md up.
 export function SegmentedControl<T extends string>({
   label,
+  labelledBy,
   options,
   value,
   onChange,
@@ -27,10 +30,19 @@ export function SegmentedControl<T extends string>({
   );
 
   function onKeyDown(event: KeyboardEvent<HTMLDivElement>) {
-    const step = event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0;
-    if (!step) return;
+    // The standard radio-group keys: arrows step (and wrap), Home/End jump to the ends.
+    const last = options.length - 1;
+    const target: Record<string, number> = {
+      ArrowRight: index === last ? 0 : index + 1,
+      ArrowDown: index === last ? 0 : index + 1,
+      ArrowLeft: index === 0 ? last : index - 1,
+      ArrowUp: index === 0 ? last : index - 1,
+      Home: 0,
+      End: last,
+    };
+    const nextIndex = target[event.key];
+    if (nextIndex === undefined) return;
     event.preventDefault();
-    const nextIndex = (index + step + options.length) % options.length;
     const next = options[nextIndex];
     if (!next) return;
     onChange(next.value);
@@ -42,7 +54,8 @@ export function SegmentedControl<T extends string>({
   return (
     <div
       role="radiogroup"
-      aria-label={label}
+      aria-label={labelledBy ? undefined : label}
+      aria-labelledby={labelledBy}
       onKeyDown={onKeyDown}
       className="relative grid rounded-sm bg-muted p-0.5"
       style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}

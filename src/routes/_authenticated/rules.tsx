@@ -1,17 +1,36 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronDown, Loader2, Plus, Trash2 } from "lucide-react";
+import { ArrowRight, Loader2, Plus, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
+import { ApplyToPast } from "@/components/rules/apply-to-past";
+import { rulesQuery as rulesQueryOptions, type RuleRow } from "@/lib/rules-query";
 import { Button } from "@/components/ui/button";
-import { Input, fieldClass } from "@/components/ui/field";
+import { Input, Select } from "@/components/ui/field";
+import { GroupedList, SectionTitle } from "@/components/ui/grouped-list";
+import { SegmentedControl } from "@/components/segmented-control";
+import { EmptyState } from "@/components/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert } from "@/components/ui/alert";
 import { TRANSACTION_TYPES } from "@/lib/categories";
 import { useCategories } from "@/lib/use-categories";
+import { plural } from "@/lib/plural";
+import {
+  MATCH_FIELDS,
+  MATCH_MODES,
+  isLooseMatch,
+  MAX_MATCH_TEXT,
+  modeHint,
+  quoteText,
+  ruleCondition,
+  LOOSE_MATCH_HINT,
+  type MatchField,
+  type MatchMode,
+} from "@/lib/rules";
+
+// "Make a rule" from a transaction's category opens this page with the form filled in.
+type RulesSearch = { text?: string | undefined; category?: string | undefined };
 
 export const Route = createFileRoute("/_authenticated/rules")({
   head: () => ({
@@ -28,65 +47,125 @@ export const Route = createFileRoute("/_authenticated/rules")({
       },
     ],
   }),
+  validateSearch: (s: Record<string, unknown>): RulesSearch => ({
+    text: typeof s["text"] === "string" ? s["text"].slice(0, MAX_MATCH_TEXT) : undefined,
+    category: typeof s["category"] === "string" ? s["category"] : undefined,
+  }),
   component: RulesPage,
 });
-
-type RuleRow = {
-  id: string;
-  match_field: string;
-  match_text: string;
-  set_category: string | null;
-  set_transaction_type: string | null;
-  set_flow_type: string | null;
-  priority: number;
-  created_at: string;
-};
-
-const MATCH_FIELDS = [
-  { value: "creditor_name", label: "Creditor name" },
-  { value: "remittance_info", label: "Remittance info" },
-  { value: "any", label: "Either field" },
-];
-
-async function fetchRules(): Promise<RuleRow[]> {
-  const { data, error } = await supabase
-    .from("category_rules")
-    .select(
-      "id, match_field, match_text, set_category, set_transaction_type, set_flow_type, priority, created_at",
-    )
-    .order("priority", { ascending: true })
-    .order("created_at", { ascending: true });
-  if (error) throw error;
-  return data ?? [];
-}
 
 // Rules from "To review" only decide how a row counts: "spend" and "income" both mean "count by
 // direction".
 const flowLabel = (setFlowType: string) =>
   setFlowType === "transfer" ? "Count as transfer" : "Not a transfer";
 
-function fieldLabel(value: string) {
-  return MATCH_FIELDS.find((f) => f.value === value)?.label ?? value;
-}
+const LABEL = "mb-1.5 block text-xs font-medium text-muted-foreground";
+const CHIP = "rounded-sm bg-muted px-2 py-0.5 text-xs font-medium";
 
 function RulesPage() {
-  const queryClient = useQueryClient();
-  const [matchField, setMatchField] = useState("creditor_name");
-  const [matchText, setMatchText] = useState("");
-  const [category, setCategory] = useState<string | null>(null);
-  const [type, setType] = useState<string | null>(null);
-  const [fieldOpen, setFieldOpen] = useState(false);
-  const [categoryOpen, setCategoryOpen] = useState(false);
-  const [typeOpen, setTypeOpen] = useState(false);
-  const [formError, setFormError] = useState<string | null>(null);
-  const [showForm, setShowForm] = useState(false);
-  const categories = useCategories().list;
+  const prefill = Route.useSearch();
+  const navigate = Route.useNavigate();
+  const [showForm, setShowForm] = useState(!!prefill.text);
+  // Focus goes back to "New rule" when the form closes, not to the top of the page.
+  const newRuleButton = useRef<HTMLButtonElement>(null);
+  const wasOpen = useRef(showForm);
+  useEffect(() => {
+    if (wasOpen.current && !showForm) newRuleButton.current?.focus();
+    wasOpen.current = showForm;
+  }, [showForm]);
+  const rulesQuery = useQuery(rulesQueryOptions);
+  const rules = rulesQuery.data ?? [];
 
-  const rulesQuery = useQuery({ queryKey: ["category-rules"], queryFn: fetchRules });
+  return (
+    <div className="mx-auto max-w-5xl px-4 py-8 sm:px-8 md:py-12">
+      <header className="mb-8 flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="ios-large-title">Rules</h1>
+          <p className="mt-0.5 max-w-prose text-sm text-muted-foreground">
+            Rules set the category or type of new transactions that match, before the AI guesses. If
+            two rules match, the one higher in the list wins.
+          </p>
+        </div>
+        {!showForm && (
+          <Button ref={newRuleButton} onClick={() => setShowForm(true)}>
+            <Plus />
+            New rule
+          </Button>
+        )}
+      </header>
+
+      {showForm && (
+        <RuleForm
+          initialText={prefill.text ?? ""}
+          initialCategory={prefill.category ?? ""}
+          onClose={() => {
+            setShowForm(false);
+            // Back or a refresh must not open the filled-in form again.
+            if (prefill.text || prefill.category) void navigate({ search: {}, replace: true });
+          }}
+        />
+      )}
+
+      {rulesQuery.isLoading ? (
+        <div className="space-y-2">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={i} className="h-14" />
+          ))}
+        </div>
+      ) : rulesQuery.isError ? (
+        <div className="flex flex-wrap items-center gap-3">
+          <Alert>Failed to load rules.</Alert>
+          <Button variant="quiet" onClick={() => void rulesQuery.refetch()}>
+            Try again
+          </Button>
+        </div>
+      ) : rules.length === 0 ? (
+        <GroupedList>
+          <EmptyState
+            title="No rules yet"
+            hint="Use New rule above, or change a transaction's category and pick Make a rule. For example: Name has the word “Netflix” → Entertainment."
+          />
+        </GroupedList>
+      ) : (
+        <RuleList rules={rules} />
+      )}
+    </div>
+  );
+}
+
+function RuleForm({
+  initialText,
+  initialCategory,
+  onClose,
+}: {
+  initialText: string;
+  initialCategory: string;
+  onClose: () => void;
+}) {
+  const queryClient = useQueryClient();
+  const categories = useCategories().list;
+  const [matchField, setMatchField] = useState<MatchField>("creditor_name");
+  const [matchMode, setMatchMode] = useState<MatchMode>("word");
+  const [matchText, setMatchText] = useState(initialText);
+  const [category, setCategory] = useState(initialCategory);
+  // A category the picker can't show (renamed since) must not be saved unseen.
+  const shownCategory = categories.includes(category) ? category : "";
+  const [type, setType] = useState("");
+  const [formError, setFormError] = useState<string | null>(null);
+  // The field a message is about: marked invalid, described by the message, and focused.
+  const [errorField, setErrorField] = useState<"text" | "set" | null>(null);
+  const textInput = useRef<HTMLInputElement>(null);
+  const categorySelect = useRef<HTMLSelectElement>(null);
+  // A message about the form goes away as soon as you change the form.
+  useEffect(() => {
+    setFormError(null);
+    setErrorField(null);
+  }, [matchField, matchMode, matchText, category, type]);
 
   const addRule = useMutation({
     mutationFn: async (rule: {
       match_field: string;
+      match_mode: string;
       match_text: string;
       set_category: string | null;
       set_transaction_type: string | null;
@@ -102,15 +181,203 @@ function RulesPage() {
     },
     onSuccess: () => {
       toast.success("Rule added");
-      setMatchText("");
-      setCategory(null);
-      setType(null);
-      setFormError(null);
       void queryClient.invalidateQueries({ queryKey: ["category-rules"] });
+      onClose();
     },
-    onError: (err) => {
-      toast.error(err instanceof Error ? err.message : "Failed to add rule");
+    onError: () => setFormError("Couldn't save the rule. Try again."),
+  });
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!matchText.trim()) {
+      setFormError("Type the text to look for.");
+      setErrorField("text");
+      return textInput.current?.focus();
+    }
+    if (!shownCategory && !type) {
+      setFormError("Pick a category, a type, or both.");
+      setErrorField("set");
+      return categorySelect.current?.focus();
+    }
+    setFormError(null);
+    setErrorField(null);
+    addRule.mutate({
+      match_field: matchField,
+      match_mode: matchMode,
+      match_text: matchText.trim(),
+      set_category: shownCategory || null,
+      set_transaction_type: type || null,
+    });
+  }
+
+  const loose = isLooseMatch(matchText, matchMode);
+
+  return (
+    <form
+      onSubmit={handleSubmit}
+      onKeyDown={(e) => e.key === "Escape" && onClose()}
+      aria-labelledby="rule-form-title"
+      className="mb-8 rounded-lg bg-card p-5 sm:p-6"
+    >
+      <div className="mb-5 flex items-center justify-between gap-3">
+        <h2 id="rule-form-title" className="text-[0.9375rem] font-medium">
+          New rule
+        </h2>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          onClick={onClose}
+          aria-label="Close"
+          className="-m-2"
+        >
+          <X />
+        </Button>
+      </div>
+
+      <fieldset className="grid gap-5">
+        <legend className="sr-only">When</legend>
+        <div className="grid gap-5 sm:grid-cols-2">
+          <div>
+            <span id="rule-look-in" className={LABEL}>
+              Look in
+            </span>
+            <SegmentedControl
+              label="Look in"
+              labelledBy="rule-look-in"
+              options={MATCH_FIELDS.map((f) => ({ value: f.value, label: f.label }))}
+              value={matchField}
+              onChange={setMatchField}
+            />
+          </div>
+          <div>
+            <span id="rule-match" className={LABEL}>
+              Match
+            </span>
+            <SegmentedControl
+              label="Match"
+              labelledBy="rule-match"
+              options={MATCH_MODES.map((m) => ({ value: m.value, label: m.label }))}
+              value={matchMode}
+              onChange={setMatchMode}
+            />
+          </div>
+        </div>
+
+        <div>
+          <label htmlFor="rule-match-text" className={LABEL}>
+            Text to look for
+          </label>
+          <Input
+            id="rule-match-text"
+            ref={textInput}
+            type="text"
+            autoComplete="off"
+            value={matchText}
+            maxLength={MAX_MATCH_TEXT}
+            onChange={(e) => setMatchText(e.target.value)}
+            placeholder="e.g. Spotify"
+            autoFocus
+            aria-describedby={
+              errorField === "text" ? "rule-match-hint rule-form-error" : "rule-match-hint"
+            }
+            aria-invalid={errorField === "text" || undefined}
+          />
+          <p
+            id="rule-match-hint"
+            className={`mt-1.5 text-[0.8125rem] ${loose ? "text-foreground" : "text-muted-foreground"}`}
+          >
+            {loose ? LOOSE_MATCH_HINT : modeHint(matchMode)}
+          </p>
+        </div>
+
+        <div className="grid gap-5 sm:grid-cols-2">
+          <div>
+            <label htmlFor="rule-category" className={LABEL}>
+              Set category
+            </label>
+            <Select
+              id="rule-category"
+              ref={categorySelect}
+              aria-invalid={errorField === "set" || undefined}
+              aria-describedby={errorField === "set" ? "rule-form-error" : undefined}
+              value={shownCategory}
+              onChange={(e) => setCategory(e.target.value)}
+            >
+              <option value="">Leave as is</option>
+              {categories.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </Select>
+          </div>
+          <div>
+            <label htmlFor="rule-type" className={LABEL}>
+              Set type
+            </label>
+            <Select id="rule-type" value={type} onChange={(e) => setType(e.target.value)}>
+              <option value="">Leave as is</option>
+              {TRANSACTION_TYPES.map((t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ))}
+            </Select>
+          </div>
+        </div>
+      </fieldset>
+
+      {matchText.trim() && (shownCategory || type) && (
+        <p className="mt-6 text-sm break-words">
+          {ruleCondition(matchField, matchMode)} {quoteText(matchText.trim())} →{" "}
+          {[shownCategory, type].filter(Boolean).join(", ")}
+        </p>
+      )}
+
+      <div className="mt-6 flex flex-wrap items-center gap-3">
+        <Button type="submit" disabled={addRule.isPending}>
+          {addRule.isPending ? <Loader2 className="animate-spin" /> : <Plus />}
+          Add rule
+        </Button>
+        <Button type="button" variant="ghost" onClick={onClose}>
+          Cancel
+        </Button>
+        {formError && (
+          <p id="rule-form-error" role="alert" className="text-sm text-negative">
+            {formError}
+          </p>
+        )}
+      </div>
+    </form>
+  );
+}
+
+function RuleList({ rules }: { rules: RuleRow[] }) {
+  const queryClient = useQueryClient();
+  const [checking, setChecking] = useState(false);
+  // Focus goes back to "Apply to past transactions" when the preview closes.
+  const applyButton = useRef<HTMLButtonElement>(null);
+  const wasChecking = useRef(false);
+  useEffect(() => {
+    if (wasChecking.current && !checking) applyButton.current?.focus();
+    wasChecking.current = checking;
+  }, [checking]);
+  const hasCategoryRules = rules.some((r) => r.set_category);
+
+  // Undo after a delete saves the same rule again: a new id, but its old date keeps its place in
+  // the list (the list, and which rule wins, go by priority then date).
+  const restoreRule = useMutation({
+    mutationFn: async ({ id: _id, ...rule }: RuleRow) => {
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError || !userData.user) throw userError ?? new Error("Not signed in");
+      const { error } = await supabase
+        .from("category_rules")
+        .insert({ ...rule, user_id: userData.user.id });
+      if (error) throw error;
     },
+    onError: () => toast.error("Couldn't restore the rule. Add it again."),
+    onSettled: () => void queryClient.invalidateQueries({ queryKey: ["category-rules"] }),
   });
 
   const deleteRule = useMutation({
@@ -119,6 +386,7 @@ function RulesPage() {
       if (error) throw error;
     },
     onMutate: async (id) => {
+      setChecking(false); // its count would include the rule being deleted
       await queryClient.cancelQueries({ queryKey: ["category-rules"] });
       const previous = queryClient.getQueryData<RuleRow[]>(["category-rules"]);
       queryClient.setQueryData<RuleRow[]>(["category-rules"], (old) =>
@@ -126,301 +394,95 @@ function RulesPage() {
       );
       return { previous };
     },
-    onError: (err, _id, ctx) => {
+    onError: (_err, _id, ctx) => {
       if (ctx?.previous) queryClient.setQueryData(["category-rules"], ctx.previous);
-      toast.error(err instanceof Error ? err.message : "Failed to delete rule");
+      toast.error("Couldn't delete the rule. Try again.");
     },
-    onSuccess: () => toast.success("Rule deleted"),
+    onSuccess: (_data, id, ctx) => {
+      const rule = ctx?.previous?.find((r) => r.id === id);
+      // Rules from before the 200-character cap can't be saved again, so no Undo for them.
+      const length = rule ? [...rule.match_text].length : 0;
+      const restorable = rule && length >= 1 && length <= MAX_MATCH_TEXT;
+      toast.success(
+        "Rule deleted",
+        restorable ? { action: { label: "Undo", onClick: () => restoreRule.mutate(rule) } } : {},
+      );
+    },
     onSettled: () => void queryClient.invalidateQueries({ queryKey: ["category-rules"] }),
   });
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!category && !type) {
-      setFormError("Set a category and/or a type — a rule must do at least one thing.");
-      return;
-    }
-    if (!matchText.trim()) {
-      setFormError("Match text can't be empty.");
-      return;
-    }
-    setFormError(null);
-    addRule.mutate({
-      match_field: matchField,
-      match_text: matchText.trim(),
-      set_category: category,
-      set_transaction_type: type,
-    });
-  }
-
-  const rules = rulesQuery.data ?? [];
+  // After a delete, focus moves to the next rule's delete button (the previous one for the last
+  // rule), once the buttons are enabled again; otherwise it falls to the page.
+  const focusAfterDelete = useRef<string | null>(null);
+  useEffect(() => {
+    if (deleteRule.isPending || !focusAfterDelete.current) return;
+    document.querySelector<HTMLElement>(`[data-rule-id="${focusAfterDelete.current}"]`)?.focus();
+    focusAfterDelete.current = null;
+  }, [deleteRule.isPending, deleteRule.submittedAt]); // submittedAt: a quick delete may never render as pending
+  const remove = (id: string) => {
+    const i = rules.findIndex((r) => r.id === id);
+    focusAfterDelete.current = (rules[i + 1] ?? rules[i - 1])?.id ?? null;
+    deleteRule.mutate(id);
+  };
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-8 sm:px-8 md:py-12">
-      <header className="mb-8">
-        <h1 className="ios-large-title">Rules</h1>
-        <p className="mt-0.5 text-sm text-muted-foreground">
-          Categorize matching transactions automatically. Rules run before AI categorization.
-        </p>
-      </header>
+    <section>
+      {checking && (
+        <ApplyToPast ruleIds={rules.map((r) => r.id).join()} onDone={() => setChecking(false)} />
+      )}
 
-      {/* Add rule form — collapsed by default so it doesn't push the
-          existing rules list below the fold on a phone. */}
-      <form onSubmit={handleSubmit} className="mb-8 rounded-lg bg-card">
-        <button
-          type="button"
-          onClick={() => setShowForm((v) => !v)}
-          className="flex min-h-11 w-full items-center justify-between gap-3 p-5 text-left"
-          aria-expanded={showForm}
-        >
-          <h2 className="text-sm font-medium">Add rule</h2>
-          <ChevronDown
-            className={`size-4 shrink-0 text-muted-foreground transition-transform ${showForm ? "rotate-180" : ""}`}
-          />
-        </button>
-        {showForm && (
-          <div className="px-5 pb-5">
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-              <div className="lg:col-span-1">
-                <label htmlFor="rule-field" className="mb-1 block text-xs text-muted-foreground">
-                  If this field
-                </label>
-                <Popover open={fieldOpen} onOpenChange={setFieldOpen}>
-                  <PopoverTrigger asChild>
-                    <button
-                      id="rule-field"
-                      type="button"
-                      className={cn(fieldClass(), "flex items-center justify-between text-left")}
-                    >
-                      {fieldLabel(matchField)}
-                      <ChevronDown className="size-3.5 opacity-50" />
-                    </button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-44 p-1" align="start">
-                    {MATCH_FIELDS.map((f) => (
-                      <button
-                        key={f.value}
-                        type="button"
-                        onClick={() => {
-                          setMatchField(f.value);
-                          setFieldOpen(false);
-                        }}
-                        className={cn(
-                          "min-h-11 w-full rounded-sm px-2.5 py-1.5 text-left text-sm hover:bg-accent",
-                          f.value === matchField && "bg-accent",
-                        )}
-                      >
-                        {f.label}
-                      </button>
-                    ))}
-                  </PopoverContent>
-                </Popover>
-              </div>
+      <SectionTitle
+        className="items-center"
+        action={
+          hasCategoryRules && !checking ? (
+            <Button ref={applyButton} variant="quiet" onClick={() => setChecking(true)}>
+              Apply to past transactions
+            </Button>
+          ) : undefined
+        }
+      >
+        {plural(rules.length, "rule")}
+      </SectionTitle>
 
-              <div className="lg:col-span-2">
-                <label
-                  htmlFor="rule-match-text"
-                  className="mb-1 block text-xs text-muted-foreground"
-                >
-                  contains this text
-                </label>
-                <Input
-                  id="rule-match-text"
-                  type="text"
-                  value={matchText}
-                  onChange={(e) => setMatchText(e.target.value)}
-                  placeholder="e.g. spotify"
-                />
-              </div>
-
-              <div className="lg:col-span-1">
-                <label htmlFor="rule-category" className="mb-1 block text-xs text-muted-foreground">
-                  set category (optional)
-                </label>
-                <Popover open={categoryOpen} onOpenChange={setCategoryOpen}>
-                  <PopoverTrigger asChild>
-                    <button
-                      id="rule-category"
-                      type="button"
-                      className={cn(fieldClass(), "flex items-center justify-between text-left")}
-                    >
-                      <span className={cn(!category && "text-muted-foreground/60")}>
-                        {category ?? "—"}
-                      </span>
-                      <ChevronDown className="size-3.5 opacity-50" />
-                    </button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-44 p-1" align="start">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setCategory(null);
-                        setCategoryOpen(false);
-                      }}
-                      className={cn(
-                        "min-h-11 w-full rounded-sm px-2.5 py-1.5 text-left text-sm text-muted-foreground hover:bg-accent",
-                        !category && "bg-accent",
-                      )}
-                    >
-                      None
-                    </button>
-                    {categories.map((c) => (
-                      <button
-                        key={c}
-                        type="button"
-                        onClick={() => {
-                          setCategory(c);
-                          setCategoryOpen(false);
-                        }}
-                        className={cn(
-                          "min-h-11 w-full rounded-sm px-2.5 py-1.5 text-left text-sm hover:bg-accent",
-                          c === category && "bg-accent",
-                        )}
-                      >
-                        {c}
-                      </button>
-                    ))}
-                  </PopoverContent>
-                </Popover>
-              </div>
-
-              <div className="lg:col-span-1">
-                <label htmlFor="rule-type" className="mb-1 block text-xs text-muted-foreground">
-                  set type (optional)
-                </label>
-                <Popover open={typeOpen} onOpenChange={setTypeOpen}>
-                  <PopoverTrigger asChild>
-                    <button
-                      id="rule-type"
-                      type="button"
-                      className={cn(fieldClass(), "flex items-center justify-between text-left")}
-                    >
-                      <span className={cn(!type && "text-muted-foreground/60")}>{type ?? "—"}</span>
-                      <ChevronDown className="size-3.5 opacity-50" />
-                    </button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-44 p-1" align="start">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setType(null);
-                        setTypeOpen(false);
-                      }}
-                      className={cn(
-                        "min-h-11 w-full rounded-sm px-2.5 py-1.5 text-left text-sm text-muted-foreground hover:bg-accent",
-                        !type && "bg-accent",
-                      )}
-                    >
-                      None
-                    </button>
-                    {TRANSACTION_TYPES.map((t) => (
-                      <button
-                        key={t}
-                        type="button"
-                        onClick={() => {
-                          setType(t);
-                          setTypeOpen(false);
-                        }}
-                        className={cn(
-                          "min-h-11 w-full rounded-sm px-2.5 py-1.5 text-left text-sm hover:bg-accent",
-                          t === type && "bg-accent",
-                        )}
-                      >
-                        {t}
-                      </button>
-                    ))}
-                  </PopoverContent>
-                </Popover>
-              </div>
-            </div>
-
-            <div className="mt-4 flex items-center gap-3">
-              <Button type="submit" disabled={addRule.isPending}>
-                {addRule.isPending ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : (
-                  <Plus className="size-4" />
+      <GroupedList>
+        {rules.map((rule) => (
+          <div key={rule.id} className="flex items-center gap-3 py-3 pr-2 pl-4">
+            <div className="min-w-0 flex-1">
+              <p className="text-[0.9375rem] break-words">
+                <span className="text-muted-foreground">
+                  {ruleCondition(rule.match_field, rule.match_mode)}
+                </span>{" "}
+                <span className="font-medium">{quoteText(rule.match_text)}</span>
+              </p>
+              <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                <ArrowRight aria-hidden className="size-3.5 text-muted-foreground" />
+                {rule.set_category && <span className={CHIP}>{rule.set_category}</span>}
+                {rule.set_transaction_type && (
+                  <span className={`${CHIP} text-muted-foreground`}>
+                    {rule.set_transaction_type}
+                  </span>
                 )}
-                Add rule
-              </Button>
-              {formError && <p className="text-sm text-destructive">{formError}</p>}
+                {rule.set_flow_type && (
+                  <span className={`${CHIP} text-muted-foreground`}>
+                    {flowLabel(rule.set_flow_type)}
+                  </span>
+                )}
+              </div>
             </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => remove(rule.id)}
+              disabled={deleteRule.isPending}
+              data-rule-id={rule.id}
+              aria-label={`Delete rule for ${rule.match_text}`}
+              className="hover:text-negative"
+            >
+              <Trash2 />
+            </Button>
           </div>
-        )}
-      </form>
-
-      {/* Rules list */}
-      <div className="overflow-hidden rounded-lg bg-card">
-        <div className="border-b px-5 py-3">
-          <h2 className="text-sm font-medium">
-            Existing rules <span className="text-muted-foreground">({rules.length})</span>
-          </h2>
-        </div>
-
-        {rulesQuery.isLoading ? (
-          <div className="space-y-2 p-5">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <Skeleton key={i} className="h-12" />
-            ))}
-          </div>
-        ) : rulesQuery.isError ? (
-          <Alert className="m-5">Failed to load rules.</Alert>
-        ) : rules.length === 0 ? (
-          <div className="px-5 py-8 text-center text-sm text-muted-foreground">
-            <p>No rules yet.</p>
-            <p className="mt-1">
-              Example: if the creditor name contains “spotify”, set the category to Subscriptions.
-            </p>
-            {!showForm && (
-              <Button variant="quiet" className="mt-4 bg-muted" onClick={() => setShowForm(true)}>
-                <Plus className="size-4" />
-                Add a rule
-              </Button>
-            )}
-          </div>
-        ) : (
-          <ul className="divide-y">
-            {rules.map((rule) => (
-              <li key={rule.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 px-5 py-3.5">
-                <div className="min-w-0 basis-full sm:basis-0 sm:flex-1">
-                  <p className="text-sm">
-                    <span className="text-muted-foreground">{fieldLabel(rule.match_field)}</span>{" "}
-                    contains{" "}
-                    <span className="font-medium text-foreground">“{rule.match_text}”</span>
-                  </p>
-                </div>
-                <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
-                  {rule.set_category && (
-                    <span className="rounded-sm bg-muted px-2.5 py-0.5 text-xs font-medium text-foreground">
-                      {rule.set_category}
-                    </span>
-                  )}
-                  {rule.set_transaction_type && (
-                    <span className="rounded-sm bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
-                      {rule.set_transaction_type}
-                    </span>
-                  )}
-                  {rule.set_flow_type && (
-                    <span className="rounded-sm bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
-                      {flowLabel(rule.set_flow_type)}
-                    </span>
-                  )}
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => deleteRule.mutate(rule.id)}
-                    disabled={deleteRule.isPending}
-                    aria-label={`Delete rule for ${rule.match_text}`}
-                    className="-m-2 ml-auto hover:bg-negative/10 hover:text-negative"
-                  >
-                    <Trash2 />
-                  </Button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-    </div>
+        ))}
+      </GroupedList>
+    </section>
   );
 }

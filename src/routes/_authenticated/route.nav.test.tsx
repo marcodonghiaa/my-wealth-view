@@ -100,6 +100,17 @@ describe("sidebar icons", () => {
   });
 });
 
+describe("nav links", () => {
+  // Regression: the Rules page existed but no link led to it.
+  it("links to Rules from the sidebar", async () => {
+    rows.current = [];
+    renderLayout();
+    const links = await screen.findAllByRole("link", { name: /Rules/ });
+    expect(links).toHaveLength(1);
+    links.forEach((l) => expect(l).toHaveAttribute("href", "/rules"));
+  });
+});
+
 describe("phone tabs and More", () => {
   const tabBar = () => screen.getByRole("navigation", { name: "Primary" });
 

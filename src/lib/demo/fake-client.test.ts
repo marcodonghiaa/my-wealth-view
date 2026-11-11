@@ -608,6 +608,19 @@ describe("fake client: parse-statement", () => {
   });
 });
 
+describe("fake client: reapply-rules", () => {
+  it("answers the Rules page with nothing to change instead of an error", async () => {
+    const { data, error } = await (
+      fresh().functions.invoke as unknown as (
+        n: string,
+        o: object,
+      ) => Promise<{ data: unknown; error: unknown }>
+    )("reapply-rules", { body: { apply: false } });
+    expect(error).toBeNull();
+    expect(data).toEqual({ changes: 0, sample: [] });
+  });
+});
+
 describe("fake client: set_holding_quantity", () => {
   type Rpc = (f: string, a: object) => PromiseLike<{ data: number; error: unknown }>;
   it("selling a stock takes its value out of today's net worth at once", async () => {

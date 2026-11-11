@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import type { TablesUpdate } from "@/integrations/supabase/types";
 import type { ReviewGroup, ReviewRow } from "@/lib/transfer-review";
+import { MAX_MATCH_TEXT } from "@/lib/rules";
 import {
   restoredFlow,
   txId,
@@ -51,6 +52,9 @@ function forTx<Q extends { eq: (c: string, v: string) => Q; is: (c: string, v: n
 // Shared shape behind updateCategory/updateType/answerWorthIt: update one column
 // on one transaction, with optimistic cache update + rollback. (Renames go through
 // useRenameMerchantMutation, which renames the merchant's other rows too.)
+// The row being edited; its name feeds a success action such as "Make a rule".
+type MutatedTx = TxKey & Partial<Pick<TransactionRow, "creditor_name">>;
+
 export function useTransactionFieldMutation<K extends "category" | "transaction_type" | "worth_it">(
   queryClient: QueryClient,
   monthKey: string,
@@ -58,9 +62,15 @@ export function useTransactionFieldMutation<K extends "category" | "transaction_
   opts: {
     errorMessage: string;
     successMessage?: (value: TransactionRow[K]) => string;
+    // A button on the success toast, e.g. "Make a rule" after a category change.
+    successAction?: (vars: {
+      tx: MutatedTx;
+      value: TransactionRow[K];
+    }) => { label: string; onClick: () => void } | undefined;
   },
 ) {
-  type Vars = { tx: TxKey; value: TransactionRow[K] };
+  // noAction: leave successAction off this toast (e.g. the change came from a sheet that covers it).
+  type Vars = { tx: MutatedTx; value: TransactionRow[K]; noAction?: boolean };
   type Context = { previous: Array<TransactionRow> | undefined };
 
   return useMutation<void, Error, Vars, Context>({
@@ -88,7 +98,11 @@ export function useTransactionFieldMutation<K extends "category" | "transaction_
       toast.error(opts.errorMessage, { description: error.message });
     },
     onSuccess: (_data, vars) => {
-      if (opts.successMessage) toast.success(opts.successMessage(vars.value));
+      if (opts.successMessage) {
+        const action = vars.noAction ? undefined : opts.successAction?.(vars);
+        // A toast with a button stays twice as long, so there's time to reach it.
+        toast.success(opts.successMessage(vars.value), action ? { action, duration: 8000 } : {});
+      }
     },
     onSettled: (_data, _error, vars) => {
       if (column !== "category") return;
@@ -419,7 +433,8 @@ export function useReviewGroupMutation(queryClient: QueryClient) {
         await updateTxs(debits, { flow_type: "spend", flow_source: "user" });
         await updateTxs(credits, { flow_type: "income", flow_source: "user" });
       }
-      if (!group.name) return; // nothing a rule could match on
+      // Nothing a rule could match on, or a name longer than a rule can hold.
+      if (!group.name || group.name.length > MAX_MATCH_TEXT) return;
       const { data } = await supabase.auth.getUser();
       if (!data.user) throw new Error("You are signed out. Sign in again.");
       // The sync reads "spend" and "income" alike as "not a transfer: count by direction".
