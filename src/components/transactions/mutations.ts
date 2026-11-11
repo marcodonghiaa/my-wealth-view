@@ -108,6 +108,14 @@ export function useTransactionFieldMutation<
       }
     },
     onSettled: (_data, _error, vars) => {
+      // The rollback above restores the whole month, which can also undo a note or tags save made
+      // just before; reloading the month puts the saved ones back. New tags join the suggestions.
+      if (column === "note" || column === "tags") {
+        void queryClient.invalidateQueries({ queryKey: ["transactions", monthKey] });
+        if (column === "tags")
+          void queryClient.invalidateQueries({ queryKey: ["transaction-tags"] });
+        return;
+      }
       if (column !== "category") return;
       if (vars.value === TRANSFER_CATEGORY) refetchFlows(queryClient);
       else refetchReview(queryClient);

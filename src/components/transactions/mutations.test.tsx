@@ -17,6 +17,7 @@ const calls: Call[] = [];
 const rpc = vi.fn();
 const getUser = vi.fn(async () => ({ data: { user: { id: "u1" } as { id: string } | null } }));
 let insertError: Error | null = null;
+let updateError: Error | null = null;
 let existingRule: Array<{ id: string }> = [];
 
 const toastSuccess = vi.hoisted(() => vi.fn());
@@ -62,7 +63,7 @@ vi.mock("@/integrations/supabase/client", () => ({
         then(resolve: (v: { data?: unknown; error: Error | null }) => void) {
           calls.push(call);
           if (call.select) resolve({ data: existingRule, error: null });
-          else resolve({ error: call.insert ? insertError : null });
+          else resolve({ error: call.insert ? insertError : call.update ? updateError : null });
         },
       };
       return q;
@@ -122,6 +123,7 @@ function setup() {
 beforeEach(() => {
   calls.length = 0;
   insertError = null;
+  updateError = null;
   existingRule = [];
 });
 
@@ -149,6 +151,43 @@ describe("success toast action", () => {
       action: { label: "Make a rule", onClick },
       duration: 8000,
     });
+  });
+});
+
+// protects=a note or tags save sends only that column for that one row, rolls back on failure and
+// then reloads the month so a save made just before isn't lost;
+// fails_when=the patch carries other columns, or a failed save leaves the month unreloaded
+describe("note and tags saves", () => {
+  it("sends only the note, for that row", async () => {
+    const { queryClient, wrapper, cached } = setup();
+    const { result } = renderHook(
+      () => useTransactionFieldMutation(queryClient, MONTH, "note", { errorMessage: "fail" }),
+      { wrapper },
+    );
+    await act(() =>
+      result.current.mutateAsync({ tx: { account_uid: "a1", entry_reference: "r1" }, value: "hi" }),
+    );
+    expect(calls[0]?.update).toEqual({ note: "hi" });
+    expect(calls[0]?.eq).toEqual({ account_uid: "a1", entry_reference: "r1" });
+    expect(cached().map((r) => r.note)).toEqual(["hi", null]);
+  });
+
+  it("rolls back a failed tags save and reloads the month", async () => {
+    const { queryClient, wrapper, cached } = setup();
+    const invalidate = vi.spyOn(queryClient, "invalidateQueries");
+    updateError = new Error("denied");
+    const { result } = renderHook(
+      () => useTransactionFieldMutation(queryClient, MONTH, "tags", { errorMessage: "fail" }),
+      { wrapper },
+    );
+    await act(async () => {
+      await result.current
+        .mutateAsync({ tx: { account_uid: "a1", entry_reference: "r1" }, value: ["trip"] })
+        .catch(() => {});
+    });
+    expect(calls[0]?.update).toEqual({ tags: ["trip"] });
+    expect(cached().map((r) => r.tags)).toEqual([[], []]);
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ["transactions", MONTH] });
   });
 });
 
