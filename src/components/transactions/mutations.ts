@@ -98,8 +98,18 @@ export function useTransactionFieldMutation<
       );
       return { previous };
     },
-    onError: (error, _vars, context) => {
-      if (context?.previous) queryClient.setQueryData(["transactions", monthKey], context.previous);
+    onError: (error, { tx }, context) => {
+      if (column === "note" || column === "tags") {
+        // Put back only this row's field: another note or tags save may have landed meanwhile.
+        const before = context?.previous?.find((row) => txId(row) === txId(tx));
+        if (before)
+          queryClient.setQueryData<Array<TransactionRow>>(["transactions", monthKey], (old) =>
+            old?.map((row) =>
+              txId(row) === txId(tx) ? { ...row, [column]: before[column] } : row,
+            ),
+          );
+      } else if (context?.previous)
+        queryClient.setQueryData(["transactions", monthKey], context.previous);
       toast.error(opts.errorMessage, { description: error.message });
     },
     onSuccess: (_data, vars) => {

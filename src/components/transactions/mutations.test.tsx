@@ -200,6 +200,29 @@ describe("note and tags saves", () => {
     );
   });
 
+  // polish-3 #5: fails_when=a failed note save restores the whole month and hides newer tags
+  it("a failed note save puts back only the note", async () => {
+    const { queryClient, wrapper, cached } = setup();
+    let open = () => {};
+    updateGate = new Promise<void>((r) => (open = r));
+    updateError = new Error("denied");
+    const { result } = renderHook(
+      () => useTransactionFieldMutation(queryClient, MONTH, "note", { errorMessage: "fail" }),
+      { wrapper },
+    );
+    act(() =>
+      result.current.mutate({ tx: { account_uid: "a1", entry_reference: "r1" }, value: "hi" }),
+    );
+    await waitFor(() => expect(cached()[0]?.note).toBe("hi"));
+    // A tags save lands on the same row meanwhile.
+    queryClient.setQueryData<TransactionRow[]>(["transactions", MONTH], (old) =>
+      old?.map((r, i) => (i === 0 ? { ...r, tags: ["trip"] } : r)),
+    );
+    open();
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(cached()[0]).toMatchObject({ note: null, tags: ["trip"] });
+  });
+
   it("rolls back a failed tags save and reloads the month", async () => {
     const { queryClient, wrapper, cached } = setup();
     const invalidate = vi.spyOn(queryClient, "invalidateQueries");
