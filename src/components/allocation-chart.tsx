@@ -18,6 +18,7 @@ import {
   type ReconstructedRow,
 } from "@/lib/net-worth";
 import { formatEur } from "@/lib/transactions";
+import { ASSET_COLORS } from "@/lib/asset-colors";
 import type { ReactNode } from "react";
 
 // Each class leads to the page that explains it. "Stocks & funds" is everything in the portfolio
@@ -26,29 +27,29 @@ const CLASSES = [
   {
     key: "stocks_eur",
     label: "Stocks & funds",
-    color: "var(--alloc-stocks)",
+    color: ASSET_COLORS.stock,
     icon: Building2,
     to: "/portfolio",
   },
   {
     key: "bonds_eur",
     label: "Bonds",
-    color: "var(--alloc-bonds)",
+    color: ASSET_COLORS.bond,
     icon: ScrollText,
     to: "/portfolio",
   },
   {
     key: "crypto_eur",
     label: "Crypto",
-    color: "var(--alloc-crypto)",
+    color: ASSET_COLORS.crypto,
     icon: Bitcoin,
     to: "/crypto",
   },
-  { key: "cash_eur", label: "Cash", color: "var(--alloc-cash)", icon: Landmark, to: "/accounts" },
+  { key: "cash_eur", label: "Cash", color: ASSET_COLORS.cash, icon: Landmark, to: "/accounts" },
   {
     key: "other_eur",
     label: "Unallocated",
-    color: "var(--color-muted-foreground)",
+    color: ASSET_COLORS.other,
     icon: Shapes,
     to: null,
   },

@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState } from "react";
 import { CategoryRow } from "@/components/spending/category-row";
 import { supabase } from "@/integrations/supabase/client";
 import { formatISODate } from "@/lib/date";
@@ -113,7 +113,6 @@ function SpendingPage() {
   const total = rows.reduce((sum, r) => sum + r.spend_eur, 0);
   const prevTotal = categorySpend(prevSpendQuery.data ?? []).reduce((s, r) => s + r.spend_eur, 0);
   const change = prevSpendQuery.data ? spendChange(total, prevTotal) : null;
-  const isCurrentMonth = month.getTime() === startOfMonth(new Date()).getTime();
 
   const monthLabel = month.toLocaleDateString("en-GB", {
     month: "long",
@@ -170,12 +169,7 @@ function SpendingPage() {
               <HeadlineFigure value={total} currency="EUR" />
             </div>
             {change && (
-              <SpendChangeLine
-                delta={change.delta}
-                tone={change.tone}
-                versus={prevMonthName}
-                partial={isCurrentMonth}
-              />
+              <SpendChangeLine delta={change.delta} tone={change.tone} versus={prevMonthName} />
             )}
             {/* The stripes show the split at a glance; each row below names its own share */}
             <div className="mt-5 max-w-2xl">
@@ -238,43 +232,18 @@ function SpendingPage() {
   );
 }
 
-// "Is that normal?": the month against the one before, coloured by meaning (less is good).
-// A month still running is compared with all of last month, so it stays neutral until it
-// has already spent more.
-function SpendChangeLine({
-  delta,
-  tone,
-  versus,
-  partial,
-}: {
-  delta: number;
-  tone: Tone;
-  versus: string;
-  partial: boolean;
-}) {
-  const amount = <span className="font-figure">{formatEur(Math.abs(delta))}</span>;
-  let text: ReactNode;
-  let shown = tone;
-  if (partial) {
-    shown = delta > 0 ? "negative" : "neutral";
-    text =
-      delta > 0 ? (
-        <>
-          {amount} more than all of {versus} already
-        </>
+// "Is that normal?": one plain line against the previous month, coloured by meaning (less is good).
+function SpendChangeLine({ delta, tone, versus }: { delta: number; tone: Tone; versus: string }) {
+  return (
+    <p className={`mt-1.5 text-sm ${TONE_TEXT[tone]}`}>
+      {tone === "neutral" ? (
+        <>About the same as {versus}</>
       ) : (
         <>
-          {amount} less than all of {versus}, so far
+          <span className="font-figure">{formatEur(Math.abs(delta))}</span>{" "}
+          {delta < 0 ? "less" : "more"} than {versus}
         </>
-      );
-  } else if (tone === "neutral") {
-    text = <>About the same as {versus}</>;
-  } else {
-    text = (
-      <>
-        {amount} {delta < 0 ? "less" : "more"} than {versus}
-      </>
-    );
-  }
-  return <p className={`mt-1.5 text-sm ${TONE_TEXT[shown]}`}>{text}</p>;
+      )}
+    </p>
+  );
 }

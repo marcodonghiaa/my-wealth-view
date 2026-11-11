@@ -155,26 +155,16 @@ describe("Spending page breakdown", () => {
     );
   });
 
-  // A running month against a whole one would always look "less": keep it neutral.
-  it("keeps the running month neutral while it is under last month", async () => {
+  // The running month gets the same plain line as any other: no "so far" wording.
+  it("compares the running month in the same plain words", async () => {
     spendByMonth = {
       "2026-11-01": october,
       "2026-10-01": [{ category: "Housing", spend_eur: 1500 }],
     };
     renderPage();
-    const line = await screen.findByText(/less than all of October, so far/);
-    expect(line).toHaveClass("text-muted-foreground");
-  });
-
-  it("flags the running month once it has passed last month", async () => {
-    spendByMonth = {
-      "2026-11-01": october,
-      "2026-10-01": [{ category: "Housing", spend_eur: 600 }],
-    };
-    renderPage();
-    expect(await screen.findByText(/more than all of October already/)).toHaveClass(
-      "text-negative",
-    );
+    const line = await screen.findByText(/less than October$/);
+    expect(line).toHaveClass("text-positive");
+    expect(screen.queryByText(/so far|already|all of/)).toBeNull();
   });
 
   it("shows no comparison when last month has no spend", async () => {

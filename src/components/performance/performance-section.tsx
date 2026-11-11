@@ -1,10 +1,7 @@
 import { TradesDialog } from "@/components/holdings/trades-dialog";
 import { ImportTrades } from "@/components/holdings/import-trades";
 import { Alert } from "@/components/ui/alert";
-import { Skeleton } from "@/components/ui/skeleton";
-import { shortHoldingName } from "@/lib/holding-name";
 import { RETURN_NOISE_BAND, formatReturn } from "@/lib/performance";
-import { formatEur } from "@/lib/transactions";
 import type { usePerformance } from "@/lib/use-performance";
 import { TONE_TEXT, toneOf } from "@/lib/tone";
 
@@ -18,8 +15,6 @@ function Change({ change }: { change: number | null }) {
     </span>
   );
 }
-
-const formatGain = (gain: number) => `${gain >= 0 ? "+" : "−"}${formatEur(Math.abs(gain))}`;
 
 const dash = <span className="text-muted-foreground">—</span>;
 
@@ -71,14 +66,11 @@ export function ReturnCell({
   );
 }
 
-/** Your total return since purchase, from your trades, and the best and worst holding. The hero's
- * quiet second line: the range change above it answers "how did it move". */
-export function PerformanceSummary({ perf }: { perf: Performance }) {
+/** Only what needs saying under the hero: returns failed to load, or the database needs its
+ * update. The range change above answers "how did it move"; returns live on each row. */
+export function PerformanceNotice({ perf }: { perf: Performance }) {
   if (perf.error) {
     return <Alert className="mt-3">Couldn't load returns: {perf.error.message}</Alert>;
-  }
-  if (perf.isPending) {
-    return <Skeleton className="mt-2 h-5 w-56" />;
   }
   if (perf.unavailable) {
     return (
@@ -87,45 +79,7 @@ export function PerformanceSummary({ perf }: { perf: Performance }) {
       </p>
     );
   }
-
-  const { summary } = perf;
-  const best = summary.best[0];
-  const worst = summary.worst[0];
-  const incomplete = summary.total > summary.counted;
-  return (
-    <section aria-label="Return" className="mt-2 space-y-1 text-sm">
-      {summary.counted > 0 ? (
-        <p className="flex flex-wrap items-baseline gap-x-1.5">
-          <span className="text-muted-foreground">Total return since purchase</span>
-          <Change change={summary.change} />
-          <span className="font-figure text-foreground">{formatGain(summary.gain)}</span>
-          {incomplete && (
-            <span className="text-muted-foreground">
-              on {summary.counted} of {summary.total} holdings
-            </span>
-          )}
-        </p>
-      ) : (
-        <p className="text-muted-foreground">Add your purchases to see your return.</p>
-      )}
-      {(best || worst) && (
-        <p className="flex flex-wrap gap-x-4">
-          {best && (
-            <span>
-              <span className="text-muted-foreground">Best </span>
-              {shortHoldingName(best.name ?? best.key)} <Change change={best.change} />
-            </span>
-          )}
-          {worst && (
-            <span>
-              <span className="text-muted-foreground">Worst </span>
-              {shortHoldingName(worst.name ?? worst.key)} <Change change={worst.change} />
-            </span>
-          )}
-        </p>
-      )}
-    </section>
-  );
+  return null;
 }
 
 /** "Import trades from CSV", under the holdings it fills in. Always offered once returns load: a new

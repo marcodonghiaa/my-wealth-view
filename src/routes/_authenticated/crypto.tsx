@@ -20,7 +20,7 @@ import { EmptyState } from "@/components/empty-state";
 import { useValueHistory } from "@/lib/use-value-history";
 import { usePerformance } from "@/lib/use-performance";
 import {
-  PerformanceSummary,
+  PerformanceNotice,
   ReturnCell,
   ReturnText,
   TradesImport,
@@ -176,7 +176,7 @@ function CryptoPage() {
         <Alert className="mb-6">Couldn't load your crypto history: {history.error.message}</Alert>
       )}
 
-      {/* Headline: total value, its change over the chart range, then the return since purchase */}
+      {/* Headline: total value, its change over the chart range, then notices about returns */}
       <section aria-label="Total crypto value" className="mb-6">
         <div className="min-h-16" aria-live="polite">
           {query.isPending ? (
@@ -186,7 +186,7 @@ function CryptoPage() {
           )}
         </div>
         {!query.isPending && <RangeChange {...history} />}
-        {!query.isPending && <PerformanceSummary perf={perf} />}
+        {!query.isPending && <PerformanceNotice perf={perf} />}
       </section>
 
       {/* Chart: crypto value over time; scrub it to read any day */}

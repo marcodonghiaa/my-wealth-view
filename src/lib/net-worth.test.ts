@@ -3,7 +3,6 @@ import {
   allocationHistory,
   chartPoints,
   inRange,
-  dayBeforeMonth,
   monthAgo,
   monthNetWorth,
   onOrBefore,
@@ -400,13 +399,5 @@ describe("monthNetWorth", () => {
 
   it("is null with no rows", () => {
     expect(monthNetWorth([], "2026-02-28", "2026-03-31")).toBeNull();
-  });
-});
-
-describe("dayBeforeMonth", () => {
-  it("is the previous month's last day, across years and leap Februaries", () => {
-    expect(dayBeforeMonth("2026-03-14")).toBe("2026-02-28");
-    expect(dayBeforeMonth("2024-03-01")).toBe("2024-02-29");
-    expect(dayBeforeMonth("2026-01-31")).toBe("2025-12-31");
   });
 });

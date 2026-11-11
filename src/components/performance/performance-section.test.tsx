@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import type { Measured, MeasuredRow } from "@/lib/trades";
 import { summarizeTrades } from "@/lib/trades";
 import type { PerformanceRow } from "@/lib/performance";
-import { PerformanceSummary, ReturnCell, ReturnText, TradesImport } from "./performance-section";
+import { PerformanceNotice, ReturnCell, ReturnText, TradesImport } from "./performance-section";
 
 const row = (key: string): PerformanceRow => ({
   kind: "stock",
@@ -48,72 +48,33 @@ const perf = (rows: Array<MeasuredRow>, over: Record<string, unknown> = {}) =>
     unavailable: false,
     error: null,
     ...over,
-  }) as unknown as Parameters<typeof PerformanceSummary>[0]["perf"];
+  }) as unknown as Parameters<typeof PerformanceNotice>[0]["perf"];
 
 const renderWith = (ui: ReactElement) =>
   render(<QueryClientProvider client={new QueryClient()}>{ui}</QueryClientProvider>);
 
-describe("PerformanceSummary", () => {
-  const ranked = [
-    { row: row("A"), measured: ok(300, 1000) },
-    { row: row("B"), measured: ok(-100, 1000) },
-  ];
-
-  it("shows total return since purchase in percent and euros, as a quiet line", () => {
-    renderWith(<PerformanceSummary perf={perf([{ row: row("K"), measured: ok(200, 1000) }])} />);
-    expect(screen.getByText("+20.00%")).toBeInTheDocument();
-    expect(screen.getByText(/\+.*200/)).toBeInTheDocument();
-    expect(screen.getByText("Total return since purchase")).toBeInTheDocument();
-    expect(screen.getByRole("region", { name: "Return" })).toHaveClass("text-sm");
-    expect(screen.queryByText(/holdings/)).not.toBeInTheDocument();
-    // The import lives under the holdings now (TradesImport), not in the hero.
-    expect(screen.queryByText("Import trades from CSV")).not.toBeInTheDocument();
-  });
-
-  it("names the best and the worst holding", () => {
-    renderWith(<PerformanceSummary perf={perf(ranked, { summary: summarizeTrades(ranked, 1) })} />);
-    expect(screen.getByText("Best")).toBeInTheDocument();
-    expect(screen.getByText("+30.00%")).toBeInTheDocument();
-    expect(screen.getByText("−10.00%")).toBeInTheDocument();
-  });
-
-  it("leaves out Worst when everything is up", () => {
-    const up = [
+describe("PerformanceNotice", () => {
+  // protects=the Investing hero stays to value + range change (Marco 2026-11-11);
+  // fails_when=total return, best/worst or "on N of M holdings" come back under the hero
+  it("shows nothing when returns load fine", () => {
+    const ranked = [
       { row: row("A"), measured: ok(300, 1000) },
-      { row: row("B"), measured: ok(100, 1000) },
+      { row: row("B"), measured: { state: "no_trades" as const } },
     ];
-    renderWith(<PerformanceSummary perf={perf(up, { summary: summarizeTrades(up, 1) })} />);
-    expect(screen.getByText("Best")).toBeInTheDocument();
-    expect(screen.queryByText("Worst")).not.toBeInTheDocument();
-  });
-
-  it("while holdings lack trades, says how many count", () => {
-    renderWith(
-      <PerformanceSummary
-        perf={perf([
-          { row: row("A"), measured: ok(200, 1000) },
-          { row: row("B"), measured: { state: "no_trades" } },
-        ])}
-      />,
+    const { container } = renderWith(
+      <PerformanceNotice perf={perf(ranked, { summary: summarizeTrades(ranked, 1) })} />,
     );
-    expect(screen.getByText(/on 1 of 2 holdings/)).toBeInTheDocument();
-  });
-
-  it("asks for purchases instead of showing a number when there are none", () => {
-    renderWith(
-      <PerformanceSummary perf={perf([{ row: row("A"), measured: { state: "no_trades" } }])} />,
-    );
-    expect(screen.getByText("Add your purchases to see your return.")).toBeInTheDocument();
-    expect(screen.queryByText("Total return since purchase")).not.toBeInTheDocument();
+    expect(container).toBeEmptyDOMElement();
+    expect(screen.queryByText(/since purchase|Best|Worst|holdings/)).not.toBeInTheDocument();
   });
 
   it("shows a load error and the not-yet-migrated note", () => {
     const { unmount } = renderWith(
-      <PerformanceSummary perf={perf([], { error: new Error("boom") })} />,
+      <PerformanceNotice perf={perf([], { error: new Error("boom") })} />,
     );
     expect(screen.getByRole("alert")).toHaveTextContent("boom");
     unmount();
-    renderWith(<PerformanceSummary perf={perf([], { unavailable: true })} />);
+    renderWith(<PerformanceNotice perf={perf([], { unavailable: true })} />);
     expect(screen.getByText(/latest update/)).toBeInTheDocument();
   });
 });

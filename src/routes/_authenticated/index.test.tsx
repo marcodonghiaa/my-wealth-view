@@ -147,28 +147,32 @@ const day = (snapshot_date: string, total_eur: number) => ({
   total_eur,
 });
 
-describe("Net worth page: today and this month", () => {
-  // protects=the hero says how much it moved today and this month, in money; fails_when=Today
-  // shows only a percent or Month is missing
-  it("shows both as amounts on one line", async () => {
+describe("Net worth page: today", () => {
+  // protects=Today reads like the range line: amount, (percent), label, coloured by sign;
+  // fails_when=Today shows only a percent, or a Month figure comes back
+  it("shows today's move as amount and percent, red when down, with no Month", async () => {
     rowsFor = {
       v_net_worth_daily: [
         day("2026-10-31", 1000),
-        day("2026-11-09", 1300),
-        day("2026-11-10", 1200),
+        day("2026-11-09", 1250),
+        day("2026-11-10", 1000),
       ],
     };
     renderPage();
-    const line = (await screen.findByText("Today")).parentElement!.parentElement!;
-    expect(line.textContent).toBe("Today−€100·Month+€200");
+    const label = await screen.findByText("Today");
+    const line = label.parentElement!;
+    expect(line.textContent).toBe("−€250 (−20.00%)Today");
+    expect(line.firstElementChild!.className).toContain("text-negative");
+    expect(screen.queryByText("Month")).toBeNull();
     rowsFor = {};
   });
 
-  it("leaves Month out when nothing precedes the month", async () => {
-    rowsFor = { v_net_worth_daily: [day("2026-11-09", 1300), day("2026-11-10", 1200)] };
+  it("is green and signed + when up", async () => {
+    rowsFor = { v_net_worth_daily: [day("2026-11-09", 1000), day("2026-11-10", 1250)] };
     renderPage();
-    await screen.findByText("Today");
-    expect(screen.queryByText("Month")).toBeNull();
+    const line = (await screen.findByText("Today")).parentElement!;
+    expect(line.textContent).toBe("+€250 (+25.00%)Today");
+    expect(line.firstElementChild!.className).toContain("text-positive");
     rowsFor = {};
   });
 });

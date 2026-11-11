@@ -13,9 +13,7 @@ import {
   CHART_RANGES,
   RANGE_LABEL,
   chartPoints,
-  dayBeforeMonth,
   inRange,
-  monthNetWorth,
   withHistory,
   type ChartRange,
 } from "@/lib/net-worth";
@@ -110,22 +108,12 @@ function NetWorthPage() {
   const chartFirst = chartData.at(0);
   const latest = snapshots.at(-1);
   const previous = snapshots.at(-2);
-  // Today and this month, as amounts (EUR) with the share that colours them.
+  // Today's move, as an amount (EUR) and the share, styled like the range line above it.
   const today =
     latest != null && previous != null && previous.total_eur !== 0
       ? {
           eur: latest.total_eur - previous.total_eur,
           share: (latest.total_eur - previous.total_eur) / Math.abs(previous.total_eur),
-        }
-      : null;
-  const monthRow = latest
-    ? monthNetWorth(allRows, dayBeforeMonth(latest.snapshot_date), latest.snapshot_date)
-    : null;
-  const month =
-    monthRow?.delta && monthRow.start && monthRow.start.total_eur !== 0
-      ? {
-          eur: monthRow.delta.total,
-          share: monthRow.delta.total / Math.abs(monthRow.start.total_eur),
         }
       : null;
   const sync = useSyncStatus();
@@ -217,19 +205,14 @@ function NetWorthPage() {
 
         {/* Today's context: hidden (space kept) while scrubbing a past day */}
         <div className={scrubbed ? "invisible" : undefined}>
-          {(today || month) && rateToEur != null && (
-            <p className="mt-2 flex flex-wrap items-baseline gap-x-1.5 text-sm">
-              {today && (
-                <PeriodChange label="Today" change={today} rate={rateToEur} currency={currency} />
-              )}
-              {today && month && (
-                <span aria-hidden className="text-muted-foreground">
-                  ·
-                </span>
-              )}
-              {month && (
-                <PeriodChange label="Month" change={month} rate={rateToEur} currency={currency} />
-              )}
+          {today && rateToEur != null && (
+            <p className="mt-1 flex flex-wrap items-baseline gap-x-2 text-[0.9375rem]">
+              <span className={`font-figure ${TONE_TEXT[toneOf(today.share, NOISE_BAND)]}`}>
+                {today.eur >= 0 ? "+" : "−"}
+                {formatMoney(Math.abs(today.eur) / rateToEur, currency)} (
+                {formatPercent(today.share)})
+              </span>
+              <span className="text-muted-foreground">Today</span>
             </p>
           )}
           {currency !== "EUR" && headline != null && rateToEur != null && (
@@ -335,28 +318,6 @@ function NetWorthPage() {
 function formatPercent(value: number, signed = true): string {
   const sign = signed ? (value > 0 ? "+" : value < 0 ? "−" : "") : "";
   return `${sign}${Math.abs(value * 100).toFixed(2)}%`;
-}
-
-function PeriodChange({
-  label,
-  change,
-  rate,
-  currency,
-}: {
-  label: string;
-  change: { eur: number; share: number };
-  rate: number;
-  currency: Currency;
-}) {
-  return (
-    <span className="inline-flex items-baseline gap-1.5">
-      <span className="text-muted-foreground">{label}</span>
-      <span className={`font-figure ${TONE_TEXT[toneOf(change.share, NOISE_BAND)]}`}>
-        {change.eur >= 0 ? "+" : "−"}
-        {formatMoney(Math.abs(change.eur) / rate, currency)}
-      </span>
-    </span>
-  );
 }
 
 function LegendDot({ color, label, dashed }: { color: string; label: string; dashed?: boolean }) {

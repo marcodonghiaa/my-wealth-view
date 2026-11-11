@@ -15,6 +15,7 @@ import { shortHoldingName } from "@/lib/holding-name";
 import { supabase } from "@/integrations/supabase/client";
 import { formatEur } from "@/lib/transactions";
 import { currentValueEur } from "@/lib/holdings";
+import { colorForHoldingType } from "@/lib/asset-colors";
 import { AddHoldingPanel } from "@/components/holdings/add-holding-panel";
 import { SoldHoldings } from "@/components/holdings/sold-holdings";
 import { EditHolding } from "@/components/holdings/edit-holding";
@@ -29,7 +30,7 @@ import { InvestingSwitch } from "@/components/investing-switch";
 import { useValueHistory } from "@/lib/use-value-history";
 import { usePerformance } from "@/lib/use-performance";
 import {
-  PerformanceSummary,
+  PerformanceNotice,
   ReturnCell,
   ReturnText,
   TradesImport,
@@ -70,21 +71,6 @@ interface PortfolioRow {
 }
 
 const UNCLASSIFIED = "Other";
-
-// Fixed per-type color so a type keeps its color as holdings change,
-// rather than reassigning colors by array position like the old per-holding pie.
-const TYPE_COLORS: Record<string, string> = {
-  Stock: "var(--color-chart-1)",
-  ETF: "var(--color-chart-2)",
-  Fund: "var(--color-chart-3)",
-  Bond: "var(--color-chart-4)",
-  [UNCLASSIFIED]: "var(--color-chart-5)",
-};
-
-function colorForType(type: string): string {
-  // UNCLASSIFIED is always a key in TYPE_COLORS -- defined right above.
-  return TYPE_COLORS[type] ?? TYPE_COLORS[UNCLASSIFIED]!;
-}
 
 const TYPE_ICONS: Record<string, LucideIcon> = {
   Stock: Building2,
@@ -216,7 +202,7 @@ function PortfolioPage() {
         </Alert>
       )}
 
-      {/* Headline: total value, its change over the chart range, then the return since purchase */}
+      {/* Headline: total value, its change over the chart range, then notices about returns */}
       <section aria-label="Total portfolio value" className="mb-6">
         <div className="min-h-16" aria-live="polite">
           {query.isPending ? (
@@ -226,7 +212,7 @@ function PortfolioPage() {
           )}
         </div>
         {!query.isPending && <RangeChange {...history} />}
-        {!query.isPending && <PerformanceSummary perf={perf} />}
+        {!query.isPending && <PerformanceNotice perf={perf} />}
       </section>
 
       {/* Chart: portfolio value over time; scrub it to read any day */}
@@ -240,7 +226,7 @@ function PortfolioPage() {
             shares={groups.map((g) => ({
               label: g.type,
               value: g.totalEur,
-              color: colorForType(g.type),
+              color: colorForHoldingType(g.type),
             }))}
           />
         </div>
@@ -263,7 +249,7 @@ function PortfolioPage() {
           <GroupedList>
             {groups.map((group) => {
               const percent = totalEur > 0 ? (group.totalEur / totalEur) * 100 : 0;
-              const color = colorForType(group.type);
+              const color = colorForHoldingType(group.type);
               const TypeIcon = TYPE_ICONS[group.type] ?? Shapes;
               const isOpen = expanded.has(group.type);
               return (
