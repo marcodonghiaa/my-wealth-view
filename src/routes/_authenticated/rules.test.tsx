@@ -154,6 +154,19 @@ describe("Rules list", () => {
     expect(await screen.findByRole("button", { name: "Try again" })).toHaveClass("min-h-11");
   });
 
+  // Polish pass 4 #18: each picker's name was read twice (the visible label, then aria-label).
+  it("names each picker by its visible label", async () => {
+    renderPage();
+    await openForm();
+    for (const name of ["Look in", "Match"]) {
+      const group = screen.getByRole("radiogroup", { name });
+      expect(group).not.toHaveAttribute("aria-label");
+      expect(
+        document.getElementById(group.getAttribute("aria-labelledby") ?? ""),
+      ).toHaveTextContent(name);
+    }
+  });
+
   // Regression: the form's labels weren't tied to their fields, so screen readers read the
   // match-text box and the pickers with no name.
   it("names every field of the new-rule form", async () => {

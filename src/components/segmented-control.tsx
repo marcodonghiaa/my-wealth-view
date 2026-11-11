@@ -7,6 +7,8 @@ interface Option<T extends string> {
 
 interface SegmentedControlProps<T extends string> {
   label: string;
+  /** id of a visible label: the group is named by it instead of `label`, so it's read once. */
+  labelledBy?: string;
   options: Array<Option<T>>;
   value: T;
   onChange: (value: T) => void;
@@ -16,6 +18,7 @@ interface SegmentedControlProps<T extends string> {
 // slides under the selected option.
 export function SegmentedControl<T extends string>({
   label,
+  labelledBy,
   options,
   value,
   onChange,
@@ -41,7 +44,8 @@ export function SegmentedControl<T extends string>({
   return (
     <div
       role="radiogroup"
-      aria-label={label}
+      aria-label={labelledBy ? undefined : label}
+      aria-labelledby={labelledBy}
       onKeyDown={onKeyDown}
       className="relative grid rounded-sm bg-muted p-0.5"
       style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}

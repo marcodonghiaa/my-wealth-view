@@ -265,18 +265,24 @@ function RuleForm({
         <legend className="sr-only">When</legend>
         <div className="grid gap-5 sm:grid-cols-2">
           <div>
-            <span className={LABEL}>Look in</span>
+            <span id="rule-look-in" className={LABEL}>
+              Look in
+            </span>
             <SegmentedControl
               label="Look in"
+              labelledBy="rule-look-in"
               options={MATCH_FIELDS.map((f) => ({ value: f.value, label: f.label }))}
               value={matchField}
               onChange={setMatchField}
             />
           </div>
           <div>
-            <span className={LABEL}>Match</span>
+            <span id="rule-match" className={LABEL}>
+              Match
+            </span>
             <SegmentedControl
               label="Match"
+              labelledBy="rule-match"
               options={MATCH_MODES.map((m) => ({ value: m.value, label: m.label }))}
               value={matchMode}
               onChange={setMatchMode}
