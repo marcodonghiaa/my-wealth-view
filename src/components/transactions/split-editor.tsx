@@ -9,9 +9,12 @@ import { numberFormat } from "@/lib/locale";
 
 const QUICK_SPLITS = [2, 3, 4];
 
-// The share box speaks the chosen decimal mark, without thousands marks so parseOwed reads it back.
+// The share box speaks the chosen decimal mark, in Latin digits and without thousands marks, so
+// parseOwed reads it back.
 const shareText = (value: number) =>
-  numberFormat({ maximumFractionDigits: 2, useGrouping: false }).format(value);
+  numberFormat({ maximumFractionDigits: 2, useGrouping: false, numberingSystem: "latn" }).format(
+    value,
+  );
 
 const pill = (on: boolean) =>
   `inline-flex min-h-11 items-center rounded-sm border px-3 text-sm transition-colors ${

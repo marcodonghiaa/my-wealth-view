@@ -166,6 +166,18 @@ describe("SplitEditor", () => {
     expect(screen.queryByRole("alert")).toBeNull();
   });
 
+  it("polish-4 #2 keeps Latin digits in the share box so it can be read back", async () => {
+    setLocaleOverride("");
+    Object.defineProperty(navigator, "language", { value: "ar-EG", configurable: true });
+    try {
+      render(<SplitEditor tx={tx({ amount: 23.78 })} onSave={vi.fn()} saving={false} />);
+      await open();
+      expect(await screen.findByLabelText(/Your share/)).toHaveValue("23.78");
+    } finally {
+      Object.defineProperty(navigator, "language", { value: "en-GB", configurable: true });
+    }
+  });
+
   it("polish-4 #2 fills the share box with the chosen decimal mark", async () => {
     setLocaleOverride("it-IT");
     try {
