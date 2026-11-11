@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { dateLocale } from "@/lib/locale";
 import {
@@ -124,28 +124,24 @@ function CashFlowPage() {
   });
   const loadError = [monthlyQuery, spendQuery, incomeQuery].find((q) => q.isError)?.error;
 
-  const monthly = useMemo(() => monthlyQuery.data ?? [], [monthlyQuery.data]);
-  const summary = useMemo(() => summarize(monthly, from, to), [monthly, from, to]);
+  // A few months and categories: cheap enough to work out on every render.
+  const monthly = monthlyQuery.data ?? [];
+  const summary = summarize(monthly, from, to);
   const earliest = firstMonth(monthly);
   const canGoPrev = earliest != null && from > earliest;
   const canGoNext = start < current;
 
-  const graph = useMemo(() => {
-    const monthTotals = new Map(
-      monthly.filter((r) => r.month).map((r) => [r.month as string, r.expenses_eur ?? 0]),
-    );
-    return buildFlow({
-      income: summary.income,
-      spending: summary.spending,
-      sources: incomeBySource(incomeQuery.data ?? []),
-      categories: spendByCategory(spendQuery.data ?? [], monthTotals),
-    });
-  }, [monthly, summary, incomeQuery.data, spendQuery.data]);
-
-  const bars = useMemo(
-    () => trimLeadingEmpty(trend(monthly, period, current, TREND_COUNT[period])),
-    [monthly, period, current.getTime()], // eslint-disable-line react-hooks/exhaustive-deps
+  const monthTotals = new Map(
+    monthly.filter((r) => r.month).map((r) => [r.month as string, r.expenses_eur ?? 0]),
   );
+  const graph = buildFlow({
+    income: summary.income,
+    spending: summary.spending,
+    sources: incomeBySource(incomeQuery.data ?? []),
+    categories: spendByCategory(spendQuery.data ?? [], monthTotals),
+  });
+
+  const bars = trimLeadingEmpty(trend(monthly, period, current, TREND_COUNT[period]));
 
   const label = periodLabel(start, period, locale);
   const pending = monthlyQuery.isPending;
