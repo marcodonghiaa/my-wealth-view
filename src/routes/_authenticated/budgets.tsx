@@ -560,6 +560,8 @@ function BudgetLineRow({
           <form
             onSubmit={submit}
             onKeyDown={(e) => e.key === "Escape" && close()}
+            // On a phone the editor can open under the bottom bar: bring all of it into view.
+            ref={(el) => el?.scrollIntoView?.({ block: "nearest" })}
             className="flex flex-wrap items-center gap-2"
           >
             <Input
@@ -568,7 +570,8 @@ function BudgetLineRow({
               aria-describedby={invalid ? `budget-error-${line.category}` : undefined}
               inputMode="decimal"
               autoFocus
-              className="min-h-11 w-28"
+              // Narrow on a phone so Save, Cancel and Remove fit beside it at 375px.
+              className="min-h-11 w-24 sm:w-32"
               value={draft}
               onChange={(e) => {
                 setDraft(e.target.value);
@@ -635,7 +638,7 @@ function BudgetLineRow({
             )}
           </span>
         )}
-        <label className="flex min-h-11 cursor-pointer items-center gap-2">
+        <label className="ml-auto flex min-h-11 cursor-pointer items-center gap-2">
           <input
             type="checkbox"
             className="size-4 accent-[var(--color-primary)] aria-disabled:opacity-60"

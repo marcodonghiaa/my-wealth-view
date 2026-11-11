@@ -959,4 +959,22 @@ describe("Budgets page", () => {
     await waitFor(() => expect(screen.queryByLabelText("Budget for Groceries")).toBeNull());
     expect(upserts).toHaveLength(1);
   });
+
+  // protects=P5 P2-8 the phone editor fits one line and is scrolled into view when it opens
+  // (real sizes are measured in the polish-pass screenshots);
+  // fails_when=the input is wide enough to push Remove onto its own line, or nothing scrolls
+  it("opens a compact editor and scrolls it into view", async () => {
+    const scrolled = vi.fn();
+    Element.prototype.scrollIntoView = scrolled;
+    db["category_budgets"] = [
+      { category: "Groceries", month: "2026-11-01", amount: 300, rollover: false },
+    ];
+    renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: /Change budget for Groceries/ }));
+    const input = screen.getByLabelText("Budget for Groceries");
+    expect(input.className).toMatch(/(^| )w-24( |$)/);
+    expect(input.className).toContain("sm:w-32");
+    expect(scrolled).toHaveBeenCalledWith({ block: "nearest" });
+    expect(screen.getByText("Roll over").className).toContain("ml-auto");
+  });
 });
