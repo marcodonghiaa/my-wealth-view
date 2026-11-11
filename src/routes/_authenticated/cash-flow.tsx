@@ -67,6 +67,9 @@ const PERIODS: Array<{ value: Period; label: string }> = [
   { value: "year", label: "Year" },
 ];
 
+/** Below half a percent the rate shows as 0% (0.5% already rounds to 1%). */
+const ZERO_RATE = 0.005 - 1e-9;
+
 /** Bars in the trend: a year of months, two years of quarters, five years. */
 const TREND_COUNT: Record<Period, number> = { month: 12, quarter: 8, year: 5 };
 
@@ -213,7 +216,8 @@ function CashFlowPage() {
             toneClass={
               summary.savingsRate == null
                 ? "text-foreground"
-                : TONE_TEXT[toneOf(summary.savingsRate)]
+                : // Same dead band as formatRate: a rate shown as 0% is neither gain nor loss.
+                  TONE_TEXT[toneOf(summary.savingsRate, ZERO_RATE)]
             }
           />
         </ul>

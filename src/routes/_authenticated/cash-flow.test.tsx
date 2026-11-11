@@ -236,4 +236,14 @@ describe("Cash flow page", () => {
     renderPage();
     expect((await screen.findByRole("alert")).textContent).toContain("boom");
   });
+
+  // Polish 3 #3: a rate that shows as 0% is coloured neither as a gain nor a loss.
+  it("keeps a 0% rate neutral", async () => {
+    tables["v_income_vs_expenses_monthly"] = [
+      { month: monthISO(0), income_eur: 1000, expenses_eur: 996 },
+    ];
+    renderPage();
+    await waitFor(() => expect(row("Savings rate")).toHaveTextContent("0%"));
+    expect(within(row("Savings rate")).getByText("0%")).toHaveClass("text-muted-foreground");
+  });
 });
