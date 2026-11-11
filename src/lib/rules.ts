@@ -97,10 +97,11 @@ export function makeRuleAction(
   name: string | null | undefined,
   category: string | null,
   navigate: (opts: { to: "/rules"; search: { text: string; category: string } }) => unknown,
-  rules: ReadonlyArray<RuleLike> = [],
+  // undefined = not loaded yet (or failed): we can't tell if a rule covers the name, so offer nothing
+  rules: ReadonlyArray<RuleLike> | undefined,
 ) {
   const text = name?.trim();
-  if (!text || !category) return undefined;
+  if (!text || !category || !rules) return undefined;
   const folded = foldText(text);
   const covered = rules.some(
     (r) =>
