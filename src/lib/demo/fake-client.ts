@@ -609,7 +609,7 @@ class Query implements PromiseLike<Result> {
     return this;
   }
   // PostgREST's `or`, for the plain "col.op.value,col.op.value" lists the dashboard sends. Demo
-  // only: it splits on `,` and `.` and knows no quoting, so a value with either would be misread.
+  // only: it splits on `,` and knows no quoting, so a value with a comma or quotes is misread.
   or(expr: string) {
     const parts = expr.split(",").map((p) => {
       const [col = "", op = "", ...rest] = p.split(".");
