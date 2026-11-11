@@ -178,8 +178,15 @@ function RuleForm({
   const shownCategory = categories.includes(category) ? category : "";
   const [type, setType] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
+  // The field a message is about: marked invalid, described by the message, and focused.
+  const [errorField, setErrorField] = useState<"text" | "set" | null>(null);
+  const textInput = useRef<HTMLInputElement>(null);
+  const categorySelect = useRef<HTMLSelectElement>(null);
   // A message about the form goes away as soon as you change the form.
-  useEffect(() => setFormError(null), [matchField, matchMode, matchText, category, type]);
+  useEffect(() => {
+    setFormError(null);
+    setErrorField(null);
+  }, [matchField, matchMode, matchText, category, type]);
 
   const addRule = useMutation({
     mutationFn: async (rule: {
@@ -208,9 +215,18 @@ function RuleForm({
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!matchText.trim()) return setFormError("Type the text to look for.");
-    if (!shownCategory && !type) return setFormError("Pick a category, a type, or both.");
+    if (!matchText.trim()) {
+      setFormError("Type the text to look for.");
+      setErrorField("text");
+      return textInput.current?.focus();
+    }
+    if (!shownCategory && !type) {
+      setFormError("Pick a category, a type, or both.");
+      setErrorField("set");
+      return categorySelect.current?.focus();
+    }
     setFormError(null);
+    setErrorField(null);
     addRule.mutate({
       match_field: matchField,
       match_mode: matchMode,
@@ -274,6 +290,7 @@ function RuleForm({
           </label>
           <Input
             id="rule-match-text"
+            ref={textInput}
             type="text"
             autoComplete="off"
             value={matchText}
@@ -281,7 +298,10 @@ function RuleForm({
             onChange={(e) => setMatchText(e.target.value)}
             placeholder="e.g. Spotify"
             autoFocus
-            aria-describedby="rule-match-hint"
+            aria-describedby={
+              errorField === "text" ? "rule-match-hint rule-form-error" : "rule-match-hint"
+            }
+            aria-invalid={errorField === "text" || undefined}
           />
           <p
             id="rule-match-hint"
@@ -298,6 +318,9 @@ function RuleForm({
             </label>
             <Select
               id="rule-category"
+              ref={categorySelect}
+              aria-invalid={errorField === "set" || undefined}
+              aria-describedby={errorField === "set" ? "rule-form-error" : undefined}
               value={shownCategory}
               onChange={(e) => setCategory(e.target.value)}
             >
@@ -341,7 +364,7 @@ function RuleForm({
           Cancel
         </Button>
         {formError && (
-          <p role="alert" className="text-sm text-negative">
+          <p id="rule-form-error" role="alert" className="text-sm text-negative">
             {formError}
           </p>
         )}

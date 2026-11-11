@@ -214,6 +214,26 @@ describe("form message", () => {
   });
 });
 
+// Polish pass 4 #17: the message was announced but not tied to the field it is about.
+describe("form message and its field", () => {
+  it("marks the field that needs fixing and moves focus to it", async () => {
+    renderPage();
+    await openForm();
+    fireEvent.click(screen.getByRole("button", { name: "Add rule" }));
+    const text = screen.getByLabelText("Text to look for");
+    expect(text).toHaveAttribute("aria-invalid", "true");
+    expect(text.getAttribute("aria-describedby")).toContain("rule-form-error");
+    expect(text).toHaveFocus();
+    fireEvent.change(text, { target: { value: "Spotify" } });
+    fireEvent.click(screen.getByRole("button", { name: "Add rule" }));
+    const category = screen.getByLabelText("Set category");
+    expect(category).toHaveAttribute("aria-invalid", "true");
+    expect(category).toHaveAccessibleDescription("Pick a category, a type, or both.");
+    expect(category).toHaveFocus();
+    expect(text).not.toHaveAttribute("aria-invalid");
+  });
+});
+
 describe("form focus and keys", () => {
   it("focuses Text on open; Escape closes and focus returns to New rule", async () => {
     renderPage();
