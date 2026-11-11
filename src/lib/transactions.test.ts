@@ -412,7 +412,7 @@ describe("activeFilterCount", () => {
   });
 
   it("counts a tag too", () => {
-    expect(activeFilterCount({ category: "all", bank: "all", day: "", tag: "all" })).toBe(0);
+    expect(activeFilterCount({ category: "all", bank: "all", day: "", tag: "" })).toBe(0);
     expect(activeFilterCount({ category: "all", bank: "all", day: "", tag: "trip" })).toBe(1);
   });
 });

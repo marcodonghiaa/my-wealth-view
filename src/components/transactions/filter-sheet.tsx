@@ -140,7 +140,7 @@ export function FilterSheet(p: FilterSheetProps) {
                   onChange={(e) => p.onTag(e.target.value)}
                   className="px-4"
                 >
-                  <option value="all">All tags</option>
+                  <option value="">All tags</option>
                   {p.tags.map((t) => (
                     <option key={t} value={t}>
                       #{t}

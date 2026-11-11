@@ -282,7 +282,7 @@ export function filterTransactions(
   transactions: Array<TransactionRow>,
   search: string,
   category: string,
-  { bank = "all", bankFor, day = "", tag = "all" }: TransactionFilters = {},
+  { bank = "all", bankFor, day = "", tag = "" }: TransactionFilters = {},
 ): Array<TransactionRow> {
   const q = search.trim().toLowerCase();
   return transactions.filter((tx) => {
@@ -294,7 +294,7 @@ export function filterTransactions(
       !(tx.note ?? "").toLowerCase().includes(q)
     )
       return false;
-    if (tag !== "all" && !(tx.tags ?? []).some((t) => sameTag(t, tag))) return false;
+    if (tag && !(tx.tags ?? []).some((t) => sameTag(t, tag))) return false;
     if (bank !== "all" && bankFor?.(tx.account_uid) !== bank) return false;
     if (day && tx.booking_date !== day) return false;
     return true;
@@ -354,14 +354,14 @@ export function activeFilterCount({
   category,
   bank,
   day,
-  tag = "all",
+  tag = "",
 }: {
   category: string;
   bank: string;
   day: string;
   tag?: string;
 }): number {
-  return [category !== "all", bank !== "all", day !== "", tag !== "all"].filter(Boolean).length;
+  return [category !== "all", bank !== "all", day !== "", tag !== ""].filter(Boolean).length;
 }
 
 /** True when an income row's category only repeats its title ("Income · Income"). */

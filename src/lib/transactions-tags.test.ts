@@ -68,7 +68,13 @@ describe("filterTransactions by tag and note", () => {
   const refs = (r: Array<TransactionRow>) => r.map((t) => t.entry_reference);
   it("keeps only rows with the tag", () => {
     expect(refs(filterTransactions(rows, "", "all", { tag: "trip" }))).toEqual(["1"]);
-    expect(refs(filterTransactions(rows, "", "all", { tag: "all" }))).toEqual(["1", "2", "3"]);
+    expect(refs(filterTransactions(rows, "", "all", { tag: "" }))).toEqual(["1", "2", "3"]);
+  });
+
+  // fails_when="all" means both "All tags" and a tag named all
+  it("filters a tag named all", () => {
+    const withAll = [...rows, row({ entry_reference: "4", tags: ["all"] })];
+    expect(refs(filterTransactions(withAll, "", "all", { tag: "all" }))).toEqual(["4"]);
   });
   it("search matches the note as well as the name", () => {
     expect(refs(filterTransactions(rows, "team", "all"))).toEqual(["2"]);

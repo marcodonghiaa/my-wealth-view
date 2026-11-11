@@ -196,7 +196,7 @@ function TransactionsPage({ category: initialCategory, month: initialMonth }: Tr
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<string>(initialCategory ?? "all");
   const [bank, setBank] = useState<string>("all");
-  const [tag, setTag] = useState<string>("all");
+  const [tag, setTag] = useState<string>(""); // "" = all tags (a tag may be named "all")
   const [day, setDay] = useState("");
   const [month, setMonth] = useState(() => monthFromParam(initialMonth));
   const monthKey = useMemo(() => formatISODate(month), [month]);
@@ -398,19 +398,19 @@ function TransactionsPage({ category: initialCategory, month: initialMonth }: Tr
     setCategory("all");
     setBank("all");
     setDay("");
-    setTag("all");
+    setTag("");
   }
   const filterSummary = [
     category === "all" ? null : category === UNCATEGORIZED ? "Uncategorized" : category,
     day ? formatDayHeading(day) : null,
     bank === "all" ? null : bank,
-    tag === "all" ? null : `#${tag}`,
+    tag ? `#${tag}` : null,
   ].filter(Boolean);
 
   function goToMonth(next: Date) {
     setSelected(new Set());
     setDay(""); // a day belongs to one month
-    setTag("all"); // the next month may not use it
+    setTag(""); // the next month may not use it
     setMonth(next);
   }
 
@@ -614,7 +614,7 @@ function TransactionsPage({ category: initialCategory, month: initialMonth }: Tr
               setCategory("all");
               setBank("all");
               setDay("");
-              setTag("all");
+              setTag("");
             }}
           />
         </div>
@@ -658,7 +658,7 @@ function TransactionsPage({ category: initialCategory, month: initialMonth }: Tr
               aria-label="Filter by tag"
               className="w-auto px-4"
             >
-              <option value="all">All tags</option>
+              <option value="">All tags</option>
               {tags.map((t) => (
                 <option key={t} value={t}>
                   #{t}

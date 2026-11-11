@@ -10,7 +10,7 @@ const props = (over: Partial<FilterSheetProps> = {}): FilterSheetProps => ({
   bank: "all",
   onBank: vi.fn(),
   banks: ["Fineco"],
-  tag: "all",
+  tag: "",
   onTag: vi.fn(),
   tags: [],
   day: "",
