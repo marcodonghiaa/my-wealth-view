@@ -135,6 +135,18 @@ describe("Cash flow page", () => {
   });
 
   // protects=a failed query shows an error instead of quiet zeros
+  // Polish 1 #3: a failed totals query must not read as a real €0 month.
+  it("shows dashes, not €0.00, and no trend when the totals fail to load", async () => {
+    failTable = "v_income_vs_expenses_monthly";
+    renderPage();
+    await screen.findByRole("alert");
+    expect(row("Income")).toHaveTextContent("—");
+    expect(row("Spending")).toHaveTextContent("—");
+    expect(screen.queryByText(/€0\.00/)).toBeNull();
+    expect(screen.queryByRole("img", { name: /^Saved per/ })).toBeNull();
+    expect(screen.queryByText(/^Nothing came in or went out/)).toBeNull();
+  });
+
   it("says when figures fail to load", async () => {
     failTable = "v_spend_by_category_monthly";
     renderPage();

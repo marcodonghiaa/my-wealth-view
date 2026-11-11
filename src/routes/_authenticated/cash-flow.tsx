@@ -140,6 +140,9 @@ function CashFlowPage() {
 
   const label = periodLabel(start, period, locale);
   const pending = monthlyQuery.isPending;
+  // Without the totals every figure would read as a real €0 month: show dashes instead.
+  const noTotals = monthlyQuery.isError;
+  const money = (value: number) => (noTotals ? "—" : formatEur(value));
   const flowPending = pending || spendQuery.isPending || incomeQuery.isPending;
 
   function changePeriod(next: Period) {
@@ -175,6 +178,8 @@ function CashFlowPage() {
         <div className="mt-1">
           {pending ? (
             <Skeleton className="h-12 w-48" />
+          ) : noTotals ? (
+            <p className="figure-display text-muted-foreground">—</p>
           ) : (
             <HeadlineFigure value={summary.net} currency="EUR" />
           )}
@@ -186,8 +191,8 @@ function CashFlowPage() {
 
       <GroupedList>
         <ul className="divide-y divide-hairline">
-          <SummaryRow label="Income" pending={pending} value={formatEur(summary.income)} />
-          <SummaryRow label="Spending" pending={pending} value={formatEur(summary.spending)} />
+          <SummaryRow label="Income" pending={pending} value={money(summary.income)} />
+          <SummaryRow label="Spending" pending={pending} value={money(summary.spending)} />
           <SummaryRow
             label="Savings rate"
             hint={summary.savingsRate == null ? "No income this period" : "Share of income kept"}
@@ -207,6 +212,10 @@ function CashFlowPage() {
         <GroupedList className="px-2 py-4 sm:px-4">
           {flowPending ? (
             <Skeleton className="h-60 w-full" />
+          ) : noTotals ? (
+            <p className="px-2 py-8 text-center text-sm text-muted-foreground">
+              The totals didn't load.
+            </p>
           ) : graph.nodes.length === 0 ? (
             <p className="px-2 py-8 text-center text-sm text-muted-foreground">
               Nothing came in or went out in {label}.
@@ -227,6 +236,10 @@ function CashFlowPage() {
         <GroupedList className="px-2 py-4 sm:px-4">
           {pending ? (
             <Skeleton className="h-40 w-full" />
+          ) : noTotals ? (
+            <p className="px-2 py-8 text-center text-sm text-muted-foreground">
+              The totals didn't load.
+            </p>
           ) : (
             <TrendBars
               bars={bars}
