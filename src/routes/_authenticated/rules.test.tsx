@@ -18,6 +18,9 @@ const db = {
 let search: Record<string, string> = {};
 
 const toastSuccess = vi.fn();
+// Polish 3 #9: the real sonner closes a toast when its action is clicked (unless the click
+// calls preventDefault: node_modules/sonner/dist/index.mjs, action onClick), so a second click
+// on Re-sort can't happen. This mock doesn't render toasts, so that is not tested here.
 const toastInfo = vi.fn((_m: string, _o?: unknown) => "");
 const toastDismiss = vi.fn();
 const toastLoading = vi.fn();
