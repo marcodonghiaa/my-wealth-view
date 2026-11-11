@@ -438,3 +438,13 @@ describe("transactions deep-link params", () => {
     expect(monthFromParam("2027-01", now)).toEqual(new Date(2026, 10, 1));
   });
 });
+
+// Polish 2 #4: a two-digit year would land in the 1900s; such links fall back to this month.
+describe("month param before 1970", () => {
+  it("ignores it", () => {
+    const now = new Date(2026, 10, 15);
+    expect(monthFromParam("0000-01", now)).toEqual(new Date(2026, 10, 1));
+    expect(monthFromParam("1969-12", now)).toEqual(new Date(2026, 10, 1));
+    expect(monthFromParam("1970-01", now)).toEqual(new Date(1970, 0, 1));
+  });
+});

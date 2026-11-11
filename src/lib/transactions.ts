@@ -148,7 +148,8 @@ export interface TransactionsSearch {
   month?: string;
 }
 
-const MONTH_PARAM = /^(\d{4})-(0[1-9]|1[0-2])$/;
+// From 1970: `new Date` would read a year 0-99 as 1900-1999.
+const MONTH_PARAM = /^(19[7-9]\d|[2-9]\d{3})-(0[1-9]|1[0-2])$/;
 
 /** Keeps only well-formed params, so a hand-edited URL never breaks the page. */
 export function parseTransactionsSearch(raw: Record<string, unknown>): TransactionsSearch {
