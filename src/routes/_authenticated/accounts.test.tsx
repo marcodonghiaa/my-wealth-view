@@ -98,7 +98,28 @@ describe("debts", () => {
 });
 
 describe("connect a bank", () => {
+  beforeEach(() => {
+    vi.spyOn(navigator, "languages", "get").mockReturnValue(["pl-PL"]);
+  });
   afterEach(() => vi.restoreAllMocks());
+
+  // protects=a browser language outside the list asks for a country; fails_when=en-US browsers
+  // start on Austria, the first country A-Z, and load its banks (polish 4, P2-3)
+  it("asks for a country when the browser language names none in the list", async () => {
+    vi.spyOn(navigator, "languages", "get").mockReturnValue(["en-US"]);
+    invoke.mockClear();
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <Page />
+      </QueryClientProvider>,
+    );
+    fireEvent.click(await screen.findByRole("button", { name: "Connect a bank" }));
+    expect(screen.getByLabelText("Country")).toHaveValue("");
+    expect(screen.getByRole("option", { name: "Choose a country…" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Bank")).toBeDisabled();
+    expect(screen.getByRole("option", { name: "Choose a country first" })).toBeInTheDocument();
+    expect(invoke).not.toHaveBeenCalledWith("list-banks", expect.anything());
+  });
 
   // protects=the country picker opens on the browser's country; fails_when=the form ignores
   // navigator.languages and always starts on the first country

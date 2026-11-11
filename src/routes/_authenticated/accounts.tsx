@@ -223,7 +223,7 @@ function AccountsPage() {
       if (!data?.banks) throw new Error(data?.error ?? "No bank list returned");
       return data.banks;
     },
-    enabled: showConnectForm,
+    enabled: showConnectForm && bankCountry !== "",
     staleTime: 10 * 60_000,
   });
   const banks = banksQuery.data ?? [];
@@ -376,6 +376,7 @@ function AccountsPage() {
                     }}
                     className="sm:w-auto"
                   >
+                    {bankCountry === "" && <option value="">Choose a country…</option>}
                     {COUNTRIES.map((c) => (
                       <option key={c.code} value={c.code}>
                         {c.name}
@@ -394,11 +395,13 @@ function AccountsPage() {
                     disabled={banksQuery.isPending || banksQuery.isError || noBanks}
                   >
                     <option value="">
-                      {banksQuery.isPending
-                        ? "Loading banks…"
-                        : noBanks
-                          ? "No banks for this country"
-                          : "Select a bank…"}
+                      {bankCountry === ""
+                        ? "Choose a country first"
+                        : banksQuery.isPending
+                          ? "Loading banks…"
+                          : noBanks
+                            ? "No banks for this country"
+                            : "Select a bank…"}
                     </option>
                     {banks.map((b) => (
                       <option key={b.name} value={b.name}>

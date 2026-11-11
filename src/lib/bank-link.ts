@@ -49,7 +49,7 @@ export function countriesFor(lang: string): Array<{ code: string; name: string }
 export const COUNTRIES = countriesFor("en");
 
 // The form's first country: the region of the browser's language (de-AT -> AT, a bare "it" ->
-// IT, "sv" -> SE) when it is in the list, else the first one listed.
+// IT, "sv" -> SE) when it is in the list, else "" so the user picks one.
 export function defaultCountry(languages: readonly string[]): string {
   for (const lang of languages) {
     let region: string | undefined;
@@ -60,7 +60,7 @@ export function defaultCountry(languages: readonly string[]): string {
     }
     if (region && COUNTRIES.some((c) => c.code === region)) return region;
   }
-  return COUNTRIES[0]!.code;
+  return "";
 }
 
 // Toast text after the bank-consent-callback redirect or the complete-bank-consent reply:

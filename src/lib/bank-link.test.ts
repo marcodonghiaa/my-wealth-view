@@ -148,9 +148,10 @@ describe("defaultCountry", () => {
     expect(defaultCountry(["sv"])).toBe("SE");
   });
 
-  it("falls back to the first country when no listed region is found", () => {
-    const first = COUNTRIES[0]!.code;
-    expect(defaultCountry(["en-US", "ja", "not a tag!"])).toBe(first);
-    expect(defaultCountry([])).toBe(first);
+  // protects=no country is pre-picked for the user by accident; fails_when=en-US or ja browsers
+  // start on whichever country sorts first (Austria) (polish 4, P2-3)
+  it("picks no country when no listed region is found", () => {
+    expect(defaultCountry(["en-US", "ja", "not a tag!"])).toBe("");
+    expect(defaultCountry([])).toBe("");
   });
 });
