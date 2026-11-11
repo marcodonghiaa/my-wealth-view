@@ -5,6 +5,7 @@ import { ArrowRight, Loader2, Plus, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { ApplyToPast } from "@/components/rules/apply-to-past";
+import { invalidateAfterReapply, reapply, type RetiredRule } from "@/lib/reapply-rules";
 import { rulesQuery as rulesQueryOptions, type RuleRow } from "@/lib/rules-query";
 import { Button } from "@/components/ui/button";
 import { Input, Select } from "@/components/ui/field";
@@ -353,6 +354,23 @@ function RuleForm({
   );
 }
 
+const retiredRule = ({
+  match_field,
+  match_text,
+  match_mode,
+  set_category,
+}: RuleRow): RetiredRule => ({
+  match_field,
+  match_text,
+  match_mode,
+  set_category,
+});
+// Rule text in a toast: long rules (up to 200 characters, older ones more) are cut.
+const shortText = (text: string) => {
+  const chars = [...text];
+  return chars.length > 40 ? `${chars.slice(0, 39).join("")}…` : text;
+};
+
 function RuleList({ rules }: { rules: RuleRow[] }) {
   const queryClient = useQueryClient();
   const [checking, setChecking] = useState(false);
@@ -380,6 +398,74 @@ function RuleList({ rules }: { rules: RuleRow[] }) {
     onSettled: () => void queryClient.invalidateQueries({ queryKey: ["category-rules"] }),
   });
 
+  // After a delete, the rows that rule filed keep its category (no other rule explains them,
+  // so "Apply to past transactions" can't fix them). Offer to send them back to the next sync,
+  // in the same toast as "Rule deleted" so Undo stays in view. Each rule has its own toast id.
+  const resortToastId = (rule: RuleRow) => `resort-${rule.id}`;
+  const undone = useRef(new WeakSet<RuleRow>());
+  // Keyboard users land back on the list when a toast button they pressed goes away. A click
+  // from Enter/Space has detail 0; a mouse click leaves focus alone.
+  const focusList = (e?: { detail?: number }) => {
+    if (e?.detail === 0) document.querySelector<HTMLElement>("[data-rule-id]")?.focus();
+  };
+  // The toast shows "Re-sorting…" until the answer replaces it. Sonner merges an update into
+  // the toast with the same id, so each update clears the offer's text and Re-sort itself.
+  const resort = useMutation({
+    mutationFn: ({ rule }: { rule: RuleRow }) => reapply(true, retiredRule(rule)),
+    onMutate: ({ rule }) =>
+      void toast.loading("Re-sorting…", {
+        id: resortToastId(rule),
+        // Each step changes duration, which restarts sonner's timer: the result would otherwise
+        // inherit what was left of the offer's 8s.
+        duration: Infinity,
+        description: undefined,
+        action: undefined,
+      }),
+    onSuccess: (result, { rule }) => {
+      void invalidateAfterReapply(queryClient);
+      if (undone.current.has(rule)) return; // Undo already closed this toast
+      toast.success(`${plural(result.changes)} will be re-sorted at the next sync`, {
+        id: resortToastId(rule),
+        duration: 6000,
+        description: undefined,
+        action: undefined,
+      });
+    },
+    onError: (err, { rule }) => {
+      if (undone.current.has(rule)) return;
+      toast.error(err.message, {
+        id: resortToastId(rule),
+        duration: 6000,
+        description: undefined,
+        action: { label: "Retry", onClick: (e) => startResort(e, rule) },
+      });
+    },
+  });
+  // preventDefault: sonner closes a toast when its action is clicked, which hid "Re-sorting…".
+  const startResort = (e: { preventDefault: () => void; detail?: number }, rule: RuleRow) => {
+    e.preventDefault();
+    focusList(e);
+    resort.mutate({ rule });
+  };
+  type Button = { label: string; onClick: (e?: { detail?: number }) => void };
+  const offerResort = async (rule: RuleRow, undo?: Button) => {
+    if (!rule.set_category || rule.set_category === "Transfer") return; // Transfer rows never change
+    let changes = 0;
+    try {
+      changes = (await reapply(false, retiredRule(rule))).changes;
+    } catch {
+      return; // only an offer: the delete itself worked
+    }
+    if (!changes || undone.current.has(rule)) return;
+    toast.success("Rule deleted", {
+      id: resortToastId(rule),
+      duration: 8000, // two lines and two buttons: 4s is short on a phone
+      description: `${plural(changes)} still in ${rule.set_category} because of ${quoteText(shortText(rule.match_text))}. Re-sort clears them now; the next sync sorts them again.`,
+      action: { label: "Re-sort", onClick: (e) => startResort(e, rule) },
+      cancel: undo, // Undo stays, beside Re-sort
+    });
+  };
+
   const deleteRule = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("category_rules").delete().eq("id", id);
@@ -400,13 +486,21 @@ function RuleList({ rules }: { rules: RuleRow[] }) {
     },
     onSuccess: (_data, id, ctx) => {
       const rule = ctx?.previous?.find((r) => r.id === id);
+      if (!rule) return void toast.success("Rule deleted");
       // Rules from before the 200-character cap can't be saved again, so no Undo for them.
-      const length = rule ? [...rule.match_text].length : 0;
-      const restorable = rule && length >= 1 && length <= MAX_MATCH_TEXT;
-      toast.success(
-        "Rule deleted",
-        restorable ? { action: { label: "Undo", onClick: () => restoreRule.mutate(rule) } } : {},
-      );
+      const length = [...rule.match_text].length;
+      const restorable = length >= 1 && length <= MAX_MATCH_TEXT;
+      const undo: Button = {
+        label: "Undo",
+        onClick: (e) => {
+          undone.current.add(rule);
+          focusList(e);
+          restoreRule.mutate(rule);
+        },
+      };
+      const toastId = resortToastId(rule);
+      toast.success("Rule deleted", restorable ? { id: toastId, action: undo } : { id: toastId });
+      void offerResort(rule, restorable ? undo : undefined);
     },
     onSettled: () => void queryClient.invalidateQueries({ queryKey: ["category-rules"] }),
   });

@@ -13,7 +13,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
           description: "group-[.toast]:text-muted-foreground",
           // 44px tall: the button is often tapped on a phone ("Make a rule").
           actionButton: "group-[.toast]:bg-primary group-[.toast]:text-primary-foreground min-h-11",
-          cancelButton: "group-[.toast]:bg-muted group-[.toast]:text-muted-foreground",
+          cancelButton: "group-[.toast]:bg-muted group-[.toast]:text-foreground min-h-11",
         },
       }}
       {...props}

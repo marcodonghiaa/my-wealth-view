@@ -3,7 +3,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { QueryClient, QueryClientProvider, focusManager } from "@tanstack/react-query";
 
 const invoke = vi.fn();
-const toastError = vi.fn();
+const toastError = vi.fn((_m: string, _o?: unknown) => {});
 const inserted: Array<Record<string, unknown>> = [];
 const onlyFlowRules = { current: false };
 // How the mocked database answers: the rules list, a delete, an insert.
@@ -18,12 +18,34 @@ const db = {
 let search: Record<string, string> = {};
 
 const toastSuccess = vi.fn();
+// The real sonner closes a toast when its action is clicked unless the click calls
+// preventDefault (node_modules/sonner/dist/index.mjs, action onClick); tests pass a click event.
+const toastInfo = vi.fn((_m: string, _o?: unknown) => "");
+const toastDismiss = vi.fn();
+const toastLoading = vi.fn();
 vi.mock("sonner", () => ({
   toast: {
     success: (m: string, o?: unknown) => (o ? toastSuccess(m, o) : toastSuccess(m)),
-    error: (m: string) => toastError(m),
+    error: (m: string, o?: unknown) => (o ? toastError(m, o) : toastError(m)),
+    info: (m: string, o?: unknown) => toastInfo(m, o),
+    loading: (m: string, o?: unknown) => toastLoading(m, o),
+    dismiss: (id: unknown) => toastDismiss(id),
   },
 }));
+
+// Spied on, not replaced: tests can wait until a failed call has been turned into a message.
+const errorMessages = vi.hoisted(() => ({ calls: [] as Promise<string>[] }));
+vi.mock("@/lib/function-error", async (importOriginal) => {
+  const real = await importOriginal<typeof import("@/lib/function-error")>();
+  return {
+    ...real,
+    functionErrorMessage: (...args: Parameters<typeof real.functionErrorMessage>) => {
+      const message = real.functionErrorMessage(...args);
+      errorMessages.calls.push(message);
+      return message;
+    },
+  };
+});
 
 vi.mock("@/integrations/supabase/client", () => {
   const q: Record<string, unknown> = {};
@@ -137,6 +159,10 @@ afterEach(() => {
   navigate.mockReset();
   toastSuccess.mockReset();
   toastError.mockReset();
+  toastInfo.mockClear();
+  toastDismiss.mockReset();
+  toastLoading.mockReset();
+  errorMessages.calls.length = 0;
 });
 
 const Page = Route.options.component as () => React.JSX.Element;
@@ -673,6 +699,7 @@ describe("deleting a rule", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Delete rule for Netflix" }));
     await waitFor(() =>
       expect(toastSuccess).toHaveBeenCalledWith("Rule deleted", {
+        id: "resort-r1",
         action: { label: "Undo", onClick: expect.any(Function) },
       }),
     );
@@ -702,7 +729,7 @@ describe("deleting a rule", () => {
     renderPage();
     fireEvent.click(await screen.findByRole("button", { name: /^Delete rule for x+/ }));
     await waitFor(() => expect(toastSuccess).toHaveBeenCalled());
-    expect(toastSuccess.mock.calls[0]?.[1]).not.toHaveProperty("action");
+    expect(toastSuccess.mock.calls[0]?.[1]).toEqual({ id: expect.any(String) }); // no Undo
   });
 
   it("says so when Undo can't save the rule again", async () => {
@@ -820,5 +847,410 @@ describe("preview after the rules change", () => {
       expect(screen.queryByRole("button", { name: "Update 2 transactions" })).toBeNull(),
     );
     expect(screen.queryByText("Checking your transactions…")).toBeNull();
+  });
+});
+
+describe("re-sorting what a deleted rule filed", () => {
+  const netflix = {
+    match_field: "creditor_name",
+    match_text: "Netflix",
+    match_mode: "contains",
+    set_category: "Entertainment",
+  };
+  const answer = (changes: number) => ({ data: { changes, sample: [] }, error: null });
+  type Click = { preventDefault: () => void; detail?: number };
+  type Offer = { action: { label: string; onClick: (e: Click) => void } };
+  const click = (detail = 1) => ({ preventDefault: vi.fn(), detail });
+  // The offer is the "Rule deleted" toast again, now with Re-sort (and Undo beside it).
+  const offers = () =>
+    toastSuccess.mock.calls
+      .map(
+        (c) =>
+          c[1] as (Offer & { cancel?: { onClick: (e?: { detail?: number }) => void } }) | undefined,
+      )
+      .filter((o) => o?.action?.label === "Re-sort");
+  const offer = () => offers()[0];
+  const undo = (n = 0) =>
+    (toastSuccess.mock.calls[n]?.[1] as { action: { onClick: () => void } }).action.onClick();
+
+  it("offers to re-sort the rows only that rule explained, then sends them back to the sync", async () => {
+    invoke.mockResolvedValue(answer(3));
+    renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: "Delete rule for Netflix" }));
+    // Polish 4 #3/#5/#6/#7: the "Rule deleted" toast itself gains the count, names the rule,
+    // keeps Undo beside Re-sort and stays 8s.
+    await waitFor(() =>
+      expect(toastSuccess).toHaveBeenLastCalledWith("Rule deleted", {
+        id: "resort-r1",
+        duration: 8000,
+        description:
+          "3 transactions still in Entertainment because of “Netflix”. Re-sort clears them now; the next sync sorts them again.",
+        action: { label: "Re-sort", onClick: expect.any(Function) },
+        cancel: { label: "Undo", onClick: expect.any(Function) },
+      }),
+    );
+    expect(toastInfo).not.toHaveBeenCalled(); // no second toast covering Undo
+    expect(invoke).toHaveBeenCalledWith("reapply-rules", {
+      body: { apply: false, retired: netflix },
+    });
+    offer()!.action.onClick(click());
+    await waitFor(() =>
+      expect(toastSuccess).toHaveBeenCalledWith(
+        "3 transactions will be re-sorted at the next sync",
+        { id: "resort-r1", duration: 6000, description: undefined, action: undefined },
+      ),
+    );
+    expect(invoke).toHaveBeenLastCalledWith("reapply-rules", {
+      body: { apply: true, retired: netflix },
+    });
+  });
+
+  it("offers nothing when no row is left to re-sort", async () => {
+    invoke.mockResolvedValue(answer(0));
+    renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: "Delete rule for Netflix" }));
+    await waitFor(() => expect(invoke).toHaveBeenCalled());
+    await waitFor(() => expect(toastSuccess).toHaveBeenCalled());
+    expect(offer()).toBeUndefined();
+  });
+
+  it("doesn't ask for a rule that sets no category", async () => {
+    renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: "Delete rule for Revolut" }));
+    await waitFor(() => expect(toastSuccess).toHaveBeenCalled());
+    expect(invoke).not.toHaveBeenCalled();
+  });
+
+  it("stays quiet when the check fails: the delete itself worked", async () => {
+    invoke.mockResolvedValue({ data: null, error: new Error("down") });
+    renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: "Delete rule for Netflix" }));
+    // Polish 3 #8: wait until the failed check reached its error path, not just a tick.
+    await waitFor(() => expect(errorMessages.calls).toHaveLength(1));
+    await errorMessages.calls[0];
+    await new Promise((r) => setTimeout(r, 0)); // let offerResort's catch run (microtasks only)
+    expect(offer()).toBeUndefined();
+    expect(toastError).not.toHaveBeenCalled();
+  });
+
+  it("Undo takes the offer away, even one still being checked", async () => {
+    let finish: (v: unknown) => void = () => {};
+    invoke.mockReturnValue(new Promise((r) => (finish = r)));
+    renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: "Delete rule for Netflix" }));
+    await waitFor(() => expect(toastSuccess).toHaveBeenCalled());
+    undo(); // Undo before the count is back
+    finish(answer(3));
+    await waitFor(() => expect(inserted).toHaveLength(1));
+    expect(offer()).toBeUndefined();
+  });
+
+  it("Undo beside Re-sort puts the rule back", async () => {
+    invoke.mockResolvedValue(answer(2));
+    renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: "Delete rule for Netflix" }));
+    await waitFor(() => expect(offer()).toBeTruthy());
+    offer()?.cancel?.onClick();
+    await waitFor(() => expect(inserted).toHaveLength(1));
+  });
+
+  it("says so when re-sorting fails", async () => {
+    invoke
+      .mockResolvedValueOnce(answer(2))
+      .mockResolvedValueOnce({ data: null, error: new Error("down") });
+    renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: "Delete rule for Netflix" }));
+    await waitFor(() => expect(offer()).toBeTruthy());
+    offer()!.action.onClick(click());
+    await waitFor(() =>
+      expect(toastError).toHaveBeenCalledWith("Couldn't update your transactions.", {
+        id: "resort-r1",
+        duration: 6000,
+        description: undefined,
+        action: { label: "Retry", onClick: expect.any(Function) },
+      }),
+    );
+  });
+
+  // Polish 4 #1: a failed re-sort offers Retry instead of the stale offer button.
+  it("Retry after a failed re-sort tries again and keeps the toast open", async () => {
+    invoke
+      .mockResolvedValueOnce(answer(2))
+      .mockResolvedValueOnce({ data: null, error: new Error("down") })
+      .mockResolvedValueOnce(answer(2));
+    renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: "Delete rule for Netflix" }));
+    await waitFor(() => expect(offer()).toBeTruthy());
+    offer()!.action.onClick(click());
+    await waitFor(() => expect(toastError).toHaveBeenCalled());
+    const event = click();
+    (toastError.mock.calls[0] as unknown as [string, Offer])[1].action.onClick(event);
+    expect(event.preventDefault).toHaveBeenCalled();
+    await waitFor(() =>
+      expect(toastSuccess).toHaveBeenCalledWith(
+        "2 transactions will be re-sorted at the next sync",
+        { id: "resort-r1", duration: 6000, description: undefined, action: undefined },
+      ),
+    );
+    expect(invoke).toHaveBeenCalledTimes(3);
+  });
+
+  // Polish 1 #1: one shared toast handle meant Undo on the first of two deletes closed the
+  // second rule's offer and left the restored rule's offer up.
+  it("two deletes get two offers, each naming its rule", async () => {
+    inserted.push({
+      match_field: "creditor_name",
+      match_text: "Bar",
+      match_mode: "word",
+      set_category: "Dine Out",
+      set_transaction_type: null,
+      priority: 100,
+    });
+    invoke.mockResolvedValue(answer(2));
+    renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: "Delete rule for Netflix" }));
+    await waitFor(() => expect(offers()).toHaveLength(1));
+    fireEvent.click(await screen.findByRole("button", { name: "Delete rule for Bar" }));
+    await waitFor(() => expect(offers()).toHaveLength(2));
+    expect(offers().map((o) => (o as unknown as { id: string }).id)).toEqual([
+      "resort-r1",
+      expect.not.stringMatching(/^resort-r1$/),
+    ]);
+    // Polish 4 #5: each offer names its own rule.
+    expect((offers()[1] as unknown as { description: string }).description).toContain("“Bar”");
+  });
+
+  // Polish 4 #4: Undo while re-sorting closed the toast, then the result brought it back.
+  it("Undo during Re-sorting… keeps the toast closed", async () => {
+    let finish: (v: unknown) => void = () => {};
+    invoke.mockResolvedValueOnce(answer(2)).mockReturnValueOnce(new Promise((r) => (finish = r)));
+    renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: "Delete rule for Netflix" }));
+    await waitFor(() => expect(offer()).toBeTruthy());
+    offer()?.action.onClick(click());
+    offer()?.cancel?.onClick(); // Undo, still on the Re-sorting… toast
+    finish(answer(2));
+    await waitFor(() => expect(inserted).toHaveLength(1));
+    await new Promise((r) => setTimeout(r, 0));
+    expect(toastSuccess.mock.calls.some(([m]) => String(m).includes("re-sorted"))).toBe(false);
+  });
+
+  it("Undo during a failing re-sort shows no error", async () => {
+    let fail: (v: unknown) => void = () => {};
+    invoke.mockResolvedValueOnce(answer(2)).mockReturnValueOnce(new Promise((r) => (fail = r)));
+    renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: "Delete rule for Netflix" }));
+    await waitFor(() => expect(offer()).toBeTruthy());
+    offer()?.action.onClick(click());
+    offer()?.cancel?.onClick();
+    fail({ data: null, error: new Error("down") });
+    await waitFor(() => expect(errorMessages.calls.length).toBeGreaterThan(0));
+    await new Promise((r) => setTimeout(r, 0));
+    expect(toastError).not.toHaveBeenCalled();
+  });
+
+  // Polish 4 #5: a long rule is cut in the toast.
+  it("cuts long rule text in the offer", async () => {
+    db.rules = "legacy";
+    invoke.mockResolvedValue(answer(1));
+    renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: /^Delete rule for x+/ }));
+    await waitFor(() => expect(offer()).toBeTruthy());
+    const text = (offer() as unknown as { description: string }).description;
+    expect(text).toContain(`“${"x".repeat(39)}…”`);
+    expect(text).not.toContain("x".repeat(40));
+  });
+
+  // Polish 4 #8: the pressed toast button goes away; keyboard focus returns to the list.
+  it("puts keyboard focus back on the list after Re-sort or Undo", async () => {
+    invoke.mockResolvedValue(answer(2));
+    renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: "Delete rule for Netflix" }));
+    await waitFor(() => expect(offer()).toBeTruthy());
+    (document.activeElement as HTMLElement | null)?.blur();
+    offer()!.action.onClick(click(0)); // Enter/Space
+    expect(document.activeElement?.getAttribute("data-rule-id")).toBeTruthy();
+    (document.activeElement as HTMLElement).blur();
+    offer()?.cancel?.onClick({ detail: 0 });
+    expect(document.activeElement?.getAttribute("data-rule-id")).toBeTruthy();
+  });
+
+  // Re-audit: a mouse click must not move focus (or scroll a long list to the top).
+  it("leaves focus alone after a mouse click", async () => {
+    invoke.mockResolvedValue(answer(2));
+    renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: "Delete rule for Netflix" }));
+    await waitFor(() => expect(offer()).toBeTruthy());
+    (document.activeElement as HTMLElement | null)?.blur();
+    offer()!.action.onClick(click(1));
+    offer()?.cancel?.onClick({ detail: 1 });
+    expect(document.activeElement).toBe(document.body);
+  });
+
+  // Re-audit: each step changes duration, so sonner restarts the timer; the result no longer
+  // inherits the offer's leftover time.
+  it("gives the result a fresh timer", async () => {
+    invoke.mockResolvedValue(answer(2));
+    renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: "Delete rule for Netflix" }));
+    await waitFor(() => expect(offer()).toBeTruthy());
+    offer()!.action.onClick(click());
+    expect(toastLoading.mock.calls[0]?.[1]).toMatchObject({ duration: Infinity });
+    await waitFor(() =>
+      expect(toastSuccess).toHaveBeenLastCalledWith(
+        "2 transactions will be re-sorted at the next sync",
+        expect.objectContaining({ duration: 6000 }),
+      ),
+    );
+  });
+
+  // Polish 1 #3: Transfer rows never change, so deleting a Transfer rule asks nothing.
+  it("doesn't ask for a Transfer rule", async () => {
+    inserted.push({
+      match_field: "creditor_name",
+      match_text: "Savings",
+      match_mode: "word",
+      set_category: "Transfer",
+      set_transaction_type: null,
+      priority: 100,
+    });
+    renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: "Delete rule for Savings" }));
+    await waitFor(() => expect(toastSuccess).toHaveBeenCalled());
+    expect(invoke).not.toHaveBeenCalled();
+  });
+
+  // Polish 1 #12: Re-sort, then Undo the delete. The rows are already uncategorized; the
+  // restored rule files them again at the next sync, so Undo just puts the rule back.
+  it("Undo after a re-sort still puts the rule back", async () => {
+    invoke.mockResolvedValue(answer(2));
+    renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: "Delete rule for Netflix" }));
+    await waitFor(() => expect(offer()).toBeTruthy());
+    offer()!.action.onClick(click());
+    await waitFor(() =>
+      expect(toastSuccess).toHaveBeenCalledWith(
+        "2 transactions will be re-sorted at the next sync",
+        { id: "resort-r1", duration: 6000, description: undefined, action: undefined },
+      ),
+    );
+    undo();
+    await waitFor(() => expect(inserted).toHaveLength(1));
+    // Polish 4 #9: Undo doesn't re-sort again; the restored rule files the rows at the next sync.
+    expect(invoke).toHaveBeenCalledTimes(2);
+    expect(toastError).not.toHaveBeenCalled();
+  });
+
+  // Polish 3 #1: after a Re-sort, categories on every page are read again.
+  it("refreshes the data after a re-sort", async () => {
+    const invalidate = vi.spyOn(QueryClient.prototype, "invalidateQueries");
+    invoke.mockResolvedValue(answer(2));
+    renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: "Delete rule for Netflix" }));
+    await waitFor(() => expect(offer()).toBeTruthy());
+    invalidate.mockClear();
+    offer()!.action.onClick(click());
+    await waitFor(() =>
+      expect(toastSuccess).toHaveBeenCalledWith(
+        "2 transactions will be re-sorted at the next sync",
+        { id: "resort-r1", duration: 6000, description: undefined, action: undefined },
+      ),
+    );
+    const refreshesTransactions = invalidate.mock.calls.some(([filters]) => {
+      const predicate = (
+        filters as unknown as { predicate?: (q: { queryKey: unknown[] }) => boolean }
+      )?.predicate;
+      return predicate?.({ queryKey: ["transactions"] }) === true;
+    });
+    invalidate.mockRestore();
+    expect(refreshesTransactions).toBe(true);
+  });
+
+  // Polish 3 #2: a rule from before the 200-character cap has no Undo, but its rows still need
+  // re-sorting, so the offer stays (the server takes text up to 2000 characters).
+  it("still offers a re-sort for a rule longer than 200 characters", async () => {
+    db.rules = "legacy";
+    invoke.mockResolvedValue(answer(1));
+    renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: /^Delete rule for x+/ }));
+    await waitFor(() => expect(offer()).toBeTruthy());
+    expect(invoke).toHaveBeenCalledWith("reapply-rules", {
+      body: {
+        apply: false,
+        retired: {
+          match_field: "creditor_name",
+          match_text: "x".repeat(201),
+          match_mode: "contains",
+          set_category: "Shopping",
+        },
+      },
+    });
+  });
+
+  // Polish 3 #3 + polish 4 #1/#2: "Re-sorting…" shows until the answer replaces it. The click
+  // keeps the toast open, and each update drops the offer's text and Re-sort button.
+  it("shows that it's re-sorting, then the result in the same toast", async () => {
+    let finish: (v: unknown) => void = () => {};
+    invoke.mockResolvedValueOnce(answer(2)).mockReturnValueOnce(new Promise((r) => (finish = r)));
+    renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: "Delete rule for Netflix" }));
+    await waitFor(() => expect(offer()).toBeTruthy());
+    const event = click();
+    offer()!.action.onClick(event);
+    expect(event.preventDefault).toHaveBeenCalled();
+    // Keys must be present: sonner keeps any key an update leaves out (toHaveBeenCalledWith
+    // treats a missing key as undefined, so check the keys themselves).
+    expect(Object.keys(toastLoading.mock.calls[0]?.[1] as object)).toEqual(
+      expect.arrayContaining(["description", "action"]),
+    );
+    expect(toastLoading).toHaveBeenCalledWith("Re-sorting…", {
+      id: "resort-r1",
+      duration: Infinity,
+      description: undefined,
+      action: undefined,
+    });
+    finish(answer(2));
+    await waitFor(() =>
+      expect(toastSuccess).toHaveBeenCalledWith(
+        "2 transactions will be re-sorted at the next sync",
+        { id: "resort-r1", duration: 6000, description: undefined, action: undefined },
+      ),
+    );
+    const done = toastSuccess.mock.calls.find(([m]) => String(m).includes("re-sorted"));
+    expect(Object.keys(done?.[1] as object)).toEqual(
+      expect.arrayContaining(["description", "action"]),
+    );
+  });
+
+  // Polish 3 #4: leave the page while the count loads. The offer still shows (toasts are
+  // app-wide) and Re-sort still works from the next page.
+  it("still offers and re-sorts after you leave the page", async () => {
+    let count: (v: unknown) => void = () => {};
+    invoke.mockReturnValueOnce(new Promise((r) => (count = r))).mockResolvedValueOnce(answer(2));
+    const { unmount } = renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: "Delete rule for Netflix" }));
+    await waitFor(() => expect(invoke).toHaveBeenCalledTimes(1));
+    unmount();
+    count(answer(2));
+    await waitFor(() => expect(offer()).toBeTruthy());
+    offer()!.action.onClick(click());
+    await waitFor(() =>
+      expect(toastSuccess).toHaveBeenCalledWith(
+        "2 transactions will be re-sorted at the next sync",
+        { id: "resort-r1", duration: 6000, description: undefined, action: undefined },
+      ),
+    );
+  });
+
+  // Polish 3 #5: with no cached list there's no rule to restore or check: just "Rule deleted".
+  it("deletes with an empty cache: no Undo, no check", async () => {
+    renderPage();
+    const remove = await screen.findByRole("button", { name: "Delete rule for Netflix" });
+    const read = vi.spyOn(QueryClient.prototype, "getQueryData").mockReturnValue(undefined);
+    fireEvent.click(remove);
+    await waitFor(() => expect(toastSuccess).toHaveBeenCalled());
+    read.mockRestore();
+    expect(toastSuccess).toHaveBeenCalledWith("Rule deleted");
+    expect(invoke).not.toHaveBeenCalled();
   });
 });
