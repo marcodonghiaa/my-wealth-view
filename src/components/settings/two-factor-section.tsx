@@ -128,7 +128,11 @@ export function TwoFactorSection() {
         {on && (
           <ul className="space-y-2">
             {list!.map((a) => (
-              <li key={a.id} className="space-y-2 text-sm">
+              <li
+                key={a.id}
+                className="space-y-2 text-sm"
+                onKeyDown={(e) => e.key === "Escape" && setConfirmRemove(null)}
+              >
                 <div className="flex items-center justify-between gap-3">
                   <span className="flex min-w-0 items-center gap-2">
                     <ShieldCheck className="size-4 shrink-0 text-positive" />
@@ -145,10 +149,7 @@ export function TwoFactorSection() {
                   </Button>
                 </div>
                 {confirmRemove === a.id && (
-                  <div
-                    className="space-y-2 rounded-lg bg-negative/10 p-3"
-                    onKeyDown={(e) => e.key === "Escape" && setConfirmRemove(null)}
-                  >
+                  <div className="space-y-2 rounded-lg bg-negative/10 p-3">
                     <p className="text-xs text-foreground">
                       Remove {a.name}?
                       {list!.length === 1 && " Sign-in won't ask for a code any more."}

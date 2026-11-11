@@ -194,7 +194,8 @@ describe("TwoFactorSection", () => {
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
     expect(screen.queryByRole("button", { name: "Confirm remove" })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Remove Phone" }));
-    fireEvent.keyDown(screen.getByRole("button", { name: "Confirm remove" }), { key: "Escape" });
+    // Esc works from the bin itself, where focus stays after Enter.
+    fireEvent.keyDown(screen.getByRole("button", { name: "Remove Phone" }), { key: "Escape" });
     expect(screen.queryByRole("button", { name: "Confirm remove" })).toBeNull();
     expect(lib.removeAuthenticator).not.toHaveBeenCalled();
   });
