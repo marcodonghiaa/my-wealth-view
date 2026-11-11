@@ -576,7 +576,7 @@ function BudgetLineRow({
               }}
             />
             <Button type="submit" size="sm" className="min-h-11" disabled={busy}>
-              Save
+              {busy ? "Saving…" : "Save"}
             </Button>
             <Button variant="ghost" size="sm" className="min-h-11" onClick={close}>
               Cancel
@@ -729,7 +729,7 @@ function AddBudget({
             className="sm:w-40"
           />
           <Button type="submit" disabled={busy || !category || !amount}>
-            Add
+            {busy && category ? "Saving…" : "Add"}
           </Button>
           {invalid && (
             <p id="add-budget-error" role="alert" className="basis-full text-sm text-negative">

@@ -938,4 +938,25 @@ describe("Budgets page", () => {
     await screen.findByRole("button", { name: /^Change budget for Health/ });
     await waitFor(() => expect(document.activeElement).toBe(screen.getByLabelText("Category")));
   });
+
+  // protects=P5 P2-14 a slow save says it is saving; P5 P2-5 Save can't be pressed twice and the
+  // editor stays until the budget is saved; fails_when=no feedback, or the editor closes early
+  it("shows Saving and keeps the editor open until the budget is saved", async () => {
+    db["category_budgets"] = [
+      { category: "Groceries", month: "2026-11-01", amount: 300, rollover: false },
+    ];
+    renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: /Change budget for Groceries/ }));
+    fireEvent.change(screen.getByLabelText("Budget for Groceries"), { target: { value: "280" } });
+    let release = () => {};
+    holdBudgets = new Promise((r) => (release = r));
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    const saving = (await screen.findByRole("button", { name: "Saving…" })) as HTMLButtonElement;
+    expect(saving.disabled).toBe(true);
+    fireEvent.click(saving);
+    expect(screen.getByLabelText("Budget for Groceries")).toBeTruthy();
+    release();
+    await waitFor(() => expect(screen.queryByLabelText("Budget for Groceries")).toBeNull());
+    expect(upserts).toHaveLength(1);
+  });
 });
