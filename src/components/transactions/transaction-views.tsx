@@ -207,7 +207,7 @@ export function TransactionRowView(props: TransactionViewProps) {
       <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">
         {formatBookingDateShort(tx.booking_date)}
       </td>
-      <td className="w-full px-4 py-3">
+      <td className="w-full max-w-0 px-4 py-3">
         <div className="flex items-center gap-3">
           <CategoryPicker
             tx={tx}

@@ -146,3 +146,19 @@ describe("amount editing", () => {
     expect(screen.queryByRole("button", { name: "Change amount" })).toBeNull();
   });
 });
+
+describe("polish-5 #14 long descriptions on desktop", () => {
+  // jsdom has no layout: check the table-cell trick itself. A w-full cell with max-w-0 takes the
+  // space left and lets the name truncate, instead of widening the table past the Amount column.
+  it("lets the merchant cell shrink so the name truncates", () => {
+    render(
+      <table>
+        <tbody>
+          <TransactionRowView {...props()} />
+        </tbody>
+      </table>,
+    );
+    const cell = screen.getByRole("button", { name: "Rename Dinner" }).closest("td");
+    expect(cell).toHaveClass("w-full", "max-w-0");
+  });
+});
