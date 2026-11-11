@@ -107,7 +107,7 @@ export function normalizeNumber(input: string): string {
 }
 
 /** A number to put back in an input box: the chosen decimal mark, no grouping, Latin digits. */
-export const inputNumber = (value: number, maxDigits = 10): string =>
+export const inputNumber = (value: number, maxDigits = 20): string =>
   numberFormat({
     maximumFractionDigits: maxDigits,
     useGrouping: false,

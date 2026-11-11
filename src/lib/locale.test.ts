@@ -6,6 +6,7 @@ import {
   formatNumber,
   formatPercent,
   formatQuantity,
+  inputNumber,
   localeOverride,
   monthFirst,
   numberFormat,
@@ -212,4 +213,12 @@ describe("polish-5 #4 typed numbers follow the chosen format", () => {
       expect(parse("1,125")).toBeNull();
     },
   );
+});
+
+describe("inputNumber", () => {
+  it("polish-5 #4 audit 2: keeps every decimal of a coin quantity", () => {
+    setLocaleOverride("it-IT");
+    expect(inputNumber(0.123456789012)).toBe("0,123456789012");
+    expect(inputNumber(1234.5)).toBe("1234,5");
+  });
 });
