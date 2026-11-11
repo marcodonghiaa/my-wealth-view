@@ -18,10 +18,14 @@ const db = {
 let search: Record<string, string> = {};
 
 const toastSuccess = vi.fn();
+const toastInfo = vi.fn((_m: string, _o?: unknown) => "resort-toast");
+const toastDismiss = vi.fn();
 vi.mock("sonner", () => ({
   toast: {
     success: (m: string, o?: unknown) => (o ? toastSuccess(m, o) : toastSuccess(m)),
     error: (m: string) => toastError(m),
+    info: (m: string, o?: unknown) => toastInfo(m, o),
+    dismiss: (id: unknown) => toastDismiss(id),
   },
 }));
 
@@ -137,6 +141,8 @@ afterEach(() => {
   navigate.mockReset();
   toastSuccess.mockReset();
   toastError.mockReset();
+  toastInfo.mockClear();
+  toastDismiss.mockReset();
 });
 
 const Page = Route.options.component as () => React.JSX.Element;
@@ -820,5 +826,101 @@ describe("preview after the rules change", () => {
       expect(screen.queryByRole("button", { name: "Update 2 transactions" })).toBeNull(),
     );
     expect(screen.queryByText("Checking your transactions…")).toBeNull();
+  });
+});
+
+describe("re-sorting what a deleted rule filed", () => {
+  const netflix = {
+    match_field: "creditor_name",
+    match_text: "Netflix",
+    match_mode: "contains",
+    set_category: "Entertainment",
+  };
+  const answer = (changes: number) => ({ data: { changes, sample: [] }, error: null });
+  type Offer = { action: { label: string; onClick: () => void } };
+
+  it("offers to re-sort the rows only that rule explained, then sends them back to the sync", async () => {
+    invoke.mockResolvedValue(answer(3));
+    renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: "Delete rule for Netflix" }));
+    await waitFor(() =>
+      expect(toastInfo).toHaveBeenCalledWith("3 transactions still filed by this rule", {
+        description:
+          "Re-sort them: they show as uncategorized until the next sync sorts them again.",
+        action: { label: "Re-sort", onClick: expect.any(Function) },
+      }),
+    );
+    expect(invoke).toHaveBeenCalledWith("reapply-rules", {
+      body: { apply: false, retired: netflix },
+    });
+    (toastInfo.mock.calls[0] as unknown as [string, Offer])[1].action.onClick();
+    await waitFor(() =>
+      expect(toastSuccess).toHaveBeenCalledWith(
+        "3 transactions will be re-sorted at the next sync",
+      ),
+    );
+    expect(invoke).toHaveBeenLastCalledWith("reapply-rules", {
+      body: { apply: true, retired: netflix },
+    });
+  });
+
+  it("offers nothing when no row is left to re-sort", async () => {
+    invoke.mockResolvedValue(answer(0));
+    renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: "Delete rule for Netflix" }));
+    await waitFor(() => expect(invoke).toHaveBeenCalled());
+    await waitFor(() => expect(toastSuccess).toHaveBeenCalled());
+    expect(toastInfo).not.toHaveBeenCalled();
+  });
+
+  it("doesn't ask for a rule that sets no category", async () => {
+    renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: "Delete rule for Revolut" }));
+    await waitFor(() => expect(toastSuccess).toHaveBeenCalled());
+    expect(invoke).not.toHaveBeenCalled();
+  });
+
+  it("stays quiet when the check fails: the delete itself worked", async () => {
+    invoke.mockResolvedValue({ data: null, error: new Error("down") });
+    renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: "Delete rule for Netflix" }));
+    await waitFor(() => expect(invoke).toHaveBeenCalled());
+    await new Promise((r) => setTimeout(r, 0));
+    expect(toastInfo).not.toHaveBeenCalled();
+    expect(toastError).not.toHaveBeenCalled();
+  });
+
+  it("Undo takes the offer away, even one still being checked", async () => {
+    let finish: (v: unknown) => void = () => {};
+    invoke.mockReturnValue(new Promise((r) => (finish = r)));
+    renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: "Delete rule for Netflix" }));
+    await waitFor(() => expect(toastSuccess).toHaveBeenCalled());
+    (toastSuccess.mock.calls[0]?.[1] as Offer).action.onClick(); // Undo before the count is back
+    finish(answer(3));
+    await waitFor(() => expect(inserted).toHaveLength(1));
+    expect(toastInfo).not.toHaveBeenCalled();
+  });
+
+  it("Undo closes an offer already showing", async () => {
+    invoke.mockResolvedValue(answer(2));
+    renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: "Delete rule for Netflix" }));
+    await waitFor(() => expect(toastInfo).toHaveBeenCalled());
+    (toastSuccess.mock.calls[0]?.[1] as Offer).action.onClick();
+    expect(toastDismiss).toHaveBeenCalledWith("resort-toast");
+  });
+
+  it("says so when re-sorting fails", async () => {
+    invoke
+      .mockResolvedValueOnce(answer(2))
+      .mockResolvedValueOnce({ data: null, error: new Error("down") });
+    renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: "Delete rule for Netflix" }));
+    await waitFor(() => expect(toastInfo).toHaveBeenCalled());
+    (toastInfo.mock.calls[0] as unknown as [string, Offer])[1].action.onClick();
+    await waitFor(() =>
+      expect(toastError).toHaveBeenCalledWith("Couldn't update your transactions."),
+    );
   });
 });

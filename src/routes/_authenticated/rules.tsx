@@ -5,6 +5,7 @@ import { ArrowRight, Loader2, Plus, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { ApplyToPast } from "@/components/rules/apply-to-past";
+import { reapply, type RetiredRule } from "@/lib/reapply-rules";
 import { rulesQuery as rulesQueryOptions, type RuleRow } from "@/lib/rules-query";
 import { Button } from "@/components/ui/button";
 import { Input, Select } from "@/components/ui/field";
@@ -380,6 +381,35 @@ function RuleList({ rules }: { rules: RuleRow[] }) {
     onSettled: () => void queryClient.invalidateQueries({ queryKey: ["category-rules"] }),
   });
 
+  // After a delete, the rows that rule filed keep its category (no other rule explains them,
+  // so "Apply to past transactions" can't fix them). Offer to send them back to the next sync.
+  const resortToast = useRef<string | number>(undefined);
+  const undone = useRef(new WeakSet<RuleRow>());
+  const resort = useMutation({
+    mutationFn: (retired: RetiredRule) => reapply(true, retired),
+    onSuccess: (result) => {
+      toast.success(`${plural(result.changes)} will be re-sorted at the next sync`);
+      void queryClient.invalidateQueries({ predicate: (q) => q.queryKey[0] !== "reapply-preview" });
+    },
+    onError: (err) => toast.error(err.message),
+  });
+  const offerResort = async (rule: RuleRow) => {
+    if (!rule.set_category || rule.set_category === "Transfer") return; // Transfer rows never change
+    const { match_field, match_text, match_mode, set_category } = rule;
+    const retired = { match_field, match_text, match_mode, set_category };
+    let changes = 0;
+    try {
+      changes = (await reapply(false, retired)).changes;
+    } catch {
+      return; // only an offer: the delete itself worked
+    }
+    if (!changes || undone.current.has(rule)) return;
+    resortToast.current = toast.info(`${plural(changes)} still filed by this rule`, {
+      description: "Re-sort them: they show as uncategorized until the next sync sorts them again.",
+      action: { label: "Re-sort", onClick: () => resort.mutate(retired) },
+    });
+  };
+
   const deleteRule = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("category_rules").delete().eq("id", id);
@@ -403,10 +433,13 @@ function RuleList({ rules }: { rules: RuleRow[] }) {
       // Rules from before the 200-character cap can't be saved again, so no Undo for them.
       const length = rule ? [...rule.match_text].length : 0;
       const restorable = rule && length >= 1 && length <= MAX_MATCH_TEXT;
-      toast.success(
-        "Rule deleted",
-        restorable ? { action: { label: "Undo", onClick: () => restoreRule.mutate(rule) } } : {},
-      );
+      const undo = () => {
+        undone.current.add(rule!);
+        if (resortToast.current !== undefined) toast.dismiss(resortToast.current);
+        restoreRule.mutate(rule!);
+      };
+      toast.success("Rule deleted", restorable ? { action: { label: "Undo", onClick: undo } } : {});
+      if (rule) void offerResort(rule);
     },
     onSettled: () => void queryClient.invalidateQueries({ queryKey: ["category-rules"] }),
   });

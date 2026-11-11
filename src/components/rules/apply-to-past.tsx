@@ -4,30 +4,11 @@ import { useEffect, useRef } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowRight, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { GroupedList } from "@/components/ui/grouped-list";
-import { functionErrorMessage } from "@/lib/function-error";
 import { plural } from "@/lib/plural";
 import { previewLine } from "@/lib/rules";
-
-type ReapplyResult = {
-  changes: number;
-  sample: Array<{ name: string; from: string | null; to: string }>;
-};
-
-async function reapply(apply: boolean): Promise<ReapplyResult> {
-  const { data, error } = await supabase.functions.invoke<ReapplyResult>("reapply-rules", {
-    body: { apply },
-  });
-  if (error || !data) {
-    const fallback = apply
-      ? "Couldn't update your transactions."
-      : "Couldn't check your transactions.";
-    throw new Error(await functionErrorMessage(error, fallback));
-  }
-  return data;
-}
+import { reapply } from "@/lib/reapply-rules";
 
 // Rules run on new transactions only; this re-runs them on the past ones, after a preview that
 // starts as soon as the panel opens. A change to the rules is a new preview (ruleIds in the key).
