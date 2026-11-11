@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { setLocaleOverride } from "@/lib/locale";
+import { categoryColor } from "@/lib/categories";
 import {
   buildFlow,
   fitLabel,
@@ -283,6 +284,29 @@ describe("topParts", () => {
 const sum = (xs: Array<number>) => xs.reduce((s, x) => s + x, 0);
 
 describe("buildFlow", () => {
+  // Polish 1 #13: a period that breaks even to the cent draws neither Saved nor From savings.
+  it("adds no Saved or From savings node when the period breaks even", () => {
+    const g = buildFlow({
+      income: 100,
+      spending: 100.004,
+      sources: [{ name: "Employer", value: 100 }],
+      categories: [{ name: "Groceries", value: 100.004 }],
+    });
+    expect(g.nodes.map((n) => n.kind)).toEqual(["income", "hub", "spend"]);
+  });
+
+  it("greys out Other spending and colours categories as everywhere else", () => {
+    const g = buildFlow({
+      income: 0,
+      spending: 300,
+      sources: [],
+      categories: [{ name: "Groceries", value: 100 }],
+    });
+    const color = (name: string) => g.nodes.find((n) => n.name === name)?.color;
+    expect(color("Groceries")).toBe(categoryColor("Groceries"));
+    expect(color(OTHER_SPENDING)).toBe(categoryColor(null));
+  });
+
   it("is empty with no money in or out", () => {
     expect(buildFlow({ income: 0, spending: 0, sources: [], categories: [] })).toEqual({
       nodes: [],

@@ -159,6 +159,30 @@ describe("Cash flow page", () => {
     ]);
   });
 
+  // Polish 1 #13: Quarter adds up the quarter's months.
+  it("adds up a quarter", async () => {
+    renderPage();
+    await waitFor(() => expect(row("Income")).toHaveTextContent("€3,000.00"));
+    fireEvent.click(screen.getByRole("radio", { name: "Quarter" }));
+    // Last month is in this quarter unless this month starts a quarter.
+    const both = now.getMonth() % 3 > 0;
+    await waitFor(() => expect(row("Income")).toHaveTextContent(both ? "€4,000.00" : "€3,000.00"));
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
+      /Cash flow for Q[1-4] \d{4}/,
+    );
+  });
+
+  // Polish 1 #13: tapping a bar opens that period.
+  it("opens the period of a tapped bar", async () => {
+    renderPage();
+    await waitFor(() => expect(row("Income")).toHaveTextContent("€3,000.00"));
+    const trend = screen.getByRole("img", { name: /^Saved per month/ });
+    const bars = trend.querySelectorAll(".recharts-bar-rectangle");
+    expect(bars.length).toBe(2);
+    fireEvent.click(bars[0]!);
+    await waitFor(() => expect(row("Income")).toHaveTextContent("€1,000.00"));
+  });
+
   // protects=the switcher stops at the first month with data and at the current period
   it("stops at the start of history and at today", async () => {
     renderPage();
