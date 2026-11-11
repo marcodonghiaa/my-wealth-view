@@ -46,7 +46,10 @@ export const CodeInput = forwardRef<
       autoComplete="one-time-code"
       maxLength={9}
       placeholder="123456"
-      className={cn(large ? LARGE_CODE_CLASS : fieldClass(), className)}
+      className={cn(
+        large ? LARGE_CODE_CLASS : `${fieldClass()} font-mono tracking-[0.2em]`,
+        className,
+      )}
       {...props}
     />
   );
