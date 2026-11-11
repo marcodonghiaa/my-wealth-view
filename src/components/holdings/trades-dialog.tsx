@@ -15,7 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input, Select } from "@/components/ui/field";
 import { formatDay } from "@/lib/date";
-import { localToday, netShares, parseAmount } from "@/lib/trades";
+import { localToday, netShares, parseTypedAmount } from "@/lib/trades";
 import { parseQuantity } from "@/lib/holdings";
 import { formatEur } from "@/lib/transactions";
 import type { SavedTrade } from "@/lib/use-performance";
@@ -32,8 +32,8 @@ const blank = (): Form => ({ side: "buy", date: localToday(), shares: "", price:
 
 function validate(form: Form) {
   const shares = parseQuantity(form.shares);
-  const price = parseAmount(form.price);
-  const fee = form.fee.trim() === "" ? 0 : parseAmount(form.fee);
+  const price = parseTypedAmount(form.price);
+  const fee = form.fee.trim() === "" ? 0 : parseTypedAmount(form.fee);
   if (!form.date) return { error: "Pick the date of the trade." };
   if (form.date > localToday()) return { error: "The date can't be in the future." };
   if (shares == null) return { error: "Shares must be a number above zero." };

@@ -12,7 +12,7 @@ import {
   setLocaleOverride,
 } from "./locale";
 import { formatBookingDate, formatMoney } from "./transactions";
-import { parseAmount } from "./trades";
+import { parseTypedAmount } from "./trades";
 import { parseQuantity } from "./holdings";
 import { parseOwed } from "./account-types";
 
@@ -186,7 +186,7 @@ describe("thousands marks (polish-4 #3)", () => {
 });
 
 describe("polish-5 #4 typed numbers follow the chosen format", () => {
-  const parsers = { parseAmount, parseQuantity, parseOwed };
+  const parsers = { parseTypedAmount, parseQuantity, parseOwed };
   it.each(Object.entries(parsers))(
     "%s reads 1.250 as 1250 under it-IT and 1,250 under en-GB",
     (_n, parse) => {
