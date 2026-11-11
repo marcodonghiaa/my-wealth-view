@@ -147,6 +147,14 @@ describe("SplitEditor", () => {
     expect(share).toHaveAttribute("aria-describedby", alert.id);
   });
 
+  it("polish-4 #12 gives quick-split and contact pills a 44px tap target", async () => {
+    render(<SplitEditor tx={tx()} onSave={vi.fn()} saving={false} contacts={["Anna"]} />);
+    await open();
+    for (const name of ["Split in 2", "Anna", "+ New"]) {
+      expect(await screen.findByRole("button", { name })).toHaveClass("min-h-11");
+    }
+  });
+
   it("polish-4 #2 fills the share box with the chosen decimal mark", async () => {
     setLocaleOverride("it-IT");
     try {

@@ -248,7 +248,9 @@ export function ImportStatement() {
 
           {text && headers.length > 0 && (
             <details open={!statement} className="rounded-lg bg-card p-3 text-sm">
-              <summary className="cursor-pointer text-muted-foreground">Columns</summary>
+              <summary className="-m-3 min-h-11 cursor-pointer p-3 text-muted-foreground">
+                Columns
+              </summary>
               <div className="mt-2 grid gap-2 sm:grid-cols-2">
                 {FIELD_LABELS.map(([key, label]) => (
                   <label

@@ -14,7 +14,7 @@ const shareText = (value: number) =>
   numberFormat({ maximumFractionDigits: 2, useGrouping: false }).format(value);
 
 const pill = (on: boolean) =>
-  `inline-flex min-h-9 items-center rounded-sm border px-3 text-sm transition-colors ${
+  `inline-flex min-h-11 items-center rounded-sm border px-3 text-sm transition-colors ${
     on
       ? "border-primary bg-primary text-primary-foreground"
       : "bg-background text-foreground hover:bg-accent"
@@ -166,7 +166,7 @@ export function SplitEditor({
               <button
                 type="button"
                 onClick={() => setNewName("")}
-                className="inline-flex min-h-9 items-center rounded-sm border border-dashed px-3 text-sm text-muted-foreground transition-colors hover:bg-accent"
+                className="inline-flex min-h-11 items-center rounded-sm border border-dashed px-3 text-sm text-muted-foreground transition-colors hover:bg-accent"
               >
                 + New
               </button>

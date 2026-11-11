@@ -177,6 +177,11 @@ describe("ImportStatement", () => {
     expect(await screen.findByText("+€3.20")).toBeInTheDocument();
   });
 
+  it("polish-4 #12 gives the Columns toggle a 44px tap target", async () => {
+    upload("Fineco_movimenti.csv", CSV);
+    expect(await screen.findByText("Columns")).toHaveClass("min-h-11");
+  });
+
   it("polish-4 #9 names the date menu by the words you see above it, like the column pickers", async () => {
     upload("Fineco_movimenti.csv", CSV);
     const menu = await screen.findByRole("combobox", { name: "Date order" });
