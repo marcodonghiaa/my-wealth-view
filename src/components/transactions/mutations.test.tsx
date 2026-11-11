@@ -316,6 +316,8 @@ describe("transaction mutations are scoped to one account", () => {
     });
     expect(calls[0]?.eq).toEqual({ account_uid: "a1", entry_reference: "r1" });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ["income"] });
+    // Polish 3 #5: the cash flow page reads the same rows.
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ["cash-flow"] });
   });
 
   it("income: another category changes only the label", async () => {

@@ -118,13 +118,14 @@ function CashFlowPage() {
   const { from, to } = periodRange(start, period);
   const current = periodStart(new Date(), period);
 
-  const monthlyQuery = useQuery({ queryKey: ["cash-flow-monthly"], queryFn: fetchMonthlyFlow });
+  // One "cash-flow" prefix, so edits and imports refresh the page with one key.
+  const monthlyQuery = useQuery({ queryKey: ["cash-flow", "monthly"], queryFn: fetchMonthlyFlow });
   const spendQuery = useQuery({
-    queryKey: ["cash-flow-spend", from, to],
+    queryKey: ["cash-flow", "spend", from, to],
     queryFn: () => fetchCategorySpend(from, to),
   });
   const incomeQuery = useQuery({
-    queryKey: ["cash-flow-income", from, to],
+    queryKey: ["cash-flow", "income", from, to],
     queryFn: () => fetchIncomeRows(from, to),
   });
   const loadError = [monthlyQuery, spendQuery, incomeQuery].find((q) => q.isError)?.error;

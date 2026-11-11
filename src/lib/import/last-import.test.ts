@@ -53,6 +53,9 @@ describe("refreshKeys", () => {
     expect(refreshKeys("spend")).toContainEqual(["spend-by-category"]);
     expect(refreshKeys("spend")).not.toContainEqual(["net-worth-history"]);
     expect(refreshKeys("spend")).toContainEqual(["welcome-facts"]);
+    // Polish 3 #5: imported spending shows on the cash flow page too.
+    expect(refreshKeys("spend")).toContainEqual(["cash-flow"]);
+    expect(refreshKeys("splitwise")).toContainEqual(["cash-flow"]);
   });
 
   it("lists the spending and income screens a Splitwise import changes", () => {

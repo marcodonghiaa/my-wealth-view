@@ -308,6 +308,7 @@ export const ADDED_TRANSACTION_QUERIES = [
   "spend-by-category",
   "category-transactions",
   "accounts",
+  "cash-flow",
 ] as const;
 /** Rows in their given order, cut into runs that share a booking date (the phone list's day groups). */
 export function groupByDay(

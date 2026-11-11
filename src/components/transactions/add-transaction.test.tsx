@@ -51,6 +51,8 @@ describe("AddTransaction", () => {
     await waitFor(() => expect(invalidate).toHaveBeenCalledWith({ queryKey: ["transactions"] }));
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ["income"] });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ["accounts"] });
+    // Polish 3 #5: the cash flow page reads the same rows.
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ["cash-flow"] });
   });
 
   it("sends money in with its category", async () => {
