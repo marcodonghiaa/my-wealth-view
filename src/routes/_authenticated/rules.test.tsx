@@ -1051,4 +1051,26 @@ describe("re-sorting what a deleted rule filed", () => {
       ),
     );
   });
+
+  // Polish 3 #4: leave the page while the count loads. The offer still shows (toasts are
+  // app-wide) and Re-sort still works from the next page.
+  it("still offers and re-sorts after you leave the page", async () => {
+    let count: (v: unknown) => void = () => {};
+    invoke.mockReturnValueOnce(new Promise((r) => (count = r))).mockResolvedValueOnce(answer(2));
+    const { unmount } = renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: "Delete rule for Netflix" }));
+    await waitFor(() => expect(invoke).toHaveBeenCalledTimes(1));
+    unmount();
+    count(answer(2));
+    await waitFor(() => expect(toastInfo).toHaveBeenCalled());
+    (toastInfo.mock.calls[0] as unknown as [string, Offer])[1].action.onClick();
+    await waitFor(() =>
+      expect(toastSuccess).toHaveBeenCalledWith(
+        "2 transactions will be re-sorted at the next sync",
+        {
+          id: "resort-r1",
+        },
+      ),
+    );
+  });
 });
