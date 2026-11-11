@@ -1003,4 +1003,25 @@ describe("re-sorting what a deleted rule filed", () => {
     invalidate.mockRestore();
     expect(refreshesTransactions).toBe(true);
   });
+
+  // Polish 3 #2: a rule from before the 200-character cap has no Undo, but its rows still need
+  // re-sorting, so the offer stays (the server takes text up to 2000 characters).
+  it("still offers a re-sort for a rule longer than 200 characters", async () => {
+    db.rules = "legacy";
+    invoke.mockResolvedValue(answer(1));
+    renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: /^Delete rule for x+/ }));
+    await waitFor(() => expect(toastInfo).toHaveBeenCalled());
+    expect(invoke).toHaveBeenCalledWith("reapply-rules", {
+      body: {
+        apply: false,
+        retired: {
+          match_field: "creditor_name",
+          match_text: "x".repeat(201),
+          match_mode: "contains",
+          set_category: "Shopping",
+        },
+      },
+    });
+  });
 });
