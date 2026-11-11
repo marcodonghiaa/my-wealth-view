@@ -148,7 +148,7 @@ describe("Reports rows lead to their pages", () => {
       screen.getByText(text).closest("a")?.getAttribute("href") ?? null;
     await screen.findByText("Income minus spending");
     expect(href("Net worth")).toBe("/");
-    expect(href("Income minus spending")).toBe("/income");
+    expect(href("Income minus spending")).toBe("/cash-flow");
     expect(href("Not worth it")).toBe("/spending");
     expect(href("Subscriptions")).toBe("/subscriptions");
     expect(screen.queryByText("Income vs expenses")).toBeNull();

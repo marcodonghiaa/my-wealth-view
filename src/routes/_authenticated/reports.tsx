@@ -236,7 +236,7 @@ function ReportsPage() {
             icon={<ArrowLeftRight className="size-4" />}
             label="Income minus spending"
             sublabel={undefined}
-            to="/income"
+            to="/cash-flow"
             pending={incomeExpensesQuery.isPending}
             // No row: nothing was recorded that month (or only imported totals), not a net of zero.
             value={net == null ? "—" : formatSignedEur(net)}

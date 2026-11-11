@@ -1,0 +1,114 @@
+import { ResponsiveContainer, Sankey } from "recharts";
+import { fitLabel, type FlowGraph, type FlowNode } from "@/lib/cash-flow";
+import { formatEur } from "@/lib/transactions";
+import { useIsMobile } from "@/lib/use-is-mobile";
+
+/** Room for a two-line label and the gap under it, per node on the busier side. */
+const ROW = 56;
+
+interface NodeProps {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  payload: FlowNode & { value: number; depth: number };
+}
+
+function FlowNodeShape({ x, y, width, height, payload, narrow }: NodeProps & { narrow: boolean }) {
+  const isLeft = payload.depth === 0;
+  const isHub = payload.kind === "hub";
+  // On a phone there's no room for a label column on both sides: the payers' labels sit on
+  // their own band instead, which is pale enough to read on.
+  const outside = isLeft && !narrow;
+  const labelX = outside ? x - 8 : x + width + 8;
+  const mid = y + height / 2;
+  return (
+    <g>
+      <rect x={x} y={y} width={width} height={Math.max(height, 1)} fill={payload.color} rx={1} />
+      {!isHub && (
+        <text
+          x={labelX}
+          y={mid}
+          textAnchor={outside ? "end" : "start"}
+          className="fill-foreground"
+          style={{ fontSize: 12 }}
+        >
+          <tspan x={labelX} dy="-0.2em">
+            {fitLabel(payload.name, narrow ? 13 : 24)}
+          </tspan>
+          <tspan
+            x={labelX}
+            dy="1.25em"
+            className="fill-muted-foreground"
+            style={{ fontFamily: "var(--font-figure)", fontSize: 11 }}
+          >
+            {formatEur(payload.value)}
+          </tspan>
+        </text>
+      )}
+    </g>
+  );
+}
+
+interface LinkProps {
+  sourceX: number;
+  targetX: number;
+  sourceY: number;
+  targetY: number;
+  sourceControlX: number;
+  targetControlX: number;
+  linkWidth: number;
+  payload: { source: FlowNode; target: FlowNode };
+}
+
+function FlowLinkShape({
+  sourceX,
+  targetX,
+  sourceY,
+  targetY,
+  sourceControlX,
+  targetControlX,
+  linkWidth,
+  payload,
+}: LinkProps) {
+  // Each band takes the colour of the side that isn't the hub, so a category reads the same here
+  // as on Spending.
+  const end = payload.target.kind === "hub" ? payload.source : payload.target;
+  return (
+    <path
+      d={`M${sourceX},${sourceY} C${sourceControlX},${sourceY} ${targetControlX},${targetY} ${targetX},${targetY}`}
+      fill="none"
+      stroke={end.color}
+      strokeOpacity={0.28}
+      strokeWidth={Math.max(linkWidth, 1)}
+    />
+  );
+}
+
+/**
+ * Where the period's money came from and went: payers on the left, one hub, categories and what
+ * was saved on the right. Labels sit outside the bands, so the side margins hold them.
+ */
+export function FlowSankey({ graph, label }: { graph: FlowGraph; label: string }) {
+  const narrow = useIsMobile();
+  const lefts = graph.links.filter((l) => graph.nodes[l.target]?.kind === "hub").length;
+  const rights = graph.links.length - lefts;
+  const height = Math.max(240, Math.max(lefts, rights) * ROW);
+  return (
+    <div role="img" aria-label={label} style={{ height }}>
+      <ResponsiveContainer width="100%" height="100%">
+        <Sankey
+          data={graph}
+          sort={false}
+          nodeWidth={8}
+          nodePadding={30}
+          linkCurvature={0.5}
+          iterations={0}
+          margin={{ top: 12, bottom: 12, left: narrow ? 4 : 104, right: narrow ? 104 : 112 }}
+          node={(props: NodeProps) => <FlowNodeShape {...props} narrow={narrow} />}
+          link={(props: LinkProps) => <FlowLinkShape {...props} />}
+        />
+      </ResponsiveContainer>
+    </div>
+  );
+}

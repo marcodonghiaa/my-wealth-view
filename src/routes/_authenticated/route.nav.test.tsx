@@ -171,6 +171,8 @@ describe("phone tabs and More", () => {
       "Subscriptions",
       "Who owes you",
       "Reports",
+      // Cash flow (Sankey, savings rate) sits with Reports in Overview.
+      "Cash flow",
       "Income",
       // Budgets (#139) has no phone tab, so More is where phones reach it.
       "Budgets",

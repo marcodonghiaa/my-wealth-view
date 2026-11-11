@@ -8,6 +8,8 @@ interface MonthSwitcherProps {
   /** False at the earliest month the screen offers. Left out: no limit. */
   canGoPrev?: boolean;
   className?: string;
+  /** What one step moves by, for the arrows' names ("Previous quarter"). */
+  unit?: string;
 }
 
 // The month a screen is showing (DESIGN.md "Month Switcher"): a 20px title, 44px steps.
@@ -18,6 +20,7 @@ export function MonthSwitcher({
   canGoNext,
   canGoPrev = true,
   className = "",
+  unit = "month",
 }: MonthSwitcherProps) {
   const step =
     "flex size-11 items-center justify-center rounded-sm bg-card text-foreground transition-colors hover:bg-accent disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
@@ -33,7 +36,7 @@ export function MonthSwitcher({
         type="button"
         onClick={onPrev}
         disabled={!canGoPrev}
-        aria-label="Previous month"
+        aria-label={`Previous ${unit}`}
         className={step}
       >
         <ChevronLeft className="size-4" />
@@ -42,7 +45,7 @@ export function MonthSwitcher({
         type="button"
         onClick={onNext}
         disabled={!canGoNext}
-        aria-label="Next month"
+        aria-label={`Next ${unit}`}
         className={step}
       >
         <ChevronRight className="size-4" />
