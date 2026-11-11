@@ -56,7 +56,7 @@ export function ApplyToPast({ ruleIds, onDone }: { ruleIds: string; onDone: () =
   useEffect(() => heading.current?.focus(), []);
 
   return (
-    <div className="mb-8 rounded-lg bg-card p-5">
+    <div className="mb-8 rounded-lg bg-card p-5 sm:p-6">
       <div className="flex items-start justify-between gap-3">
         <div>
           <h3 ref={heading} tabIndex={-1} className="text-[0.9375rem] font-medium outline-none">

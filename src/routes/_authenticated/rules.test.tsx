@@ -518,6 +518,16 @@ describe("apply to past transactions", () => {
     expect(panel.compareDocumentPosition(count) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
+  // Polish pass 4 #22: it opens where the form does, with different padding (edges jumped).
+  it("has the same padding as the new-rule form", async () => {
+    invoke.mockResolvedValueOnce({ data: { changes: 0, sample: [] }, error: null });
+    await open();
+    const panel = (
+      await screen.findByRole("heading", { name: "Apply to past transactions" })
+    ).closest(".rounded-lg");
+    expect(panel).toHaveClass("p-5", "sm:p-6");
+  });
+
   it("is not offered when no rule sets a category", async () => {
     onlyFlowRules.current = true;
     renderPage();
