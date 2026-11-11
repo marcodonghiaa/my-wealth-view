@@ -423,3 +423,22 @@ describe("trimLeadingEmpty", () => {
     expect(trimLeadingEmpty(bars.slice(2))).toHaveLength(4);
   });
 });
+
+// Polish 2 #1 and #3: hostile names can't flip a label or stall the page.
+describe("fitLabel with hostile names", () => {
+  it("drops direction overrides, so a cut never leaves one open", () => {
+    expect(fitLabel("‮live‬", 13)).toBe("live");
+    expect(fitLabel("⁧Long payer name here⁩", 8)).toBe("Long pa…");
+  });
+
+  it("cuts a huge name quickly", () => {
+    const t = performance.now();
+    expect(fitLabel("x".repeat(2_000_000), 13)).toBe(`${"x".repeat(12)}…`);
+    expect(performance.now() - t).toBeLessThan(50);
+  });
+});
+
+it("fitLabel still marks a cut when the kept start is short in characters", () => {
+  // 200 combining accents on one letter: one character, but past the segmented start.
+  expect(fitLabel(`a${"́".repeat(200)}`, 13).endsWith("…")).toBe(true);
+});

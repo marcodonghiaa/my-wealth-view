@@ -306,12 +306,16 @@ export function buildFlow({
 
 /** A long payer or category name, cut to fit the narrow label column on phones. */
 export function fitLabel(name: string, max: number): string {
+  // Direction overrides could flip the label (and its amount), or stay open after a cut: drop them.
+  // Only the start is segmented, so a huge custom name can't stall the page.
+  const shown = name.replace(/[\u202A-\u202E\u2066-\u2069]/g, "");
+  const clean = shown.slice(0, max * 8);
   // Count what the reader sees: an emoji or a letter with its accent is one character.
-  const chars = Array.from(new Intl.Segmenter().segment(name), (g) => g.segment);
-  return chars.length > max
+  const chars = Array.from(new Intl.Segmenter().segment(clean), (g) => g.segment);
+  return chars.length > max || clean.length < shown.length
     ? `${chars
         .slice(0, max - 1)
         .join("")
         .trimEnd()}…`
-    : name;
+    : clean;
 }
