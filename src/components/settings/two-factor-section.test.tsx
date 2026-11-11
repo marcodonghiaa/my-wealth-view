@@ -249,6 +249,17 @@ describe("TwoFactorSection", () => {
   });
 
   // fails_when=a failed load retries 3 times (about 8s) or shows the failure twice, once raw
+  // fails_when=pressing Enter in the name field does nothing
+  it("starts setup when Enter is pressed in the name field", async () => {
+    lib.listAuthenticators.mockResolvedValue([]);
+    render(<TwoFactorSection />);
+    const name = await screen.findByLabelText("Name");
+    fireEvent.change(name, { target: { value: "Phone" } });
+    fireEvent.submit(name);
+    expect(await screen.findByAltText(/QR code/)).toBeInTheDocument();
+    expect(lib.startEnrollment).toHaveBeenCalledWith("Phone");
+  });
+
   it("tries once more, then says it once in plain words", async () => {
     lib.listAuthenticators.mockRejectedValue(new Error("network down"));
     render(<TwoFactorSection />);

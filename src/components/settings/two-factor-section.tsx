@@ -216,7 +216,13 @@ export function TwoFactorSection() {
           </form>
         ) : (
           list !== null && (
-            <div className="space-y-3">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                void start();
+              }}
+              className="space-y-3"
+            >
               <div className="space-y-1.5">
                 <label htmlFor="enroll-name" className="text-xs font-medium text-muted-foreground">
                   {on ? "Name of the new one" : "Name"}
@@ -230,15 +236,15 @@ export function TwoFactorSection() {
                 />
               </div>
               <Button
+                type="submit"
                 variant={on ? "secondary" : "primary"}
                 disabled={pending}
-                onClick={() => void start()}
                 className="w-full"
               >
                 {pending ? <Loader2 className="animate-spin" /> : <ShieldCheck />}
                 {on ? "Add another authenticator" : "Set up two-step sign-in"}
               </Button>
-            </div>
+            </form>
           )
         )}
 
