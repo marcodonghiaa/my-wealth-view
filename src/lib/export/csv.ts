@@ -3,14 +3,12 @@ import type { ExportData, ExportRow } from "./tables";
 
 const BOM = "﻿"; // so Excel reads the file as UTF-8
 
-// A list of words (transaction tags) reads as "trip, work" in a spreadsheet; other objects stay JSON.
-const isWordList = (v: unknown): v is Array<string> =>
-  Array.isArray(v) && v.every((x) => typeof x === "string");
-
-const cell = (v: unknown): string | number | boolean =>
+// Transaction tags read as "trip, work" in a spreadsheet (a tag never holds a comma); any other
+// object stays JSON.
+const cell = (v: unknown, column: string): string | number | boolean =>
   v === null || v === undefined
     ? ""
-    : isWordList(v)
+    : column === "tags" && Array.isArray(v)
       ? v.join(", ")
       : typeof v === "object"
         ? JSON.stringify(v)
@@ -21,7 +19,7 @@ const cell = (v: unknown): string | number | boolean =>
  * never runs it as a formula; real numbers stay numbers, so -12.5 is untouched.
  */
 export function toCsv(columns: ReadonlyArray<string>, rows: ReadonlyArray<ExportRow>): string {
-  const data = rows.map((r) => columns.map((c) => cell(r[c])));
+  const data = rows.map((r) => columns.map((c) => cell(r[c], c)));
   return BOM + Papa.unparse({ fields: [...columns], data }, { escapeFormulae: true });
 }
 
