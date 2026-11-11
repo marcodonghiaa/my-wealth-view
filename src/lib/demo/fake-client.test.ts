@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { createFakeClient } from "./fake-client";
+import { createFakeClient, demoTagCounts } from "./fake-client";
 import { DEMO_USER_ID } from "./generate";
 import { groupStreams } from "@/lib/recurring";
 import type { Tables } from "@/integrations/supabase/types";
@@ -772,5 +772,35 @@ describe("fake client: resolve_transfer_pair", () => {
     expect(res.error).toBeTruthy();
     const { data } = await c.from("transfer_pairs").select("status").eq("id", pair.id);
     expect(data).toMatchObject([{ status: "suggested" }]);
+  });
+});
+
+// protects=the demo offers tag suggestions like the real my_transaction_tags; fails_when=deleted
+// rows count, or the order is not most used first
+describe("demo tag suggestions", () => {
+  it("counts live rows' tags, most used first", () => {
+    expect(
+      demoTagCounts([
+        { tags: ["work", "trip"] },
+        { tags: ["work"] },
+        { tags: ["gone"], deleted_at: "2026-11-01" },
+        { tags: [] },
+        {},
+      ]),
+    ).toEqual([
+      { tag: "work", uses: 2 },
+      { tag: "trip", uses: 1 },
+    ]);
+  });
+});
+
+// protects=the demo shows notes and tags on some rows; fails_when=no demo row has a tag
+describe("demo notes and tags", () => {
+  it("has tagged rows the rpc lists", async () => {
+    const client = fresh();
+    const { data } = await client.rpc("my_transaction_tags");
+    expect((data as Array<{ tag: string }>).map((r) => r.tag)).toEqual(
+      expect.arrayContaining(["work"]),
+    );
   });
 });

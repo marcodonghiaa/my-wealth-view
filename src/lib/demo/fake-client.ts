@@ -243,6 +243,8 @@ class Store {
         owed_by: null,
         refund_of: null,
         deleted_at: null,
+        note: null,
+        tags: [],
       }),
     );
     this.refresh();
@@ -848,7 +850,9 @@ export function createFakeClient(now: Date = new Date()): SupabaseClient<Databas
                                 ),
                                 error: null,
                               }
-                            : { data: null, error: DISABLED },
+                            : fn === "my_transaction_tags"
+                              ? { data: demoTagCounts(store.db["transactions"] ?? []), error: null }
+                              : { data: null, error: DISABLED },
     functions: {
       invoke: async (name: string, opts?: { body?: Record<string, unknown> }) =>
         name === "add-holding"
@@ -898,3 +902,16 @@ export const resetDemoClient = () => {
 };
 
 onDemoExit(resetDemoClient);
+
+/** Like the my_transaction_tags function: every tag on live rows, most used first. */
+export function demoTagCounts(rows: Array<Row>): Array<{ tag: string; uses: number }> {
+  const uses = new Map<string, number>();
+  for (const r of rows) {
+    if (r["deleted_at"]) continue;
+    for (const t of (r["tags"] as Array<string> | undefined) ?? [])
+      uses.set(t, (uses.get(t) ?? 0) + 1);
+  }
+  return [...uses]
+    .map(([tag, n]) => ({ tag, uses: n }))
+    .sort((a, b) => b.uses - a.uses || a.tag.localeCompare(b.tag));
+}

@@ -263,7 +263,7 @@ describe("Activity page", () => {
     tableData = { v_transactions_eur: [row("1")] };
     renderPage();
     await screen.findAllByText("Shop 1");
-    await userEvent.type(screen.getByLabelText("Search by merchant"), "zzz");
+    await userEvent.type(screen.getByLabelText("Search by merchant or note"), "zzz");
     expect(screen.getAllByText("Nothing matches “zzz”.").length).toBeGreaterThan(0);
     await userEvent.click(screen.getAllByRole("button", { name: "Clear search" })[0]!);
     expect(screen.getAllByText("Shop 1").length).toBeGreaterThan(0);
@@ -274,7 +274,7 @@ describe("Activity page", () => {
     renderPage();
     await screen.findAllByText("Shop 1");
     await userEvent.selectOptions(screen.getByLabelText("Filter by category"), "Dine Out");
-    await userEvent.type(screen.getByLabelText("Search by merchant"), "Shop 1");
+    await userEvent.type(screen.getByLabelText("Search by merchant or note"), "Shop 1");
     expect(screen.getAllByText("No transactions match your filters.").length).toBeGreaterThan(0);
     await userEvent.click(screen.getAllByRole("button", { name: "Clear filters" })[0]!);
     expect(screen.getAllByText("Shop 2").length).toBeGreaterThan(0);
@@ -341,7 +341,7 @@ describe("Transactions page tag filter", () => {
       credit_debit_indicator: "DBIT",
       flow_type: "spend",
     };
-    rows.v_transactions_eur = [
+    rows["v_transactions_eur"] = [
       { ...base, entry_reference: "1", creditor_name: "Hotel Alpha", tags: ["trip"] },
       { ...base, entry_reference: "2", creditor_name: "Cafe Beta", tags: [] },
     ];
@@ -350,6 +350,6 @@ describe("Transactions page tag filter", () => {
     fireEvent.change(screen.getByLabelText("Filter by tag"), { target: { value: "trip" } });
     expect(screen.queryAllByText("Cafe Beta")).toHaveLength(0);
     expect(screen.getAllByText("Hotel Alpha").length).toBeGreaterThan(0);
-    delete rows.v_transactions_eur;
+    delete rows["v_transactions_eur"];
   });
 });

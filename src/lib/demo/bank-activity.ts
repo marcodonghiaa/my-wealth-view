@@ -175,6 +175,16 @@ export function monthlyTransactions(n: number): Array<Tx> {
   return out;
 }
 
+// A few rows carry a note and tags so the demo shows them (and the tag filter has options).
+// Picked by day number, not the day's random draw, so every other demo figure stays the same.
+function demoNoteTags(category: string, n: number): Partial<Pick<Tx, "note" | "tags">> {
+  if (category === "Dine Out" && n % 3 === 0)
+    return { note: "Lunch with the team", tags: ["work"] };
+  if (category === "Experiences") return { tags: ["weekend", "trip"] };
+  if (category === "Shopping" && n % 5 === 0) return { note: "Birthday present", tags: ["gifts"] };
+  return {};
+}
+
 export function dailyTransactions(n: number, todayNum: number): Array<Tx> {
   const date = iso(n);
   const r = rngFor(`tx|${date}`);
@@ -193,6 +203,7 @@ export function dailyTransactions(n: number, todayNum: number): Array<Tx> {
         creditor_name: pick(r, m.names),
         // The last two days stay unanswered so the "was it worth it?" prompt has something to ask.
         worth_it: todayNum - n <= 1 || answer > 0.5 ? null : answer < 0.44 ? "yes" : "no",
+        ...demoNoteTags(m.category, n),
       }),
     );
   }

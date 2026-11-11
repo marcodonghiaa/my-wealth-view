@@ -408,6 +408,11 @@ describe("activeFilterCount", () => {
     expect(activeFilterCount({ category: "Groceries", bank: "all", day: "" })).toBe(1);
     expect(activeFilterCount({ category: "Groceries", bank: "Fineco", day: "2026-11-01" })).toBe(3);
   });
+
+  it("counts a tag too", () => {
+    expect(activeFilterCount({ category: "all", bank: "all", day: "", tag: "all" })).toBe(0);
+    expect(activeFilterCount({ category: "all", bank: "all", day: "", tag: "trip" })).toBe(1);
+  });
 });
 
 describe("transactions deep-link params", () => {

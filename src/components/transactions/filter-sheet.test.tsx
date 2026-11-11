@@ -10,6 +10,9 @@ const props = (over: Partial<FilterSheetProps> = {}): FilterSheetProps => ({
   bank: "all",
   onBank: vi.fn(),
   banks: ["Fineco"],
+  tag: "all",
+  onTag: vi.fn(),
+  tags: [],
   day: "",
   onDay: vi.fn(),
   minDay: "2026-11-01",
@@ -62,5 +65,23 @@ describe("FilterSheet", () => {
     expect(p.onClear).toHaveBeenCalled();
     await userEvent.click(screen.getByRole("button", { name: "Show 1 transaction" }));
     expect(screen.queryByLabelText("Bank")).toBeNull();
+  });
+});
+
+// protects=the phone sheet offers the tag filter once the month has a tag;
+// fails_when=it shows with no tags or picking one does not reach the page
+describe("FilterSheet tag", () => {
+  it("hides the tag filter when the month has no tags", async () => {
+    render(<FilterSheet {...props()} />);
+    await userEvent.click(screen.getByRole("button", { name: "Filter" }));
+    expect(screen.queryByLabelText("Tag")).toBeNull();
+  });
+
+  it("picks a tag", async () => {
+    const onTag = vi.fn();
+    render(<FilterSheet {...props({ tags: ["trip", "work"], onTag })} />);
+    await userEvent.click(screen.getByRole("button", { name: "Filter" }));
+    await userEvent.selectOptions(screen.getByLabelText("Tag"), "work");
+    expect(onTag).toHaveBeenCalledWith("work");
   });
 });
