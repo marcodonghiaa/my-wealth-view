@@ -263,9 +263,12 @@ describe("Budgets page", () => {
     await waitFor(() => expect(upserts).toHaveLength(1));
     // Saved, but the fresh rows aren't here yet: give the mutation time to settle.
     await new Promise((r) => setTimeout(r, 50));
-    expect(box.disabled).toBe(true);
+    // Busy, not disabled: a disabled control would lose keyboard focus (P5 P2-6).
+    expect(box.getAttribute("aria-disabled")).toBe("true");
+    fireEvent.click(box);
+    expect(upserts).toHaveLength(1);
     release();
-    await waitFor(() => expect(box.disabled).toBe(false));
+    await waitFor(() => expect(box.getAttribute("aria-disabled")).toBe("false"));
     expect(box.checked).toBe(true);
   });
 
@@ -903,5 +906,36 @@ describe("Budgets page", () => {
     expect(await screen.findByText("Income, spread over the year")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Previous month" }));
     expect(await screen.findByText("Income in October 2026, spread over the year")).toBeTruthy();
+  });
+
+  // protects=P5 P2-6 keyboard users keep their place after Roll over, Add budget and Add;
+  // fails_when=focus falls to the page body because the control was disabled or went away
+  it("keeps keyboard focus after Roll over, the quick Add budget and Add", async () => {
+    db["category_budgets"] = [
+      { category: "Groceries", month: "2026-11-01", amount: 300, rollover: false },
+    ];
+    renderPage();
+    const box = (await screen.findByRole("checkbox", { name: "Roll over" })) as HTMLInputElement;
+    box.focus();
+    fireEvent.click(box);
+    expect(box.disabled).toBe(false);
+    await waitFor(() => expect(box.checked).toBe(true));
+    expect(document.activeElement).toBe(box);
+
+    // Dine Out has spend and no budget: its quick button goes away once the budget exists.
+    const quick = screen.getByRole("button", { name: "Add budget" });
+    quick.focus();
+    fireEvent.click(quick);
+    const row = await screen.findByRole("button", { name: /^Change budget for Dine Out/ });
+    await waitFor(() => expect(document.activeElement).toBe(row));
+
+    const category = screen.getByLabelText("Category");
+    fireEvent.change(category, { target: { value: "Health" } });
+    fireEvent.change(screen.getByLabelText("Monthly budget in euros"), { target: { value: "40" } });
+    const add = screen.getByRole("button", { name: "Add" });
+    add.focus();
+    fireEvent.click(add);
+    await screen.findByRole("button", { name: /^Change budget for Health/ });
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByLabelText("Category")));
   });
 });

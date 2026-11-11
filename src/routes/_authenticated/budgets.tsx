@@ -227,21 +227,30 @@ function BudgetsPage() {
   const loading = budgetsQuery.isPending || (budgetsQuery.isSuccess && spendQuery.isPending);
   const error = budgetsQuery.error ?? spendQuery.error;
 
-  // The button vanishes once budgets exist, so hand focus to the first row.
+  // A button that vanishes once its budget exists hands focus to a budget row: the named
+  // category's, or the first one ("").
   const list = useRef<HTMLUListElement>(null);
-  const focusFirstRow = useRef(false);
+  const focusRow = useRef<string | null>(null);
   useEffect(() => {
-    const first = focusFirstRow.current && list.current?.querySelector("button");
-    if (!first) return;
-    focusFirstRow.current = false;
-    first.focus();
+    const wanted = focusRow.current;
+    if (wanted == null) return;
+    const buttons = [...(list.current?.querySelectorAll("button") ?? [])];
+    const target =
+      wanted === ""
+        ? buttons[0]
+        : buttons.find((b) =>
+            b.getAttribute("aria-label")?.startsWith(`Change budget for ${wanted},`),
+          );
+    if (!target) return;
+    focusRow.current = null;
+    target.focus();
   });
 
   const startFromAverages = () => {
-    focusFirstRow.current = true;
+    focusRow.current = "";
     save.mutate(
       [...suggestions].map(([category, amount]) => ({ category, amount, rollover: false })),
-      { onError: () => void (focusFirstRow.current = false) },
+      { onError: () => void (focusRow.current = null) },
     );
   };
 
@@ -382,16 +391,21 @@ function BudgetsPage() {
                             size="sm"
                             className="min-h-11"
                             disabled={save.isPending}
-                            onClick={() =>
-                              save.mutate([
-                                {
-                                  category: s.category,
-                                  amount:
-                                    suggestions.get(s.category) ?? Math.ceil(s.spend_eur / 10) * 10,
-                                  rollover: false,
-                                },
-                              ])
-                            }
+                            onClick={() => {
+                              focusRow.current = s.category;
+                              save.mutate(
+                                [
+                                  {
+                                    category: s.category,
+                                    amount:
+                                      suggestions.get(s.category) ??
+                                      Math.ceil(s.spend_eur / 10) * 10,
+                                    rollover: false,
+                                  },
+                                ],
+                                { onError: () => void (focusRow.current = null) },
+                              );
+                            }}
                           >
                             Add budget
                           </Button>
@@ -624,10 +638,13 @@ function BudgetLineRow({
         <label className="flex min-h-11 cursor-pointer items-center gap-2">
           <input
             type="checkbox"
-            className="size-4 accent-[var(--color-primary)]"
+            className="size-4 accent-[var(--color-primary)] aria-disabled:opacity-60"
             checked={line.rollover}
-            disabled={busy}
-            onChange={(e) => onSave(line.budget, e.target.checked)}
+            // Busy, not disabled: a disabled checkbox would drop keyboard focus.
+            aria-disabled={busy}
+            onChange={(e) => {
+              if (!busy) onSave(line.budget, e.target.checked);
+            }}
           />
           Roll over
         </label>
@@ -666,6 +683,8 @@ function AddBudget({
       setCategory("");
       setAmount("");
       setTyped(false);
+      // Ready for the next one, instead of focus falling to the page.
+      document.getElementById(ADD_CATEGORY_ID)?.focus();
     });
   }
 
