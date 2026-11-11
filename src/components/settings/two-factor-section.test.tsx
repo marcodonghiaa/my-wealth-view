@@ -219,6 +219,18 @@ describe("TwoFactorSection", () => {
     expect(note.textContent).not.toMatch(/SQL|UPGRADING|Supabase/);
   });
 
+  // protects=secondary buttons inside the white card look like buttons;
+  // fails_when=they use the quiet variant, white on white
+  it("gives the card's secondary buttons a visible fill", async () => {
+    lib.listAuthenticators.mockResolvedValue([{ id: "a", name: "Phone" }]);
+    render(<TwoFactorSection />);
+    const add = await screen.findByRole("button", { name: "Add another authenticator" });
+    expect(add).toHaveClass("bg-background");
+    expect(add).not.toHaveClass("bg-card");
+    fireEvent.click(screen.getByRole("button", { name: "Remove Phone" }));
+    expect(screen.getByRole("button", { name: "Cancel" })).toHaveClass("bg-background");
+  });
+
   it("says when the list can't load", async () => {
     lib.listAuthenticators.mockRejectedValue(new Error("network down"));
     render(<TwoFactorSection />);

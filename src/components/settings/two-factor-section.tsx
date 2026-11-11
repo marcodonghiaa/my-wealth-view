@@ -142,7 +142,7 @@ export function TwoFactorSection() {
                     </p>
                     <div className="flex gap-2">
                       <Button
-                        variant="quiet"
+                        variant="secondary"
                         onClick={() => setConfirmRemove(null)}
                         className="flex-1"
                       >
@@ -193,7 +193,7 @@ export function TwoFactorSection() {
                 {pending && <Loader2 className="animate-spin" />}
                 Turn on
               </Button>
-              <Button variant="quiet" disabled={pending} onClick={cancel}>
+              <Button variant="secondary" disabled={pending} onClick={cancel}>
                 Cancel
               </Button>
             </div>
@@ -214,7 +214,7 @@ export function TwoFactorSection() {
                 />
               </div>
               <Button
-                variant={on ? "quiet" : "primary"}
+                variant={on ? "secondary" : "primary"}
                 disabled={pending}
                 onClick={() => void start()}
                 className="w-full"
@@ -227,7 +227,7 @@ export function TwoFactorSection() {
         )}
 
         {loadFailed && (
-          <Button variant="quiet" onClick={() => void authenticators.refetch().then(backToSection)}>
+          <Button variant="secondary" onClick={() => void authenticators.refetch().then(backToSection)}>
             Try again
           </Button>
         )}
