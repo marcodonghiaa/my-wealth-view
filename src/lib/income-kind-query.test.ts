@@ -57,11 +57,13 @@ describe("fetchIncomeWindow", () => {
     const real = client.current.from.bind(client.current);
     const orders: Array<string> = [];
     const spy = vi.spyOn(client.current, "from").mockImplementation(((table: string) => {
-      const q = real(table as never);
+      const q = real(table as never) as unknown as {
+        order: (col: string, opts?: unknown) => unknown;
+      };
       const order = q.order.bind(q);
-      (q as unknown as { order: unknown }).order = (col: string, opts?: unknown) => {
+      q.order = (col: string, opts?: unknown) => {
         orders.push(col);
-        return order(col, opts as never);
+        return order(col, opts);
       };
       return q;
     }) as never);
