@@ -141,6 +141,22 @@ describe("connect a bank", () => {
       await screen.findByRole("option", { name: "No banks for this country" }),
     ).toBeInTheDocument();
   });
+
+  // protects=the empty bank list is announced and says what to do; fails_when=the only sign is
+  // the placeholder of a closed, still-enabled select (polish 4, P2-2)
+  it("announces an empty bank list with a next step and disables the bank select", async () => {
+    invoke.mockResolvedValue({ data: { banks: [] }, error: null });
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <Page />
+      </QueryClientProvider>,
+    );
+    fireEvent.click(await screen.findByRole("button", { name: "Connect a bank" }));
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "No banks listed for this country yet. Try another country.",
+    );
+    expect(screen.getByLabelText("Bank")).toBeDisabled();
+  });
 });
 
 describe("bank redirect with a one-time code", () => {

@@ -227,6 +227,7 @@ function AccountsPage() {
     staleTime: 10 * 60_000,
   });
   const banks = banksQuery.data ?? [];
+  const noBanks = banksQuery.isSuccess && banks.length === 0;
 
   const connectBank = useMutation({
     mutationFn: async (input: { bankName: string; country: string }) => {
@@ -390,12 +391,12 @@ function AccountsPage() {
                     id="acc-bank"
                     value={bankName}
                     onChange={(e) => setBankName(e.target.value)}
-                    disabled={banksQuery.isPending || banksQuery.isError}
+                    disabled={banksQuery.isPending || banksQuery.isError || noBanks}
                   >
                     <option value="">
                       {banksQuery.isPending
                         ? "Loading banks…"
-                        : banksQuery.isSuccess && banks.length === 0
+                        : noBanks
                           ? "No banks for this country"
                           : "Select a bank…"}
                     </option>
@@ -405,6 +406,11 @@ function AccountsPage() {
                       </option>
                     ))}
                   </Select>
+                  {noBanks && (
+                    <p role="status" className="mt-1 text-xs text-muted-foreground">
+                      No banks listed for this country yet. Try another country.
+                    </p>
+                  )}
                   {banksQuery.isError && (
                     <p className="mt-1 break-words text-xs text-negative">
                       {banksQuery.error.message}
