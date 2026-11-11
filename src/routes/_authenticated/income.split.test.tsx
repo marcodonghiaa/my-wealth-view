@@ -44,7 +44,7 @@ vi.mock("@/integrations/supabase/client", () => ({
     auth: { getUser: () => Promise.resolve({ data: { user: { id: "u1" } } }) },
     from: (table: string) => {
       const q: Record<string, unknown> = {};
-      for (const m of ["select", "order", "eq", "gte", "lt", "in", "is", "range", "delete"])
+      for (const m of ["select", "order", "eq", "gte", "lt", "in", "is", "or", "range", "delete"])
         q[m] = () => q;
       q["maybeSingle"] = () => Promise.resolve({ data: null, error: null });
       q["insert"] = (row: Record<string, unknown>) => {

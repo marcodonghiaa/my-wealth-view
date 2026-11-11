@@ -24,7 +24,8 @@ export async function fetchIncomeWindow(month: Date): Promise<Array<IncomeTx>> {
         "account_uid,entry_reference,booking_date,merchant_key,creditor_name,remittance_info,amount,currency",
       )
       .eq("credit_debit_indicator", "CRDT")
-      .eq("flow_type", "income")
+      // The Income list (v_transactions_eur) reads a flow the sync hasn't set yet as the direction.
+      .or("flow_type.is.null,flow_type.eq.income")
       .is("deleted_at", null)
       .gte("booking_date", start)
       .lt("booking_date", end)

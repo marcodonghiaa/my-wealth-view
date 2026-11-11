@@ -17,7 +17,7 @@ vi.mock("@/integrations/supabase/client", () => ({
     from: (table: string) => {
       let side = "";
       const q: Record<string, unknown> = {};
-      for (const m of ["select", "order", "gte", "lt", "in", "is", "range"]) q[m] = () => q;
+      for (const m of ["select", "order", "gte", "lt", "in", "is", "or", "range"]) q[m] = () => q;
       q["eq"] = (col: string, v: string) => {
         if (col === "credit_debit_indicator") side = v;
         return q;
