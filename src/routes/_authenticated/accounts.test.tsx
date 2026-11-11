@@ -157,6 +157,44 @@ describe("connect a bank", () => {
     expect(await screen.findByRole("option", { name: "Sample Bank" })).toBeInTheDocument();
   });
 
+  // protects=Renew says when the saved bank is gone from the list; fails_when=the bank select
+  // silently falls back to "Select a bank…" with Approve disabled (polish 5, item 5)
+  it("says when the bank to renew is no longer listed", async () => {
+    const soon = new Date(Date.now() + 3 * 86_400_000).toISOString();
+    rows.v_bank_accounts_latest = [
+      {
+        uid: "a1",
+        label: "Gone Bank Current",
+        iban: null,
+        currency: "EUR",
+        snapshot_date: "2026-10-19",
+        amount: 1000,
+        amount_eur: 1000,
+        consent_valid_until: soon,
+        bank_name: "Gone Bank",
+        bank_country: "LT",
+        account_type: null,
+        manual: false,
+      },
+    ];
+    invoke.mockResolvedValue({
+      data: { banks: [{ name: "Other Bank", logo: null }] },
+      error: null,
+    });
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <Page />
+      </QueryClientProvider>,
+    );
+    fireEvent.click(await screen.findByRole("button", { name: "Renew access" }));
+    expect(
+      await screen.findByText(
+        "Gone Bank isn't listed for this country anymore. Pick your bank again.",
+      ),
+    ).toBeInTheDocument();
+    rows.v_bank_accounts_latest = [];
+  });
+
   // protects=long country names ("United Kingdom") stay readable; fails_when=the country select
   // gets a fixed width again, which clipped "United Kingdom" at 640-767px (polish 4, P1-1)
   it("sizes the country select to its longest name, not a fixed width", async () => {

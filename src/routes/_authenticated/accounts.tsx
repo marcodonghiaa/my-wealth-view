@@ -229,6 +229,9 @@ function AccountsPage() {
   });
   const banks = banksQuery.data ?? [];
   const noBanks = banksQuery.isSuccess && banks.length === 0;
+  // Renew prefills the bank it linked; the list may no longer have it.
+  const bankGone =
+    banksQuery.isSuccess && bankName !== "" && !banks.some((b) => b.name === bankName);
 
   const connectBank = useMutation({
     mutationFn: async (input: { bankName: string; country: string }) => {
@@ -412,6 +415,11 @@ function AccountsPage() {
                       </option>
                     ))}
                   </Select>
+                  {bankGone && !noBanks && (
+                    <p role="status" className="mt-1 text-xs text-muted-foreground">
+                      {bankName} isn't listed for this country anymore. Pick your bank again.
+                    </p>
+                  )}
                   {noBanks && (
                     <p role="status" className="mt-1 text-xs text-muted-foreground">
                       No banks listed for this country yet. Try another country.
