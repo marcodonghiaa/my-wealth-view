@@ -161,6 +161,10 @@ export function formatAmountPlain(value: number): string {
   }).format(Math.abs(value));
 }
 
+/** "+€40.00" / "−€25.00": an explicit plus and a real minus, as in the transaction list. */
+export const formatSignedMoney = (value: number, currency: string): string =>
+  `${value >= 0 ? "+" : "−"}${formatMoney(Math.abs(value), currency)}`;
+
 /** Signed amount in the transaction's own currency. */
 export function nativeSignedAmount(tx: TransactionRow): number | null {
   if (tx.amount == null) return null;

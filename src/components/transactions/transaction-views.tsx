@@ -11,6 +11,7 @@ import {
   formatBookingDate,
   formatBookingDateShort,
   formatMoney,
+  formatSignedMoney,
   isSplitwiseShare,
   isWorthItEligible,
   nativeSignedAmount,
@@ -61,8 +62,7 @@ function AmountText({ tx }: { tx: TransactionRow }) {
           positive ? "text-positive" : "text-foreground"
         }`}
       >
-        {positive ? "+" : "−"}
-        {formatMoney(Math.abs(native), currency)}
+        {formatSignedMoney(native, currency)}
       </div>
       {currency !== "EUR" && eur != null && (
         <div className="font-figure text-xs whitespace-nowrap text-muted-foreground">
