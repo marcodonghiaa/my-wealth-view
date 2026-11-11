@@ -241,6 +241,15 @@ describe("ImportStatement", () => {
     );
   });
 
+  it("polish-4 #4 says why a line was skipped when its currency can't be told", async () => {
+    upload(
+      "card.csv",
+      "Date,Description,Amount,Currency\n01/02/2026,Shop,-5,EUR\n02/02/2026,Diner,-10,$",
+    );
+    expect(await screen.findByText(/1 other line skipped/)).toBeInTheDocument();
+    expect(screen.getByText(/currency isn't clear: \$/)).toBeInTheDocument();
+  });
+
   it("shows only the latest read when an older duplicate check answers last", async () => {
     upload("card.csv", "Date,Description,Amount\n01/02/2026,Shop,-5");
     expect(await screen.findByText(/1 Feb 2026/)).toBeInTheDocument();

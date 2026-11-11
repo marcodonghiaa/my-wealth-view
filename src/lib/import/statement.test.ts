@@ -284,5 +284,7 @@ describe("untrusted values in a file", () => {
     const s = readStatement(csv);
     expect(s.rows.map((r) => r.description)).toEqual(["Shop", "Bus"]);
     expect(s.skipped).toBe(1);
+    // polish-4 #4: says which currency it couldn't tell.
+    expect(s.unknownCurrencies).toEqual(["$"]);
   });
 });

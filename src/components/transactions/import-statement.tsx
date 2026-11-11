@@ -121,6 +121,7 @@ export function ImportStatement() {
         columns: NO_COLUMNS,
         rows,
         skipped: 0,
+        unknownCurrencies: [],
         preset: null,
         dateOrder: "DMY",
         decimal: null,
@@ -318,6 +319,13 @@ export function ImportStatement() {
                   `, ${statement.skipped} other line${statement.skipped === 1 ? "" : "s"} skipped`}
                 .
               </p>
+              {statement.unknownCurrencies.length > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  Skipped because the currency isn't clear:{" "}
+                  {statement.unknownCurrencies.slice(0, 3).join(", ")}. Use a code like USD in the
+                  file.
+                </p>
+              )}
               {fresh.length > 0 && (
                 <ul className="divide-y overflow-hidden rounded-lg bg-card text-sm">
                   {fresh.slice(0, 5).map((r, i) => (

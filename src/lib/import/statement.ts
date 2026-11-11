@@ -56,6 +56,8 @@ export interface Statement {
   rows: Array<StatementRow>;
   /** Lines that are not a transaction: no valid date, no amount, a balance line. */
   skipped: number;
+  /** Currency cells it couldn't read ("$" could be USD, CAD…); their rows are in `skipped`. */
+  unknownCurrencies: Array<string>;
   /** The known export the file was read as, or null for a generic statement. */
   preset: string | null;
   dateOrder: DateOrder;
@@ -337,6 +339,8 @@ interface Recipe {
   dateOrder: DateOrder;
   decimal: DecimalMark | undefined;
   invert: boolean;
+  /** Collects currency cells that made a row be skipped. */
+  unknownCurrencies?: Set<string>;
 }
 
 function readRow(row: Array<string>, r: Recipe): StatementRow | null {
@@ -372,7 +376,10 @@ function readRow(row: Array<string>, r: Recipe): StatementRow | null {
   const currencyText = cell(row, r.currency);
   const currency = currencyCode(currencyText);
   // "$" could be USD, CAD, AUD…: a currency it can't tell is skipped, not saved as EUR.
-  if (currencyText !== "" && !currency) return null;
+  if (currencyText !== "" && !currency) {
+    r.unknownCurrencies?.add(currencyText);
+    return null;
+  }
   return {
     date,
     description,
@@ -462,6 +469,7 @@ export function readStatement(
     dateOrder: options.dateOrder ?? detectDateOrder(body.map((r) => cell(r, c.date))),
     decimal: preset?.decimal ?? detectDecimal(amountCells),
     invert: options.invert ?? false,
+    unknownCurrencies: new Set(),
   };
   const rows = body.map((r) => readRow(r, recipe)).filter((r): r is StatementRow => r != null);
   return {
@@ -469,6 +477,7 @@ export function readStatement(
     columns: c,
     rows,
     skipped: body.length - rows.length,
+    unknownCurrencies: [...recipe.unknownCurrencies!],
     preset: preset?.name ?? null,
     dateOrder: recipe.dateOrder,
     decimal: recipe.decimal ?? null,
