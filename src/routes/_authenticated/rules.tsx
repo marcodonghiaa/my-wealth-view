@@ -411,6 +411,20 @@ function RuleList({ rules }: { rules: RuleRow[] }) {
     onSettled: () => void queryClient.invalidateQueries({ queryKey: ["category-rules"] }),
   });
 
+  // After a delete, focus moves to the next rule's delete button (the previous one for the last
+  // rule), once the buttons are enabled again; otherwise it falls to the page.
+  const focusAfterDelete = useRef<string | null>(null);
+  useEffect(() => {
+    if (deleteRule.isPending || !focusAfterDelete.current) return;
+    document.querySelector<HTMLElement>(`[data-rule-id="${focusAfterDelete.current}"]`)?.focus();
+    focusAfterDelete.current = null;
+  }, [deleteRule.isPending, deleteRule.submittedAt]); // submittedAt: a quick delete may never render as pending
+  const remove = (id: string) => {
+    const i = rules.findIndex((r) => r.id === id);
+    focusAfterDelete.current = (rules[i + 1] ?? rules[i - 1])?.id ?? null;
+    deleteRule.mutate(id);
+  };
+
   return (
     <section>
       {checking && (
@@ -458,8 +472,9 @@ function RuleList({ rules }: { rules: RuleRow[] }) {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => deleteRule.mutate(rule.id)}
+              onClick={() => remove(rule.id)}
               disabled={deleteRule.isPending}
+              data-rule-id={rule.id}
               aria-label={`Delete rule for ${rule.match_text}`}
               className="hover:text-negative"
             >

@@ -646,6 +646,27 @@ describe("deleting a rule", () => {
     expect(db.deleted).toEqual(["r1"]);
   });
 
+  // pass5 #7: the deleted row's button went away and keyboard focus fell to the page
+  it("moves focus to the next rule's delete button", async () => {
+    renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: "Delete rule for Netflix" }));
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        screen.getByRole("button", { name: "Delete rule for Revolut" }),
+      ),
+    );
+  });
+
+  it("moves focus to the rule above when the last one is deleted", async () => {
+    renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: "Delete rule for Mum" }));
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        screen.getByRole("button", { name: "Delete rule for Revolut" }),
+      ),
+    );
+  });
+
   // Polish pass 4 #11: one tap deleted a rule for good.
   it("puts the rule back from Undo", async () => {
     renderPage();
