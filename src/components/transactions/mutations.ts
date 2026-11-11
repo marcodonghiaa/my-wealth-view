@@ -98,7 +98,9 @@ export function useTransactionFieldMutation<K extends "category" | "transaction_
     },
     onSuccess: (_data, vars) => {
       if (opts.successMessage) {
-        toast.success(opts.successMessage(vars.value), { action: opts.successAction?.(vars) });
+        const action = opts.successAction?.(vars);
+        // A toast with a button stays twice as long, so there's time to reach it.
+        toast.success(opts.successMessage(vars.value), action ? { action, duration: 8000 } : {});
       }
     },
     onSettled: (_data, _error, vars) => {

@@ -142,8 +142,10 @@ describe("success toast action", () => {
     const tx = { account_uid: "a1", entry_reference: "r1", creditor_name: "BAR ROMA" };
     await act(() => result.current.mutateAsync({ tx, value: "Dine Out" }));
     expect(successAction).toHaveBeenCalledWith({ tx, value: "Dine Out" });
+    // Polish pass 4 #3: a toast with a button stays up long enough to reach it.
     expect(toastSuccess).toHaveBeenCalledWith("Saved — Dine Out", {
       action: { label: "Make a rule", onClick },
+      duration: 8000,
     });
   });
 });
