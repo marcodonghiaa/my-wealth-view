@@ -363,6 +363,15 @@ describe("fitLabel", () => {
     expect(fitLabel("Housing", 13)).toBe("Housing");
     expect(fitLabel("A very long employer name", 13)).toBe("A very long…");
   });
+
+  // Polish 1 #16: cut whole characters, never half an emoji or an accent.
+  it("never splits an emoji or an accented letter on the cut", () => {
+    expect(fitLabel("ab🍕cd", 4)).toBe("ab🍕…");
+    expect(fitLabel("ab👨‍👩‍👧cd", 4)).toBe("ab👨‍👩‍👧…");
+    expect(fitLabel("Cafe\u0301 Zu\u0308rich", 5)).toBe("Cafe\u0301…"); // accents typed as two characters
+    expect(fitLabel("Café Zürich", 5)).toBe("Café…");
+    expect(fitLabel("🍕🍕🍕", 3)).toBe("🍕🍕🍕");
+  });
 });
 
 describe("trimLeadingEmpty", () => {

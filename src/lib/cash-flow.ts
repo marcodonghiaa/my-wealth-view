@@ -306,5 +306,7 @@ export function buildFlow({
 
 /** A long payer or category name, cut to fit the narrow label column on phones. */
 export function fitLabel(name: string, max: number): string {
-  return name.length > max ? `${name.slice(0, max - 1).trimEnd()}…` : name;
+  // Count what the reader sees: an emoji or a letter with its accent is one character.
+  const chars = Array.from(new Intl.Segmenter().segment(name), (g) => g.segment);
+  return chars.length > max ? `${chars.slice(0, max - 1).join("").trimEnd()}…` : name;
 }
