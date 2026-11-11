@@ -21,7 +21,13 @@ import { useIncomeCategoryMutation } from "@/components/transactions/mutations";
 import { Alert } from "@/components/ui/alert";
 import { GroupedList, SectionTitle } from "@/components/ui/grouped-list";
 import { Skeleton } from "@/components/ui/skeleton";
-import { classifyIncome, txKey, type IncomeKind, type IncomeTx } from "@/lib/regular-income";
+import {
+  REGULAR_RULE,
+  classifyIncome,
+  txKey,
+  type IncomeKind,
+  type IncomeTx,
+} from "@/lib/regular-income";
 import { useIncomeRules, useIncomeWindow, useMarkIncomeKind } from "@/lib/income-kind-query";
 
 export const Route = createFileRoute("/_authenticated/income")({
@@ -215,7 +221,7 @@ function IncomePage() {
           </p>
         )}
         <p className="mt-1 text-xs text-muted-foreground">
-          Excludes transfers. Regular: paid you in at least 3 of the last 6 months.
+          Excludes transfers. Regular: {REGULAR_RULE}.
         </p>
       </section>
 

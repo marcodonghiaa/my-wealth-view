@@ -6,7 +6,7 @@ import type { Tables } from "@/integrations/supabase/types";
 import { formatISODate } from "@/lib/date";
 import { dateLocale } from "@/lib/locale";
 import { formatMoney, startOfMonth } from "@/lib/transactions";
-import { regularSources } from "@/lib/regular-income";
+import { REGULAR_RULE, regularSources } from "@/lib/regular-income";
 import { useIncomeRules, useIncomeWindow } from "@/lib/income-kind-query";
 import {
   billEntries,
@@ -34,7 +34,9 @@ async function fetchCharges(month: Date, keys: Array<string>): Promise<Array<Cha
   const { start, end } = monthBounds(month);
   const { data, error } = await supabase
     .from("transactions")
-    .select("account_uid,entry_reference,booking_date,merchant_key,amount,currency,transaction_type")
+    .select(
+      "account_uid,entry_reference,booking_date,merchant_key,amount,currency,transaction_type",
+    )
     .eq("credit_debit_indicator", "DBIT")
     .eq("flow_type", "spend")
     .is("deleted_at", null)
@@ -269,8 +271,8 @@ export function RecurringCalendar({
         )}
       </div>
       <p className="mt-3 px-4 text-xs text-muted-foreground">
-        Bills come from your active subscriptions. Income is any sender that paid you in at least 3
-        of the last 6 months; change that on the Income page.
+        Bills come from your active subscriptions. Income is any sender that {REGULAR_RULE}; change
+        that on the Income page.
       </p>
     </section>
   );

@@ -8,6 +8,9 @@ import { foldText, textMatches } from "@/lib/rules";
 export const WINDOW_MONTHS = 6;
 export const REGULAR_MONTHS = 3;
 
+/** The rule in words, for the screens that explain it. */
+export const REGULAR_RULE = `paid you in at least ${REGULAR_MONTHS} of the last ${WINDOW_MONTHS} months`;
+
 export type IncomeKind = "regular" | "one_off";
 
 /** A credit counted as income, as read from `transactions` (the original bank name, not a rename). */

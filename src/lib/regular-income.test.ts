@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  REGULAR_RULE,
   classifyIncome,
   incomeWindow,
   regularSenders,
@@ -30,6 +31,12 @@ const rule = (text: string, kind: string | null, over: Partial<IncomeRule> = {})
   match_mode: "word",
   set_income_kind: kind,
   ...over,
+});
+
+describe("REGULAR_RULE", () => {
+  it("says the rule with its numbers", () => {
+    expect(REGULAR_RULE).toBe("paid you in at least 3 of the last 6 months");
+  });
 });
 
 describe("incomeWindow", () => {
