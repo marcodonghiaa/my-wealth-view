@@ -47,7 +47,7 @@ describe("TwoFactorSection", () => {
       .mockResolvedValueOnce([{ id: "f1", name: "Phone" }]);
     render(<TwoFactorSection />);
     expect(await screen.findByText(/^Off\./)).toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText("Name"), { target: { value: "Phone" } });
+    fireEvent.change(screen.getByLabelText("Name (optional)"), { target: { value: "Phone" } });
     fireEvent.click(screen.getByRole("button", { name: "Set up two-step sign-in" }));
     expect(await screen.findByAltText(/QR code/)).toBeInTheDocument();
     expect(screen.getByText("JBSW Y3DP")).toBeInTheDocument();
@@ -257,7 +257,7 @@ describe("TwoFactorSection", () => {
   it("starts setup when Enter is pressed in the name field", async () => {
     lib.listAuthenticators.mockResolvedValue([]);
     render(<TwoFactorSection />);
-    const name = await screen.findByLabelText("Name");
+    const name = await screen.findByLabelText("Name (optional)");
     fireEvent.change(name, { target: { value: "Phone" } });
     fireEvent.submit(name);
     expect(await screen.findByAltText(/QR code/)).toBeInTheDocument();
@@ -284,5 +284,16 @@ describe("TwoFactorSection", () => {
     fireEvent.click(screen.getByRole("button", { name: "Copy key" }));
     expect(writeText).toHaveBeenCalledWith("JBSWY3DP");
     expect(await screen.findByRole("button", { name: "Copied" })).toBeInTheDocument();
+  });
+
+  // fails_when=the name field looks required, or the Off pitch stays above the QR during setup
+  it("marks the name optional and says setup is under way", async () => {
+    lib.listAuthenticators.mockResolvedValue([{ id: "f1", name: "Phone" }]);
+    render(<TwoFactorSection />);
+    expect(await screen.findByLabelText("Name of the new one (optional)")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Add another authenticator" }));
+    await screen.findByAltText(/QR code/);
+    expect(screen.getByText("Setting up…")).toBeInTheDocument();
+    expect(screen.queryByText(/^On\./)).toBeNull();
   });
 });

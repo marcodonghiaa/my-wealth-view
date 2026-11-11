@@ -113,13 +113,15 @@ export function TwoFactorSection() {
             Two-step sign-in
           </h3>
           <p className="mt-1 text-sm text-muted-foreground">
-            {list === null
-              ? loadFailed
-                ? "Couldn't check right now. Check your connection and try again."
-                : "Checking…"
-              : on
-                ? "On. Sign-in asks for a code from your authenticator app."
-                : "Off. Add an authenticator app (1Password, Google Authenticator, Aegis…) so a stolen password alone can't open your finances."}
+            {enrollment
+              ? "Setting up…"
+              : list === null
+                ? loadFailed
+                  ? "Couldn't check right now. Check your connection and try again."
+                  : "Checking…"
+                : on
+                  ? "On. Sign-in asks for a code from your authenticator app."
+                  : "Off. Add an authenticator app (1Password, Google Authenticator, Aegis…) so a stolen password alone can't open your finances."}
           </p>
         </div>
 
@@ -195,9 +197,10 @@ export function TwoFactorSection() {
                   type="button"
                   variant="secondary"
                   onClick={() =>
-                    void navigator.clipboard
-                      ?.writeText(enrollment.secret)
-                      .then(() => setCopied(true), () => undefined)
+                    void navigator.clipboard?.writeText(enrollment.secret).then(
+                      () => setCopied(true),
+                      () => undefined,
+                    )
                   }
                 >
                   {copied ? <Check /> : <Copy />}
@@ -244,7 +247,7 @@ export function TwoFactorSection() {
             >
               <div className="space-y-1.5">
                 <label htmlFor="enroll-name" className="text-xs font-medium text-muted-foreground">
-                  {on ? "Name of the new one" : "Name"}
+                  {on ? "Name of the new one (optional)" : "Name (optional)"}
                 </label>
                 <Input
                   id="enroll-name"
