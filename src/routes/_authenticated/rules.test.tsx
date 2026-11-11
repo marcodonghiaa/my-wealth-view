@@ -18,9 +18,8 @@ const db = {
 let search: Record<string, string> = {};
 
 const toastSuccess = vi.fn();
-// Polish 3 #9: the real sonner closes a toast when its action is clicked (unless the click
-// calls preventDefault: node_modules/sonner/dist/index.mjs, action onClick), so a second click
-// on Re-sort can't happen. This mock doesn't render toasts, so that is not tested here.
+// The real sonner closes a toast when its action is clicked unless the click calls
+// preventDefault (node_modules/sonner/dist/index.mjs, action onClick); tests pass a click event.
 const toastInfo = vi.fn((_m: string, _o?: unknown) => "");
 const toastDismiss = vi.fn();
 const toastLoading = vi.fn();
@@ -858,7 +857,9 @@ describe("re-sorting what a deleted rule filed", () => {
     set_category: "Entertainment",
   };
   const answer = (changes: number) => ({ data: { changes, sample: [] }, error: null });
-  type Offer = { action: { label: string; onClick: () => void } };
+  type Click = { preventDefault: () => void };
+  type Offer = { action: { label: string; onClick: (e: Click) => void } };
+  const click = () => ({ preventDefault: vi.fn() });
 
   it("offers to re-sort the rows only that rule explained, then sends them back to the sync", async () => {
     invoke.mockResolvedValue(answer(3));
@@ -875,11 +876,11 @@ describe("re-sorting what a deleted rule filed", () => {
     expect(invoke).toHaveBeenCalledWith("reapply-rules", {
       body: { apply: false, retired: netflix },
     });
-    (toastInfo.mock.calls[0] as unknown as [string, Offer])[1].action.onClick();
+    (toastInfo.mock.calls[0] as unknown as [string, Offer])[1].action.onClick(click());
     await waitFor(() =>
       expect(toastSuccess).toHaveBeenCalledWith(
         "3 transactions will be re-sorted at the next sync",
-        { id: "resort-r1" },
+        { id: "resort-r1", description: undefined, action: undefined },
       ),
     );
     expect(invoke).toHaveBeenLastCalledWith("reapply-rules", {
@@ -943,12 +944,37 @@ describe("re-sorting what a deleted rule filed", () => {
     renderPage();
     fireEvent.click(await screen.findByRole("button", { name: "Delete rule for Netflix" }));
     await waitFor(() => expect(toastInfo).toHaveBeenCalled());
-    (toastInfo.mock.calls[0] as unknown as [string, Offer])[1].action.onClick();
+    (toastInfo.mock.calls[0] as unknown as [string, Offer])[1].action.onClick(click());
     await waitFor(() =>
       expect(toastError).toHaveBeenCalledWith("Couldn't update your transactions.", {
         id: "resort-r1",
+        description: undefined,
+        action: { label: "Retry", onClick: expect.any(Function) },
       }),
     );
+  });
+
+  // Polish 4 #1: a failed re-sort offers Retry instead of the stale offer button.
+  it("Retry after a failed re-sort tries again and keeps the toast open", async () => {
+    invoke
+      .mockResolvedValueOnce(answer(2))
+      .mockResolvedValueOnce({ data: null, error: new Error("down") })
+      .mockResolvedValueOnce(answer(2));
+    renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: "Delete rule for Netflix" }));
+    await waitFor(() => expect(toastInfo).toHaveBeenCalled());
+    (toastInfo.mock.calls[0] as unknown as [string, Offer])[1].action.onClick(click());
+    await waitFor(() => expect(toastError).toHaveBeenCalled());
+    const event = click();
+    (toastError.mock.calls[0] as unknown as [string, Offer])[1].action.onClick(event);
+    expect(event.preventDefault).toHaveBeenCalled();
+    await waitFor(() =>
+      expect(toastSuccess).toHaveBeenCalledWith(
+        "2 transactions will be re-sorted at the next sync",
+        { id: "resort-r1", description: undefined, action: undefined },
+      ),
+    );
+    expect(invoke).toHaveBeenCalledTimes(3);
   });
 
   // Polish 1 #1: one shared toast handle meant Undo on the first of two deletes closed the
@@ -996,11 +1022,11 @@ describe("re-sorting what a deleted rule filed", () => {
     renderPage();
     fireEvent.click(await screen.findByRole("button", { name: "Delete rule for Netflix" }));
     await waitFor(() => expect(toastInfo).toHaveBeenCalled());
-    (toastInfo.mock.calls[0] as unknown as [string, Offer])[1].action.onClick();
+    (toastInfo.mock.calls[0] as unknown as [string, Offer])[1].action.onClick(click());
     await waitFor(() =>
       expect(toastSuccess).toHaveBeenCalledWith(
         "2 transactions will be re-sorted at the next sync",
-        { id: "resort-r1" },
+        { id: "resort-r1", description: undefined, action: undefined },
       ),
     );
     (toastSuccess.mock.calls[0]?.[1] as Offer).action.onClick();
@@ -1016,11 +1042,11 @@ describe("re-sorting what a deleted rule filed", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Delete rule for Netflix" }));
     await waitFor(() => expect(toastInfo).toHaveBeenCalled());
     invalidate.mockClear();
-    (toastInfo.mock.calls[0] as unknown as [string, Offer])[1].action.onClick();
+    (toastInfo.mock.calls[0] as unknown as [string, Offer])[1].action.onClick(click());
     await waitFor(() =>
       expect(toastSuccess).toHaveBeenCalledWith(
         "2 transactions will be re-sorted at the next sync",
-        { id: "resort-r1" },
+        { id: "resort-r1", description: undefined, action: undefined },
       ),
     );
     const refreshesTransactions = invalidate.mock.calls.some(([filters]) => {
@@ -1054,23 +1080,37 @@ describe("re-sorting what a deleted rule filed", () => {
     });
   });
 
-  // Polish 3 #3: the offer closes on click; "Re-sorting…" shows until the answer replaces it.
+  // Polish 3 #3 + polish 4 #1/#2: "Re-sorting…" shows until the answer replaces it. The click
+  // keeps the toast open, and each update drops the offer's text and Re-sort button.
   it("shows that it's re-sorting, then the result in the same toast", async () => {
     let finish: (v: unknown) => void = () => {};
     invoke.mockResolvedValueOnce(answer(2)).mockReturnValueOnce(new Promise((r) => (finish = r)));
     renderPage();
     fireEvent.click(await screen.findByRole("button", { name: "Delete rule for Netflix" }));
     await waitFor(() => expect(toastInfo).toHaveBeenCalled());
-    (toastInfo.mock.calls[0] as unknown as [string, Offer])[1].action.onClick();
-    expect(toastLoading).toHaveBeenCalledWith("Re-sorting…", { id: "resort-r1" });
+    const event = click();
+    (toastInfo.mock.calls[0] as unknown as [string, Offer])[1].action.onClick(event);
+    expect(event.preventDefault).toHaveBeenCalled();
+    // Keys must be present: sonner keeps any key an update leaves out (toHaveBeenCalledWith
+    // treats a missing key as undefined, so check the keys themselves).
+    expect(Object.keys(toastLoading.mock.calls[0]?.[1] as object)).toEqual(
+      expect.arrayContaining(["description", "action"]),
+    );
+    expect(toastLoading).toHaveBeenCalledWith("Re-sorting…", {
+      id: "resort-r1",
+      description: undefined,
+      action: undefined,
+    });
     finish(answer(2));
     await waitFor(() =>
       expect(toastSuccess).toHaveBeenCalledWith(
         "2 transactions will be re-sorted at the next sync",
-        {
-          id: "resort-r1",
-        },
+        { id: "resort-r1", description: undefined, action: undefined },
       ),
+    );
+    const done = toastSuccess.mock.calls.find(([m]) => String(m).includes("re-sorted"));
+    expect(Object.keys(done?.[1] as object)).toEqual(
+      expect.arrayContaining(["description", "action"]),
     );
   });
 
@@ -1085,13 +1125,11 @@ describe("re-sorting what a deleted rule filed", () => {
     unmount();
     count(answer(2));
     await waitFor(() => expect(toastInfo).toHaveBeenCalled());
-    (toastInfo.mock.calls[0] as unknown as [string, Offer])[1].action.onClick();
+    (toastInfo.mock.calls[0] as unknown as [string, Offer])[1].action.onClick(click());
     await waitFor(() =>
       expect(toastSuccess).toHaveBeenCalledWith(
         "2 transactions will be re-sorted at the next sync",
-        {
-          id: "resort-r1",
-        },
+        { id: "resort-r1", description: undefined, action: undefined },
       ),
     );
   });

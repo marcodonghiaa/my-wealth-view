@@ -386,18 +386,35 @@ function RuleList({ rules }: { rules: RuleRow[] }) {
   // Each offer's toast id is the rule's, so Undo closes that rule's offer and no other.
   const resortToastId = (rule: RuleRow) => `resort-${rule.id}`;
   const undone = useRef(new WeakSet<RuleRow>());
-  // The offer closes on click; its toast shows "Re-sorting…" until the answer replaces it.
+  // The offer's toast shows "Re-sorting…" until the answer replaces it. Sonner merges an update
+  // into the toast with the same id, so each update clears the offer's text and button itself.
   const resort = useMutation({
     mutationFn: ({ retired }: { retired: RetiredRule; toastId: string }) => reapply(true, retired),
-    onMutate: ({ toastId }) => void toast.loading("Re-sorting…", { id: toastId }),
+    onMutate: ({ toastId }) =>
+      void toast.loading("Re-sorting…", { id: toastId, description: undefined, action: undefined }),
     onSuccess: (result, { toastId }) => {
       toast.success(`${plural(result.changes)} will be re-sorted at the next sync`, {
         id: toastId,
+        description: undefined,
+        action: undefined,
       });
       void invalidateAfterReapply(queryClient);
     },
-    onError: (err, { toastId }) => toast.error(err.message, { id: toastId }),
+    onError: (err, vars) =>
+      toast.error(err.message, {
+        id: vars.toastId,
+        description: undefined,
+        action: { label: "Retry", onClick: (e) => startResort(e, vars) },
+      }),
   });
+  // preventDefault: sonner closes a toast when its action is clicked, which hid "Re-sorting…".
+  const startResort = (
+    e: { preventDefault: () => void },
+    vars: { retired: RetiredRule; toastId: string },
+  ) => {
+    e.preventDefault();
+    resort.mutate(vars);
+  };
   const offerResort = async (rule: RuleRow) => {
     if (!rule.set_category || rule.set_category === "Transfer") return; // Transfer rows never change
     const { match_field, match_text, match_mode, set_category } = rule;
@@ -414,7 +431,7 @@ function RuleList({ rules }: { rules: RuleRow[] }) {
       description: "Re-sort them: they show as uncategorized until the next sync sorts them again.",
       action: {
         label: "Re-sort",
-        onClick: () => resort.mutate({ retired, toastId: resortToastId(rule) }),
+        onClick: (e) => startResort(e, { retired, toastId: resortToastId(rule) }),
       },
     });
   };
