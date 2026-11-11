@@ -84,6 +84,16 @@ describe("TwoFactorSection", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Turn on" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("Invalid TOTP code entered");
+    // Next to the field it is about, and tied to it.
+    const field = screen.getByLabelText("Authenticator code");
+    expect(field).toHaveAttribute("aria-invalid", "true");
+    expect(field).toHaveAccessibleDescription(/Invalid TOTP code entered/);
+    expect(
+      screen
+        .getByRole("alert")
+        .compareDocumentPosition(screen.getByRole("button", { name: "Turn on" })) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
     expect(screen.getByAltText(/QR code/)).toBeInTheDocument();
   });
 

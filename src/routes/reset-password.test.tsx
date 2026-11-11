@@ -77,6 +77,9 @@ describe("ResetPasswordPage", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Save and sign in" }));
     expect((await screen.findByRole("alert")).textContent).toBe("Invalid TOTP code entered");
+    expect(screen.getByLabelText("Authenticator code")).toHaveAccessibleDescription(
+      /type the 6-digit code.*Invalid TOTP code entered/,
+    );
     expect(updateUser).not.toHaveBeenCalled();
     expect(navigate).not.toHaveBeenCalled();
   });

@@ -167,11 +167,13 @@ function AuthPage() {
                   <CodeInput
                     id="mfa-code"
                     autoFocus
+                    aria-invalid={error ? true : undefined}
+                    aria-describedby={error ? "mfa-code-hint auth-error" : "mfa-code-hint"}
                     value={code}
                     onChange={(e) => setCode(e.target.value)}
                     large
                   />
-                  <p className="text-xs text-muted-foreground">
+                  <p id="mfa-code-hint" className="text-xs text-muted-foreground">
                     Open your authenticator app and type the 6-digit code for Alopex.
                   </p>
                 </div>
@@ -232,7 +234,7 @@ function AuthPage() {
               )}
 
               {error && (
-                <p role="alert" className="text-sm text-negative">
+                <p id="auth-error" role="alert" className="text-sm text-negative">
                   {error}
                 </p>
               )}

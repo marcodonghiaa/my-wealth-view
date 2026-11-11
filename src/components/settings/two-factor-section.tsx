@@ -195,7 +195,14 @@ export function TwoFactorSection() {
                 autoFocus
                 value={code}
                 onChange={(e) => setCode(e.target.value)}
+                aria-invalid={shownError ? true : undefined}
+                aria-describedby={shownError ? "two-step-error" : undefined}
               />
+              {shownError && (
+                <p id="two-step-error" role="alert" className="text-sm text-negative">
+                  {shownError}
+                </p>
+              )}
             </div>
             <div className="flex gap-2">
               <Button type="submit" disabled={pending} className="flex-1">
@@ -246,7 +253,8 @@ export function TwoFactorSection() {
           </Button>
         )}
 
-        {shownError && (
+        {/* During setup the error sits under the code field instead. */}
+        {shownError && !enrollment && (
           <p role="alert" className="text-sm text-negative">
             {shownError}
           </p>

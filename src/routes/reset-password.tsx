@@ -134,11 +134,12 @@ export function ResetPasswordPage() {
                   </label>
                   <CodeInput
                     id="reset-mfa-code"
+                    aria-describedby={error ? "reset-code-hint reset-error" : "reset-code-hint"}
                     value={code}
                     onChange={(e) => setCode(e.target.value)}
                     large
                   />
-                  <p className="text-xs text-muted-foreground">
+                  <p id="reset-code-hint" className="text-xs text-muted-foreground">
                     Your account has two-step sign-in: type the 6-digit code from your authenticator
                     app.
                   </p>
@@ -146,7 +147,7 @@ export function ResetPasswordPage() {
               )}
 
               {error && (
-                <p role="alert" className="text-sm text-negative">
+                <p id="reset-error" role="alert" className="text-sm text-negative">
                   {error}
                 </p>
               )}

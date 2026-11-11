@@ -86,6 +86,11 @@ describe("sign-in with two-step", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Verify" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("Invalid TOTP code entered");
+    // The error and the hint are tied to the field, so a screen reader reads them with it.
+    const field = screen.getByLabelText("Authenticator code");
+    expect(field).toHaveAttribute("aria-invalid", "true");
+    expect(field).toHaveAccessibleDescription(/Invalid TOTP code entered/);
+    expect(field).toHaveAccessibleDescription(/Open your authenticator app/);
     expect(navigate).not.toHaveBeenCalled();
   });
 
