@@ -184,6 +184,21 @@ describe("billEntries", () => {
     expect(billEntries([s], [tagged], NOV, TODAY)[0]?.status).toBe("done");
     expect(billEntries([s], [near], NOV, TODAY)[0]?.status).toBe("done");
   });
+  // Polish #8: across a clock change a week is 7 days ± 1 hour; a charge 7 days off its date
+  // still pays it. New York's clocks go back on 1 Nov 2026.
+  it("counts a charge 7 days off across a clock change as paid", () => {
+    const tz = process.env["TZ"];
+    process.env["TZ"] = "America/New_York";
+    try {
+      const s = stream({ next_expected: "2026-11-08" });
+      const nov = new Date(2026, 10, 1); // made in New York time
+      const out = billEntries([s], [charge("2026-11-01")], nov, nov);
+      expect(out.map((e) => `${e.date} ${e.status}`)).toEqual(["2026-11-01 done"]);
+    } finally {
+      if (tz === undefined) delete process.env["TZ"];
+      else process.env["TZ"] = tz;
+    }
+  });
   it("gives a shared name's charge to the stream with the nearest usual amount", () => {
     const a = stream({
       id: "a",

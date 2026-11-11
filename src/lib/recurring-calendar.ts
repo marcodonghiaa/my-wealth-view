@@ -153,7 +153,9 @@ export function billEntries(
     for (let n = 0, date = anchor; date < end && n < 400; date = nth(anchor, step, ++n)) {
       if (date < start) continue;
       const covered = dates.some(
-        (d) => Math.abs(parse(d).getTime() - parse(date).getTime()) <= tolerance * DAY_MS,
+        // Whole days: across a clock change a week is 7 days ± 1 hour.
+        (d) =>
+          Math.round(Math.abs(parse(d).getTime() - parse(date).getTime()) / DAY_MS) <= tolerance,
       );
       if (covered) continue;
       out.push({
