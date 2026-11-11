@@ -25,7 +25,8 @@ import { AmountEditor } from "./amount-editor";
 export interface TransactionViewProps {
   tx: TransactionRow;
   accountLabel: string;
-  onSelectCategory: (category: string) => void;
+  // inSheet: picked in the edit sheet, whose overlay covers toasts.
+  onSelectCategory: (category: string, opts?: { inSheet?: boolean }) => void;
   savingCategory: boolean;
   onSelectType: (type: string) => void;
   savingType: boolean;
@@ -131,7 +132,11 @@ function TransactionEditSheet({
               </Field>
             )}
             <Field label="Category">
-              <CategoryPicker tx={tx} onSelect={p.onSelectCategory} saving={p.savingCategory} />
+              <CategoryPicker
+                tx={tx}
+                onSelect={(c) => p.onSelectCategory(c, { inSheet: true })}
+                saving={p.savingCategory}
+              />
             </Field>
             {p.makeRule && (
               <button

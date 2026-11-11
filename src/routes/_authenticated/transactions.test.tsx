@@ -10,7 +10,19 @@ vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
     from: (table: string) => {
       const q: Record<string, unknown> = {};
-      for (const m of ["select", "order", "eq", "neq", "gte", "lt", "lte", "is", "in", "not"]) {
+      for (const m of [
+        "select",
+        "order",
+        "eq",
+        "neq",
+        "gte",
+        "lt",
+        "lte",
+        "is",
+        "in",
+        "not",
+        "update",
+      ]) {
         q[m] = () => q;
       }
       q["then"] = (resolve: (v: unknown) => void) =>
@@ -24,6 +36,14 @@ vi.mock("@/integrations/supabase/client", () => ({
   },
 }));
 
+const toastSuccess = vi.fn();
+vi.mock("sonner", () => ({
+  toast: Object.assign(vi.fn(), {
+    success: (...a: unknown[]) => toastSuccess(...a),
+    error: vi.fn(),
+  }),
+}));
+
 import { Route } from "./transactions";
 
 const Page = Route.options.component as () => React.JSX.Element;
@@ -35,6 +55,7 @@ const renderPage = (client = new QueryClient({ defaultOptions: { queries: { retr
   );
 
 afterEach(() => {
+  toastSuccess.mockReset();
   for (const k of Object.keys(rows)) delete rows[k];
 });
 
@@ -85,6 +106,28 @@ describe("Make a rule in the transaction sheet", () => {
     await waitFor(() =>
       expect(within(sheet).queryByRole("button", { name: "Make a rule" })).toBeNull(),
     );
+  });
+
+  // pass5 #2: the sheet's overlay covers the toast, so a change made in the sheet gets no toast
+  // button (the sheet has its own); an inline change in the table keeps it
+  it("puts Make a rule on the toast only when the change wasn't made in the sheet", async () => {
+    rows["v_transactions_eur"] = [bankRow];
+    renderPage();
+    const sheet = await openSheet(/Poste Italiane/);
+    await userEvent.click(within(sheet).getByRole("button", { name: /Change category for/ }));
+    await userEvent.click(await screen.findByRole("button", { name: "Groceries" }));
+    await waitFor(() => expect(toastSuccess).toHaveBeenCalled());
+    expect(toastSuccess.mock.calls.at(-1)?.[1]).not.toHaveProperty("action");
+  });
+
+  it("keeps Make a rule on the toast for an inline change in the table", async () => {
+    rows["v_transactions_eur"] = [bankRow];
+    renderPage();
+    const [inline] = await screen.findAllByRole("button", { name: /Change category for/ });
+    await userEvent.click(inline!);
+    await userEvent.click(await screen.findByRole("button", { name: "Groceries" }));
+    await waitFor(() => expect(toastSuccess).toHaveBeenCalled());
+    expect(toastSuccess.mock.calls.at(-1)?.[1]).toHaveProperty("action.label", "Make a rule");
   });
 
   it("leaves it out for a Splitwise share", async () => {

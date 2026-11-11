@@ -69,7 +69,8 @@ export function useTransactionFieldMutation<K extends "category" | "transaction_
     }) => { label: string; onClick: () => void } | undefined;
   },
 ) {
-  type Vars = { tx: MutatedTx; value: TransactionRow[K] };
+  // noAction: leave successAction off this toast (e.g. the change came from a sheet that covers it).
+  type Vars = { tx: MutatedTx; value: TransactionRow[K]; noAction?: boolean };
   type Context = { previous: Array<TransactionRow> | undefined };
 
   return useMutation<void, Error, Vars, Context>({
@@ -98,7 +99,7 @@ export function useTransactionFieldMutation<K extends "category" | "transaction_
     },
     onSuccess: (_data, vars) => {
       if (opts.successMessage) {
-        const action = opts.successAction?.(vars);
+        const action = vars.noAction ? undefined : opts.successAction?.(vars);
         // A toast with a button stays twice as long, so there's time to reach it.
         toast.success(opts.successMessage(vars.value), action ? { action, duration: 8000 } : {});
       }

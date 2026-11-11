@@ -346,10 +346,10 @@ function TransactionsPage() {
     savingCategory: isSplitwiseShare(tx)
       ? savingShare(tx)
       : updateCategory.isPending && isSameTx(updateCategory.variables?.tx, tx),
-    onSelectCategory: (next) =>
+    onSelectCategory: (next, o) =>
       isSplitwiseShare(tx)
         ? updateShare.mutate({ id: shareId(tx), patch: { category: next } })
-        : updateCategory.mutate({ tx, value: next }),
+        : updateCategory.mutate({ tx, value: next, noAction: !!o?.inSheet }),
     savingType: updateType.isPending && isSameTx(updateType.variables?.tx, tx),
     onSelectType: (next) => updateType.mutate({ tx, value: next }),
     accountLabel: labelFor(tx.account_uid),
