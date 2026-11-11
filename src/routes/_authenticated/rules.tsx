@@ -432,16 +432,17 @@ function RuleList({ rules }: { rules: RuleRow[] }) {
     },
     onSuccess: (_data, id, ctx) => {
       const rule = ctx?.previous?.find((r) => r.id === id);
+      if (!rule) return void toast.success("Rule deleted", {});
       // Rules from before the 200-character cap can't be saved again, so no Undo for them.
-      const length = rule ? [...rule.match_text].length : 0;
-      const restorable = rule && length >= 1 && length <= MAX_MATCH_TEXT;
+      const length = [...rule.match_text].length;
+      const restorable = length >= 1 && length <= MAX_MATCH_TEXT;
       const undo = () => {
-        undone.current.add(rule!);
-        toast.dismiss(resortToastId(rule!));
-        restoreRule.mutate(rule!);
+        undone.current.add(rule);
+        toast.dismiss(resortToastId(rule));
+        restoreRule.mutate(rule);
       };
       toast.success("Rule deleted", restorable ? { action: { label: "Undo", onClick: undo } } : {});
-      if (rule) void offerResort(rule);
+      void offerResort(rule);
     },
     onSettled: () => void queryClient.invalidateQueries({ queryKey: ["category-rules"] }),
   });
