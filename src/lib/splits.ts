@@ -1,8 +1,14 @@
+import { numberFormat } from "@/lib/locale";
 import { supabase } from "@/integrations/supabase/client";
-import { txId, type TxKey } from "@/lib/transactions";
+import { formatMoney, txId, type TxKey } from "@/lib/transactions";
 
-export const money = (value: number, currency: string) =>
-  new Intl.NumberFormat("en-IE", { style: "currency", currency }).format(value);
+export const money = (value: number, currency: string) => {
+  try {
+    return numberFormat({ style: "currency", currency }).format(value);
+  } catch {
+    return formatMoney(value, currency);
+  }
+};
 
 // owed_by is free text; several people are stored comma-separated ("Anna, Luca M").
 export const parseNames = (owedBy: string | null | undefined): Array<string> =>

@@ -1,0 +1,4 @@
+"Datum";"Naam / Omschrijving";"Rekening";"Tegenrekening";"Code";"Af Bij";"Bedrag (EUR)";"Mutatiesoort";"Mededelingen"
+"20260305";"Albert Heijn 1234";"NL00BANK0000000000";"";"BA";"Af";"23,45";"Betaalautomaat";"Pasvolgnr: 001"
+"20260301";"Werkgever BV";"NL00BANK0000000000";"NL00BANK0000000001";"OV";"Bij";"2.750,00";"Overschrijving";"Salaris maart"
+"20260302";"";"NL00BANK0000000000";"";"DV";"Af";"4,10";"Diversen";"Kosten pakket"

@@ -1,3 +1,4 @@
+import { normalizeNumber } from "@/lib/locale";
 // What kind of account it is. The bank says on link; null (unknown) counts as checking.
 export const ACCOUNT_TYPES = [
   ["checking", "Checking"],
@@ -23,7 +24,7 @@ export const accountTypeLabel = (type: string | null | undefined): string =>
 
 /** What is owed, typed by hand: 0 or more, up to two decimals. */
 export function parseOwed(input: string): number | null {
-  const text = input.trim().replace(",", ".");
+  const text = normalizeNumber(input);
   if (!/^\d+(\.\d{1,2})?$/.test(text)) return null;
   const value = Number(text);
   return Number.isFinite(value) && value <= 1e12 ? value : null;

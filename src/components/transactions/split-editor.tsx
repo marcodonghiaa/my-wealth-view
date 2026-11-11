@@ -4,11 +4,20 @@ import { useState } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { formatAmountPlain, formatMoney, type TransactionRow } from "@/lib/transactions";
 import { evenShare, joinNames, parseNames } from "@/lib/splits";
+import { parseOwed } from "@/lib/account-types";
+import { numberFormat } from "@/lib/locale";
 
 const QUICK_SPLITS = [2, 3, 4];
 
+// The share box speaks the chosen decimal mark, in Latin digits and without thousands marks, so
+// parseOwed reads it back.
+const shareText = (value: number) =>
+  numberFormat({ maximumFractionDigits: 2, useGrouping: false, numberingSystem: "latn" }).format(
+    value,
+  );
+
 const pill = (on: boolean) =>
-  `inline-flex min-h-9 items-center rounded-sm border px-3 text-sm transition-colors ${
+  `inline-flex min-h-11 items-center rounded-sm border px-3 text-sm transition-colors ${
     on
       ? "border-primary bg-primary text-primary-foreground"
       : "bg-background text-foreground hover:bg-accent"
@@ -32,7 +41,12 @@ export function SplitEditor({
 }) {
   const [open, setOpen] = useState(false);
   const fullAmount = Math.abs(tx.amount ?? 0);
-  const [shareInput, setShareInput] = useState(() => String(tx.personal_amount ?? fullAmount));
+  const [shareInput, setShareInput] = useState(() => shareText(tx.personal_amount ?? fullAmount));
+  const [shareError, setShareError] = useState(false);
+  const validShare = (text: string) => {
+    const parsed = parseOwed(text);
+    return parsed != null && parsed <= fullAmount;
+  };
   const [people, setPeople] = useState(() => parseNames(tx.owed_by));
   const [newName, setNewName] = useState<string | null>(null);
 
@@ -59,7 +73,7 @@ export function SplitEditor({
       open={open}
       onOpenChange={(next) => {
         if (next) {
-          setShareInput(String(tx.personal_amount ?? fullAmount));
+          setShareInput(shareText(tx.personal_amount ?? fullAmount));
           setPeople(parseNames(tx.owed_by));
           setNewName(null);
         }
@@ -101,24 +115,37 @@ export function SplitEditor({
           >
             Your share ({tx.currency ?? "EUR"}, full amount {formatAmountPlain(fullAmount)})
           </label>
+          {/* Text, not number: a number box follows the browser's own decimal mark, which can
+              differ from the format picked in Settings. 6.25 and 6,25 both work. */}
           <Input
             id="split-your-share-full-amount"
-            type="number"
+            type="text"
             inputMode="decimal"
-            step="0.01"
-            min="0"
-            max={fullAmount}
             value={shareInput}
-            onChange={(e) => setShareInput(e.target.value)}
+            aria-invalid={shareError}
+            aria-describedby={shareError ? "split-share-error" : undefined}
+            onChange={(e) => {
+              setShareInput(e.target.value);
+              setShareError(false);
+            }}
+            onBlur={() => setShareError(!validShare(shareInput))}
           />
+          {shareError && (
+            <p id="split-share-error" role="alert" className="mt-1 text-xs text-negative">
+              Enter an amount between 0 and {formatAmountPlain(fullAmount)}.
+            </p>
+          )}
           <div className="mt-1.5 flex gap-1.5" role="group" aria-label="Quick split">
             {QUICK_SPLITS.map((n) => (
               <button
                 key={n}
                 type="button"
                 aria-label={`Split in ${n}`}
-                onClick={() => setShareInput(String(evenShare(fullAmount, n)))}
-                className={`${pill(Number(shareInput) === evenShare(fullAmount, n))} flex-1 justify-center`}
+                onClick={() => {
+                  setShareInput(shareText(evenShare(fullAmount, n)));
+                  setShareError(false);
+                }}
+                className={`${pill(parseOwed(shareInput) === evenShare(fullAmount, n))} flex-1 justify-center`}
               >
                 ÷{n}
               </button>
@@ -145,7 +172,7 @@ export function SplitEditor({
               <button
                 type="button"
                 onClick={() => setNewName("")}
-                className="inline-flex min-h-9 items-center rounded-sm border border-dashed px-3 text-sm text-muted-foreground transition-colors hover:bg-accent"
+                className="inline-flex min-h-11 items-center rounded-sm border border-dashed px-3 text-sm text-muted-foreground transition-colors hover:bg-accent"
               >
                 + New
               </button>
@@ -184,14 +211,11 @@ export function SplitEditor({
           )}
           <Button
             onClick={() => {
-              const parsed = Number(shareInput);
-              if (
-                shareInput.trim() === "" ||
-                !Number.isFinite(parsed) ||
-                parsed < 0 ||
-                parsed > fullAmount
-              )
+              const parsed = parseOwed(shareInput);
+              if (parsed == null || !validShare(shareInput)) {
+                setShareError(true);
                 return;
+              }
               setOpen(false);
               // Full amount = same as unset, keeps the "NULL means whole
               // thing is mine" convention the schema/views rely on.

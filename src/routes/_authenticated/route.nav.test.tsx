@@ -172,6 +172,7 @@ describe("phone tabs and More", () => {
       "Who owes you",
       "Reports",
       "Income",
+      // Budgets (#139) has no phone tab, so More is where phones reach it.
       "Budgets",
     ]);
     expect(rest.map((g) => g.label)).toEqual(["Tools"]);

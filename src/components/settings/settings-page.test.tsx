@@ -30,6 +30,7 @@ describe("SettingsPage order", () => {
       "Health",
       "Notifications",
       "Categories",
+      "Number and date format",
       "Password",
       "Export",
       "Delete",
@@ -39,6 +40,6 @@ describe("SettingsPage order", () => {
   it("leaves out the account sections in the demo", () => {
     demo.current = true;
     render(<SettingsPage />);
-    expect(order()).toEqual(["Health", "Notifications", "Categories"]);
+    expect(order()).toEqual(["Health", "Notifications", "Categories", "Number and date format"]);
   });
 });

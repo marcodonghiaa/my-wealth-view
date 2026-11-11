@@ -160,6 +160,22 @@ describe("amount editing", () => {
   });
 });
 
+describe("polish-5 #14 long descriptions on desktop", () => {
+  // jsdom has no layout: check the table-cell trick itself. A w-full cell with max-w-0 takes the
+  // space left and lets the name truncate, instead of widening the table past the Amount column.
+  it("lets the merchant cell shrink so the name truncates", () => {
+    render(
+      <table>
+        <tbody>
+          <TransactionRowView {...props()} />
+        </tbody>
+      </table>,
+    );
+    const cell = screen.getByRole("button", { name: "Rename Dinner" }).closest("td");
+    expect(cell).toHaveClass("w-full", "max-w-0");
+  });
+});
+
 // protects=the table drops the account badge when every row is from one account, and an open
 // "worth it?" is a one-line hint (answered in the sheet), so rows keep one height;
 // fails_when=the badge shows with one account, hides with several, or Yes/No buttons are inline

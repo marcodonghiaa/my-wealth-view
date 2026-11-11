@@ -1,0 +1,4 @@
+Id;AccountName;Date;Description;OriginalDescription;Amount;Currency;CategoryName;MainCategoryName;Comment;Duplicate
+1;Lønkonto;28-02-2026;Netto;NETTO 1234 KBH;-245,50;DKK;Dagligvarer;Mad;;false
+2;Lønkonto;27-02-2026;;LØN FEBRUAR;25.000,00;DKK;Løn;Indkomst;;false
+3;Lønkonto;27-02-2026;Netto;NETTO 1234 KBH;-245,50;DKK;Dagligvarer;Mad;;true

@@ -1,3 +1,4 @@
+import { dateLocale } from "@/lib/locale";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
@@ -114,7 +115,7 @@ function SpendingPage() {
   const prevTotal = categorySpend(prevSpendQuery.data ?? []).reduce((s, r) => s + r.spend_eur, 0);
   const change = prevSpendQuery.data ? spendChange(total, prevTotal) : null;
 
-  const monthLabel = month.toLocaleDateString("en-GB", {
+  const monthLabel = month.toLocaleDateString(dateLocale(), {
     month: "long",
     year: "numeric",
   });

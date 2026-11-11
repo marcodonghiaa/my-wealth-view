@@ -1,3 +1,4 @@
+import { inputNumber } from "@/lib/locale";
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Pencil } from "lucide-react";
@@ -68,7 +69,7 @@ export function EditHolding({
 }) {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
-  const [value, setValue] = useState(String(quantity));
+  const [value, setValue] = useState(() => inputNumber(quantity));
   const [error, setError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -119,7 +120,7 @@ export function EditHolding({
       onOpenChange={(next) => {
         setOpen(next);
         if (next) {
-          setValue(String(quantity));
+          setValue(inputNumber(quantity));
           setError(null);
           setConfirmDelete(false);
         }

@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import {
   formatBookingDateShort,
-  formatMoney,
+  formatSignedMoney,
   nativeSignedAmount,
   restoredFlow,
   txId,
@@ -48,7 +48,7 @@ export function TransfersSection({
                 </div>
               </div>
               <span className="font-figure text-sm whitespace-nowrap text-foreground">
-                {native == null ? "—" : formatMoney(native, tx.currency ?? "EUR")}
+                {native == null ? "—" : formatSignedMoney(native, tx.currency ?? "EUR")}
               </span>
               {pairId ? (
                 <>

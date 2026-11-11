@@ -1,9 +1,21 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
+import { setLocaleOverride } from "./locale";
 import { newTrades, parseTradesCsv, shareUpdates, summarizeImport } from "./trades-csv";
 
 const opts = { kind: "stock" as const, knownKeys: new Set(["IE00B4L5Y983"]), today: "2026-10-31" };
 
 describe("parseTradesCsv", () => {
+  afterEach(() => setLocaleOverride(""));
+
+  it("polish-5 #4 audit: a file reads the same whatever format the viewer picked", () => {
+    setLocaleOverride("it-IT");
+    const { trades } = parseTradesCsv(
+      "date,side,isin,shares,price,fee\n2026-01-15,buy,IE00B4L5Y983,1.125,12.345,1\n",
+      opts,
+    );
+    expect(trades[0]).toMatchObject({ shares: 1.125, price_eur: 12.345 });
+  });
+
   it("reads a comma file", () => {
     const { trades, errors } = parseTradesCsv(
       "date,side,isin,shares,price,fee\n2026-01-15,buy,IE00B4L5Y983,1.5,90.25,1\n",
