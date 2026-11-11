@@ -149,7 +149,9 @@ function AuthPage() {
         <div className="mb-8 flex flex-col items-center text-center">
           <BrandMark className="mb-4 size-12" />
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">Alopex</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Sign in to view your finances</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {mode === "mfa" ? "One more step: enter your code" : "Sign in to view your finances"}
+          </p>
         </div>
 
         <div className="rounded-2xl bg-card p-6">
@@ -282,23 +284,25 @@ function AuthPage() {
             </form>
           )}
 
-          <div className="mt-5 space-y-3 border-t pt-4 text-center">
-            <Link
-              to="/demo"
-              className="flex w-full items-center justify-center rounded-full border border-input px-4 py-2.5 text-sm font-semibold text-foreground transition-colors hover:bg-accent"
-            >
-              Try the demo
-            </Link>
-            <a
-              href="https://github.com/marcodonghiaa/alopex-web"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
-            >
-              <Github className="size-3.5" />
-              No account? Self-host your own
-            </a>
-          </div>
+          {mode !== "mfa" && (
+            <div className="mt-5 space-y-3 border-t pt-4 text-center">
+              <Link
+                to="/demo"
+                className="flex w-full items-center justify-center rounded-full border border-input px-4 py-2.5 text-sm font-semibold text-foreground transition-colors hover:bg-accent"
+              >
+                Try the demo
+              </Link>
+              <a
+                href="https://github.com/marcodonghiaa/alopex-web"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+              >
+                <Github className="size-3.5" />
+                No account? Self-host your own
+              </a>
+            </div>
+          )}
         </div>
         <TrustNote className="mx-auto mt-6 max-w-xs" />
       </div>

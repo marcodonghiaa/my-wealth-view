@@ -122,4 +122,18 @@ describe("sign-in with two-step", () => {
     expect(auth.signOut).toHaveBeenCalledWith({ scope: "local" });
     expect(await screen.findByLabelText("Email")).toBeInTheDocument();
   });
+
+  // fails_when=the code step still reads like the first sign-in screen, with demo and self-host links
+  it("says the password was accepted on the code step and hides the demo links", async () => {
+    mfa.needsMfaCode.mockResolvedValue(true);
+    render(<AuthPage />);
+    await screen.findByLabelText("Email");
+    expect(screen.getByText("Try the demo")).toBeInTheDocument();
+    signIn();
+    await screen.findByLabelText("Authenticator code");
+    expect(screen.getByText("One more step: enter your code")).toBeInTheDocument();
+    expect(screen.queryByText("Sign in to view your finances")).toBeNull();
+    expect(screen.queryByText("Try the demo")).toBeNull();
+    expect(screen.queryByText(/Self-host your own/)).toBeNull();
+  });
 });
