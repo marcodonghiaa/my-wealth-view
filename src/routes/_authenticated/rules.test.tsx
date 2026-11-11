@@ -379,6 +379,15 @@ describe("apply to past transactions", () => {
     );
   });
 
+  // Polish pass 4 #8: the panel sat between "3 rules" and the list it counts.
+  it("opens above the rules count, which stays with its list", async () => {
+    invoke.mockResolvedValueOnce({ data: { changes: 0, sample: [] }, error: null });
+    await open();
+    const panel = await screen.findByRole("heading", { name: "Apply to past transactions" });
+    const count = screen.getByText("3 rules");
+    expect(panel.compareDocumentPosition(count) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   it("is not offered when no rule sets a category", async () => {
     onlyFlowRules.current = true;
     renderPage();

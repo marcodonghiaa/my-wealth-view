@@ -372,6 +372,10 @@ function RuleList({ rules }: { rules: RuleRow[] }) {
 
   return (
     <section>
+      {checking && (
+        <ApplyToPast ruleIds={rules.map((r) => r.id).join()} onDone={() => setChecking(false)} />
+      )}
+
       <SectionTitle
         className="items-center"
         action={
@@ -384,10 +388,6 @@ function RuleList({ rules }: { rules: RuleRow[] }) {
       >
         {plural(rules.length, "rule")}
       </SectionTitle>
-
-      {checking && (
-        <ApplyToPast ruleIds={rules.map((r) => r.id).join()} onDone={() => setChecking(false)} />
-      )}
 
       <GroupedList>
         {rules.map((rule) => (
