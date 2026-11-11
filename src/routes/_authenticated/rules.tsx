@@ -173,6 +173,8 @@ function RuleForm({
   const shownCategory = categories.includes(category) ? category : "";
   const [type, setType] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
+  // A message about the form goes away as soon as you change the form.
+  useEffect(() => setFormError(null), [matchField, matchMode, matchText, category, type]);
 
   const addRule = useMutation({
     mutationFn: async (rule: {

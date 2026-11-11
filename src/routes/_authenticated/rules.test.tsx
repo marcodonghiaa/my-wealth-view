@@ -196,6 +196,18 @@ describe("Rules list", () => {
   });
 });
 
+// Polish pass 4 #10: the message stayed after the field was filled in.
+describe("form message", () => {
+  it("clears the message once you change the form", async () => {
+    renderPage();
+    await openForm();
+    fireEvent.click(screen.getByRole("button", { name: "Add rule" }));
+    expect(screen.getByRole("alert")).toBeTruthy();
+    fireEvent.change(screen.getByLabelText("Text"), { target: { value: "Spotify" } });
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+});
+
 describe("form focus and keys", () => {
   it("focuses Text on open; Escape closes and focus returns to New rule", async () => {
     renderPage();
