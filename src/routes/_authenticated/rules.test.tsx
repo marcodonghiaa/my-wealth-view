@@ -31,6 +31,20 @@ vi.mock("sonner", () => ({
   },
 }));
 
+// Spied on, not replaced: tests can wait until a failed call has been turned into a message.
+const errorMessages = vi.hoisted(() => ({ calls: [] as Promise<string>[] }));
+vi.mock("@/lib/function-error", async (importOriginal) => {
+  const real = await importOriginal<typeof import("@/lib/function-error")>();
+  return {
+    ...real,
+    functionErrorMessage: (...args: Parameters<typeof real.functionErrorMessage>) => {
+      const message = real.functionErrorMessage(...args);
+      errorMessages.calls.push(message);
+      return message;
+    },
+  };
+});
+
 vi.mock("@/integrations/supabase/client", () => {
   const q: Record<string, unknown> = {};
   for (const m of ["select", "order"]) q[m] = () => q;
@@ -146,6 +160,7 @@ afterEach(() => {
   toastInfo.mockClear();
   toastDismiss.mockReset();
   toastLoading.mockReset();
+  errorMessages.calls.length = 0;
 });
 
 const Page = Route.options.component as () => React.JSX.Element;
@@ -889,8 +904,10 @@ describe("re-sorting what a deleted rule filed", () => {
     invoke.mockResolvedValue({ data: null, error: new Error("down") });
     renderPage();
     fireEvent.click(await screen.findByRole("button", { name: "Delete rule for Netflix" }));
-    await waitFor(() => expect(invoke).toHaveBeenCalled());
-    await new Promise((r) => setTimeout(r, 0));
+    // Polish 3 #8: wait until the failed check reached its error path, not just a tick.
+    await waitFor(() => expect(errorMessages.calls).toHaveLength(1));
+    await errorMessages.calls[0];
+    await new Promise((r) => setTimeout(r, 0)); // let offerResort's catch run (microtasks only)
     expect(toastInfo).not.toHaveBeenCalled();
     expect(toastError).not.toHaveBeenCalled();
   });
