@@ -141,7 +141,8 @@ export function TwoFactorSection() {
               <li
                 key={a.id}
                 className="space-y-2 text-sm"
-                onKeyDown={(e) => e.key === "Escape" && closeConfirm(e.currentTarget)}
+                // Not while the remove runs: the bin is disabled then, so focus would be lost.
+                onKeyDown={(e) => e.key === "Escape" && !pending && closeConfirm(e.currentTarget)}
               >
                 <div className="flex items-center justify-between gap-3">
                   <span className="flex min-w-0 items-center gap-2">
@@ -167,6 +168,7 @@ export function TwoFactorSection() {
                     <div className="flex gap-2">
                       <Button
                         variant="secondary"
+                        disabled={pending}
                         onClick={(e) => closeConfirm(e.currentTarget)}
                         className="flex-1"
                       >
@@ -204,19 +206,22 @@ export function TwoFactorSection() {
                 <code className="flex-1 font-mono text-sm tracking-wide text-foreground">
                   {enrollment.secret.match(/.{1,4}/g)?.join(" ")}
                 </code>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={() =>
-                    void navigator.clipboard?.writeText(enrollment.secret).then(
-                      () => setCopied(true),
-                      () => undefined,
-                    )
-                  }
-                >
-                  {copied ? <Check /> : <Copy />}
-                  {copied ? "Copied" : "Copy key"}
-                </Button>
+                {/* No clipboard API over plain http (e.g. a LAN address): the key can still be selected. */}
+                {navigator.clipboard && (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() =>
+                      void navigator.clipboard.writeText(enrollment.secret).then(
+                        () => setCopied(true),
+                        () => undefined,
+                      )
+                    }
+                  >
+                    {copied ? <Check /> : <Copy />}
+                    {copied ? "Copied" : "Copy key"}
+                  </Button>
+                )}
               </div>
             </div>
             <div className="space-y-1.5">
@@ -284,8 +289,14 @@ export function TwoFactorSection() {
         {loadFailed && (
           <Button
             variant="secondary"
-            disabled={authenticators.isFetching}
-            onClick={() => void authenticators.refetch().then(backToSection)}
+            // aria-disabled, not disabled: a disabled button drops keyboard focus to the page body.
+            aria-disabled={authenticators.isFetching || undefined}
+            className="aria-disabled:pointer-events-none aria-disabled:opacity-50"
+            onClick={() => {
+              if (authenticators.isFetching) return;
+              // A retry that fails again keeps this button, so focus stays on it.
+              void authenticators.refetch().then((r) => r.isError || backToSection());
+            }}
           >
             {authenticators.isFetching && <Loader2 className="animate-spin" />}
             Try again
