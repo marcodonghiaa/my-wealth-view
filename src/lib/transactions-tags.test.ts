@@ -24,6 +24,8 @@ const row = (p: Partial<TransactionRow>): TransactionRow => ({
   owed_by: null,
   flow_type: "spend",
   refund_of: null,
+  note: null,
+  tags: [],
   ...p,
 });
 

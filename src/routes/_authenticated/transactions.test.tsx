@@ -7,8 +7,10 @@ let failTable: string | null = null;
 // Rows the mocked views return (empty unless a test sets them).
 const rows: Record<string, Array<Record<string, unknown>>> = {};
 let tableData: Record<string, unknown> = {};
+let rpcResult: { data: unknown; error: { message: string } | null } = { data: [], error: null };
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
+    rpc: () => Promise.resolve(rpcResult),
     from: (table: string) => {
       const q: Record<string, unknown> = {};
       for (const m of [
@@ -329,6 +331,22 @@ describe("Activity deep link", () => {
 
 // protects=the tag filter keeps only rows with that tag; fails_when=the filter ignores tags
 describe("Transactions page tag filter", () => {
+  // protects=a failing tag-suggestions call is reported in the console, not hidden;
+  // fails_when=fetchTagSuggestions swallows the error
+  it("logs a failed suggestions call and still shows the page", async () => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    rpcResult = { data: null, error: { message: "denied" } };
+    renderPage();
+    await waitFor(() =>
+      expect(log).toHaveBeenCalledWith(
+        expect.stringContaining("tag suggestions"),
+        expect.objectContaining({ message: "denied" }),
+      ),
+    );
+    rpcResult = { data: [], error: null };
+    log.mockRestore();
+  });
+
   it("filters the month by tag", async () => {
     const today = new Date().toISOString().slice(0, 10);
     const base = {

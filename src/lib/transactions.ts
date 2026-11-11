@@ -17,9 +17,9 @@ export interface TransactionRow {
   owed_by: string | null;
   flow_type: string | null;
   refund_of: string | null;
-  /** The user's own words and labels; absent before the backend migration, never written by the sync. */
-  note?: string | null;
-  tags?: Array<string> | null;
+  /** The user's own words and labels. Only the dashboard writes them; the bank sync never does. */
+  note: string | null;
+  tags: Array<string>;
 }
 
 // The euro columns of v_transactions_eur; `amount` and `personal_amount` are in the card's own currency.
@@ -93,6 +93,8 @@ export function shareToRow(s: SplitwiseShare): TransactionRow {
     owed_by: null,
     flow_type: "spend",
     refund_of: null,
+    note: null,
+    tags: [],
   };
 }
 
@@ -405,7 +407,7 @@ export function normalizeNote(raw: string): string | null {
 export const sameTag = (a: string, b: string): boolean => a.toLowerCase() === b.toLowerCase();
 
 /** Tags used by these rows, once each ignoring case (first spelling seen), sorted, for the tag filter. */
-export function listTags(transactions: Array<Pick<TransactionRow, "tags">>): Array<string> {
+export function listTags(transactions: Array<{ tags?: Array<string> | null }>): Array<string> {
   const byKey = new Map<string, string>();
   for (const tx of transactions)
     for (const t of tx.tags ?? []) if (!byKey.has(t.toLowerCase())) byKey.set(t.toLowerCase(), t);

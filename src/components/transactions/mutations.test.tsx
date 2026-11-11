@@ -104,6 +104,8 @@ const row = (account_uid: string, entry_reference: string): TransactionRow => ({
   owed_by: null,
   flow_type: "spend",
   refund_of: null,
+  note: null,
+  tags: [],
 });
 
 function setup() {
