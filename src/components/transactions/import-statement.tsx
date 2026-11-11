@@ -308,16 +308,27 @@ export function ImportStatement() {
             </div>
           )}
 
-          {checking && <p className="text-xs text-muted-foreground">Checking for duplicates…</p>}
+          {/* One live region: screen readers hear "Checking…" and then the count that replaces it. */}
+          {(checking || (statement && fresh)) && (
+            <p
+              role="status"
+              className={checking ? "text-xs text-muted-foreground" : "text-sm text-foreground"}
+            >
+              {checking
+                ? "Checking for duplicates…"
+                : statement &&
+                  fresh &&
+                  `${fresh.length} new transaction${fresh.length === 1 ? "" : "s"}${
+                    duplicates > 0 ? `, ${duplicates} already here` : ""
+                  }${
+                    statement.skipped > 0
+                      ? `, ${statement.skipped} other line${statement.skipped === 1 ? "" : "s"} skipped`
+                      : ""
+                  }.`}
+            </p>
+          )}
           {statement && fresh && (
             <>
-              <p className="text-sm text-foreground">
-                {fresh.length} new transaction{fresh.length === 1 ? "" : "s"}
-                {duplicates > 0 && `, ${duplicates} already here`}
-                {statement.skipped > 0 &&
-                  `, ${statement.skipped} other line${statement.skipped === 1 ? "" : "s"} skipped`}
-                .
-              </p>
               {statement.unknownCurrencies.length > 0 && (
                 <p className="text-xs text-muted-foreground">
                   Skipped because the currency isn't clear:{" "}

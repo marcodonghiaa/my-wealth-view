@@ -240,6 +240,20 @@ describe("ImportStatement", () => {
     expect(screen.queryByText("Checking for duplicates…")).toBeNull();
   });
 
+  it("polish-4 #10 announces the check and its result in one live region", async () => {
+    let release: () => void = () => {};
+    range = () =>
+      new Promise((resolve) => {
+        release = () => resolve({ data: existing, error: null });
+      });
+    upload("card.csv", "Date,Description,Amount\n2026-02-01,Shop,-5");
+    const status = await screen.findByRole("status");
+    await waitFor(() => expect(status).toHaveTextContent("Checking for duplicates…"));
+    await act(async () => release());
+    await waitFor(() => expect(status).toHaveTextContent(/1 new transaction/));
+    expect(screen.getByRole("status")).toBe(status);
+  });
+
   it("polish-3 #14 says to pick the file again when the re-check after a failure fails too", async () => {
     rpc
       .mockResolvedValueOnce({ data: [], error: null })
