@@ -75,7 +75,6 @@ function tx(
     category: null,
     created_at: stamp(p.booking_date),
     credit_debit_indicator: "DBIT",
-    creditor_name: null,
     custom_name: null,
     currency: "EUR",
     debtor_name: null,
