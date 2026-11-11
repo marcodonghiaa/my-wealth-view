@@ -403,8 +403,11 @@ function RuleList({ rules }: { rules: RuleRow[] }) {
   // in the same toast as "Rule deleted" so Undo stays in view. Each rule has its own toast id.
   const resortToastId = (rule: RuleRow) => `resort-${rule.id}`;
   const undone = useRef(new WeakSet<RuleRow>());
-  // Keyboard users land back on the list when a toast button they pressed goes away.
-  const focusList = () => document.querySelector<HTMLElement>("[data-rule-id]")?.focus();
+  // Keyboard users land back on the list when a toast button they pressed goes away. A click
+  // from Enter/Space has detail 0; a mouse click leaves focus alone.
+  const focusList = (e?: { detail?: number }) => {
+    if (e?.detail === 0) document.querySelector<HTMLElement>("[data-rule-id]")?.focus();
+  };
   // The toast shows "Re-sorting…" until the answer replaces it. Sonner merges an update into
   // the toast with the same id, so each update clears the offer's text and Re-sort itself.
   const resort = useMutation({
@@ -412,6 +415,9 @@ function RuleList({ rules }: { rules: RuleRow[] }) {
     onMutate: ({ rule }) =>
       void toast.loading("Re-sorting…", {
         id: resortToastId(rule),
+        // Each step changes duration, which restarts sonner's timer: the result would otherwise
+        // inherit what was left of the offer's 8s.
+        duration: Infinity,
         description: undefined,
         action: undefined,
       }),
@@ -420,6 +426,7 @@ function RuleList({ rules }: { rules: RuleRow[] }) {
       if (undone.current.has(rule)) return; // Undo already closed this toast
       toast.success(`${plural(result.changes)} will be re-sorted at the next sync`, {
         id: resortToastId(rule),
+        duration: 6000,
         description: undefined,
         action: undefined,
       });
@@ -428,18 +435,20 @@ function RuleList({ rules }: { rules: RuleRow[] }) {
       if (undone.current.has(rule)) return;
       toast.error(err.message, {
         id: resortToastId(rule),
+        duration: 6000,
         description: undefined,
         action: { label: "Retry", onClick: (e) => startResort(e, rule) },
       });
     },
   });
   // preventDefault: sonner closes a toast when its action is clicked, which hid "Re-sorting…".
-  const startResort = (e: { preventDefault: () => void }, rule: RuleRow) => {
+  const startResort = (e: { preventDefault: () => void; detail?: number }, rule: RuleRow) => {
     e.preventDefault();
-    focusList();
+    focusList(e);
     resort.mutate({ rule });
   };
-  const offerResort = async (rule: RuleRow, undo?: { label: string; onClick: () => void }) => {
+  type Button = { label: string; onClick: (e?: { detail?: number }) => void };
+  const offerResort = async (rule: RuleRow, undo?: Button) => {
     if (!rule.set_category || rule.set_category === "Transfer") return; // Transfer rows never change
     let changes = 0;
     try {
@@ -481,11 +490,11 @@ function RuleList({ rules }: { rules: RuleRow[] }) {
       // Rules from before the 200-character cap can't be saved again, so no Undo for them.
       const length = [...rule.match_text].length;
       const restorable = length >= 1 && length <= MAX_MATCH_TEXT;
-      const undo = {
+      const undo: Button = {
         label: "Undo",
-        onClick: () => {
+        onClick: (e) => {
           undone.current.add(rule);
-          focusList();
+          focusList(e);
           restoreRule.mutate(rule);
         },
       };
