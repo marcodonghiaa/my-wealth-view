@@ -980,4 +980,27 @@ describe("re-sorting what a deleted rule filed", () => {
     await waitFor(() => expect(inserted).toHaveLength(1));
     expect(toastError).not.toHaveBeenCalled();
   });
+
+  // Polish 3 #1: after a Re-sort, categories on every page are read again.
+  it("refreshes the data after a re-sort", async () => {
+    const invalidate = vi.spyOn(QueryClient.prototype, "invalidateQueries");
+    invoke.mockResolvedValue(answer(2));
+    renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: "Delete rule for Netflix" }));
+    await waitFor(() => expect(toastInfo).toHaveBeenCalled());
+    invalidate.mockClear();
+    (toastInfo.mock.calls[0] as unknown as [string, Offer])[1].action.onClick();
+    await waitFor(() =>
+      expect(toastSuccess).toHaveBeenCalledWith(
+        "2 transactions will be re-sorted at the next sync",
+      ),
+    );
+    const refreshesTransactions = invalidate.mock.calls.some(([filters]) => {
+      const predicate = (filters as { predicate?: (q: { queryKey: unknown[] }) => boolean })
+        ?.predicate;
+      return predicate?.({ queryKey: ["transactions"] }) === true;
+    });
+    invalidate.mockRestore();
+    expect(refreshesTransactions).toBe(true);
+  });
 });
