@@ -93,3 +93,13 @@ describe("tags drop invisible characters", () => {
     expect(normalizeTags(["​", "wo‍rk", "﻿trip­"])).toEqual(["work", "trip"]);
   });
 });
+
+// polish-1 #22: "café" with a separate accent is the same tag as "café" (the database wants NFC).
+describe("tags are composed (NFC)", () => {
+  it("merges decomposed and composed spellings", () => {
+    const tags = normalizeTags(["café", "café"]);
+    expect(tags).toEqual(["café"]);
+    expect(tags[0]).toBe(tags[0]!.normalize("NFC"));
+    expect(normalizeNote("cafe\u0301")).toBe("café");
+  });
+});

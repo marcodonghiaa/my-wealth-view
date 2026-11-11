@@ -371,9 +371,16 @@ export const MAX_NOTE_LENGTH = 2000;
 /** The first `max` characters (code points, like Postgres char_length): never half an emoji. */
 const cutChars = (s: string, max: number): string => Array.from(s).slice(0, max).join("");
 
-/** One tag as typed: invisible format characters dropped, trimmed, inner spaces collapsed, cut to the length limit. */
+/** One tag as typed: composed (NFC), invisible format characters dropped, trimmed, inner spaces collapsed, cut to the length limit. */
 export const cleanTag = (raw: string): string =>
-  cutChars(raw.replace(/\p{Cf}/gu, "").trim().replace(/\s+/g, " "), MAX_TAG_LENGTH).trim();
+  cutChars(
+    raw
+      .normalize("NFC")
+      .replace(/\p{Cf}/gu, "")
+      .trim()
+      .replace(/\s+/g, " "),
+    MAX_TAG_LENGTH,
+  ).trim();
 
 /** Tags to save: cleaned, no blanks, no repeats (ignoring case, first spelling wins), at most 20. */
 export function normalizeTags(raw: Array<string>): Array<string> {
@@ -388,9 +395,9 @@ export function normalizeTags(raw: Array<string>): Array<string> {
   return out.slice(0, MAX_TAGS);
 }
 
-/** Note to save: trimmed, null when empty. */
+/** Note to save: composed (NFC, so search finds "café" however it was typed), trimmed, null when empty. */
 export function normalizeNote(raw: string): string | null {
-  const note = cutChars(raw.trim(), MAX_NOTE_LENGTH).trim();
+  const note = cutChars(raw.normalize("NFC").trim(), MAX_NOTE_LENGTH).trim();
   return note === "" ? null : note;
 }
 
