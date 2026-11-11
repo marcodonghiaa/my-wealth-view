@@ -74,6 +74,7 @@ vi.mock("@/integrations/supabase/client", () => ({
   },
 }));
 
+import { toast } from "sonner";
 import { Route } from "./income";
 
 const Page = Route.options.component as () => React.JSX.Element;
@@ -158,6 +159,13 @@ describe("Income: Regular and One-off", () => {
     fireEvent.click(within(regular).getByRole("button", { name: "Mark one-off" }));
     await vi.waitFor(() => expect(db.updates).toEqual([{ set_income_kind: "one_off" }]));
     expect(db.inserts).toEqual([]);
+    // Polish #7: the rule may cover other names too, so the toast says which rule changed.
+    await vi.waitFor(() =>
+      expect(toast.success).toHaveBeenCalledWith(
+        "ACME Ltd now counts as one-off income",
+        expect.objectContaining({ description: "Changed your rule for “acme”." }),
+      ),
+    );
   });
 
   it("keeps one list when the six months can't be read", async () => {

@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { MAX_MATCH_TEXT } from "@/lib/rules";
+import { MAX_MATCH_TEXT, quoteText } from "@/lib/rules";
 import { RULE_COLUMNS, rulesQuery, type RuleRow } from "@/lib/rules-query";
 import {
   incomeWindow,
@@ -62,7 +62,7 @@ export interface MarkVars {
 /** What marking a row did, so Undo can take it back. */
 type Done =
   | { kind: "inserted"; id: string; rule: RuleRow }
-  | { kind: "updated"; id: string; previous: string | null }
+  | { kind: "updated"; id: string; previous: string | null; text: string }
   | { kind: "none" };
 
 /**
@@ -78,7 +78,12 @@ export async function markIncomeKind({ tx, kind, rules }: MarkVars): Promise<Don
       .update({ set_income_kind: kind })
       .eq("id", existing.id);
     if (error) throw error;
-    return { kind: "updated", id: existing.id, previous: existing.set_income_kind };
+    return {
+      kind: "updated",
+      id: existing.id,
+      previous: existing.set_income_kind,
+      text: existing.match_text,
+    };
   }
   const name = tx.creditor_name?.trim();
   if (!name) throw new Error("This payment has no name to make a rule from.");
@@ -134,7 +139,11 @@ export function useMarkIncomeKind() {
       toast.success(
         `${tx.creditor_name ?? "This payment"} now counts as ${kindLabel(kind)} income`,
         {
-          description: done.kind === "inserted" ? "Saved as a rule." : "Its rule was updated.",
+          // An existing rule may cover other names too: say which one changed.
+          description:
+            done.kind === "inserted"
+              ? "Saved as a rule."
+              : `Changed your rule for ${quoteText(done.text)}.`,
           action: {
             label: "Undo",
             onClick: () =>
