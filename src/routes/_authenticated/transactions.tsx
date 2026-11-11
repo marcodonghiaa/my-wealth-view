@@ -174,7 +174,6 @@ async function fetchInOut(
   return data;
 }
 
-// Missing before the backend migration: then there is simply nothing to suggest.
 // Suggestions are a help, not the list: a failure leaves the tag field without them, logged.
 async function fetchTagSuggestions(): Promise<Array<string>> {
   const { data, error } = await supabase.rpc("my_transaction_tags");
