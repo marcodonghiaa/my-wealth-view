@@ -177,6 +177,13 @@ describe("ImportStatement", () => {
     expect(await screen.findByText("+€3.20")).toBeInTheDocument();
   });
 
+  it("polish-4 #9 names the date menu by the words you see above it, like the column pickers", async () => {
+    upload("Fineco_movimenti.csv", CSV);
+    const menu = await screen.findByRole("combobox", { name: "Date order" });
+    expect(menu).not.toHaveAttribute("aria-label");
+    expect(screen.getByText("Date order")).toBeInTheDocument();
+  });
+
   it("#10 hides the sign flip for files with separate in and out columns", async () => {
     upload("Fineco_movimenti.csv", CSV);
     expect(await screen.findByText("Ristorante Mario")).toBeInTheDocument();

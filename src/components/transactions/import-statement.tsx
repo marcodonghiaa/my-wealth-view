@@ -281,11 +281,10 @@ export function ImportStatement() {
                 {statement.decimal &&
                   `Amounts use ${statement.decimal === "," ? "a decimal comma" : "a decimal point"}.`}
               </p>
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-                <label className="flex items-center gap-2">
-                  <span>Dates</span>
+              <div className="flex flex-wrap items-end gap-x-4 gap-y-2">
+                <label className="block space-y-1">
+                  <span>Date order</span>
                   <Select
-                    aria-label="Date order"
                     value={statement.dateOrder}
                     onChange={(e) => setOption({ dateOrder: e.target.value as DateOrder })}
                     className="w-auto"
