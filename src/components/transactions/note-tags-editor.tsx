@@ -8,6 +8,7 @@ import {
   MAX_TAGS,
   normalizeNote,
   normalizeTags,
+  sameTag,
 } from "@/lib/transactions";
 
 /** Free text about a transaction. Saved when the field loses focus, if it changed. */
@@ -62,14 +63,15 @@ export function TagEditor({
   const full = current.length >= MAX_TAGS;
 
   function add(text = input) {
-    const next = normalizeTags([...current, text]);
+    // A new tag that only differs in case from one used before takes that spelling.
+    const next = normalizeTags([...current, text]).map((t, i) =>
+      i < current.length ? t : (suggestions.find((s) => sameTag(s, t)) ?? t),
+    );
     setInput("");
     if (next.length !== current.length) onSave(next);
   }
 
-  const offered = suggestions.filter(
-    (s) => !current.some((t) => t.toLowerCase() === s.toLowerCase()),
-  );
+  const offered = suggestions.filter((s) => !current.some((t) => sameTag(t, s)));
 
   return (
     <div className="space-y-2">

@@ -110,3 +110,16 @@ describe("tags split at commas", () => {
     expect(normalizeTags(["a, b", "c,", ","])).toEqual(["a", "b", "c"]);
   });
 });
+
+// polish-1 #5: "Trip" on one row and "trip" on another are one tag for the filter.
+describe("tags ignore case across rows", () => {
+  it("lists one option and filters both rows", () => {
+    const rows = [
+      row({ entry_reference: "1", tags: ["Trip"] }),
+      row({ entry_reference: "2", tags: ["trip"] }),
+    ];
+    expect(listTags(rows)).toHaveLength(1);
+    expect(filterTransactions(rows, "", "all", { tag: "trip" })).toHaveLength(2);
+    expect(filterTransactions(rows, "", "all", { tag: "TRIP" })).toHaveLength(2);
+  });
+});

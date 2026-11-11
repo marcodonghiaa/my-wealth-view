@@ -289,7 +289,7 @@ export function filterTransactions(
       !(tx.note ?? "").toLowerCase().includes(q)
     )
       return false;
-    if (tag !== "all" && !(tx.tags ?? []).includes(tag)) return false;
+    if (tag !== "all" && !(tx.tags ?? []).some((t) => sameTag(t, tag))) return false;
     if (bank !== "all" && bankFor?.(tx.account_uid) !== bank) return false;
     if (day && tx.booking_date !== day) return false;
     return true;
@@ -401,9 +401,13 @@ export function normalizeNote(raw: string): string | null {
   return note === "" ? null : note;
 }
 
-/** Tags used by these rows, sorted, for the tag filter. */
+/** Tags that differ only in case ("Trip", "trip") are one tag. */
+export const sameTag = (a: string, b: string): boolean => a.toLowerCase() === b.toLowerCase();
+
+/** Tags used by these rows, once each ignoring case (first spelling seen), sorted, for the tag filter. */
 export function listTags(transactions: Array<Pick<TransactionRow, "tags">>): Array<string> {
-  const set = new Set<string>();
-  for (const tx of transactions) for (const t of tx.tags ?? []) set.add(t);
-  return [...set].sort((a, b) => a.localeCompare(b));
+  const byKey = new Map<string, string>();
+  for (const tx of transactions)
+    for (const t of tx.tags ?? []) if (!byKey.has(t.toLowerCase())) byKey.set(t.toLowerCase(), t);
+  return [...byKey.values()].sort((a, b) => a.localeCompare(b));
 }

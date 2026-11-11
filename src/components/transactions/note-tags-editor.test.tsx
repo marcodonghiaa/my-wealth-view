@@ -84,3 +84,15 @@ describe("TagEditor commas", () => {
     expect(onSave).toHaveBeenLastCalledWith(["trip", "work", "food"]);
   });
 });
+
+// polish-1 #5: typing "trip" when "Trip" is already used reuses "Trip".
+describe("TagEditor reuses an existing spelling", () => {
+  it("takes the suggestion's spelling when only case differs", () => {
+    const onSave = vi.fn();
+    render(<TagEditor tags={[]} onSave={onSave} saving={false} suggestions={["Trip"]} />);
+    const input = screen.getByLabelText("Add a tag");
+    fireEvent.change(input, { target: { value: "trip" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+    expect(onSave).toHaveBeenLastCalledWith(["Trip"]);
+  });
+});
