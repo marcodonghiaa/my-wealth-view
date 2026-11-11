@@ -40,6 +40,10 @@ export function SplitEditor({
   const fullAmount = Math.abs(tx.amount ?? 0);
   const [shareInput, setShareInput] = useState(() => shareText(tx.personal_amount ?? fullAmount));
   const [shareError, setShareError] = useState(false);
+  const validShare = (text: string) => {
+    const parsed = parseOwed(text);
+    return parsed != null && parsed <= fullAmount;
+  };
   const [people, setPeople] = useState(() => parseNames(tx.owed_by));
   const [newName, setNewName] = useState<string | null>(null);
 
@@ -115,13 +119,16 @@ export function SplitEditor({
             type="text"
             inputMode="decimal"
             value={shareInput}
+            aria-invalid={shareError}
+            aria-describedby={shareError ? "split-share-error" : undefined}
             onChange={(e) => {
               setShareInput(e.target.value);
               setShareError(false);
             }}
+            onBlur={() => setShareError(!validShare(shareInput))}
           />
           {shareError && (
-            <p role="alert" className="mt-1 text-xs text-destructive">
+            <p id="split-share-error" role="alert" className="mt-1 text-xs text-negative">
               Enter an amount between 0 and {formatAmountPlain(fullAmount)}.
             </p>
           )}
@@ -199,7 +206,7 @@ export function SplitEditor({
           <Button
             onClick={() => {
               const parsed = parseOwed(shareInput);
-              if (parsed == null || parsed > fullAmount) {
+              if (parsed == null || !validShare(shareInput)) {
                 setShareError(true);
                 return;
               }

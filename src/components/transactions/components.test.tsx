@@ -134,6 +134,19 @@ describe("SplitEditor", () => {
     expect(onSave).toHaveBeenCalledWith(6.25, null);
   });
 
+  it("polish-4 #6 flags a bad share when you leave the box, tied to the field", async () => {
+    render(<SplitEditor tx={tx()} onSave={vi.fn()} saving={false} />);
+    await open();
+    const share = await screen.findByLabelText(/Your share/);
+    await userEvent.clear(share);
+    await userEvent.type(share, "abc");
+    await userEvent.tab();
+    const alert = screen.getByRole("alert");
+    expect(alert).toHaveClass("text-negative");
+    expect(share).toHaveAttribute("aria-invalid", "true");
+    expect(share).toHaveAttribute("aria-describedby", alert.id);
+  });
+
   it("polish-4 #2 fills the share box with the chosen decimal mark", async () => {
     setLocaleOverride("it-IT");
     try {
