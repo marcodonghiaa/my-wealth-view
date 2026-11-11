@@ -162,6 +162,7 @@ export function TwoFactorSection() {
                         onClick={() => void remove(a.id)}
                         className="flex-1 bg-negative text-white"
                       >
+                        {pending && <Loader2 className="animate-spin" />}
                         Confirm remove
                       </Button>
                     </div>

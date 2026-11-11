@@ -94,6 +94,21 @@ describe("sign-in with two-step", () => {
     expect(navigate).not.toHaveBeenCalled();
   });
 
+  // fails_when=the user can sign out in the middle of a code check
+  it("keeps Use a different account disabled while the code is being checked", async () => {
+    mfa.needsMfaCode.mockResolvedValue(true);
+    mfa.verifyMfaCode.mockReturnValue(new Promise(() => {}));
+    session = { user: { id: "u" } };
+    render(<AuthPage />);
+    fireEvent.change(await screen.findByLabelText("Authenticator code"), {
+      target: { value: "123456" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Verify" }));
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Use a different account" })).toBeDisabled(),
+    );
+  });
+
   it("an existing session without the code lands on the code step, and can switch account", async () => {
     mfa.needsMfaCode.mockResolvedValue(true);
     session = { user: { id: "u" } };

@@ -142,6 +142,10 @@ describe("TwoFactorSection", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Remove Phone" }));
     fireEvent.click(screen.getByRole("button", { name: "Confirm remove" }));
     expect(screen.getByRole("button", { name: "Remove Laptop" })).toBeDisabled();
+    // The running remove shows it is working.
+    expect(
+      screen.getByRole("button", { name: "Confirm remove" }).querySelector(".animate-spin"),
+    ).not.toBeNull();
   });
 
   it("keeps the authenticator and says why when removing fails", async () => {

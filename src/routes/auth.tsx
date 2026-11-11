@@ -254,13 +254,14 @@ function AuthPage() {
               {mode === "mfa" && (
                 <button
                   type="button"
+                  disabled={pending}
                   onClick={() => {
                     void supabase.auth.signOut({ scope: "local" });
                     setMode("signin");
                     setCode("");
                     setError(null);
                   }}
-                  className="min-h-11 w-full text-center text-sm text-muted-foreground transition-colors hover:text-foreground"
+                  className="min-h-11 w-full text-center text-sm text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50"
                 >
                   Use a different account
                 </button>
