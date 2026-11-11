@@ -18,6 +18,8 @@ vi.mock("@/integrations/supabase/client", () => ({
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
 import { EditHolding } from "./edit-holding";
+import { setLocaleOverride } from "@/lib/locale";
+import { parseQuantity } from "@/lib/holdings";
 
 function setup(target: Parameters<typeof EditHolding>[0]["target"]) {
   const queryClient = new QueryClient({ defaultOptions: { mutations: { retry: false } } });
@@ -91,6 +93,23 @@ describe("EditHolding delete", () => {
     await waitFor(() =>
       expect(invalidate).toHaveBeenCalledWith({ queryKey: ["holding-performance"] }),
     );
+  });
+
+  it("polish-5 #4 audit: fills the box in the chosen format, so saving unchanged keeps 1.125", () => {
+    setLocaleOverride("it-IT");
+    try {
+      render(
+        <QueryClientProvider client={new QueryClient()}>
+          <EditHolding target={{ kind: "stock", isin: "IE00TEST" }} name="Coin" quantity={1.125} />
+        </QueryClientProvider>,
+      );
+      fireEvent.click(screen.getByRole("button", { name: "Edit Coin" }));
+      const box = screen.getByLabelText("How many you hold now") as HTMLInputElement;
+      expect(box.value).toBe("1,125");
+      expect(parseQuantity(box.value)).toBe(1.125);
+    } finally {
+      setLocaleOverride("");
+    }
   });
 
   it("sends the crypto source", async () => {

@@ -80,6 +80,17 @@ describe("AddTransaction", () => {
     expect(rpc).not.toHaveBeenCalled();
   });
 
+  it("polish-5 #9 stops at the database's limits before sending", async () => {
+    open();
+    expect(screen.getByLabelText("Description")).toHaveAttribute("maxLength", "500");
+    expect(screen.getByLabelText("From")).toHaveAttribute("maxLength", "60");
+    type("Amount", "10000000000000");
+    type("Description", "Big");
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(/up to 1,000,000,000,000/);
+    expect(rpc).not.toHaveBeenCalled();
+  });
+
   it("says the database update is missing when the function is not there yet", async () => {
     rpc.mockResolvedValue({ data: null, error: { code: "PGRST202", message: "not found" } });
     open();

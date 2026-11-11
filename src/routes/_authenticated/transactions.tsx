@@ -1,3 +1,4 @@
+import { dateLocale } from "@/lib/locale";
 import { fetchSplitContacts } from "@/lib/splits";
 import { EmptyState } from "@/components/empty-state";
 import { createFileRoute, useSearch } from "@tanstack/react-router";
@@ -424,7 +425,7 @@ function TransactionsPage({ category: initialCategory, month: initialMonth }: Tr
       : {}),
   });
 
-  const monthLabel = month.toLocaleDateString("en-GB", {
+  const monthLabel = month.toLocaleDateString(dateLocale(), {
     month: "long",
     year: "numeric",
   });

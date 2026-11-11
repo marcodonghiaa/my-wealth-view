@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
+import { setLocaleOverride } from "@/lib/locale";
 import type { SplitwiseFile, SplitwiseRow } from "./splitwise-parse";
 import { hasErrors, validateSplitwise } from "./splitwise-validate";
 
@@ -83,6 +84,13 @@ describe("validateSplitwise", () => {
       expect(found[1]).toMatch(/Cy.*total/i);
     });
 
+    it("polish-3 #9 writes the amounts in the chosen format", () => {
+      setLocaleOverride("de-DE");
+      const f = file([row()], { total: { currency: "USD", netCents: [600, -299, -301] } });
+      expect(messages(f, "error")[0]).toMatch(/2,99|3,01|6,00/);
+      expect(messages(f, "error")[0]).not.toMatch(/\d\.\d\d/);
+    });
+
     it("when the file mixes currencies", () => {
       const f = file([row(), row({ row: 2, currency: "EUR" })], {
         total: { currency: "USD", netCents: [1200, -600, -600] },
@@ -144,3 +152,5 @@ describe("validateSplitwise", () => {
     expect(hasErrors(validateSplitwise(file([row({ netCents: [1, 2, 3] })])))).toBe(true);
   });
 });
+
+afterEach(() => setLocaleOverride(""));

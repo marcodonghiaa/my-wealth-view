@@ -1,3 +1,4 @@
+import { normalizeNumber } from "@/lib/locale";
 // Shared by the Portfolio and Crypto pages and their add/edit controls.
 
 export interface SnapshotValue {
@@ -30,7 +31,7 @@ export function priceEur({ price, valueAtPrice, valueEur }: Omit<SnapshotValue, 
 
 // "3,5" and "3.5" both mean three and a half. Null for anything that isn't a positive number.
 export function parseQuantity(input: string): number | null {
-  const text = input.trim().replace(",", ".");
+  const text = normalizeNumber(input);
   if (!/^\d+(\.\d+)?$/.test(text)) return null;
   const value = Number(text);
   return Number.isFinite(value) && value > 0 ? value : null;

@@ -1,0 +1,5 @@
+user_id,group_id,journal_id,created_at,updated_at,group_title,type,currency_code,amount,foreign_currency_code,foreign_amount,primary_currency_code,description,date,source_name,source_iban,source_type,destination_name,destination_iban,destination_type,reconciled,category,budget,bill,tags,notes
+1,10,10,2026-02-01T10:00:00+01:00,2026-02-01T10:00:00+01:00,,Withdrawal,EUR,-23.45,,,EUR,Groceries,2026-02-01T00:00:00+01:00,Checking,,Asset account,Supermarket,,Expense account,false,Food,,,,
+1,11,11,2026-02-02T10:00:00+01:00,2026-02-02T10:00:00+01:00,,Deposit,EUR,1800.00,,,EUR,Salary,2026-02-02T00:00:00+01:00,Employer,,Revenue account,Checking,,Asset account,false,Salary,,,,
+1,12,12,2026-02-03T10:00:00+01:00,2026-02-03T10:00:00+01:00,,Transfer,EUR,-200.00,,,EUR,To savings,2026-02-03T00:00:00+01:00,Checking,,Asset account,Savings,,Asset account,false,,,,,
+1,13,13,2026-01-01T10:00:00+01:00,2026-01-01T10:00:00+01:00,,Opening balance,EUR,1000.00,,,EUR,Start,2026-01-01T00:00:00+01:00,Initial balance,,Initial balance account,Checking,,Asset account,false,,,,,

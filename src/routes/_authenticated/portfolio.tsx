@@ -1,3 +1,4 @@
+import { formatPercent, formatQuantity } from "@/lib/locale";
 import { createFileRoute } from "@tanstack/react-router";
 import { EmptyState } from "@/components/empty-state";
 import { useQuery } from "@tanstack/react-query";
@@ -13,7 +14,7 @@ import {
 } from "lucide-react";
 import { shortHoldingName } from "@/lib/holding-name";
 import { supabase } from "@/integrations/supabase/client";
-import { formatEur } from "@/lib/transactions";
+import { formatEur, formatMoney } from "@/lib/transactions";
 import { currentValueEur } from "@/lib/holdings";
 import { colorForHoldingType } from "@/lib/asset-colors";
 import { AddHoldingPanel } from "@/components/holdings/add-holding-panel";
@@ -88,31 +89,6 @@ async function fetchPortfolio(): Promise<Array<PortfolioRow>> {
     .order("value_eur", { ascending: false });
   if (error) throw error;
   return (data ?? []) as Array<PortfolioRow>;
-}
-
-function formatMoney(value: number, currency: string): string {
-  try {
-    return new Intl.NumberFormat("en-IE", {
-      style: "currency",
-      currency,
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(value);
-  } catch {
-    // Intl.NumberFormat throws on a malformed ISO 4217 code -- fall back to
-    // a plain number rather than crashing the whole page during render.
-    return `${new Intl.NumberFormat("en-IE", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(value)} ${currency}`;
-  }
-}
-
-function formatShares(value: number): string {
-  return new Intl.NumberFormat("en-IE", {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 3,
-  }).format(value);
 }
 
 interface TypeGroup {
@@ -276,7 +252,7 @@ function PortfolioPage() {
                       </span>
                       <span className="block text-xs text-muted-foreground">
                         {group.holdings.length} holding
-                        {group.holdings.length === 1 ? "" : "s"} · {percent.toFixed(1)}%
+                        {group.holdings.length === 1 ? "" : "s"} · {formatPercent(percent / 100)}
                       </span>
                     </span>
                     <span className="font-figure text-[0.9375rem] text-foreground">
@@ -326,7 +302,7 @@ function PortfolioPage() {
                                     </div>
                                   </td>
                                   <td className="px-4 py-3 font-figure text-foreground sm:px-5">
-                                    {row.shares != null ? formatShares(row.shares) : "—"}
+                                    {row.shares != null ? formatQuantity(row.shares, 3) : "—"}
                                   </td>
                                   <td className="px-4 py-3 font-figure text-foreground sm:px-5">
                                     {row.price != null && row.currency
@@ -345,7 +321,7 @@ function PortfolioPage() {
                                     {formatEur(valueEur)}
                                   </td>
                                   <td className="px-4 py-3 text-right font-figure text-foreground sm:px-5">
-                                    {rowPercent.toFixed(1)}%
+                                    {formatPercent(rowPercent / 100)}
                                   </td>
                                   <td className="px-2 py-1 text-right">
                                     {row.isin && (
@@ -373,7 +349,7 @@ function PortfolioPage() {
                             amount={
                               <>
                                 <span className="font-figure">
-                                  {row.shares != null ? formatShares(row.shares) : "—"}
+                                  {row.shares != null ? formatQuantity(row.shares, 3) : "—"}
                                 </span>{" "}
                                 shares{row.broker_label ? ` · ${row.broker_label}` : ""}
                               </>
@@ -398,7 +374,7 @@ function PortfolioPage() {
                             </DetailRow>
                             <DetailRow label="Shares">
                               <span className="font-figure">
-                                {row.shares != null ? formatShares(row.shares) : "—"}
+                                {row.shares != null ? formatQuantity(row.shares, 3) : "—"}
                               </span>
                               {row.isin && (
                                 <EditHolding

@@ -1,6 +1,7 @@
 import { ChangePasswordForm } from "@/components/settings/change-password-form";
 import { DeleteAccount } from "@/components/settings/delete-account";
 import { ExportData } from "@/components/settings/export-data";
+import { FormatsSection } from "@/components/settings/formats-section";
 import { CategoriesSection } from "@/components/settings/categories-section";
 import { HealthSection, NotificationsSection } from "@/components/health/health-section";
 import { isDemoMode } from "@/lib/demo/mode";
@@ -13,6 +14,7 @@ export function SettingsPage() {
       <HealthSection />
       <NotificationsSection />
       <CategoriesSection />
+      <FormatsSection />
       {/* The demo has no real account: a password change or account deletion would do nothing and an export would be fake data. */}
       {!isDemoMode() && (
         <div className="space-y-10">

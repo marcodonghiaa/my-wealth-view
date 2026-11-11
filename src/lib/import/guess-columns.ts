@@ -34,7 +34,8 @@ const SYNONYMS: Record<Role, Array<string>> = {
   currency: ["currency", "valuta", "curr"],
 };
 
-function normalize(header: string): string {
+/** A header as plain words: "Data Valuta (€)" → "data valuta". */
+export function cleanHeader(header: string): string {
   return header
     .normalize("NFD")
     .replace(/[̀-ͯ]/g, "")
@@ -43,7 +44,8 @@ function normalize(header: string): string {
     .trim();
 }
 
-const matches = (header: string, synonym: string) =>
+/** The header is the synonym, or starts with it as a word ("importo eur" for "importo"). */
+export const headerMatches = (header: string, synonym: string) =>
   header === synonym || header.startsWith(`${synonym} `);
 
 /**
@@ -51,7 +53,7 @@ const matches = (header: string, synonym: string) =>
  * to at most one role: the first role in ROLES order that matches it.
  */
 export function guessColumns(headers: Array<string>): Record<Role, number | null> {
-  const normalized = headers.map(normalize);
+  const normalized = headers.map(cleanHeader);
   const taken = new Set<number>();
   const result = Object.fromEntries(ROLES.map((role) => [role, null])) as Record<
     Role,
@@ -60,7 +62,8 @@ export function guessColumns(headers: Array<string>): Record<Role, number | null
 
   for (const role of ROLES) {
     const index = normalized.findIndex(
-      (header, i) => !taken.has(i) && SYNONYMS[role].some((synonym) => matches(header, synonym)),
+      (header, i) =>
+        !taken.has(i) && SYNONYMS[role].some((synonym) => headerMatches(header, synonym)),
     );
     if (index !== -1) {
       result[role] = index;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { MAX_ROWS, parseCsv } from "./parse-csv";
+import { decodeCsv, MAX_ROWS, parseCsv } from "./parse-csv";
 
 describe("parseCsv", () => {
   // protects=the same table comes out however the spreadsheet app saved it; fails_when=a
@@ -16,6 +16,10 @@ describe("parseCsv", () => {
 
   it("reads a semicolon separated file (Excel in Italian)", () => {
     expect(parseCsv("mese;totale\n2024-03;1.234,56\n").rows).toEqual([["2024-03", "1.234,56"]]);
+  });
+
+  it("reads a pipe separated file", () => {
+    expect(parseCsv("date|amount\n2026-01-02|1,50\n").rows).toEqual([["2026-01-02", "1,50"]]);
   });
 
   it("keeps commas inside quotes", () => {
@@ -60,5 +64,24 @@ describe("parseCsv", () => {
 
   it("rejects text over the size limit", () => {
     expect(() => parseCsv("a\n" + "x".repeat(2_000_001))).toThrow(/too large/i);
+  });
+});
+
+describe("decodeCsv", () => {
+  it("reads UTF-8", () => {
+    expect(decodeCsv(new TextEncoder().encode("Café;€"))).toBe("Café;€");
+  });
+
+  it("reads Windows-1252 when the bytes are not UTF-8", () => {
+    // "Café;€5" in Windows-1252: é = 0xE9, € = 0x80
+    const bytes = new Uint8Array([0x43, 0x61, 0x66, 0xe9, 0x3b, 0x80, 0x35]);
+    expect(decodeCsv(bytes)).toBe("Café;€5");
+  });
+
+  it("reads UTF-16 with a byte-order mark, either byte order", () => {
+    const le = new Uint8Array([0xff, 0xfe, 0x41, 0x00, 0xe9, 0x00]);
+    const be = new Uint8Array([0xfe, 0xff, 0x00, 0x41, 0x00, 0xe9]);
+    expect(decodeCsv(le)).toBe("Aé");
+    expect(decodeCsv(be)).toBe("Aé");
   });
 });

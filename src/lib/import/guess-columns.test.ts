@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { guessColumns } from "./guess-columns";
+import { cleanHeader, guessColumns, headerMatches } from "./guess-columns";
 
 describe("guessColumns", () => {
   // protects=the wizard opens with the right column already chosen; fails_when=an English or
@@ -59,5 +59,19 @@ describe("guessColumns", () => {
 
   it("returns every role as null for an empty header list", () => {
     expect(Object.values(guessColumns([])).every((i) => i === null)).toBe(true);
+  });
+});
+
+describe("cleanHeader and headerMatches (polish-3 #22)", () => {
+  it("turns a header into plain words", () => {
+    expect(cleanHeader("  Data Valuta (€) ")).toBe("data valuta");
+    expect(cleanHeader("Liquidità")).toBe("liquidita");
+  });
+
+  it("matches the synonym itself or as the first word, not inside a word", () => {
+    expect(headerMatches("importo", "importo")).toBe(true);
+    expect(headerMatches("importo eur", "importo")).toBe(true);
+    expect(headerMatches("importonetto", "importo")).toBe(false);
+    expect(headerMatches("total amount", "amount")).toBe(false);
   });
 });

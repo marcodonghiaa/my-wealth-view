@@ -1,3 +1,4 @@
+import { dateLocale, formatNumber, formatPercent, numberFormat } from "@/lib/locale";
 import { Link, createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
@@ -65,14 +66,14 @@ async function fetchLatestFxRates(): Promise<Record<string, FxRate>> {
 
 function formatFxDate(iso: string | undefined): string {
   if (!iso) return "latest";
-  return new Date(`${iso}T00:00:00`).toLocaleDateString("en-GB", {
+  return new Date(`${iso}T00:00:00`).toLocaleDateString(dateLocale(), {
     day: "numeric",
     month: "short",
   });
 }
 
 function formatMoney(value: number, currency: Currency): string {
-  return new Intl.NumberFormat("en-IE", {
+  return numberFormat({
     style: "currency",
     currency,
     maximumFractionDigits: 0,
@@ -193,7 +194,7 @@ function NetWorthPage() {
             <span className={`font-figure ${TONE_TEXT[toneOf(rangeChange, NOISE_BAND)]}`}>
               {rangeDeltaEur >= 0 ? "+" : "−"}
               {formatMoney(Math.abs(rangeDeltaEur) / rateToEur, currency)} (
-              {formatPercent(rangeChange)})
+              {formatPercent(rangeChange, { digits: 2, signed: true })})
             </span>
             <span className="text-muted-foreground">
               {scrubbed && chartFirst
@@ -210,14 +211,14 @@ function NetWorthPage() {
               <span className={`font-figure ${TONE_TEXT[toneOf(today.share, NOISE_BAND)]}`}>
                 {today.eur >= 0 ? "+" : "−"}
                 {formatMoney(Math.abs(today.eur) / rateToEur, currency)} (
-                {formatPercent(today.share)})
+                {formatPercent(today.share, { digits: 2, signed: true })})
               </span>
               <span className="text-muted-foreground">Today</span>
             </p>
           )}
           {currency !== "EUR" && headline != null && rateToEur != null && (
             <p className="mt-2 text-xs text-muted-foreground">
-              Rate: 1 {currency} = {rateToEur.toFixed(4)} EUR · ECB,{" "}
+              Rate: 1 {currency} = {formatNumber(rateToEur, 4)} EUR · ECB,{" "}
               {formatFxDate(fxQuery.data?.[currency]?.date)}
             </p>
           )}
@@ -313,11 +314,6 @@ function NetWorthPage() {
       />
     </div>
   );
-}
-
-function formatPercent(value: number, signed = true): string {
-  const sign = signed ? (value > 0 ? "+" : value < 0 ? "−" : "") : "";
-  return `${sign}${Math.abs(value * 100).toFixed(2)}%`;
 }
 
 function LegendDot({ color, label, dashed }: { color: string; label: string; dashed?: boolean }) {

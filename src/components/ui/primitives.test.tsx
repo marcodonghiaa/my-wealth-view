@@ -5,6 +5,7 @@ import { Input, Select, fieldClass } from "./field";
 import { GroupedList, SectionTitle } from "./grouped-list";
 import { Alert } from "./alert";
 import { Skeleton } from "./skeleton";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "./dialog";
 
 describe("Button", () => {
   it("is a 44px ink button by default, never submits a form by accident", () => {
@@ -89,5 +90,21 @@ describe("lists, alerts, skeletons", () => {
     );
     expect(screen.getByRole("alert")).toHaveTextContent("Broke");
     expect(screen.getByTestId("sk")).toHaveAttribute("aria-hidden");
+  });
+});
+
+describe("DialogContent (polish-4 #1)", () => {
+  // jsdom has no layout: the one column must be minmax(0,1fr) so a long line truncates instead of
+  // widening the grid past the dialog (proved live: 716px of content in a 512px dialog before).
+  it("lets its content shrink to the dialog's width", () => {
+    render(
+      <Dialog open>
+        <DialogContent>
+          <DialogTitle>Import</DialogTitle>
+          <DialogDescription>Long</DialogDescription>
+        </DialogContent>
+      </Dialog>,
+    );
+    expect(screen.getByRole("dialog")).toHaveClass("grid-cols-[minmax(0,1fr)]");
   });
 });

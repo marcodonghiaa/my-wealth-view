@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { CategoryTable } from "@/components/import/splitwise-category-table";
 import { FindInBank } from "@/components/import/find-in-bank";
 import { CTA, Group, LINK, PRIMARY, Steps, TINTED } from "@/components/import/splitwise-ui";
-import { money as amount, shortDate } from "@/lib/import/splitwise-format";
+import { money as amount, shortDate, moneyAmount } from "@/lib/import/splitwise-format";
 import type { ClassifiedRow } from "@/lib/import/splitwise-classify";
 import { refreshKeys } from "@/lib/import/last-import";
 import { IMPORT_KEY, runSplitwiseImport, type RpcClient } from "@/lib/import/splitwise-commit";
@@ -36,11 +36,11 @@ const addDays = (iso: string, days: number) =>
 
 const expenses = (n: number) => (n === 1 ? "1 expense" : `${n} expenses`);
 
-/** "113.45 USD", or one amount per currency: shares are never added across currencies. */
+/** "$113.45", or one amount per currency: shares are never added across currencies. */
 function sharesTotal(shares: Array<{ amount: number; currency: string }>): string {
   const totals = new Map<string, number>();
   for (const s of shares) totals.set(s.currency, (totals.get(s.currency) ?? 0) + s.amount);
-  return [...totals].map(([currency, amount]) => `${amount.toFixed(2)} ${currency}`).join(", ");
+  return [...totals].map(([currency, amount]) => moneyAmount(amount, currency)).join(", ");
 }
 
 interface Loaded {
