@@ -283,6 +283,22 @@ describe("notes and tags", () => {
     expect(screen.getByText("Paid for two")).toBeInTheDocument();
   });
 
+  // polish-3 #9: fails_when=the visible Note / Tags headings aren't the fields' labels
+  it("labels the note and tag fields with their headings", async () => {
+    render(
+      <ul>
+        <TransactionCardView {...bankRow()} />
+      </ul>,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /Hotel/ }));
+    const note = await screen.findByLabelText("Note");
+    expect(screen.getByText("Note", { selector: "label" })).toHaveAttribute("for", note.id);
+    expect(screen.getByText("Tags", { selector: "label" })).toHaveAttribute(
+      "for",
+      screen.getByLabelText("Add a tag").id,
+    );
+  });
+
   it("table row shows the note under the name", () => {
     render(
       <table>

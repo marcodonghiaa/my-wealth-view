@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useId, useState, type ReactNode } from "react";
 import { ChevronRight, Users } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -118,6 +118,7 @@ function TransactionEditSheet({
   const { tx } = p;
   const name = tx.creditor_name ?? "—";
   const share = isSplitwiseShare(tx);
+  const fieldId = useId();
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
@@ -190,14 +191,30 @@ function TransactionEditSheet({
             <GroupedList>
               {p.onSaveNote && (
                 <div className="space-y-1.5 px-4 py-3">
-                  <span className="text-sm text-muted-foreground">Note</span>
-                  <NoteEditor note={tx.note} onSave={p.onSaveNote} saving={p.savingNote ?? false} />
+                  <label
+                    htmlFor={`${fieldId}-note`}
+                    className="block text-sm text-muted-foreground"
+                  >
+                    Note
+                  </label>
+                  <NoteEditor
+                    id={`${fieldId}-note`}
+                    note={tx.note}
+                    onSave={p.onSaveNote}
+                    saving={p.savingNote ?? false}
+                  />
                 </div>
               )}
               {p.onSaveTags && (
                 <div className="space-y-1.5 px-4 py-3">
-                  <span className="text-sm text-muted-foreground">Tags</span>
+                  <label
+                    htmlFor={`${fieldId}-tags`}
+                    className="block text-sm text-muted-foreground"
+                  >
+                    Tags
+                  </label>
                   <TagEditor
+                    id={`${fieldId}-tags`}
                     tags={tx.tags}
                     onSave={p.onSaveTags}
                     saving={p.savingTags ?? false}

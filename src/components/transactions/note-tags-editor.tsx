@@ -18,10 +18,12 @@ import {
  * (Esc, X) can remove the field with no blur, so an edit not yet sent is saved then.
  */
 export function NoteEditor({
+  id,
   note,
   onSave,
   saving,
 }: {
+  id?: string;
   note: string | null | undefined;
   onSave: (note: string | null) => void;
   saving: boolean;
@@ -48,6 +50,7 @@ export function NoteEditor({
 
   return (
     <textarea
+      id={id}
       aria-label="Note"
       value={input}
       maxLength={MAX_NOTE_LENGTH}
@@ -77,11 +80,14 @@ export function NoteEditor({
  * sent, and the saves go out one after another.
  */
 export function TagEditor({
+  id,
   tags,
   onSave,
   saving,
   suggestions = [],
 }: {
+  /** For the field that adds a tag, so a heading can label it. */
+  id?: string;
   tags: Array<string> | null | undefined;
   onSave: (tags: Array<string>) => void;
   saving: boolean;
@@ -144,6 +150,7 @@ export function TagEditor({
         </ul>
       )}
       <input
+        id={id}
         aria-label="Add a tag"
         list={listId}
         value={input}
