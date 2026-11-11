@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { MAX_MATCH_TEXT } from "@/lib/rules";
-import { rulesQuery } from "@/lib/rules-query";
+import { RULE_COLUMNS, rulesQuery, type RuleRow } from "@/lib/rules-query";
 import {
   incomeWindow,
   ruleFor,
@@ -61,7 +61,7 @@ export interface MarkVars {
 
 /** What marking a row did, so Undo can take it back. */
 type Done =
-  | { kind: "inserted"; id: string }
+  | { kind: "inserted"; id: string; rule: RuleRow }
   | { kind: "updated"; id: string; previous: string | null }
   | { kind: "none" };
 
@@ -95,10 +95,10 @@ export async function markIncomeKind({ tx, kind, rules }: MarkVars): Promise<Don
       set_category: null,
       set_income_kind: kind,
     })
-    .select("id")
+    .select(RULE_COLUMNS)
     .single();
   if (error) throw error;
-  return { kind: "inserted", id: data.id };
+  return { kind: "inserted", id: data.id, rule: data };
 }
 
 export async function undoMark(done: Done): Promise<void> {
@@ -122,6 +122,13 @@ export function useMarkIncomeKind() {
     mutationFn: markIncomeKind,
     onError: (error) => toast.error("Couldn't save", { description: error.message }),
     onSuccess: (done, { tx, kind }) => {
+      // The rule is in the cache at once: a second Mark before the refetch lands sees it.
+      if (done.kind !== "none")
+        queryClient.setQueryData<Array<RuleRow>>(rulesQuery.queryKey, (old = []) =>
+          done.kind === "inserted"
+            ? [...old, done.rule]
+            : old.map((r) => (r.id === done.id ? { ...r, set_income_kind: kind } : r)),
+        );
       void refresh();
       if (done.kind === "none") return;
       toast.success(

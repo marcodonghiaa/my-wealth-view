@@ -17,12 +17,13 @@ export type RuleRow = Pick<
   | "created_at"
 >;
 
+export const RULE_COLUMNS =
+  "id, match_field, match_text, match_mode, set_category, set_transaction_type, set_flow_type, set_income_kind, priority, created_at";
+
 async function fetchRules(): Promise<RuleRow[]> {
   const { data, error } = await supabase
     .from("category_rules")
-    .select(
-      "id, match_field, match_text, match_mode, set_category, set_transaction_type, set_flow_type, set_income_kind, priority, created_at",
-    )
+    .select(RULE_COLUMNS)
     .order("priority", { ascending: true })
     .order("created_at", { ascending: true });
   if (error) throw error;
