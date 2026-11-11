@@ -86,3 +86,10 @@ describe("length limits count characters, not UTF-16 units", () => {
     expect(normalizeNote(`${"😀".repeat(2001)}`)).toBe("😀".repeat(2000));
   });
 });
+
+// polish-1 #13: invisible format characters would make an invisible "#" tag (the database refuses them).
+describe("tags drop invisible characters", () => {
+  it("strips zero-width and other format characters", () => {
+    expect(normalizeTags(["​", "wo‍rk", "﻿trip­"])).toEqual(["work", "trip"]);
+  });
+});
