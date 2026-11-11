@@ -12,6 +12,11 @@ describe("toCsv", () => {
     expect(line?.replace(/^"/, "").startsWith("'")).toBe(true);
   });
 
+  // polish-2 #4: the tag list is joined before the escape runs, so a first tag "=cmd" is quoted too
+  it("quotes a joined tag list that starts with a formula", () => {
+    expect(body(toCsv(["tags"], [{ tags: ["=cmd", "x"] }]))[1]).toBe(`"'=cmd, x"`);
+  });
+
   it("leaves negative numbers as numbers", () => {
     expect(body(toCsv(["a"], [{ a: -12.5 }]))[1]).toBe("-12.5");
   });
