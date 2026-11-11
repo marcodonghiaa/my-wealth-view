@@ -75,15 +75,40 @@ export function textMatches(field: string, text: string, mode: string | null | u
   return new RegExp(before + escapeRegExp(t) + after, "u").test(field);
 }
 
+// Case and accents folded, as textMatches expects ("Café" and "CAFE" are the same).
+export const foldText = (s: string) =>
+  s
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[’']/g, "")
+    .toLowerCase();
+
+export type RuleLike = {
+  match_field: string;
+  match_text: string;
+  match_mode: string | null;
+  set_category: string | null;
+};
+
 // "Make a rule" on the toast after a category change: opens Rules with the form filled in, so
-// the next transactions from this name get the same category.
+// the next transactions from this name get the same category. Not offered when one of `rules`
+// (the cached list, if loaded) already sets a category for this name.
 export function makeRuleAction(
   name: string | null | undefined,
   category: string | null,
   navigate: (opts: { to: "/rules"; search: { text: string; category: string } }) => unknown,
+  rules: ReadonlyArray<RuleLike> = [],
 ) {
   const text = name?.trim();
   if (!text || !category) return undefined;
+  const folded = foldText(text);
+  const covered = rules.some(
+    (r) =>
+      r.set_category &&
+      r.match_field !== "remittance_info" &&
+      textMatches(folded, foldText(r.match_text), r.match_mode),
+  );
+  if (covered) return undefined;
   return {
     label: "Make a rule",
     onClick: () => void navigate({ to: "/rules", search: { text, category } }),

@@ -1,7 +1,7 @@
 import { fetchSplitContacts } from "@/lib/splits";
 import { EmptyState } from "@/components/empty-state";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { makeRuleAction } from "@/lib/rules";
+import { makeRuleAction, type RuleLike } from "@/lib/rules";
 import { accountName, bankOf } from "@/components/bank-badge";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -161,7 +161,13 @@ function TransactionsPage() {
   const updateCategory = useTransactionFieldMutation(queryClient, monthKey, "category", {
     errorMessage: "Couldn't save category",
     successMessage: (value) => `Saved — ${value}`,
-    successAction: ({ tx, value }) => makeRuleAction(tx.creditor_name, value, navigate),
+    successAction: ({ tx, value }) =>
+      makeRuleAction(
+        tx.creditor_name,
+        value,
+        navigate,
+        queryClient.getQueryData<RuleLike[]>(["category-rules"]),
+      ),
   });
 
   const updateType = useTransactionFieldMutation(queryClient, monthKey, "transaction_type", {
@@ -363,7 +369,12 @@ function TransactionsPage() {
     // In the sheet too: on a phone the open sheet covers the toast's button.
     makeRule: isSplitwiseShare(tx)
       ? undefined
-      : makeRuleAction(tx.creditor_name, tx.category, navigate),
+      : makeRuleAction(
+          tx.creditor_name,
+          tx.category,
+          navigate,
+          queryClient.getQueryData<RuleLike[]>(["category-rules"]),
+        ),
     ...(tx.account_uid && accounts[tx.account_uid]?.manual
       ? {
           onSaveAmount: (amount: number) => changeAmount.mutate({ tx, amount }),

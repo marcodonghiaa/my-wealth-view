@@ -1,6 +1,6 @@
 import type { AppCategory } from "./suggest-category";
 import { suggestCategory } from "./suggest-category";
-import { textMatches } from "@/lib/rules";
+import { foldText, textMatches } from "@/lib/rules";
 
 // Picks an app category for one Splitwise row from its description: the user's own rules first,
 // then keywords, then the Splitwise category. When nothing recognises it the result is null, so
@@ -49,8 +49,7 @@ const KEYWORDS: Array<[AppCategory, RegExp]> = [
   ["Shopping", /\b(shop|goodwill|amazon|cloth\w*|abbigliament\w*|cake|gift|regalo|airtag)\b/],
 ];
 
-const norm = (s: string) =>
-  s.normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[’']/g, "").toLowerCase();
+const norm = foldText;
 
 const isAppCategory = (value: string | null): value is AppCategory =>
   value !== null && suggestCategory(value) === value;

@@ -59,6 +59,26 @@ describe("Make a rule shortcut", () => {
     });
   });
 
+  // Polish pass 4 #14: it was offered even when a rule already sorts this name.
+  it("offers nothing when a rule already sorts this name", () => {
+    const rules = [
+      {
+        match_field: "creditor_name",
+        match_text: "Café",
+        match_mode: "word",
+        set_category: "Dine Out",
+      },
+    ];
+    expect(makeRuleAction("CAFE ROMA", "Dine Out", vi.fn(), rules)).toBeUndefined();
+    expect(makeRuleAction("Bar Roma", "Dine Out", vi.fn(), rules)?.label).toBe("Make a rule");
+    const typeOnly = [{ ...rules[0]!, set_category: null }];
+    expect(makeRuleAction("CAFE ROMA", "Dine Out", vi.fn(), typeOnly)?.label).toBe("Make a rule");
+    const descriptionOnly = [{ ...rules[0]!, match_field: "remittance_info" }];
+    expect(makeRuleAction("CAFE ROMA", "Dine Out", vi.fn(), descriptionOnly)?.label).toBe(
+      "Make a rule",
+    );
+  });
+
   it("offers nothing without a name or a category", () => {
     expect(makeRuleAction("  ", "Dine Out", vi.fn())).toBeUndefined();
     expect(makeRuleAction("BAR", null, vi.fn())).toBeUndefined();
