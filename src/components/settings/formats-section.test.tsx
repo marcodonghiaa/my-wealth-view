@@ -13,7 +13,8 @@ describe("FormatsSection", () => {
   it("follows the browser by default and shows an example", () => {
     render(<FormatsSection reload={() => {}} />);
     expect(screen.getByLabelText("Format")).toHaveValue("");
-    expect(screen.getByText("-€1,234.50")).toBeInTheDocument();
+    // polish-4 #7: a real minus, like the transaction list.
+    expect(screen.getByText("−€1,234.50")).toBeInTheDocument();
     expect(screen.getByText("3 Mar 2026")).toBeInTheDocument();
   });
 

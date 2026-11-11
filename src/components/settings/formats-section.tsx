@@ -38,8 +38,11 @@ export function FormatsSection({
         </Select>
         <p className="text-sm text-muted-foreground">
           Example:{" "}
-          <span className="font-figure text-foreground">{formatMoney(-1234.5, "EUR")}</span> on{" "}
-          <span className="text-foreground">{formatDay("2026-03-03")}</span>. Saved on this device.
+          <span className="font-figure text-foreground">
+            {/* A real minus, as in the transaction list. */}−{formatMoney(1234.5, "EUR")}
+          </span>{" "}
+          on <span className="text-foreground">{formatDay("2026-03-03")}</span>. Saved on this
+          device.
         </p>
         {failed && (
           <p role="alert" className="text-sm text-negative">
