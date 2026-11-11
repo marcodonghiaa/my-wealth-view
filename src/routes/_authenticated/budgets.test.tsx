@@ -755,4 +755,23 @@ describe("Budgets page", () => {
     await waitFor(() => expect(upserts).toHaveLength(1));
     expect(upserts[0]!.rows[0]).toMatchObject({ category: "Pets", amount: 50 });
   });
+
+  // protects=P5 P0-1 Remove on a budget that has a rolled-over amount;
+  // fails_when=the row stays at €0.00 and the category can't be budgeted again
+  it("removes a budget that has a rolled-over amount", async () => {
+    db["category_budgets"] = [
+      { category: "Groceries", month: "2026-10-01", amount: 300, rollover: true },
+    ];
+    renderPage();
+    // October 300 − 320 = −20 carried into November.
+    await screen.findByText(whole(/rolled over$/));
+    fireEvent.click(screen.getByRole("button", { name: /Change budget for Groceries/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Remove" }));
+    await waitFor(() =>
+      expect(screen.queryByRole("button", { name: /Change budget for Groceries/ })).toBeNull(),
+    );
+    expect(screen.queryByText("Over budget")).toBeNull();
+    const options = [...(screen.getByLabelText("Category") as HTMLSelectElement).options];
+    expect(options.map((o) => o.value)).toContain("Groceries");
+  });
 });

@@ -152,14 +152,16 @@ describe("budgetLines with rollover across three months", () => {
     // Feb 300 − 400 = −100 carried into March.
     expect(budgetLines(on, spend, "2026-03-01")[0]).toMatchObject({ carriedIn: -100 });
   });
-  it("keeps a category whose budget was removed while something is still carried", () => {
-    const removed = [...rows, b("Groceries", "2026-02-01", 0, true)];
-    // Jan leftover 50, Feb budget 0 → 50 available, 400 spent.
-    expect(budgetLines(removed, spend, "2026-02-01")[0]).toMatchObject({
-      budget: 0,
-      carriedIn: 50,
-      left: -350,
-    });
+  // protects=P5 P0-1 Remove works on a budget with a carried amount;
+  // fails_when=a removed (0) budget stays listed because something was rolled into it
+  it("drops a removed budget together with what was carried into it", () => {
+    const removed = [...rows, b("Groceries", "2026-02-01", 0)];
+    // Jan leftover 50 would carry into Feb, but Feb's budget is removed.
+    expect(budgetLines(removed, spend, "2026-02-01")).toEqual([]);
+    expect(budgetLines(removed, spend, "2026-03-01")).toEqual([]);
+    // A new budget later starts clean, without the old leftover.
+    const again = [...removed, b("Groceries", "2026-03-01", 200)];
+    expect(budgetLines(again, spend, "2026-03-01")[0]).toMatchObject({ budget: 200, carriedIn: 0 });
   });
   it("adds up several spend rows for the same month and category, to the cent", () => {
     const [line] = budgetLines(

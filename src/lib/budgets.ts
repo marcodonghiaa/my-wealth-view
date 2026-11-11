@@ -108,6 +108,12 @@ export function budgetLines(
     for (const m of monthsBetween(first, month)) {
       const row = effectiveBudget(rows, category, m)!;
       const budget = row.amount;
+      // Removed (0): no budget this month, and whatever was rolled into it is dropped.
+      if (budget === 0) {
+        carry = 0;
+        line = undefined;
+        continue;
+      }
       // What last month passed on (0 unless its rollover was on): the switch takes effect from
       // the next month, both ways.
       const carriedIn = carry;
@@ -124,8 +130,7 @@ export function budgetLines(
         left: cents(available - s),
       };
     }
-    // A removed budget (0) with nothing carried in is no budget at all.
-    if (line && (line.budget > 0 || line.carriedIn !== 0)) lines.push(line);
+    if (line) lines.push(line);
   }
   return lines.sort((a, b) => b.budget - a.budget || a.category.localeCompare(b.category));
 }
