@@ -8,6 +8,21 @@ const TICK = {
   fontFamily: "var(--font-figure)",
 };
 
+/** One bar's tooltip: its period, what was saved and the rate. */
+export function TrendTooltip({ bar }: { bar: TrendBar & { tick: string } }) {
+  return (
+    <div className="rounded-sm border border-hairline bg-popover px-2.5 py-1.5 text-xs shadow-sm">
+      <p className="font-medium text-foreground">{bar.tick}</p>
+      <p className="font-figure text-muted-foreground">
+        {/* Nothing recorded is not a net of zero. */}
+        {bar.months === 0
+          ? "No activity"
+          : `Saved ${formatSignedEur(bar.net)} · ${formatRate(bar.savingsRate)}`}
+      </p>
+    </div>
+  );
+}
+
 /**
  * What was saved in each of the last periods; a bar below the line is a period that spent more
  * than came in. The selected period is solid, the rest are faded; tapping a bar selects it.
@@ -38,15 +53,7 @@ export function TrendBars({
               const bar = active
                 ? (payload?.[0]?.payload as (typeof data)[number] | undefined)
                 : undefined;
-              if (!bar) return null;
-              return (
-                <div className="rounded-sm border border-hairline bg-popover px-2.5 py-1.5 text-xs shadow-sm">
-                  <p className="font-medium text-foreground">{bar.tick}</p>
-                  <p className="font-figure text-muted-foreground">
-                    Saved {formatSignedEur(bar.net)} · {formatRate(bar.savingsRate)}
-                  </p>
-                </div>
-              );
+              return bar ? <TrendTooltip bar={bar} /> : null;
             }}
           />
           <Bar

@@ -201,6 +201,10 @@ describe("Cash flow page", () => {
     expect(await screen.findByText(/^Nothing came in or went out in/)).toBeInTheDocument();
     expect(row("Savings rate")).toHaveTextContent("—");
     expect(screen.getByText("No income this period")).toBeInTheDocument();
+    // Polish 3 #10: nothing recorded is not a net of zero.
+    const headline = screen.getByRole("region", { name: /^Saved in/ });
+    expect(headline).toHaveTextContent("—");
+    expect(headline).not.toHaveTextContent("€0.00");
   });
 
   // protects=a failed query shows an error instead of quiet zeros

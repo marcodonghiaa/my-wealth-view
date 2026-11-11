@@ -194,7 +194,8 @@ function CashFlowPage() {
         <div className="mt-1">
           {pending ? (
             <Skeleton className="h-12 w-48" />
-          ) : noTotals ? (
+          ) : noTotals || summary.months === 0 ? (
+            // Nothing recorded is not a net of zero (as on Reports).
             <p className="figure-display text-muted-foreground">—</p>
           ) : (
             <HeadlineFigure value={summary.net} currency="EUR" />
