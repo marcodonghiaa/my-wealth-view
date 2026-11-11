@@ -34,6 +34,24 @@ describe("SegmentedControl", () => {
   });
 });
 
+// Polish pass 4 #19: radio groups also answer Up/Down and Home/End.
+describe("SegmentedControl radio keys", () => {
+  it("moves with Up/Down and jumps with Home/End", () => {
+    render(<Harness />);
+    const first = screen.getByRole("radio", { name: "EUR" });
+    first.focus();
+    fireEvent.keyDown(first, { key: "ArrowDown" });
+    expect(screen.getByRole("radio", { name: "USD" })).toHaveFocus();
+    fireEvent.keyDown(document.activeElement!, { key: "End" });
+    expect(screen.getByRole("radio", { name: "GBP" })).toBeChecked();
+    fireEvent.keyDown(document.activeElement!, { key: "ArrowUp" });
+    expect(screen.getByRole("radio", { name: "USD" })).toHaveFocus();
+    fireEvent.keyDown(document.activeElement!, { key: "Home" });
+    expect(screen.getByRole("radio", { name: "EUR" })).toBeChecked();
+    expect(screen.getByRole("radio", { name: "EUR" })).toHaveFocus();
+  });
+});
+
 function Harness() {
   const [value, setValue] = useState("EUR");
   return <SegmentedControl label="Currency" value={value} onChange={setValue} options={options} />;

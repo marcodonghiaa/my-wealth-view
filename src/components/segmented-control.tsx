@@ -29,10 +29,19 @@ export function SegmentedControl<T extends string>({
   );
 
   function onKeyDown(event: KeyboardEvent<HTMLDivElement>) {
-    const step = event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0;
-    if (!step) return;
+    // The standard radio-group keys: arrows step (and wrap), Home/End jump to the ends.
+    const last = options.length - 1;
+    const target: Record<string, number> = {
+      ArrowRight: index === last ? 0 : index + 1,
+      ArrowDown: index === last ? 0 : index + 1,
+      ArrowLeft: index === 0 ? last : index - 1,
+      ArrowUp: index === 0 ? last : index - 1,
+      Home: 0,
+      End: last,
+    };
+    const nextIndex = target[event.key];
+    if (nextIndex === undefined) return;
     event.preventDefault();
-    const nextIndex = (index + step + options.length) % options.length;
     const next = options[nextIndex];
     if (!next) return;
     onChange(next.value);
