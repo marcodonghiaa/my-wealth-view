@@ -63,4 +63,10 @@ describe("figure-display (HeadlineFigure)", () => {
     rerender(<HeadlineFigure value={10} currency="EUR" delta={{ value: 0, label: "Today" }} />);
     expect(screen.getByText("€0.00").className).toContain("text-foreground");
   });
+
+  // Polish 3 #8: the same minus as the signed figures beside it (formatSignedEur), not a hyphen.
+  it("writes a negative amount with a real minus sign", () => {
+    const { container } = render(<HeadlineFigure value={-1234.5} currency="EUR" />);
+    expect(container.textContent).toBe("−€1,234.50");
+  });
 });
