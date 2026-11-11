@@ -86,6 +86,8 @@ export function formatRate(rate: number | null): string {
   return formatPercent(negative ? rate : Math.abs(rate), { digits: 0, signed: negative });
 }
 
+const toCents = (v: number) => Math.round(v * 100) / 100 || 0;
+
 const inRange = (month: string | null, from: string, to: string): month is string =>
   month != null && month >= from && month < to;
 
@@ -103,10 +105,13 @@ export function summarize(rows: Array<MonthlyFlowRow>, from: string, to: string)
     spending += s;
     months += 1;
   }
+  // Money in cents: adding months leaves float noise that would read as "spent more".
+  income = toCents(income);
+  spending = toCents(spending);
   return {
     income,
     spending,
-    net: income - spending,
+    net: toCents(income - spending),
     savingsRate: savingsRate(income, spending),
     months,
   };

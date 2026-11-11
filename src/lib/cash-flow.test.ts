@@ -442,3 +442,17 @@ it("fitLabel still marks a cut when the kept start is short in characters", () =
   // 200 combining accents on one letter: one character, but past the segmented start.
   expect(fitLabel(`a${"́".repeat(200)}`, 13).endsWith("…")).toBe(true);
 });
+
+// Polish 3 #1: cents of noise from adding months never turn a break-even into "spent more".
+it("summarize rounds to cents, so a break-even period nets exactly zero", () => {
+  const s = summarize(
+    [
+      { month: "2026-10-01", income_eur: 0.3, expenses_eur: 0.1 },
+      { month: "2026-11-01", income_eur: 0, expenses_eur: 0.2 },
+    ],
+    "2026-10-01",
+    "2026-12-01",
+  );
+  expect(s.net).toBe(0);
+  expect(s.savingsRate).toBe(0);
+});
