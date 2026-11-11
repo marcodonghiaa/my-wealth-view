@@ -9,6 +9,7 @@ vi.mock("@/integrations/supabase/client", () => ({
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
 import { AccountMenu, AddDebt, type MenuAccount } from "./account-menu";
+import { setLocaleOverride } from "@/lib/locale";
 
 function setup(ui: React.ReactNode) {
   const queryClient = new QueryClient({ defaultOptions: { mutations: { retry: false } } });
@@ -98,6 +99,32 @@ describe("AccountMenu", () => {
     expect(screen.getByRole("alert")).toHaveTextContent('"1,250" could mean 1250 or 1.25');
     expect(rpc).not.toHaveBeenCalled();
   });
+
+  it.each([
+    ["it-IT", 1250.5, "1250,5"],
+    ["de-DE", 1250, "1250"],
+    ["en-GB", 1250.5, "1250.5"],
+  ])(
+    "left-open #2 in %s fills %s as %s and saving it unchanged keeps it",
+    async (locale, amount, text) => {
+      setLocaleOverride(locale);
+      try {
+        rpc.mockResolvedValue({ data: null, error: null });
+        setup(<AccountMenu title="Car loan" accounts={[{ ...manual, amount }]} />);
+        fireEvent.click(screen.getByRole("button", { name: "Edit Car loan" }));
+        expect(screen.getByLabelText("Owed now")).toHaveValue(text);
+        fireEvent.click(screen.getByRole("button", { name: "Save" }));
+        await waitFor(() =>
+          expect(rpc).toHaveBeenCalledWith("set_manual_balance", {
+            p_account: "u2",
+            p_amount: amount,
+          }),
+        );
+      } finally {
+        setLocaleOverride("");
+      }
+    },
+  );
 
   it("refuses an amount it can't read, and shows a server error", async () => {
     rpc.mockResolvedValue({ data: null, error: { message: "not a manual account" } });
