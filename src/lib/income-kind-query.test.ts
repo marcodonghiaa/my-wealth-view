@@ -16,7 +16,12 @@ vi.mock("@/integrations/supabase/client", async () => {
   };
 });
 
-import { fetchIncomeWindow, useMarkIncomeKind } from "./income-kind-query";
+import {
+  fetchIncomeWindow,
+  markIncomeKind,
+  undoMark,
+  useMarkIncomeKind,
+} from "./income-kind-query";
 import { rulesQuery } from "./rules-query";
 
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
@@ -112,5 +117,81 @@ describe("useMarkIncomeKind", () => {
     );
     const cached = queryClient.getQueryData<Array<Record<string, unknown>>>(rulesQuery.queryKey);
     expect(cached?.map((r) => r["set_income_kind"])).toEqual(["one_off"]);
+  });
+});
+
+describe("markIncomeKind and undoMark", () => {
+  const tx = (name: string | null) => ({ creditor_name: name, remittance_info: null });
+  const readRule = async (id: string) =>
+    (await client.current.from("category_rules").select("*").eq("id", id).single()).data as Record<
+      string,
+      unknown
+    > | null;
+
+  it("adds an exact rule, and Undo removes it", async () => {
+    const done = await markIncomeKind({ tx: tx("Undo Me Srl"), kind: "one_off", rules: [] });
+    if (done.kind !== "inserted") throw new Error(done.kind);
+    expect(await readRule(done.id)).toMatchObject({
+      match_text: "Undo Me Srl",
+      set_income_kind: "one_off",
+    });
+    await undoMark(done);
+    expect(await readRule(done.id)).toBeNull();
+  });
+
+  it("flips the deciding rule, and Undo restores it", async () => {
+    const first = await markIncomeKind({ tx: tx("Flip Co"), kind: "regular", rules: [] });
+    if (first.kind !== "inserted") throw new Error(first.kind);
+    const flipped = await markIncomeKind({
+      tx: tx("Flip Co"),
+      kind: "one_off",
+      rules: [first.rule],
+    });
+    expect(flipped).toMatchObject({ kind: "updated", previous: "regular" });
+    await undoMark(flipped);
+    expect((await readRule(first.id))?.["set_income_kind"]).toBe("regular");
+  });
+
+  // Polish #6 (checked, no change): with two kinds, an older Undo can only restore the kind the
+  // user's later mark already chose.
+  it("an older Undo after a newer mark leaves the newer choice", async () => {
+    const first = await markIncomeKind({ tx: tx("Order Co"), kind: "regular", rules: [] });
+    if (first.kind !== "inserted") throw new Error(first.kind);
+    const a = await markIncomeKind({ tx: tx("Order Co"), kind: "one_off", rules: [first.rule] });
+    await markIncomeKind({
+      tx: tx("Order Co"),
+      kind: "regular",
+      rules: [{ ...first.rule, set_income_kind: "one_off" }],
+    });
+    await undoMark(a);
+    expect((await readRule(first.id))?.["set_income_kind"]).toBe("regular");
+  });
+
+  it("does nothing when the rule already says so", async () => {
+    const first = await markIncomeKind({ tx: tx("Same Co"), kind: "regular", rules: [] });
+    if (first.kind !== "inserted") throw new Error(first.kind);
+    const again = await markIncomeKind({ tx: tx("Same Co"), kind: "regular", rules: [first.rule] });
+    expect(again).toEqual({ kind: "none" });
+    await undoMark(again);
+    expect((await readRule(first.id))?.["set_income_kind"]).toBe("regular");
+  });
+
+  it("refuses a payment without a name, or one too long for a rule (Polish #14)", async () => {
+    await expect(markIncomeKind({ tx: tx("  "), kind: "regular", rules: [] })).rejects.toThrow(
+      "no name",
+    );
+    await expect(
+      markIncomeKind({ tx: tx("x".repeat(201)), kind: "regular", rules: [] }),
+    ).rejects.toThrow("too long");
+  });
+
+  it("refuses when signed out", async () => {
+    const spy = vi
+      .spyOn(client.current.auth, "getUser")
+      .mockResolvedValueOnce({ data: { user: null }, error: null } as never);
+    await expect(markIncomeKind({ tx: tx("Someone"), kind: "regular", rules: [] })).rejects.toThrow(
+      "signed out",
+    );
+    spy.mockRestore();
   });
 });
