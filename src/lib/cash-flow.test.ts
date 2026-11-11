@@ -88,6 +88,12 @@ describe("savingsRate / formatRate", () => {
     expect(formatRate(0.254)).toBe("25\u00a0%");
     expect(formatRate(-0.2)).toBe("−20\u00a0%");
   });
+  // Re-audit: −0.5% rounds to −0 in Math.round, which hid the minus and showed "1%".
+  it("keeps the minus on a half-percent overspend", () => {
+    setLocaleOverride("en-GB");
+    expect(formatRate(-0.005)).toBe("−1%");
+  });
+
   it("shows no minus for a rate that rounds to zero", () => {
     setLocaleOverride("en-GB");
     expect(formatRate(-0.004)).toBe("0%");

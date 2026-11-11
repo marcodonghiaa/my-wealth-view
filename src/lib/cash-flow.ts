@@ -82,7 +82,7 @@ export function savingsRate(income: number, spending: number): number | null {
 export function formatRate(rate: number | null): string {
   if (rate == null) return "—";
   // Signed only below zero, with a real minus; a rate that rounds to 0% shows none.
-  const negative = Math.round(rate * 100) < 0;
+  const negative = rate < 0 && Math.round(-rate * 100) >= 1;
   return formatPercent(negative ? rate : Math.abs(rate), { digits: 0, signed: negative });
 }
 
