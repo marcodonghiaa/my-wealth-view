@@ -31,10 +31,10 @@ const CHIPS_PER_DAY = 3;
 
 // Phone dots: the shape says the kind (bill filled, income a ring), the colour the status.
 const DOT = {
-  bill: { done: "bg-foreground", upcoming: "bg-muted-foreground/50", late: "bg-warning" },
+  bill: { done: "bg-foreground", upcoming: "bg-muted-foreground", late: "bg-warning" },
   income: {
     done: "border border-foreground",
-    upcoming: "border border-muted-foreground/50",
+    upcoming: "border border-muted-foreground",
     late: "border border-warning",
   },
 } as const;
@@ -79,7 +79,7 @@ function StatusIcon({ entry }: { entry: CalendarEntry }) {
     return <Clock aria-hidden className="size-3 shrink-0 text-warning" />;
   // Expected, bill or income alike: the amount's arrow already says which.
   return (
-    <span aria-hidden className="size-3 shrink-0 rounded-full border border-muted-foreground/60" />
+    <span aria-hidden className="size-3 shrink-0 rounded-full border border-muted-foreground" />
   );
 }
 

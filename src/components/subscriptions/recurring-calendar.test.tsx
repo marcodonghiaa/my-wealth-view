@@ -242,6 +242,16 @@ describe("RecurringCalendar", () => {
     expect(await screen.findByText(summary("1 bill · 1 income expected"))).toBeTruthy();
   });
 
+  // Polish 4 #7: faded marks (60%/50% muted) fell under 3:1 on white; marks use the full token.
+  it("draws status marks at full contrast", async () => {
+    const { container } = renderCal([stream({ next_expected: "2026-11-20" })]);
+    await screen.findByRole("gridcell", { name: /^27 November: Acme Payroll/ }); // income too
+    expect(
+      screen.getByRole("gridcell", { name: /^20 November: Streamflix .* expected$/ }),
+    ).toBeTruthy();
+    expect(container.querySelector('[class*="muted-foreground/"]')).toBeNull();
+  });
+
   it("calls a past unpaid date not seen yet", async () => {
     renderCal([stream({ next_expected: "2026-11-03" })]);
     expect(
