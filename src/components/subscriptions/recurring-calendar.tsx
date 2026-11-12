@@ -66,15 +66,25 @@ function StatusIcon({ entry }: { entry: CalendarEntry }) {
     return <Check aria-hidden className="size-3 shrink-0 text-positive" />;
   if (entry.status === "late")
     return <Clock aria-hidden className="size-3 shrink-0 text-warning" />;
-  return entry.kind === "income" ? (
-    <ArrowDownLeft aria-hidden className="size-3 shrink-0 text-muted-foreground" />
-  ) : (
+  // Expected, bill or income alike: the amount's arrow already says which.
+  return (
     <span aria-hidden className="size-3 shrink-0 rounded-full border border-muted-foreground/60" />
   );
 }
 
+// Screen readers hear the direction; on screen income shows the Income page's incoming arrow.
 const money = (e: CalendarEntry) =>
   `${e.kind === "income" ? "+" : ""}${formatMoney(e.amount, e.currency)}`;
+
+/** The amount as the Income page shows it: ink, with the incoming arrow for income. */
+function Amount({ entry, iconClass }: { entry: CalendarEntry; iconClass: string }) {
+  return (
+    <span className="inline-flex shrink-0 items-center gap-0.5 font-figure text-foreground">
+      {entry.kind === "income" && <ArrowDownLeft aria-hidden className={iconClass} />}
+      {formatMoney(entry.amount, entry.currency)}
+    </span>
+  );
+}
 
 export function RecurringCalendar({
   streams,
@@ -216,11 +226,7 @@ export function RecurringCalendar({
                           >
                             {e.name}
                           </span>
-                          <span
-                            className={`shrink-0 font-figure ${e.kind === "income" ? "text-positive" : "text-foreground"}`}
-                          >
-                            {money(e)}
-                          </span>
+                          <Amount entry={e} iconClass="size-2.5" />
                         </li>
                       ))}
                       {list.length > CHIPS_PER_DAY && (
@@ -259,11 +265,7 @@ export function RecurringCalendar({
                         {e.kind === "income" ? "Income" : "Bill"} · {statusLabel(e)}
                       </span>
                     </span>
-                    <span
-                      className={`shrink-0 font-figure ${e.kind === "income" ? "text-positive" : "text-foreground"}`}
-                    >
-                      {money(e)}
-                    </span>
+                    <Amount entry={e} iconClass="size-3.5" />
                   </li>
                 )),
               )}

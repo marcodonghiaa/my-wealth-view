@@ -173,6 +173,20 @@ describe("RecurringCalendar", () => {
     expect(row.textContent).toMatch(/Jan.*2027/);
   });
 
+  // Polish 4 #2: income looks as it does on the Income page: ink with the incoming arrow, not a
+  // green "+" (DESIGN.md: a positive number that isn't a change stays ink).
+  it("shows income amounts in ink with the incoming arrow, like the Income page", async () => {
+    renderCal([]);
+    const row = (await screen.findByText("Income · expected")).closest("li")!;
+    const amount = within(row).getByText("€2,000.00");
+    expect(amount.className).not.toMatch(/text-positive/);
+    expect(amount.querySelector("svg")).toBeTruthy();
+    // Screen readers still hear the direction.
+    expect(
+      screen.getByRole("gridcell", { name: /^27 November: Acme Payroll \+€2,000\.00 expected$/ }),
+    ).toBeTruthy();
+  });
+
   it("calls a past unpaid date not seen yet", async () => {
     renderCal([stream({ next_expected: "2026-11-03" })]);
     expect(
