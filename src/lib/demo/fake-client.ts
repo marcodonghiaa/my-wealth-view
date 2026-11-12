@@ -243,6 +243,8 @@ class Store {
         owed_by: null,
         refund_of: null,
         deleted_at: null,
+        note: null,
+        tags: [],
       }),
     );
     this.refresh();
@@ -848,7 +850,9 @@ export function createFakeClient(now: Date = new Date()): SupabaseClient<Databas
                                 ),
                                 error: null,
                               }
-                            : { data: null, error: DISABLED },
+                            : fn === "my_transaction_tags"
+                              ? { data: demoTagCounts(store.db["transactions"] ?? []), error: null }
+                              : { data: null, error: DISABLED },
     functions: {
       invoke: async (name: string, opts?: { body?: Record<string, unknown> }) =>
         name === "add-holding"
@@ -898,3 +902,25 @@ export const resetDemoClient = () => {
 };
 
 onDemoExit(resetDemoClient);
+
+/**
+ * Like the my_transaction_tags function: every tag on live rows, most used first. Tags that differ
+ * only in case count as one, shown in the spelling used most.
+ */
+export function demoTagCounts(rows: Array<Row>): Array<{ tag: string; uses: number }> {
+  const groups = new Map<string, Map<string, number>>();
+  for (const r of rows) {
+    if (r["deleted_at"]) continue;
+    for (const t of (r["tags"] as Array<string> | undefined) ?? []) {
+      const spellings = groups.get(t.toLowerCase()) ?? new Map<string, number>();
+      spellings.set(t, (spellings.get(t) ?? 0) + 1);
+      groups.set(t.toLowerCase(), spellings);
+    }
+  }
+  return [...groups.values()]
+    .map((spellings) => {
+      const [tag] = [...spellings].sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1))[0]!;
+      return { tag, uses: [...spellings.values()].reduce((a, b) => a + b, 0) };
+    })
+    .sort((a, b) => b.uses - a.uses || a.tag.localeCompare(b.tag));
+}

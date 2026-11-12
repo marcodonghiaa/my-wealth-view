@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
@@ -7,8 +7,12 @@ let failTable: string | null = null;
 // Rows the mocked views return (empty unless a test sets them).
 const rows: Record<string, Array<Record<string, unknown>>> = {};
 let tableData: Record<string, unknown> = {};
+// Every select the page sends, to check which columns each query asks for.
+const selects: Array<{ table: string; cols: string }> = [];
+let rpcResult: { data: unknown; error: { message: string } | null } = { data: [], error: null };
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
+    rpc: () => Promise.resolve(rpcResult),
     from: (table: string) => {
       const q: Record<string, unknown> = {};
       for (const m of [
@@ -27,6 +31,10 @@ vi.mock("@/integrations/supabase/client", () => ({
       ]) {
         q[m] = () => q;
       }
+      q["select"] = (cols: string) => {
+        selects.push({ table, cols });
+        return q;
+      };
       q["then"] = (resolve: (v: unknown) => void) =>
         resolve(
           table === failTable
@@ -263,7 +271,7 @@ describe("Activity page", () => {
     tableData = { v_transactions_eur: [row("1")] };
     renderPage();
     await screen.findAllByText("Shop 1");
-    await userEvent.type(screen.getByLabelText("Search by merchant"), "zzz");
+    await userEvent.type(screen.getByLabelText("Search by merchant or note"), "zzz");
     expect(screen.getAllByText("Nothing matches “zzz”.").length).toBeGreaterThan(0);
     await userEvent.click(screen.getAllByRole("button", { name: "Clear search" })[0]!);
     expect(screen.getAllByText("Shop 1").length).toBeGreaterThan(0);
@@ -274,7 +282,7 @@ describe("Activity page", () => {
     renderPage();
     await screen.findAllByText("Shop 1");
     await userEvent.selectOptions(screen.getByLabelText("Filter by category"), "Dine Out");
-    await userEvent.type(screen.getByLabelText("Search by merchant"), "Shop 1");
+    await userEvent.type(screen.getByLabelText("Search by merchant or note"), "Shop 1");
     expect(screen.getAllByText("No transactions match your filters.").length).toBeGreaterThan(0);
     await userEvent.click(screen.getAllByRole("button", { name: "Clear filters" })[0]!);
     expect(screen.getAllByText("Shop 2").length).toBeGreaterThan(0);
@@ -324,5 +332,205 @@ describe("Activity deep link", () => {
       month: "2026-03",
     });
     expect(validate({ category: 5, month: "2026-13" })).toEqual({});
+  });
+});
+
+// protects=the tag filter keeps only rows with that tag; fails_when=the filter ignores tags
+describe("Transactions page tag filter", () => {
+  // protects=only the list that shows notes and tags fetches them;
+  // fails_when=the transfers query also selects note and tags
+  it("fetches note and tags for the month list only", async () => {
+    selects.length = 0;
+    renderPage();
+    await screen.findAllByText(/No transactions for/);
+    const views = selects.filter((s) => s.table === "v_transactions_eur").map((s) => s.cols);
+    expect(views.length).toBeGreaterThan(1);
+    expect(views.filter((c) => c.includes("note,tags"))).toHaveLength(1);
+  });
+
+  // protects=a failing tag-suggestions call is reported in the console, not hidden;
+  // fails_when=fetchTagSuggestions swallows the error
+  it("logs a failed suggestions call and still shows the page", async () => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    rpcResult = { data: null, error: { message: "denied" } };
+    renderPage();
+    await screen.findAllByText(/No transactions for/);
+    await waitFor(() =>
+      expect(log).toHaveBeenCalledWith(
+        expect.stringContaining("tag suggestions"),
+        expect.objectContaining({ message: "denied" }),
+      ),
+    );
+    rpcResult = { data: [], error: null };
+    log.mockRestore();
+  });
+
+  it("filters the month by tag", async () => {
+    const today = new Date().toISOString().slice(0, 10);
+    const base = {
+      account_uid: "a",
+      booking_date: today,
+      category: "Travel",
+      currency: "EUR",
+      amount: 10,
+      signed_amount_eur: -10,
+      credit_debit_indicator: "DBIT",
+      flow_type: "spend",
+    };
+    rows["v_transactions_eur"] = [
+      { ...base, entry_reference: "1", creditor_name: "Hotel Alpha", tags: ["trip"] },
+      { ...base, entry_reference: "2", creditor_name: "Cafe Beta", tags: [] },
+    ];
+    renderPage();
+    expect((await screen.findAllByText("Cafe Beta")).length).toBeGreaterThan(0);
+    fireEvent.change(screen.getByLabelText("Filter by tag"), { target: { value: "trip" } });
+    expect(screen.queryAllByText("Cafe Beta")).toHaveLength(0);
+    expect(screen.getAllByText("Hotel Alpha").length).toBeGreaterThan(0);
+  });
+
+  // polish-3 #8: fails_when=the tag filter carries over to another month
+  it("turns the tag filter off when the month changes", async () => {
+    const today = new Date().toISOString().slice(0, 10);
+    rows["v_transactions_eur"] = [
+      {
+        account_uid: "a",
+        booking_date: today,
+        category: "Travel",
+        currency: "EUR",
+        amount: 10,
+        signed_amount_eur: -10,
+        credit_debit_indicator: "DBIT",
+        flow_type: "spend",
+        entry_reference: "1",
+        creditor_name: "Hotel Alpha",
+        tags: ["trip"],
+      },
+    ];
+    renderPage();
+    fireEvent.change(await screen.findByLabelText("Filter by tag"), { target: { value: "trip" } });
+    await userEvent.click(screen.getAllByRole("button", { name: "Previous month" })[0]!);
+    expect(await screen.findByLabelText("Filter by tag")).toHaveValue("");
+  });
+
+  // fails_when=removing the last use of the selected tag leaves the filter on and the list empty
+  it("turns the tag filter off when its tag is no longer used", async () => {
+    const today = new Date().toISOString().slice(0, 10);
+    const base = {
+      account_uid: "a",
+      booking_date: today,
+      category: "Travel",
+      currency: "EUR",
+      amount: 10,
+      signed_amount_eur: -10,
+      credit_debit_indicator: "DBIT",
+      flow_type: "spend",
+    };
+    rows["v_transactions_eur"] = [
+      { ...base, entry_reference: "1", creditor_name: "Hotel Alpha", tags: ["trip"] },
+      { ...base, entry_reference: "2", creditor_name: "Cafe Beta", tags: ["work"] },
+    ];
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    renderPage(client);
+    fireEvent.change(await screen.findByLabelText("Filter by tag"), { target: { value: "trip" } });
+    expect(screen.queryAllByText("Cafe Beta")).toHaveLength(0);
+    rows["v_transactions_eur"] = [
+      { ...base, entry_reference: "1", creditor_name: "Hotel Alpha", tags: [] },
+      { ...base, entry_reference: "2", creditor_name: "Cafe Beta", tags: ["work"] },
+    ];
+    await act(() => client.invalidateQueries({ queryKey: ["transactions"] }));
+    expect((await screen.findAllByText("Cafe Beta")).length).toBeGreaterThan(0);
+    expect(screen.getByLabelText("Filter by tag")).toHaveValue("");
+  });
+
+  // polish-5 #1: fails_when=the selected tag's spelling changes under it (Trip/trip) and the select
+  // shows "All tags" while the list stays filtered
+  it("keeps the tag filter showing its tag when the tag's spelling changes", async () => {
+    const today = new Date().toISOString().slice(0, 10);
+    const base = {
+      account_uid: "a",
+      booking_date: today,
+      category: "Travel",
+      currency: "EUR",
+      amount: 10,
+      signed_amount_eur: -10,
+      credit_debit_indicator: "DBIT",
+      flow_type: "spend",
+    };
+    rows["v_transactions_eur"] = [
+      { ...base, entry_reference: "1", creditor_name: "Hotel Alpha", tags: ["Trip"] },
+      { ...base, entry_reference: "2", creditor_name: "Cafe Beta", tags: ["trip"] },
+      { ...base, entry_reference: "3", creditor_name: "Bar Gamma", tags: ["trip"] },
+      { ...base, entry_reference: "4", creditor_name: "Shop Delta", tags: [] },
+    ];
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    renderPage(client);
+    const select = await screen.findByLabelText("Filter by tag");
+    fireEvent.change(select, { target: { value: "trip" } });
+    rows["v_transactions_eur"] = [
+      { ...base, entry_reference: "1", creditor_name: "Hotel Alpha", tags: ["Trip"] },
+      { ...base, entry_reference: "2", creditor_name: "Cafe Beta", tags: [] },
+      { ...base, entry_reference: "3", creditor_name: "Bar Gamma", tags: [] },
+      { ...base, entry_reference: "4", creditor_name: "Shop Delta", tags: [] },
+    ];
+    await act(() => client.invalidateQueries({ queryKey: ["transactions"] }));
+    await waitFor(() => expect(screen.queryAllByText("Cafe Beta")).toHaveLength(0));
+    expect(screen.getByLabelText("Filter by tag")).toHaveValue("Trip");
+    expect(screen.queryAllByText("Shop Delta")).toHaveLength(0);
+  });
+
+  // polish-4 #6: fails_when=a long tag stretches the desktop tag select and squeezes Search
+  it("caps the desktop tag select's width", async () => {
+    rows["v_transactions_eur"] = [
+      {
+        account_uid: "a",
+        booking_date: new Date().toISOString().slice(0, 10),
+        category: "Travel",
+        currency: "EUR",
+        amount: 10,
+        signed_amount_eur: -10,
+        credit_debit_indicator: "DBIT",
+        flow_type: "spend",
+        entry_reference: "1",
+        creditor_name: "Hotel Alpha",
+        tags: ["w".repeat(40)],
+      },
+    ];
+    renderPage();
+    expect(await screen.findByLabelText("Filter by tag")).toHaveClass("max-w-48", "truncate");
+  });
+
+  // polish-4 #2: fails_when=an edit that makes the row stop matching the filter closes its sheet
+  it("keeps an open row's sheet while an edit takes it out of the filter", async () => {
+    const today = new Date().toISOString().slice(0, 10);
+    const base = {
+      account_uid: "a",
+      booking_date: today,
+      category: "Travel",
+      currency: "EUR",
+      amount: 10,
+      signed_amount_eur: -10,
+      credit_debit_indicator: "DBIT",
+      flow_type: "spend",
+    };
+    rows["v_transactions_eur"] = [
+      { ...base, entry_reference: "1", creditor_name: "Hotel Alpha", tags: ["trip"] },
+      { ...base, entry_reference: "2", creditor_name: "Cafe Beta", tags: ["trip"] },
+    ];
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    renderPage(client);
+    fireEvent.change(await screen.findByLabelText("Filter by tag"), { target: { value: "trip" } });
+    const [edit] = await screen.findAllByRole("button", { name: "Edit Hotel Alpha" });
+    await userEvent.click(edit!);
+    expect(await screen.findByRole("dialog")).toBeInTheDocument();
+    rows["v_transactions_eur"] = [
+      { ...base, entry_reference: "1", creditor_name: "Hotel Alpha", tags: [] },
+      { ...base, entry_reference: "2", creditor_name: "Cafe Beta", tags: ["trip"] },
+    ];
+    await act(() => client.invalidateQueries({ queryKey: ["transactions"] }));
+    // The sheet's exit runs after the list re-renders, so give it a moment before checking.
+    await act(() => new Promise((r) => setTimeout(r, 100)));
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryAllByText("Hotel Alpha")).toHaveLength(0));
   });
 });

@@ -5,7 +5,7 @@ import {
   nativeSignedAmount,
   restoredFlow,
   txId,
-  type TransactionRow,
+  type TransferRow,
 } from "@/lib/transactions";
 
 // Transactions marked as transfers are left out of spending and income. They are listed here so a
@@ -19,9 +19,9 @@ export function TransfersSection({
   savingPair,
   onResolvePair,
 }: {
-  rows: Array<TransactionRow>;
+  rows: Array<TransferRow>;
   savingId: string | undefined;
-  onRestore: (tx: TransactionRow) => void;
+  onRestore: (tx: TransferRow) => void;
   pairIdOf?: Map<string, string>;
   savingPair?: string | undefined;
   onResolvePair?: (pairId: string, keep: boolean) => void;

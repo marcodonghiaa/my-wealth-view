@@ -26,6 +26,8 @@ import {
   isSplitwiseShare,
   shareId,
   listCategories,
+  listTags,
+  sameTag,
   mergeShares,
   nameRefunds,
   monthFromParam,
@@ -35,6 +37,7 @@ import {
   type TransactionsSearch,
   type SplitwiseShare,
   type TransactionRow,
+  type TransferRow,
   isSameTx,
   txId,
 } from "@/lib/transactions";
@@ -104,7 +107,7 @@ async function fetchTransactionsForMonth(month: Date): Promise<Array<Transaction
   const { data, error } = await supabase
     .from("v_transactions_eur")
     .select(
-      "entry_reference,account_uid,booking_date,category,transaction_type,creditor_name,currency,amount,signed_amount_eur,credit_debit_indicator,created_at,worth_it,personal_amount,owed_by,flow_type,refund_of",
+      "entry_reference,account_uid,booking_date,category,transaction_type,creditor_name,currency,amount,signed_amount_eur,credit_debit_indicator,created_at,worth_it,personal_amount,owed_by,flow_type,refund_of,note,tags",
     )
     .gte("booking_date", start)
     .lt("booking_date", end)
@@ -117,7 +120,7 @@ async function fetchTransactionsForMonth(month: Date): Promise<Array<Transaction
 }
 
 // Transfers are left out of spending and income; they are listed on request so a wrong one can be moved back.
-async function fetchTransfersForMonth(month: Date): Promise<Array<TransactionRow>> {
+async function fetchTransfersForMonth(month: Date): Promise<Array<TransferRow>> {
   const start = formatISODate(startOfMonth(month));
   const end = formatISODate(new Date(month.getFullYear(), month.getMonth() + 1, 1));
   const { data, error } = await supabase
@@ -132,7 +135,7 @@ async function fetchTransfersForMonth(month: Date): Promise<Array<TransactionRow
     .order("booking_date", { ascending: false })
     .order("entry_reference", { ascending: false });
   if (error) throw error;
-  return (data ?? []) as Array<TransactionRow>;
+  return (data ?? []) as Array<TransferRow>;
 }
 
 // Transfers the sync paired on its own, waiting for a yes or no.
@@ -171,6 +174,16 @@ async function fetchInOut(
   return data;
 }
 
+// Suggestions are a help, not the list: a failure leaves the tag field without them, logged.
+async function fetchTagSuggestions(): Promise<Array<string>> {
+  const { data, error } = await supabase.rpc("my_transaction_tags");
+  if (error) {
+    console.error("Couldn't load tag suggestions", error);
+    return [];
+  }
+  return (data ?? []).map((r) => r.tag);
+}
+
 async function fetchAccounts(): Promise<Record<string, AccountRow>> {
   const { data, error } = await supabase.from("accounts").select("*");
   if (error) throw error;
@@ -183,7 +196,10 @@ function TransactionsPage({ category: initialCategory, month: initialMonth }: Tr
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<string>(initialCategory ?? "all");
   const [bank, setBank] = useState<string>("all");
+  const [tag, setTag] = useState<string>(""); // "" = all tags (a tag may be named "all")
   const [day, setDay] = useState("");
+  // The row whose sheet is open stays listed until it closes, even if an edit stops it matching.
+  const [editing, setEditing] = useState<string | null>(null);
   const [month, setMonth] = useState(() => monthFromParam(initialMonth));
   const monthKey = useMemo(() => formatISODate(month), [month]);
   const queryClient = useQueryClient();
@@ -210,6 +226,19 @@ function TransactionsPage({ category: initialCategory, month: initialMonth }: Tr
   });
 
   const renameTx = useRenameMerchantMutation(queryClient);
+
+  const updateNote = useTransactionFieldMutation(queryClient, monthKey, "note", {
+    errorMessage: "Couldn't save note",
+  });
+  const updateTags = useTransactionFieldMutation(queryClient, monthKey, "tags", {
+    errorMessage: "Couldn't save tags",
+  });
+  // Every tag used before (all months), most used first, for suggestions while typing one.
+  const tagsQuery = useQuery({
+    queryKey: ["transaction-tags"],
+    queryFn: fetchTagSuggestions,
+    staleTime: 5 * 60_000,
+  });
 
   const updateSplit = useSplitMutation(queryClient, monthKey);
 
@@ -310,6 +339,15 @@ function TransactionsPage({ category: initialCategory, month: initialMonth }: Tr
   }, [highlightRef, txQuery.isPending, transactions]);
 
   const categories = useMemo(() => listCategories(transactions), [transactions]);
+  // Only tags on this month's rows, so every option matches something.
+  const tags = useMemo(
+    () => listTags(transactions, tagsQuery.data),
+    [transactions, tagsQuery.data],
+  );
+  // Removing the last use of the selected tag turns the filter off, so the list isn't left empty;
+  // if it's still used in another spelling (Trip/trip), the filter follows that spelling.
+  const tagNow = tags.find((t) => sameTag(t, tag));
+  if (tag && !txQuery.isPending && tagNow !== tag) setTag(tagNow ?? "");
 
   const accounts = useMemo(() => accountsQuery.data ?? {}, [accountsQuery.data]);
   const bankFor = useCallback(
@@ -328,10 +366,12 @@ function TransactionsPage({ category: initialCategory, month: initialMonth }: Tr
     [transactions, bankFor],
   );
 
-  const filtered = useMemo(
-    () => filterTransactions(transactions, search, category, { bank, bankFor, day }),
-    [transactions, search, category, bank, bankFor, day],
-  );
+  const filtered = useMemo(() => {
+    const shown = filterTransactions(transactions, search, category, { bank, bankFor, day, tag });
+    if (!editing || shown.some((tx) => txId(tx) === editing)) return shown;
+    const keep = new Set(shown);
+    return transactions.filter((tx) => keep.has(tx) || txId(tx) === editing);
+  }, [transactions, search, category, bank, bankFor, day, tag, editing]);
 
   // Shares cannot be bulk edited or deleted: they are not rows of the transactions table.
   const filteredIds = useMemo(
@@ -362,23 +402,30 @@ function TransactionsPage({ category: initialCategory, month: initialMonth }: Tr
     });
   }
 
-  const filterCount = activeFilterCount({ category, bank, day });
+  const filterCount = activeFilterCount({ category, bank, day, tag });
   const filtersOn = filterCount > 0 || search.trim() !== "";
-  function clearFilters() {
-    setSearch("");
+  // The phone filter sheet clears its own fields; search sits outside it.
+  function clearSheetFilters() {
     setCategory("all");
     setBank("all");
     setDay("");
+    setTag("");
+  }
+  function clearFilters() {
+    setSearch("");
+    clearSheetFilters();
   }
   const filterSummary = [
     category === "all" ? null : category === UNCATEGORIZED ? "Uncategorized" : category,
     day ? formatDayHeading(day) : null,
     bank === "all" ? null : bank,
+    tag ? `#${tag}` : null,
   ].filter(Boolean);
 
   function goToMonth(next: Date) {
     setSelected(new Set());
     setDay(""); // a day belongs to one month
+    setTag(""); // the next month may not use it
     setMonth(next);
   }
 
@@ -427,6 +474,21 @@ function TransactionsPage({ category: initialCategory, month: initialMonth }: Tr
     // In the sheet too: on a phone the open sheet covers the toast's button.
     makeRule: isSplitwiseShare(tx) ? undefined : ruleAction(tx.creditor_name, tx.category),
     showAccount: multiAccount,
+    // false when the save failed (the hook already showed why), so the editor can retry or roll back.
+    onSaveNote: (note) =>
+      updateNote.mutateAsync({ tx, value: note }).then(
+        () => true,
+        () => false,
+      ),
+    savingNote: updateNote.isPending && isSameTx(updateNote.variables?.tx, tx),
+    onSaveTags: (next) =>
+      updateTags.mutateAsync({ tx, value: next }).then(
+        () => true,
+        () => false,
+      ),
+    savingTags: updateTags.isPending && isSameTx(updateTags.variables?.tx, tx),
+    tagSuggestions: tagsQuery.data ?? [],
+    onOpenChange: (open) => setEditing((now) => (open ? txId(tx) : now === txId(tx) ? null : now)),
     ...(tx.account_uid && accounts[tx.account_uid]?.manual
       ? {
           onSaveAmount: (amount: number) => changeAmount.mutate({ tx, amount }),
@@ -548,7 +610,7 @@ function TransactionsPage({ category: initialCategory, month: initialMonth }: Tr
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search"
-            aria-label="Search by merchant"
+            aria-label="Search by merchant or note"
             className="pr-4 pl-10"
           />
         </div>
@@ -560,17 +622,16 @@ function TransactionsPage({ category: initialCategory, month: initialMonth }: Tr
             bank={bank}
             onBank={setBank}
             banks={banks}
+            tag={tag}
+            onTag={setTag}
+            tags={tags}
             day={day}
             onDay={setDay}
             minDay={formatISODate(month)}
             maxDay={formatISODate(new Date(month.getFullYear(), month.getMonth() + 1, 0))}
             count={filterCount}
             resultCount={filtered.length}
-            onClear={() => {
-              setCategory("all");
-              setBank("all");
-              setDay("");
-            }}
+            onClear={clearSheetFilters}
           />
         </div>
         <div className="hidden gap-3 md:flex">
@@ -601,6 +662,22 @@ function TransactionsPage({ category: initialCategory, month: initialMonth }: Tr
               {banks.map((b) => (
                 <option key={b} value={b}>
                   {b}
+                </option>
+              ))}
+            </Select>
+          )}
+          {tags.length > 0 && (
+            <Select
+              onGround
+              value={tag}
+              onChange={(e) => setTag(e.target.value)}
+              aria-label="Filter by tag"
+              className="w-auto max-w-48 truncate px-4"
+            >
+              <option value="">All tags</option>
+              {tags.map((t) => (
+                <option key={t} value={t}>
+                  #{t}
                 </option>
               ))}
             </Select>
