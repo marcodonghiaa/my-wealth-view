@@ -129,6 +129,22 @@ describe("useMarkIncomeKind", () => {
     ]);
   });
 
+  // Polish 3 #5: with nothing cached yet, a one-rule list would pass for all your rules.
+  it("leaves an empty rules cache empty", async () => {
+    const queryClient = new QueryClient();
+    const wrapper = ({ children }: { children: ReactNode }) =>
+      createElement(QueryClientProvider, { client: queryClient }, children);
+    const { result } = renderHook(() => useMarkIncomeKind(), { wrapper });
+    await act(() =>
+      result.current.mutateAsync({
+        tx: { creditor_name: "Cold Cache Co", remittance_info: null },
+        kind: "regular",
+        rules: [],
+      }),
+    );
+    expect(queryClient.getQueryData(rulesQuery.queryKey)).toBeUndefined();
+  });
+
   it("changes the cached rule it updated", async () => {
     const queryClient = new QueryClient();
     const { data } = await client.current

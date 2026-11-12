@@ -122,7 +122,8 @@ export function useMarkIncomeKind() {
   const queryClient = useQueryClient();
   const refresh = () => queryClient.invalidateQueries({ queryKey: rulesQuery.queryKey });
   const patchRules = (change: (old: Array<RuleRow>) => Array<RuleRow>) =>
-    queryClient.setQueryData<Array<RuleRow>>(rulesQuery.queryKey, (old = []) => change(old));
+    // Nothing cached yet: leave it, or one rule would pass for the whole list.
+    queryClient.setQueryData<Array<RuleRow>>(rulesQuery.queryKey, (old) => old && change(old));
   return useMutation<Done, Error, MarkVars>({
     mutationFn: markIncomeKind,
     onError: (error) => toast.error("Couldn't save", { description: error.message }),
