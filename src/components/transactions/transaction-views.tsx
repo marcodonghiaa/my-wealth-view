@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useId, useState, type ReactNode } from "react";
 import { ChevronRight, Users } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,7 @@ import { CategoryPicker, TypePicker } from "./pickers";
 import { SplitEditor } from "./split-editor";
 import { WorthItPrompt } from "./worth-it";
 import { AmountEditor } from "./amount-editor";
+import { NoteEditor, TagEditor } from "./note-tags-editor";
 
 export interface TransactionViewProps {
   tx: TransactionRow;
@@ -48,7 +49,19 @@ export interface TransactionViewProps {
   makeRule?: { label: string; onClick: () => void } | undefined;
   /** Table rows: show which account a row came from; pointless with a single account. */
   showAccount?: boolean;
+  /** Note and tags: only bank and manual rows (a Splitwise share has neither). */
+  onSaveNote?: (note: string | null) => void | Promise<boolean>;
+  savingNote?: boolean;
+  onSaveTags?: (tags: Array<string>) => void | Promise<boolean>;
+  savingTags?: boolean;
+  /** Tags used before, offered while typing one. */
+  tagSuggestions?: Array<string>;
+  /** The row's sheet opened or closed. */
+  onOpenChange?: (open: boolean) => void;
 }
+
+/** "#trip #work", or "" without tags. */
+const tagLine = (tx: TransactionRow): string => (tx.tags ?? []).map((t) => `#${t}`).join(" ");
 
 const isSplit = (tx: TransactionRow): boolean =>
   tx.personal_amount != null && tx.personal_amount < Math.abs(tx.amount ?? 0);
@@ -107,6 +120,7 @@ function TransactionEditSheet({
   const { tx } = p;
   const name = tx.creditor_name ?? "—";
   const share = isSplitwiseShare(tx);
+  const fieldId = useId();
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
@@ -175,6 +189,43 @@ function TransactionEditSheet({
               </>
             )}
           </GroupedList>
+          {!share && (p.onSaveNote || p.onSaveTags) && (
+            <GroupedList>
+              {p.onSaveNote && (
+                <div className="space-y-1.5 px-4 py-3">
+                  <label
+                    htmlFor={`${fieldId}-note`}
+                    className="block text-sm text-muted-foreground"
+                  >
+                    Note
+                  </label>
+                  <NoteEditor
+                    id={`${fieldId}-note`}
+                    note={tx.note}
+                    onSave={p.onSaveNote}
+                    saving={p.savingNote ?? false}
+                  />
+                </div>
+              )}
+              {p.onSaveTags && (
+                <div className="space-y-1.5 px-4 py-3">
+                  <label
+                    htmlFor={`${fieldId}-tags`}
+                    className="block text-sm text-muted-foreground"
+                  >
+                    Tags
+                  </label>
+                  <TagEditor
+                    id={`${fieldId}-tags`}
+                    tags={tx.tags}
+                    onSave={p.onSaveTags}
+                    saving={p.savingTags ?? false}
+                    suggestions={p.tagSuggestions}
+                  />
+                </div>
+              )}
+            </GroupedList>
+          )}
           {!share && (
             <GroupedList>
               {(tx.worth_it != null || isWorthItEligible(tx)) && (
@@ -204,6 +255,10 @@ function TransactionEditSheet({
 export function TransactionRowView(props: TransactionViewProps) {
   const { tx, accountLabel, selected, onToggleSelect, highlighted, showAccount = true } = props;
   const [open, setOpen] = useState(false);
+  const show = (o: boolean) => {
+    setOpen(o);
+    props.onOpenChange?.(o);
+  };
   // A Splitwise share lives in its own table: nothing here can edit, select or delete it.
   const share = isSplitwiseShare(tx);
   const notes = [
@@ -213,6 +268,7 @@ export function TransactionRowView(props: TransactionViewProps) {
       ? `split, owed ${formatMoney(Math.abs(tx.amount ?? 0) - (tx.personal_amount ?? 0), tx.currency ?? "EUR")}`
       : null,
     share ? null : worthItNote(tx),
+    tagLine(tx) || null,
   ].filter(Boolean);
 
   return (
@@ -256,6 +312,11 @@ export function TransactionRowView(props: TransactionViewProps) {
               <span className="truncate">{(share ? notes.slice(0, 1) : notes).join(" · ")}</span>
               <WorthItHint tx={tx} />
             </div>
+            {tx.note && (
+              <div className="truncate text-xs text-muted-foreground italic" title={tx.note}>
+                {tx.note}
+              </div>
+            )}
             <RefundedBadge flowType={tx.flow_type} />
           </div>
         </div>
@@ -272,12 +333,12 @@ export function TransactionRowView(props: TransactionViewProps) {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => setOpen(true)}
+              onClick={() => show(true)}
               aria-label={`Edit ${tx.creditor_name ?? "transaction"}`}
             >
               <ChevronRight className="size-4" />
             </Button>
-            <TransactionEditSheet {...props} open={open} onOpenChange={setOpen} />
+            <TransactionEditSheet {...props} open={open} onOpenChange={show} />
           </>
         )}
       </td>
@@ -289,6 +350,10 @@ export function TransactionRowView(props: TransactionViewProps) {
 export function TransactionCardView(props: TransactionViewProps) {
   const { tx, selected, highlighted } = props;
   const [open, setOpen] = useState(false);
+  const show = (o: boolean) => {
+    setOpen(o);
+    props.onOpenChange?.(o);
+  };
   const share = isSplitwiseShare(tx);
 
   const summary = (
@@ -309,12 +374,18 @@ export function TransactionCardView(props: TransactionViewProps) {
               tx.category ?? "Uncategorized",
               tx.flow_type === "refunded" ? "Refunded" : null,
               share ? null : worthItNote(tx),
+              tagLine(tx) || null,
             ]
               .filter(Boolean)
               .join(" · ")}
           </span>
           <WorthItHint tx={tx} />
         </p>
+        {tx.note && (
+          <p className="mt-0.5 truncate text-xs text-muted-foreground italic" title={tx.note}>
+            {tx.note}
+          </p>
+        )}
       </div>
       <AmountText tx={tx} />
     </>
@@ -326,12 +397,12 @@ export function TransactionCardView(props: TransactionViewProps) {
     <li data-entry-ref={tx.entry_reference} className={rowClass}>
       <button
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={() => show(true)}
         className="flex min-h-16 w-full items-center gap-3 px-4 py-3 text-left active:bg-accent"
       >
         {summary}
       </button>
-      <TransactionEditSheet {...props} open={open} onOpenChange={setOpen} />
+      <TransactionEditSheet {...props} open={open} onOpenChange={show} />
     </li>
   );
 }

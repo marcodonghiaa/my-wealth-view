@@ -3,20 +3,27 @@ import type { ExportData, ExportRow } from "./tables";
 
 const BOM = "﻿"; // so Excel reads the file as UTF-8
 
-const cell = (v: unknown): string | number | boolean =>
+// Transaction tags read as "trip, work" in a spreadsheet (a tag never holds a comma); any other
+// object stays JSON.
+const cell = (v: unknown, column: string): string | number | boolean =>
   v === null || v === undefined
     ? ""
-    : typeof v === "object"
-      ? JSON.stringify(v)
-      : (v as string | number | boolean);
+    : column === "tags" && Array.isArray(v)
+      ? v.join(", ")
+      : typeof v === "object"
+        ? JSON.stringify(v)
+        : (v as string | number | boolean);
+
+const FORMULA = /^(\s*[=+\-@]|[\t\r])/;
 
 /**
- * One CSV. Text starting with = + - @ (or a tab/return) gets a leading quote so a spreadsheet
- * never runs it as a formula; real numbers stay numbers, so -12.5 is untouched.
+ * One CSV. Text starting with = + - @ (or a tab/return), also behind spaces that a spreadsheet
+ * may trim on import, gets a leading quote so it never runs as a formula; real numbers stay
+ * numbers, so -12.5 is untouched.
  */
 export function toCsv(columns: ReadonlyArray<string>, rows: ReadonlyArray<ExportRow>): string {
-  const data = rows.map((r) => columns.map((c) => cell(r[c])));
-  return BOM + Papa.unparse({ fields: [...columns], data }, { escapeFormulae: true });
+  const data = rows.map((r) => columns.map((c) => cell(r[c], c)));
+  return BOM + Papa.unparse({ fields: [...columns], data }, { escapeFormulae: FORMULA });
 }
 
 const columnsOf = (rows: ReadonlyArray<ExportRow>, skip: ReadonlyArray<string>) =>

@@ -21,6 +21,8 @@ const transfer = (over: Partial<TransactionRow>): TransactionRow => ({
   owed_by: null,
   flow_type: "transfer",
   refund_of: null,
+  note: null,
+  tags: [],
   ...over,
 });
 
