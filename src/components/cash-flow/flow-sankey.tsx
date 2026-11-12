@@ -81,13 +81,17 @@ function FlowLinkShape({
   // Each band takes the colour of the side that isn't the hub, so a category reads the same here
   // as on Spending.
   const end = payload.target.kind === "hub" ? payload.source : payload.target;
+  // A filled outline (top edge out, bottom edge back): a thick stroke on a steep curve folds
+  // over itself, which broke the big "Saved" band on phones.
+  const h = Math.max(linkWidth, 1) / 2;
+  const edge = (dy: number) =>
+    `${sourceX},${sourceY + dy} C${sourceControlX},${sourceY + dy} ${targetControlX},${targetY + dy} ${targetX},${targetY + dy}`;
+  const back = `C${targetControlX},${targetY + h} ${sourceControlX},${sourceY + h} ${sourceX},${sourceY + h}`;
   return (
     <path
-      d={`M${sourceX},${sourceY} C${sourceControlX},${sourceY} ${targetControlX},${targetY} ${targetX},${targetY}`}
-      fill="none"
-      stroke={end.color}
-      strokeOpacity={0.28}
-      strokeWidth={Math.max(linkWidth, 1)}
+      d={`M${edge(-h)} L${targetX},${targetY + h} ${back} Z`}
+      fill={end.color}
+      fillOpacity={0.28}
     />
   );
 }

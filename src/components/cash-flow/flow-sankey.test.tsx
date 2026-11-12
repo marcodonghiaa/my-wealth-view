@@ -42,3 +42,16 @@ describe("FlowSankey labels", () => {
     expect(payerLabel().firstElementChild).toHaveTextContent(/^ACME CONSUL…$/);
   });
 });
+
+// Polish 4 #1: a thick stroke on a steep curve folds over itself; bands are filled outlines.
+it("draws each band as a filled outline, not a thick stroke", () => {
+  mobile = true;
+  const { container } = render(<FlowSankey graph={graph} label="Cash flow" />);
+  const links = container.querySelectorAll(".recharts-sankey-links path");
+  expect(links.length).toBe(graph.links.length);
+  for (const l of links) {
+    expect(l.getAttribute("fill")).not.toBe("none");
+    expect(l.getAttribute("stroke-width")).toBeNull();
+    expect(l.getAttribute("d")).toMatch(/Z$/);
+  }
+});
