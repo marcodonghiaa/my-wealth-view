@@ -9,6 +9,7 @@ import {
   formatRate,
   incomeBySource,
   periodLabel,
+  savedPhrase,
   periodRange,
   periodStart,
   shiftPeriod,
@@ -24,12 +25,7 @@ import {
   type MonthlyFlowRow,
   type Period,
 } from "@/lib/cash-flow";
-import {
-  formatEur,
-  formatSignedEur,
-  monthFromParam,
-  parseTransactionsSearch,
-} from "@/lib/transactions";
+import { formatEur, monthFromParam, parseTransactionsSearch } from "@/lib/transactions";
 import { TONE_TEXT, toneOf } from "@/lib/tone";
 import { FlowSankey } from "@/components/cash-flow/flow-sankey";
 import { TrendBars } from "@/components/cash-flow/trend-bars";
@@ -263,11 +259,7 @@ function CashFlowPage() {
               graph={graph}
               label={`Cash flow for ${label}: ${formatEur(summary.income)} in, ${formatEur(
                 summary.spending,
-              )} out, ${
-                summary.net < 0
-                  ? `${formatEur(-summary.net)} taken from savings`
-                  : `${formatSignedEur(summary.net)} saved`
-              }.`}
+              )} out, ${savedPhrase(summary.net)}.`}
             />
           )}
         </GroupedList>

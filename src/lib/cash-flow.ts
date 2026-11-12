@@ -2,7 +2,7 @@ import { categoryColor } from "@/lib/categories";
 import { formatISODate } from "@/lib/date";
 import type { IncomeExpenseRow } from "@/lib/income-expenses";
 import { formatPercent } from "@/lib/locale";
-import { incomeTitle } from "@/lib/transactions";
+import { formatEur, incomeTitle } from "@/lib/transactions";
 import { UNCATEGORIZED_LABEL, type MonthlySpendRow } from "@/lib/spending";
 
 /** How much time one cash-flow view covers. */
@@ -91,6 +91,11 @@ export function formatRate(rate: number | null): string {
 }
 
 const toCents = (v: number) => Math.round(v * 100) / 100 || 0;
+
+/** "€750.00 saved" or "€500.00 taken from savings": the words carry the sign, not a "+". */
+export function savedPhrase(net: number): string {
+  return net < 0 ? `${formatEur(-net)} taken from savings` : `${formatEur(net)} saved`;
+}
 
 const inRange = (month: string | null, from: string, to: string): month is string =>
   month != null && month >= from && month < to;

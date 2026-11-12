@@ -29,7 +29,9 @@ describe("TrendTooltip", () => {
   it("shows what was saved and the rate", () => {
     const { container } = render(<TrendTooltip bar={bar({})} />);
     expect(container).toHaveTextContent("Nov");
-    expect(container).toHaveTextContent("Saved +€750.00 · 25%");
+    // Polish 4 #10: no "+"; the words say the direction.
+    expect(container).toHaveTextContent("€750.00 saved · 25% of income");
+    expect(container).not.toHaveTextContent("+");
   });
 
   // Polish 3 #10: a period with nothing recorded says so, not "Saved +€0.00".

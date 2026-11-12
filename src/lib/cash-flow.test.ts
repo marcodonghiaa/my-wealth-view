@@ -26,6 +26,7 @@ import {
   trend,
   trimLeadingEmpty,
   trendEnd,
+  savedPhrase,
   type MonthlyFlowRow,
 } from "./cash-flow";
 
@@ -512,4 +513,11 @@ it("trimLeadingEmpty keeps the selected bar even when it is empty", () => {
     "2026-03-01",
     "2026-04-01",
   ]);
+});
+
+// Polish 4 #10: one sign style on the page: the words carry the direction, no "+".
+it("savedPhrase says which way the money went, without a plus", () => {
+  expect(savedPhrase(750)).toBe("€750.00 saved");
+  expect(savedPhrase(-500)).toBe("€500.00 taken from savings");
+  expect(savedPhrase(0)).toBe("€0.00 saved");
 });

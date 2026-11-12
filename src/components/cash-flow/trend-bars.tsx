@@ -1,6 +1,5 @@
 import { Bar, BarChart, Cell, ReferenceLine, ResponsiveContainer, Tooltip, XAxis } from "recharts";
-import { formatRate, type TrendBar } from "@/lib/cash-flow";
-import { formatSignedEur } from "@/lib/transactions";
+import { formatRate, savedPhrase, type TrendBar } from "@/lib/cash-flow";
 
 const TICK = {
   fill: "var(--color-muted-foreground)",
@@ -13,7 +12,7 @@ function barText(bar: TrendBar): string {
   // Nothing recorded is not a net of zero.
   if (bar.months === 0) return "No activity";
   const rate = bar.savingsRate == null ? "" : ` · ${formatRate(bar.savingsRate)} of income`;
-  return `Saved ${formatSignedEur(bar.net)}${rate}`;
+  return `${savedPhrase(bar.net)}${rate}`;
 }
 
 /** One bar's tooltip: its period, what was saved and the rate. */

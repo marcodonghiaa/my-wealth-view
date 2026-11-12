@@ -89,7 +89,7 @@ describe("Cash flow page", () => {
   it("draws where the money came from and went", async () => {
     renderPage();
     const chart = await screen.findByRole("img", { name: /^Cash flow for/ });
-    expect(chart).toHaveAccessibleName(/€3,000\.00 in, €2,250\.00 out, \+€750\.00 saved/);
+    expect(chart).toHaveAccessibleName(/€3,000\.00 in, €2,250\.00 out, €750\.00 saved/);
     for (const name of ["Employer", "Housing", "Groceries"])
       expect(within(chart).getByText(name)).toBeInTheDocument();
     expect(within(chart).getAllByText("Saved").length).toBeGreaterThan(0);
