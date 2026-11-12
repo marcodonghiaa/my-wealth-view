@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useSyncExternalStore } from "react";
 
 type Row = Record<string, unknown>;
 const { db, rpc, toast } = vi.hoisted(() => ({
@@ -18,6 +19,23 @@ vi.mock("@/integrations/supabase/client", () => ({
 }));
 
 import { Route } from "./subscriptions";
+
+// The URL's search params, as a tiny store: navigate() changes them and the page re-renders.
+type Search = { view?: "calendar"; month?: string };
+const url = vi.hoisted(() => ({
+  search: {} as Record<string, unknown>,
+  subs: new Set<() => void>(),
+}));
+const navigate = vi.fn((opts: { search: (s: Search) => Search; replace?: boolean }) => {
+  url.search = opts.search(url.search as Search);
+  url.subs.forEach((f) => f());
+});
+vi.spyOn(Route, "useSearch").mockImplementation((() =>
+  useSyncExternalStore(
+    (f) => (url.subs.add(f), () => url.subs.delete(f)),
+    () => url.search,
+  )) as never);
+vi.spyOn(Route, "useNavigate").mockImplementation((() => navigate) as never);
 
 const Page = Route.options.component as () => React.JSX.Element;
 
@@ -61,6 +79,7 @@ const renderPage = () =>
 
 beforeEach(() => {
   vi.clearAllMocks();
+  url.search = {};
   localStorage.setItem("mf.subscriptionsReveal.seen", "1"); // keep the one-time reveal out of these tests
   db.error = null;
   db.rows = [
@@ -374,6 +393,32 @@ describe("List / Calendar", () => {
     expect(screen.queryByRole("button", { name: "Remove Streamflix" })).toBeNull();
     fireEvent.click(screen.getByRole("radio", { name: "List" }));
     expect(await screen.findByRole("button", { name: "Remove Streamflix" })).toBeTruthy();
+  });
+
+  // Polish 4 #10: the view and month live in the URL, so Back returns to the list, a reload or a
+  // shared link opens the same month, and switching away and back keeps the month.
+  it("keeps the view and month in the URL", async () => {
+    url.search = { view: "calendar", month: "2026-12" };
+    renderPage();
+    expect(await screen.findByRole("table", { name: "December 2026" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Next month" }));
+    expect(navigate).toHaveBeenLastCalledWith(expect.objectContaining({ replace: true }));
+    expect(url.search).toEqual({ view: "calendar", month: "2027-01" });
+    fireEvent.click(screen.getByRole("radio", { name: "List" }));
+    expect(navigate.mock.lastCall![0].replace).toBeFalsy(); // a new history entry: Back undoes it
+    expect(url.search).toEqual({ month: "2027-01" });
+    fireEvent.click(screen.getByRole("radio", { name: "Calendar" }));
+    expect(await screen.findByRole("table", { name: "January 2027" })).toBeTruthy();
+  });
+
+  it("ignores a view or month it doesn't know", () => {
+    const validate = Route.options.validateSearch as (s: Record<string, unknown>) => unknown;
+    expect(validate({ view: "calendar", month: "2026-12" })).toEqual({
+      view: "calendar",
+      month: "2026-12",
+    });
+    expect(validate({ view: "grid", month: "2026-13" })).toEqual({});
+    expect(validate({ month: "1969-12" })).toEqual({});
   });
 
   // Polish 3 #12: only active subscriptions are bills; to-review and dismissed ones are not.

@@ -103,13 +103,25 @@ const Figure = ({ n }: { n: number }) => <span className="font-figure">{n}</span
 export function RecurringCalendar({
   streams,
   today,
+  initialMonth,
+  onMonthChange,
 }: {
   /** The active streams (Subscriptions' main list). */
   streams: ReadonlyArray<Stream>;
   today: Date;
+  /** The month to open on (the page keeps it in the URL); later than a year ahead opens there. */
+  initialMonth?: Date | undefined;
+  onMonthChange?: (month: Date) => void;
 }) {
   const thisMonth = startOfMonth(today);
-  const [month, setMonth] = useState<Date>(thisMonth);
+  const lastMonth = new Date(thisMonth.getFullYear(), thisMonth.getMonth() + MONTHS_AHEAD, 1);
+  const [month, setMonthState] = useState<Date>(() =>
+    initialMonth ? (initialMonth > lastMonth ? lastMonth : startOfMonth(initialMonth)) : thisMonth,
+  );
+  const setMonth = (next: Date) => {
+    setMonthState(next);
+    onMonthChange?.(next);
+  };
   const isPast = month < thisMonth;
   // Regular income is judged on the six months up to now: a future month has no income yet.
   const windowMonth = isPast ? month : thisMonth;
@@ -140,7 +152,6 @@ export function RecurringCalendar({
   const income = entries.filter((e) => e.kind === "income");
   const todayIso = formatISODate(today);
   const label = month.toLocaleDateString(dateLocale(), { month: "long", year: "numeric" });
-  const lastMonth = new Date(thisMonth.getFullYear(), thisMonth.getMonth() + MONTHS_AHEAD, 1);
   const weekdays = Array.from({ length: 7 }, (_, i) =>
     // 2 Nov 2026 is a Monday.
     new Date(2026, 10, 2 + i).toLocaleDateString(dateLocale(), { weekday: "short" }),

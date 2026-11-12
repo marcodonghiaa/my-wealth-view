@@ -26,7 +26,18 @@ import { Input, Select } from "@/components/ui/field";
 import { GroupedList, SectionTitle } from "@/components/ui/grouped-list";
 import { Skeleton } from "@/components/ui/skeleton";
 
+// The view and the calendar's month live in the URL: Back returns to the list, and a reload or a
+// shared link opens the same month.
+type SubscriptionsSearch = { view?: "calendar"; month?: string };
+const MONTH_PARAM = /^(19[7-9]\d|2\d{3})-(0[1-9]|1[0-2])$/;
+
 export const Route = createFileRoute("/_authenticated/subscriptions")({
+  validateSearch: (s: Record<string, unknown>): SubscriptionsSearch => ({
+    ...(s["view"] === "calendar" ? { view: "calendar" as const } : {}),
+    ...(typeof s["month"] === "string" && MONTH_PARAM.test(s["month"])
+      ? { month: s["month"] }
+      : {}),
+  }),
   head: () => ({
     meta: [
       { title: "Subscriptions — Alopex" },
@@ -87,7 +98,19 @@ type View = (typeof VIEWS)[number]["value"];
 
 function SubscriptionsPage() {
   const queryClient = useQueryClient();
-  const [view, setView] = useState<View>("list");
+  const search = Route.useSearch();
+  const navigate = Route.useNavigate();
+  const view: View = search.view ?? "list";
+  const setView = (next: View) =>
+    void navigate({
+      search: (s: SubscriptionsSearch) => {
+        const { view: _drop, ...rest } = s;
+        return next === "calendar" ? { ...rest, view: "calendar" } : rest;
+      },
+    });
+  const calendarMonth = search.month
+    ? new Date(Number(search.month.slice(0, 4)), Number(search.month.slice(5, 7)) - 1, 1)
+    : undefined;
   // One "today" per visit: a new Date each render would recompute the calendar every time.
   const [today] = useState(romeToday);
   const query = useRecurringStreams();
@@ -210,7 +233,21 @@ function SubscriptionsPage() {
         query.isPending ? (
           <Skeleton className="h-96" />
         ) : (
-          <RecurringCalendar streams={active} today={today} />
+          <RecurringCalendar
+            streams={active}
+            today={today}
+            initialMonth={calendarMonth}
+            onMonthChange={(m) =>
+              void navigate({
+                search: (s: SubscriptionsSearch) => ({
+                  ...s,
+                  month: `${m.getFullYear()}-${String(m.getMonth() + 1).padStart(2, "0")}`,
+                }),
+                // Paging months isn't worth a Back step each.
+                replace: true,
+              })
+            }
+          />
         )
       ) : (
         <>
