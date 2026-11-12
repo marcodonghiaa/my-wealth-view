@@ -131,7 +131,7 @@ export function TagEditor({
   return (
     <div className="space-y-2">
       {current.length > 0 && (
-        <ul className="flex flex-wrap gap-1.5" aria-label="Tags">
+        <ul className="flex flex-wrap gap-x-1.5 gap-y-2" aria-label="Tags">
           {current.map((t) => (
             <li
               key={t}
@@ -149,7 +149,7 @@ export function TagEditor({
                   // The chip and its button go away: keep keyboard focus in the editor.
                   field.current?.focus();
                 }}
-                className="inline-flex size-6 shrink-0 items-center justify-center rounded-sm text-muted-foreground hover:bg-background hover:text-foreground"
+                className="relative inline-flex size-6 shrink-0 items-center justify-center rounded-sm text-muted-foreground hover:bg-background hover:text-foreground after:absolute after:-inset-2.5 after:content-['']"
               >
                 <X className="size-3" />
               </button>

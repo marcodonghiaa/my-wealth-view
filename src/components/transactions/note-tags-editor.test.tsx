@@ -188,6 +188,17 @@ describe("TagEditor", () => {
     expect(onSave).toHaveBeenCalledTimes(1);
   });
 
+  // polish-4 #5: fails_when=the chip × is only its 24px icon to tap (rule: 44px targets)
+  it("gives the remove button a 44px tap area around its small icon", () => {
+    render(<TagEditor tags={["trip"]} onSave={vi.fn()} saving={false} />);
+    expect(screen.getByRole("button", { name: "Remove tag trip" })).toHaveClass(
+      "relative",
+      "size-6",
+      "after:absolute",
+      "after:-inset-2.5",
+    );
+  });
+
   // polish-4 #3: fails_when=removing a chip leaves keyboard focus on nothing
   it("moves focus to the tag field after removing a tag", async () => {
     render(<TagEditor tags={["trip", "work"]} onSave={vi.fn()} saving={false} />);
