@@ -133,15 +133,17 @@ export function TagEditor({
           {current.map((t) => (
             <li
               key={t}
-              className="inline-flex items-center gap-1 rounded-sm bg-accent py-0.5 pr-0.5 pl-2 text-xs text-foreground"
+              className="inline-flex max-w-full min-w-0 items-center gap-1 rounded-sm bg-accent py-0.5 pr-0.5 pl-2 text-xs text-foreground"
             >
-              {t}
+              <span className="truncate" title={t}>
+                {t}
+              </span>
               <button
                 type="button"
                 disabled={saving}
                 aria-label={`Remove tag ${t}`}
                 onClick={() => save(current.filter((x) => x !== t))}
-                className="inline-flex size-6 items-center justify-center rounded-sm text-muted-foreground hover:bg-background hover:text-foreground"
+                className="inline-flex size-6 shrink-0 items-center justify-center rounded-sm text-muted-foreground hover:bg-background hover:text-foreground"
               >
                 <X className="size-3" />
               </button>

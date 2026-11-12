@@ -160,6 +160,17 @@ describe("TagEditor", () => {
     expect(onSave).toHaveBeenCalledWith(["trip", "food"]);
   });
 
+  // polish-4 #1: fails_when=a long tag widens its chip past a phone sheet and pushes × out of reach
+  it("cuts a long tag short, keeps it whole on hover, and never squeezes out its ×", () => {
+    const long = "w".repeat(40);
+    render(<TagEditor tags={[long]} onSave={vi.fn()} saving={false} />);
+    const text = screen.getByText(long);
+    expect(text).toHaveClass("truncate");
+    expect(text).toHaveAttribute("title", long);
+    expect(text.closest("li")).toHaveClass("max-w-full", "min-w-0");
+    expect(screen.getByRole("button", { name: `Remove tag ${long}` })).toHaveClass("shrink-0");
+  });
+
   it("stops at 20 tags", () => {
     const tags = Array.from({ length: 20 }, (_, i) => `t${i}`);
     render(<TagEditor tags={tags} onSave={vi.fn()} saving={false} />);
