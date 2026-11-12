@@ -50,6 +50,39 @@ describe("NoteEditor length", () => {
   });
 });
 
+// polish-5 #5: fails_when=typed text is lost when the page goes away (reload, tab closed, app
+// switched on a phone) before a blur or the sheet closing saves it
+describe("leaving the page", () => {
+  it("saves a typed note when the page is about to unload, and asks to wait", () => {
+    const onSave = vi.fn();
+    const { unmount } = render(<NoteEditor note="old" onSave={onSave} saving={false} />);
+    fireEvent.change(screen.getByRole("textbox"), { target: { value: "typed" } });
+    const leave = new Event("beforeunload", { cancelable: true });
+    window.dispatchEvent(leave);
+    expect(onSave).toHaveBeenCalledWith("typed");
+    expect(leave.defaultPrevented).toBe(true);
+    unmount();
+    expect(onSave).toHaveBeenCalledTimes(1);
+  });
+
+  it("adds a half-typed tag when the page is hidden", () => {
+    const onSave = vi.fn();
+    render(<TagEditor tags={["trip"]} onSave={onSave} saving={false} />);
+    fireEvent.change(screen.getByRole("combobox"), { target: { value: "food" } });
+    const visibility = vi.spyOn(document, "visibilityState", "get").mockReturnValue("hidden");
+    act(() => void document.dispatchEvent(new Event("visibilitychange")));
+    visibility.mockRestore();
+    expect(onSave).toHaveBeenCalledWith(["trip", "food"]);
+  });
+
+  it("doesn't hold the page when nothing is unsaved", () => {
+    render(<NoteEditor note="old" onSave={vi.fn()} saving={false} />);
+    const leave = new Event("beforeunload", { cancelable: true });
+    window.dispatchEvent(leave);
+    expect(leave.defaultPrevented).toBe(false);
+  });
+});
+
 describe("NoteEditor draft", () => {
   // protects=a failed save never wipes what the user typed; fails_when=the rollback resets the field
   it("keeps the typed note when a save fails and the old note comes back", () => {

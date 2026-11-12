@@ -13,6 +13,28 @@ import {
 } from "@/lib/transactions";
 
 /**
+ * Saves what's typed but not yet sent when the page goes away: hidden (tab or app switched, often
+ * the last chance on a phone) or about to unload (reload, tab closed). `flush` sends it and says
+ * whether it sent anything; then the browser asks before leaving, giving the save time to land.
+ */
+function useSaveOnLeave(flush: { current: () => boolean }) {
+  useEffect(() => {
+    const onHide = () => {
+      if (document.visibilityState === "hidden") flush.current();
+    };
+    const onUnload = (e: BeforeUnloadEvent) => {
+      if (flush.current()) e.preventDefault();
+    };
+    document.addEventListener("visibilitychange", onHide);
+    window.addEventListener("beforeunload", onUnload);
+    return () => {
+      document.removeEventListener("visibilitychange", onHide);
+      window.removeEventListener("beforeunload", onUnload);
+    };
+  }, [flush]);
+}
+
+/**
  * Free text about a transaction. Saved when the field loses focus, if it changed. Until the user
  * types, the field follows the note (a refetch can bring a newer one). Once they type, it keeps
  * their text: a failed save rolls the note back, and the next blur tries again. Closing the sheet
@@ -53,16 +75,17 @@ export function NoteEditor({
     const timer = setTimeout(() => setSaved(false), 2000);
     return () => clearTimeout(timer);
   }, [saved]);
-  const latest = useRef({ input, edited, note, onSave });
-  latest.current = { input, edited, note, onSave };
-  useEffect(
-    () => () => {
-      const { input, edited, note, onSave } = latest.current;
-      const next = normalizeNote(input);
-      if (edited && next !== (note ?? null) && next !== sent.current) onSave(next);
-    },
-    [],
-  );
+  // Sends an edit not yet sent (closing the sheet, leaving the page); true if it sent one.
+  const flush = useRef<() => boolean>(() => false);
+  flush.current = () => {
+    const next = normalizeNote(input);
+    if (!edited || next === (note ?? null) || next === sent.current) return false;
+    sent.current = next;
+    onSave(next);
+    return true;
+  };
+  useEffect(() => () => void flush.current(), []);
+  useSaveOnLeave(flush);
 
   return (
     <div className="space-y-1">
@@ -157,12 +180,15 @@ export function TagEditor({
     });
   }
 
-  // Closing the sheet can remove the field with no blur: keep a half-typed tag then too.
-  const latestAdd = useRef(() => {});
-  latestAdd.current = () => {
-    if (input.trim()) add();
+  // Closing the sheet or leaving the page can come with no blur: keep a half-typed tag then too.
+  const flush = useRef<() => boolean>(() => false);
+  flush.current = () => {
+    if (!input.trim()) return false;
+    add();
+    return true;
   };
-  useEffect(() => () => latestAdd.current(), []);
+  useEffect(() => () => void flush.current(), []);
+  useSaveOnLeave(flush);
 
   const offered = suggestions.filter((s) => !current.some((t) => sameTag(t, s)));
 
