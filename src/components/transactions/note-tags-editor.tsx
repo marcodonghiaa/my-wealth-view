@@ -95,6 +95,7 @@ export function TagEditor({
 }) {
   const listId = useId();
   const field = useRef<HTMLInputElement>(null);
+  const hintId = useId();
   // The list last sent, until the tags come back from the save (or roll back after a failure).
   const sent = useRef<Array<string> | null>(null);
   useEffect(() => {
@@ -163,8 +164,11 @@ export function TagEditor({
         list={listId}
         value={input}
         maxLength={MAX_TAG_LENGTH}
-        disabled={full}
-        placeholder={full ? `Up to ${MAX_TAGS} tags` : "Add a tag"}
+        // Full: read-only, not disabled, so focus stays here instead of falling out of the sheet.
+        readOnly={full}
+        aria-disabled={full || undefined}
+        aria-describedby={full ? hintId : undefined}
+        placeholder="Add a tag"
         onChange={(e) => {
           // A comma ends a tag, like Enter. Some phone keyboards send it with no key event.
           if (e.target.value.endsWith(",")) add(e.target.value);
@@ -179,6 +183,11 @@ export function TagEditor({
         onBlur={() => input.trim() && add()}
         className={fieldClass()}
       />
+      {full && (
+        <p id={hintId} className="text-xs text-muted-foreground">
+          Up to {MAX_TAGS} tags. Remove one to add another.
+        </p>
+      )}
       <datalist id={listId}>
         {offered.map((s) => (
           <option key={s} value={s} />

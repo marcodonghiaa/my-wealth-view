@@ -171,10 +171,21 @@ describe("TagEditor", () => {
     expect(screen.getByRole("button", { name: `Remove tag ${long}` })).toHaveClass("shrink-0");
   });
 
-  it("stops at 20 tags", () => {
-    const tags = Array.from({ length: 20 }, (_, i) => `t${i}`);
-    render(<TagEditor tags={tags} onSave={vi.fn()} saving={false} />);
-    expect(screen.getByLabelText("Add a tag")).toBeDisabled();
+  // polish-4 #4: fails_when=the 20th tag disables the field under the cursor (focus falls out of
+  // the sheet) or the limit is only a faint placeholder
+  it("stops at 20 tags, keeping focus and saying why", async () => {
+    const tags = Array.from({ length: 19 }, (_, i) => `t${i}`);
+    const onSave = vi.fn();
+    render(<TagEditor tags={tags} onSave={onSave} saving={false} />);
+    const input = screen.getByLabelText("Add a tag");
+    await userEvent.type(input, "last{Enter}");
+    expect(onSave).toHaveBeenCalledTimes(1);
+    expect(input).toHaveFocus();
+    expect(input).toHaveAttribute("readonly");
+    expect(input).toHaveAttribute("aria-disabled", "true");
+    expect(input).toHaveAccessibleDescription("Up to 20 tags. Remove one to add another.");
+    await userEvent.type(input, "more{Enter}");
+    expect(onSave).toHaveBeenCalledTimes(1);
   });
 
   // polish-4 #3: fails_when=removing a chip leaves keyboard focus on nothing
