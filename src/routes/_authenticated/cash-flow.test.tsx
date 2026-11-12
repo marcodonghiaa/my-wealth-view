@@ -106,7 +106,7 @@ describe("Cash flow page", () => {
     const chart = await screen.findByRole("img", { name: /^Cash flow for/ });
     expect(within(chart).getByText("From savings")).toBeInTheDocument();
     // Polish 3 #7: read out as money taken from savings, not "−€500.00 saved".
-    expect(chart).toHaveAccessibleName(/€500\.00 taken from savings\.$/);
+    expect(chart).toHaveAccessibleName(/€500\.00 taken from savings\. In:/);
   });
 
   // protects=switching to Year sums every month of that year
@@ -321,4 +321,13 @@ describe("Cash flow page", () => {
     expect(trend).toHaveAccessibleName(/25% of income/);
   });
 
+  // Polish 4 #6: the Sankey's name lists payers and categories; its SVG text stays out of the tree.
+  it("names the diagram's payers and categories", async () => {
+    renderPage();
+    const chart = await screen.findByRole("img", { name: /^Cash flow for/ });
+    expect(chart).toHaveAccessibleName(
+      /In: Employer €3,000\.00\. Out: Housing €1,500\.00, Groceries €750\.00/,
+    );
+    expect(chart.querySelector("svg")?.closest("[aria-hidden=true]")).not.toBeNull();
+  });
 });

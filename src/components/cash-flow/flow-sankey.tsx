@@ -106,21 +106,33 @@ export function FlowSankey({ graph, label }: { graph: FlowGraph; label: string }
   const lefts = graph.links.filter((l) => graph.nodes[l.target]?.kind === "hub").length;
   const rights = graph.links.length - lefts;
   const height = Math.max(240, Math.max(lefts, rights) * ROW);
+  // Screen readers get the breakdown in the name; the SVG's own text stays out of the tree.
+  const side = (inbound: boolean) =>
+    graph.links
+      .filter((l) => (graph.nodes[l.target]?.kind === "hub") === inbound)
+      .map((l) => `${graph.nodes[inbound ? l.source : l.target]?.name} ${formatEur(l.value)}`)
+      .join(", ");
   return (
-    <div role="img" aria-label={label} style={{ height }}>
-      <ResponsiveContainer width="100%" height="100%">
-        <Sankey
-          data={graph}
-          sort={false}
-          nodeWidth={8}
-          nodePadding={30}
-          linkCurvature={0.5}
-          iterations={0}
-          margin={{ top: 12, bottom: 12, left, right }}
-          node={(props: NodeProps) => <FlowNodeShape {...props} narrow={narrow} />}
-          link={(props: LinkProps) => <FlowLinkShape {...props} />}
-        />
-      </ResponsiveContainer>
+    <div
+      role="img"
+      aria-label={`${label} In: ${side(true)}. Out: ${side(false)}.`}
+      style={{ height }}
+    >
+      <div aria-hidden="true" className="size-full">
+        <ResponsiveContainer width="100%" height="100%">
+          <Sankey
+            data={graph}
+            sort={false}
+            nodeWidth={8}
+            nodePadding={30}
+            linkCurvature={0.5}
+            iterations={0}
+            margin={{ top: 12, bottom: 12, left, right }}
+            node={(props: NodeProps) => <FlowNodeShape {...props} narrow={narrow} />}
+            link={(props: LinkProps) => <FlowLinkShape {...props} />}
+          />
+        </ResponsiveContainer>
+      </div>
     </div>
   );
 }

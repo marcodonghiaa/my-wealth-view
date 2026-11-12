@@ -48,36 +48,38 @@ export function TrendBars({
   const named = `${label}: ${data.map((b) => `${b.tick} ${barText(b)}`).join("; ")}.`;
   return (
     <div role="img" aria-label={named} className="h-40">
-      <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={data} margin={{ top: 8, right: 0, bottom: 0, left: 0 }}>
-          <XAxis dataKey="tick" tick={TICK} tickLine={false} axisLine={false} interval={0} />
-          <ReferenceLine y={0} stroke="var(--color-border)" />
-          <Tooltip
-            cursor={{ fill: "var(--color-muted)" }}
-            content={({ active, payload }) => {
-              const bar = active
-                ? (payload?.[0]?.payload as (typeof data)[number] | undefined)
-                : undefined;
-              return bar ? <TrendTooltip bar={bar} /> : null;
-            }}
-          />
-          <Bar
-            dataKey="net"
-            radius={[2, 2, 2, 2]}
-            maxBarSize={28}
-            onClick={(entry: { payload?: TrendBar }) => entry.payload && onSelect(entry.payload)}
-            className="cursor-pointer"
-          >
-            {data.map((b) => (
-              <Cell
-                key={b.key}
-                fill={b.net < 0 ? "var(--color-negative)" : "var(--color-positive)"}
-                fillOpacity={b.key === selected ? 1 : 0.35}
-              />
-            ))}
-          </Bar>
-        </BarChart>
-      </ResponsiveContainer>
+      <div aria-hidden="true" className="size-full">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={data} margin={{ top: 8, right: 0, bottom: 0, left: 0 }}>
+            <XAxis dataKey="tick" tick={TICK} tickLine={false} axisLine={false} interval={0} />
+            <ReferenceLine y={0} stroke="var(--color-border)" />
+            <Tooltip
+              cursor={{ fill: "var(--color-muted)" }}
+              content={({ active, payload }) => {
+                const bar = active
+                  ? (payload?.[0]?.payload as (typeof data)[number] | undefined)
+                  : undefined;
+                return bar ? <TrendTooltip bar={bar} /> : null;
+              }}
+            />
+            <Bar
+              dataKey="net"
+              radius={[2, 2, 2, 2]}
+              maxBarSize={28}
+              onClick={(entry: { payload?: TrendBar }) => entry.payload && onSelect(entry.payload)}
+              className="cursor-pointer"
+            >
+              {data.map((b) => (
+                <Cell
+                  key={b.key}
+                  fill={b.net < 0 ? "var(--color-negative)" : "var(--color-positive)"}
+                  fillOpacity={b.key === selected ? 1 : 0.35}
+                />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
     </div>
   );
 }
