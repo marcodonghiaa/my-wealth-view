@@ -415,4 +415,11 @@ describe("Cash flow page", () => {
     expect(within(row("Spending")).getByRole("link")).toHaveAttribute("href", "/spending");
     expect(within(row("Savings rate")).queryByRole("link")).toBeNull();
   });
+
+  // Polish 4 #16: the same note as on Income.
+  it("words the transfers note as on Income", async () => {
+    renderPage();
+    const headline = await screen.findByRole("region", { name: /^Saved in/ });
+    expect(headline).toHaveTextContent(/Excludes transfers\.$/);
+  });
 });

@@ -209,9 +209,7 @@ function CashFlowPage() {
             <HeadlineFigure value={summary.net} currency="EUR" />
           )}
         </div>
-        <p className="mt-1 text-xs text-muted-foreground">
-          Excludes transfers between your accounts.
-        </p>
+        <p className="mt-1 text-xs text-muted-foreground">Excludes transfers.</p>
       </section>
 
       <GroupedList>
