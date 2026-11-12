@@ -118,6 +118,9 @@ describe("Cash flow page", () => {
     await waitFor(() => expect(row("Income")).toHaveTextContent("€3,000.00"));
     fireEvent.click(screen.getByRole("button", { name: "Previous month" }));
     await waitFor(() => expect(row("Savings rate")).toHaveTextContent("−50%"));
+    // Polish 4 #20: a negative rate isn't described as "income kept".
+    expect(row("Savings rate")).toHaveTextContent("Taken from savings");
+    expect(row("Savings rate")).not.toHaveTextContent("Share of income kept");
     expect(screen.getByText("Spent more than came in")).toBeInTheDocument();
     // Polish 1 #4: the overspend is drawn as money taken from savings.
     const chart = await screen.findByRole("img", { name: /^Cash flow for/ });

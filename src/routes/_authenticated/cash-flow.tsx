@@ -230,7 +230,9 @@ function CashFlowPage() {
                   ? "Didn't load"
                   : summary.savingsRate == null
                     ? "No income this period"
-                    : "Share of income kept"
+                    : summary.savingsRate < 0
+                      ? "Taken from savings"
+                      : "Share of income kept"
             }
             pending={pending}
             value={formatRate(summary.savingsRate)}
