@@ -10,6 +10,8 @@ import {
   formatMoney,
   formatSignedEur,
   incomeTitle,
+  monthFromParam,
+  parseTransactionsSearch,
   startOfMonth,
 } from "@/lib/transactions";
 import { fetchIncomeExpenses, incomeExpensesKey, netAfterSpending } from "@/lib/income-expenses";
@@ -39,6 +41,11 @@ export const Route = createFileRoute("/_authenticated/income")({
       { name: "twitter:card", content: "summary" },
     ],
   }),
+  // ?month=YYYY-MM: the month to open on (Cash flow's rows link here with the month they show).
+  validateSearch: (s: Record<string, unknown>): { month?: string } => {
+    const { month } = parseTransactionsSearch(s);
+    return month ? { month } : {};
+  },
   component: IncomePage,
 });
 
@@ -71,7 +78,8 @@ async function fetchIncomeForMonth(month: Date): Promise<Array<IncomeRow>> {
 }
 
 function IncomePage() {
-  const [month, setMonth] = useState<Date>(() => startOfMonth(new Date()));
+  const search = Route.useSearch();
+  const [month, setMonth] = useState<Date>(() => monthFromParam(search.month));
   const updateCategory = useIncomeCategoryMutation(useQueryClient());
 
   const incomeQuery = useQuery({

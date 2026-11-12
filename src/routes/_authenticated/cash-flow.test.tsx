@@ -37,13 +37,15 @@ vi.mock("@tanstack/react-router", async (importOriginal) => ({
   Link: ({
     children,
     to,
+    search,
     className,
   }: {
     children: React.ReactNode;
     to: string;
+    search?: Record<string, string>;
     className?: string;
   }) => (
-    <a href={to} className={className}>
+    <a href={search ? `${to}?${new URLSearchParams(search)}` : to} className={className}>
       {children}
     </a>
   ),
@@ -414,9 +416,31 @@ describe("Cash flow page", () => {
   it("links the income and spending rows to their pages", async () => {
     renderPage();
     await waitFor(() => expect(row("Income")).toHaveTextContent("€3,000.00"));
-    expect(within(row("Income")).getByRole("link")).toHaveAttribute("href", "/income");
-    expect(within(row("Spending")).getByRole("link")).toHaveAttribute("href", "/spending");
+    const m = monthISO(0).slice(0, 7);
+    expect(within(row("Income")).getByRole("link")).toHaveAttribute("href", `/income?month=${m}`);
+    expect(within(row("Spending")).getByRole("link")).toHaveAttribute(
+      "href",
+      `/spending?month=${m}`,
+    );
     expect(within(row("Savings rate")).queryByRole("link")).toBeNull();
+  });
+
+  // Polish 5 #1: a row opens its page on the month it showed, not on today's month; a quarter or
+  // year has no single page to open, so its rows are plain.
+  it("opens the rows' pages on the month shown, and has no row links for a quarter", async () => {
+    renderPage();
+    await waitFor(() => expect(row("Income")).toHaveTextContent("€3,000.00"));
+    fireEvent.click(screen.getByRole("button", { name: "Previous month" }));
+    await waitFor(() => expect(row("Income")).toHaveTextContent("€1,000.00"));
+    const m = monthISO(-1).slice(0, 7);
+    expect(within(row("Income")).getByRole("link")).toHaveAttribute("href", `/income?month=${m}`);
+    expect(within(row("Spending")).getByRole("link")).toHaveAttribute(
+      "href",
+      `/spending?month=${m}`,
+    );
+    fireEvent.click(screen.getByRole("radio", { name: "Quarter" }));
+    await waitFor(() => expect(within(row("Income")).queryByRole("link")).toBeNull());
+    expect(within(row("Spending")).queryByRole("link")).toBeNull();
   });
 
   // Polish 4 #16: the same note as on Income.

@@ -48,6 +48,8 @@ vi.mock("recharts", async (importOriginal) => ({
 import { Route } from "./spending";
 
 const Page = Route.options.component as () => React.JSX.Element;
+let search: { month?: string } = {};
+vi.spyOn(Route, "useSearch").mockImplementation((() => search) as never);
 
 describe("Spending page 'not worth it' section", () => {
   beforeEach(() => {
@@ -66,6 +68,19 @@ describe("Spending page 'not worth it' section", () => {
     );
     await screen.findByText(/No spending recorded/);
     expect(worthItBounds).toContainEqual(["2026-10-01", "2026-11-01"]);
+  });
+
+  // Polish 5 #1: Cash flow's Spending row opens this page on its month (?month=YYYY-MM).
+  it("opens on the month in the link", async () => {
+    search = { month: "2026-08" };
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <Page />
+      </QueryClientProvider>,
+    );
+    await screen.findByText(/No spending recorded/);
+    expect(worthItBounds).toContainEqual(["2026-08-01", "2026-09-01"]);
+    search = {};
   });
 });
 

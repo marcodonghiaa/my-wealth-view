@@ -26,7 +26,12 @@ import {
   type MonthlyFlowRow,
   type Period,
 } from "@/lib/cash-flow";
-import { formatEur, monthFromParam, parseTransactionsSearch } from "@/lib/transactions";
+import {
+  formatEur,
+  monthFromParam,
+  monthParam,
+  parseTransactionsSearch,
+} from "@/lib/transactions";
 import { TONE_TEXT, toneOf } from "@/lib/tone";
 import { FlowSankey } from "@/components/cash-flow/flow-sankey";
 import { TrendBars } from "@/components/cash-flow/trend-bars";
@@ -155,6 +160,7 @@ function CashFlowPage() {
 
   const label = periodLabel(start, period, locale);
   const pending = monthlyQuery.isPending;
+  const rowLink = period === "month" ? monthParam(start) : undefined;
   // Without the totals every figure would read as a real €0 month: show dashes instead. A failed
   // refresh keeps what already loaded (the alert still says it failed).
   const failed = (q: { isError: boolean; data?: unknown }) => q.isError && q.data === undefined;
@@ -217,10 +223,18 @@ function CashFlowPage() {
 
       <GroupedList>
         <ul className="divide-y divide-hairline">
-          <SummaryRow label="Income" to="/income" pending={pending} value={money(summary.income)} />
+          {/* Income and Spending are month pages: only a month has one to open (on that month). */}
+          <SummaryRow
+            label="Income"
+            to={rowLink ? "/income" : undefined}
+            month={rowLink}
+            pending={pending}
+            value={money(summary.income)}
+          />
           <SummaryRow
             label="Spending"
-            to="/spending"
+            to={rowLink ? "/spending" : undefined}
+            month={rowLink}
             pending={pending}
             value={money(summary.spending)}
           />
@@ -329,13 +343,16 @@ function SummaryRow({
   value,
   pending,
   to,
+  month,
   toneClass = "text-foreground",
 }: {
   label: string;
   hint?: string | undefined;
   value: string;
   pending: boolean;
-  to?: "/income" | "/spending";
+  to?: "/income" | "/spending" | undefined;
+  /** ?month= for the linked page. */
+  month?: string | undefined;
   toneClass?: string;
 }) {
   const body = (
@@ -355,7 +372,7 @@ function SummaryRow({
   return (
     <li>
       {to ? (
-        <Link to={to} className={ROW_LINK}>
+        <Link to={to} search={month ? { month } : {}} className={ROW_LINK}>
           {body}
         </Link>
       ) : (
