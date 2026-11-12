@@ -239,7 +239,7 @@ describe("TagEditor", () => {
   it("hides the browser's suggestion arrow on the tag field", () => {
     render(<TagEditor tags={[]} onSave={vi.fn()} saving={false} />);
     expect(screen.getByRole("combobox")).toHaveClass(
-      "[&::-webkit-calendar-picker-indicator]:hidden",
+      "[&::-webkit-calendar-picker-indicator]:hidden!",
     );
   });
 

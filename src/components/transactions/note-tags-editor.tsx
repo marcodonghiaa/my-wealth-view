@@ -219,7 +219,7 @@ export function TagEditor({
         }}
         onBlur={() => input.trim() && add()}
         // Suggestions still drop down; Chrome's ▼ would make the field look like a select.
-        className={cn(fieldClass(), "[&::-webkit-calendar-picker-indicator]:hidden")}
+        className={cn(fieldClass(), "[&::-webkit-calendar-picker-indicator]:hidden!")}
       />
       {full && (
         <p id={hintId} className="text-xs text-muted-foreground">
