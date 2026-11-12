@@ -5,7 +5,9 @@ type ToasterProps = React.ComponentProps<typeof Sonner>;
 const Toaster = ({ ...props }: ToasterProps) => {
   return (
     <Sonner
-      className="toaster group"
+      // An open sheet or dialog turns pointer events off on the page; a toast over it still takes
+      // them (swipe away, hover to pause, its buttons).
+      className="toaster group pointer-events-auto"
       toastOptions={{
         classNames: {
           toast:

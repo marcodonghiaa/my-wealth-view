@@ -17,4 +17,13 @@ describe("Toaster", () => {
     act(() => void toast("Rule deleted", { cancel: { label: "Undo", onClick: vi.fn() } }));
     expect(await screen.findByRole("button", { name: "Undo" })).toHaveClass("min-h-11");
   });
+
+  // polish-4 #13: an open sheet turns pointer events off on the page. fails_when=a toast over a
+  // sheet can't be swiped away or hovered to pause
+  it("takes pointer events even while a sheet has them off", async () => {
+    render(<Toaster />);
+    act(() => void toast("Couldn't save note"));
+    await screen.findByText("Couldn't save note");
+    expect(document.querySelector("[data-sonner-toaster]")).toHaveClass("pointer-events-auto");
+  });
 });

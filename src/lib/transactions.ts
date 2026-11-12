@@ -17,7 +17,13 @@ export interface TransactionRow {
   owed_by: string | null;
   flow_type: string | null;
   refund_of: string | null;
+  /** The user's own words and labels. Only the dashboard writes them; the bank sync never does. */
+  note: string | null;
+  tags: Array<string>;
 }
+
+// A row in the Transfers list, which never shows notes or tags, so doesn't fetch them.
+export type TransferRow = Omit<TransactionRow, "note" | "tags">;
 
 // The euro columns of v_transactions_eur; `amount` and `personal_amount` are in the card's own currency.
 export interface EurRow {
@@ -96,6 +102,8 @@ export function shareToRow(s: SplitwiseShare): TransactionRow {
     owed_by: null,
     flow_type: "spend",
     refund_of: null,
+    note: null,
+    tags: [],
   };
 }
 
@@ -211,7 +219,7 @@ export const formatSignedMoney = (value: number, currency: string): string =>
   `${value >= 0 ? "+" : "−"}${formatMoney(Math.abs(value), currency)}`;
 
 /** Signed amount in the transaction's own currency. */
-export function nativeSignedAmount(tx: TransactionRow): number | null {
+export function nativeSignedAmount(tx: TransferRow): number | null {
   if (tx.amount == null) return null;
   // Without a EUR value yet (no exchange rate), debit/credit says which way the money went.
   const ind = tx.credit_debit_indicator;
@@ -273,19 +281,27 @@ export type TransactionFilters = {
   bankFor?: (accountUid: string | null) => string;
   /** YYYY-MM-DD to keep only that day, or "" for every day. */
   day?: string;
+  /** Tag to keep, or "all". */
+  tag?: string;
 };
 
 export function filterTransactions(
   transactions: Array<TransactionRow>,
   search: string,
   category: string,
-  { bank = "all", bankFor, day = "" }: TransactionFilters = {},
+  { bank = "all", bankFor, day = "", tag = "" }: TransactionFilters = {},
 ): Array<TransactionRow> {
   const q = search.trim().toLowerCase();
   return transactions.filter((tx) => {
     if (category === UNCATEGORIZED && tx.category != null) return false;
     if (category !== "all" && category !== UNCATEGORIZED && tx.category !== category) return false;
-    if (q && !(tx.creditor_name ?? "").toLowerCase().includes(q)) return false;
+    if (
+      q &&
+      !(tx.creditor_name ?? "").toLowerCase().includes(q) &&
+      !(tx.note ?? "").toLowerCase().includes(q)
+    )
+      return false;
+    if (tag && !(tx.tags ?? []).some((t) => sameTag(t, tag))) return false;
     if (bank !== "all" && bankFor?.(tx.account_uid) !== bank) return false;
     if (day && tx.booking_date !== day) return false;
     return true;
@@ -341,17 +357,19 @@ export function formatDayHeading(bookingDate: string | null, now: Date = new Dat
     .replace(",", "");
 }
 
-/** How many of the sheet's filters (category, bank, day) narrow the list; search is counted apart. */
+/** How many of the sheet's filters (category, bank, day, tag) narrow the list; search is counted apart. */
 export function activeFilterCount({
   category,
   bank,
   day,
+  tag = "",
 }: {
   category: string;
   bank: string;
   day: string;
+  tag?: string;
 }): number {
-  return [category !== "all", bank !== "all", day !== ""].filter(Boolean).length;
+  return [category !== "all", bank !== "all", day !== "", tag !== ""].filter(Boolean).length;
 }
 
 /** True when an income row's category only repeats its title ("Income · Income"). */
@@ -359,3 +377,67 @@ export const categoryRepeatsTitle = (
   tx: Pick<TransactionRow, "creditor_name" | "category">,
 ): boolean =>
   !!tx.category?.trim() && incomeTitle(tx).toLowerCase() === tx.category.trim().toLowerCase();
+export const MAX_TAGS = 20;
+export const MAX_TAG_LENGTH = 40;
+export const MAX_NOTE_LENGTH = 2000;
+
+/** The first `max` characters (code points, like Postgres char_length): never half an emoji. */
+export const cutChars = (s: string, max: number): string => Array.from(s).slice(0, max).join("");
+
+/** One tag as typed: composed (NFC), invisible format characters dropped, trimmed, inner spaces collapsed, cut to the length limit. */
+const cleanTag = (raw: string): string =>
+  cutChars(
+    raw
+      .normalize("NFC")
+      .replace(/\p{Cf}/gu, "")
+      .trim()
+      .replace(/\s+/g, " "),
+    MAX_TAG_LENGTH,
+  ).trim();
+
+/** Tags to save: split at commas, cleaned, no blanks, no repeats (ignoring case, first spelling wins), at most 20. */
+export function normalizeTags(raw: Array<string>): Array<string> {
+  const seen = new Set<string>();
+  const out: Array<string> = [];
+  for (const t of raw.flatMap((r) => r.split(",")).map(cleanTag)) {
+    const key = t.toLowerCase();
+    if (!t || seen.has(key)) continue;
+    seen.add(key);
+    out.push(t);
+  }
+  return out.slice(0, MAX_TAGS);
+}
+
+/** Note to save: composed (NFC, so search finds "café" however it was typed), trimmed, null when empty. */
+export function normalizeNote(raw: string): string | null {
+  const note = cutChars(raw.normalize("NFC").trim(), MAX_NOTE_LENGTH).trim();
+  return note === "" ? null : note;
+}
+
+/** Tags that differ only in case ("Trip", "trip") are one tag. */
+export const sameTag = (a: string, b: string): boolean => a.toLowerCase() === b.toLowerCase();
+
+/**
+ * Tags used by these rows, once each ignoring case, sorted, for the tag filter. Each is spelled as
+ * in `preferred` (the suggestions, so filter and suggestions agree), else as most used here.
+ */
+export function listTags(
+  transactions: Array<{ tags?: Array<string> | null }>,
+  preferred: Array<string> = [],
+): Array<string> {
+  const byKey = new Map<string, Map<string, number>>();
+  for (const tx of transactions)
+    for (const t of tx.tags ?? []) {
+      const spellings = byKey.get(t.toLowerCase()) ?? new Map<string, number>();
+      spellings.set(t, (spellings.get(t) ?? 0) + 1);
+      byKey.set(t.toLowerCase(), spellings);
+    }
+  const spelled = [...byKey].map(
+    ([key, spellings]) =>
+      preferred.find((p) => p.toLowerCase() === key) ??
+      [...spellings].sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1))[0]![0],
+  );
+  return spelled.sort((a, b) =>
+    a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" }),
+  );
+}

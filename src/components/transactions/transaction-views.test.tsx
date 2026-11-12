@@ -240,3 +240,100 @@ describe("Table row noise", () => {
     expect(screen.getByText("Shopping · Worth it")).toBeInTheDocument();
   });
 });
+
+// protects=a bank row's sheet has note and tags editors and the row shows its tags and note;
+// a Splitwise share has neither; fails_when=the editors vanish or appear on a share
+describe("notes and tags", () => {
+  const bankRow = (): TransactionViewProps => ({
+    ...props(),
+    tx: {
+      ...props().tx,
+      account_uid: "acc",
+      entry_reference: "bank-2",
+      creditor_name: "Hotel",
+      note: "Paid for two",
+      tags: ["trip"],
+    },
+    onSaveNote: vi.fn(),
+    onSaveTags: vi.fn(),
+    tagSuggestions: ["work"],
+  });
+
+  it("card shows the tags and opens note and tag editors", async () => {
+    const p = bankRow();
+    render(
+      <ul>
+        <TransactionCardView {...p} />
+      </ul>,
+    );
+    expect(screen.getByText(/#trip/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: /Hotel/ }));
+    expect(await screen.findByLabelText("Note")).toHaveValue("Paid for two");
+    await userEvent.type(screen.getByRole("combobox", { name: "Tags" }), "work{Enter}");
+    expect(p.onSaveTags).toHaveBeenCalledWith(["trip", "work"]);
+  });
+
+  // fails_when=a search that matches a note shows a phone card with no visible reason
+  it("card shows the note too", () => {
+    render(
+      <ul>
+        <TransactionCardView {...bankRow()} />
+      </ul>,
+    );
+    expect(screen.getByText("Paid for two")).toBeInTheDocument();
+  });
+
+  // polish-4 #8: fails_when=a note cut short on a phone card can't be read in full by hovering
+  it("card puts the whole note in its title, like the table row", () => {
+    render(
+      <ul>
+        <TransactionCardView {...bankRow()} />
+      </ul>,
+    );
+    expect(screen.getByText("Paid for two")).toHaveAttribute("title", "Paid for two");
+  });
+
+  // polish-3 #9: fails_when=the visible Note / Tags headings aren't the fields' labels
+  it("labels the note and tag fields with their headings", async () => {
+    render(
+      <ul>
+        <TransactionCardView {...bankRow()} />
+      </ul>,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /Hotel/ }));
+    const note = await screen.findByLabelText("Note");
+    expect(screen.getByText("Note", { selector: "label" })).toHaveAttribute("for", note.id);
+    expect(screen.getByText("Tags", { selector: "label" })).toHaveAttribute(
+      "for",
+      screen.getByRole("combobox", { name: "Tags" }).id,
+    );
+    // polish-4 #10: fails_when=an aria-label hides the visible heading, so "click Tags" by voice
+    // finds nothing
+    expect(screen.getByRole("combobox", { name: "Tags" })).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "Note" })).toBe(note);
+  });
+
+  it("table row shows the note under the name", () => {
+    render(
+      <table>
+        <tbody>
+          <TransactionRowView {...bankRow()} />
+        </tbody>
+      </table>,
+    );
+    expect(screen.getByText("Paid for two")).toBeInTheDocument();
+    expect(screen.getByText(/#trip/)).toBeInTheDocument();
+  });
+
+  it("a Splitwise share gets no note or tag editor", async () => {
+    render(
+      <ul>
+        <TransactionCardView {...props()} onSaveNote={vi.fn()} onSaveTags={vi.fn()} />
+      </ul>,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /Dinner/ }));
+    await screen.findByRole("dialog");
+    expect(screen.queryByLabelText("Note")).toBeNull();
+    expect(screen.queryByRole("combobox")).toBeNull();
+  });
+});

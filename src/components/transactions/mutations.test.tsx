@@ -17,6 +17,9 @@ const calls: Call[] = [];
 const rpc = vi.fn();
 const getUser = vi.fn(async () => ({ data: { user: { id: "u1" } as { id: string } | null } }));
 let insertError: Error | null = null;
+let updateError: Error | null = null;
+// When set, updates wait for it: a slow network.
+let updateGate: Promise<void> | null = null;
 let existingRule: Array<{ id: string }> = [];
 
 const toastSuccess = vi.hoisted(() => vi.fn());
@@ -61,8 +64,12 @@ vi.mock("@/integrations/supabase/client", () => ({
         },
         then(resolve: (v: { data?: unknown; error: Error | null }) => void) {
           calls.push(call);
+          if (call.update && updateGate) {
+            void updateGate.then(() => resolve({ error: updateError }));
+            return;
+          }
           if (call.select) resolve({ data: existingRule, error: null });
-          else resolve({ error: call.insert ? insertError : null });
+          else resolve({ error: call.insert ? insertError : call.update ? updateError : null });
         },
       };
       return q;
@@ -83,6 +90,7 @@ import {
   useShareMutation,
   useSettleSplitMutation,
   useSplitMutation,
+  saveErrorText,
   useTransactionFieldMutation,
 } from "./mutations";
 
@@ -104,6 +112,8 @@ const row = (account_uid: string, entry_reference: string): TransactionRow => ({
   owed_by: null,
   flow_type: "spend",
   refund_of: null,
+  note: null,
+  tags: [],
 });
 
 function setup() {
@@ -120,6 +130,8 @@ function setup() {
 beforeEach(() => {
   calls.length = 0;
   insertError = null;
+  updateError = null;
+  updateGate = null;
   existingRule = [];
 });
 
@@ -147,6 +159,196 @@ describe("success toast action", () => {
       action: { label: "Make a rule", onClick },
       duration: 8000,
     });
+  });
+});
+
+// protects=a note or tags save sends only that column for that one row, rolls back on failure and
+// then reloads the month so a save made just before isn't lost;
+// fails_when=the patch carries other columns, or a failed save leaves the month unreloaded
+describe("note and tags saves", () => {
+  // polish-3 #7: the sheet can save before the month list has loaded
+  it("saves a note with nothing cached yet", async () => {
+    const queryClient = new QueryClient({ defaultOptions: { mutations: { retry: false } } });
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    );
+    const { result } = renderHook(
+      () => useTransactionFieldMutation(queryClient, MONTH, "note", { errorMessage: "fail" }),
+      { wrapper },
+    );
+    await act(() =>
+      result.current.mutateAsync({ tx: { account_uid: "a1", entry_reference: "r1" }, value: "hi" }),
+    );
+    expect(calls[0]?.update).toEqual({ note: "hi" });
+    expect(queryClient.getQueryData(["transactions", MONTH])).toBeUndefined();
+  });
+
+  it("sends only the note, for that row", async () => {
+    const { queryClient, wrapper, cached } = setup();
+    const { result } = renderHook(
+      () => useTransactionFieldMutation(queryClient, MONTH, "note", { errorMessage: "fail" }),
+      { wrapper },
+    );
+    await act(() =>
+      result.current.mutateAsync({ tx: { account_uid: "a1", entry_reference: "r1" }, value: "hi" }),
+    );
+    expect(calls[0]?.update).toEqual({ note: "hi" });
+    expect(calls[0]?.eq).toEqual({ account_uid: "a1", entry_reference: "r1" });
+    expect(cached().map((r) => r.note)).toEqual(["hi", null]);
+  });
+
+  // polish-3 #1: two quick tag adds must reach the database in order, or the older list can land last
+  it("sends a second tags save only after the first one is done", async () => {
+    const { queryClient, wrapper } = setup();
+    let open = () => {};
+    updateGate = new Promise<void>((r) => (open = r));
+    const { result } = renderHook(
+      () => useTransactionFieldMutation(queryClient, MONTH, "tags", { errorMessage: "fail" }),
+      { wrapper },
+    );
+    const tx = { account_uid: "a1", entry_reference: "r1" };
+    act(() => result.current.mutate({ tx, value: ["a"] }));
+    act(() => result.current.mutate({ tx, value: ["a", "b"] }));
+    await waitFor(() => expect(calls).toHaveLength(1));
+    await new Promise((r) => setTimeout(r, 20));
+    expect(calls).toHaveLength(1);
+    open();
+    await waitFor(() =>
+      expect(calls.map((c) => c.update)).toEqual([{ tags: ["a"] }, { tags: ["a", "b"] }]),
+    );
+  });
+
+  // polish-3 #5: fails_when=a failed note save restores the whole month and hides newer tags
+  it("a failed note save puts back only the note", async () => {
+    const { queryClient, wrapper, cached } = setup();
+    let open = () => {};
+    updateGate = new Promise<void>((r) => (open = r));
+    updateError = new Error("denied");
+    const { result } = renderHook(
+      () => useTransactionFieldMutation(queryClient, MONTH, "note", { errorMessage: "fail" }),
+      { wrapper },
+    );
+    act(() =>
+      result.current.mutate({ tx: { account_uid: "a1", entry_reference: "r1" }, value: "hi" }),
+    );
+    await waitFor(() => expect(cached()[0]?.note).toBe("hi"));
+    // A tags save lands on the same row meanwhile.
+    queryClient.setQueryData<TransactionRow[]>(["transactions", MONTH], (old) =>
+      old?.map((r, i) => (i === 0 ? { ...r, tags: ["trip"] } : r)),
+    );
+    open();
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(cached()[0]).toMatchObject({ note: null, tags: ["trip"] });
+  });
+
+  // polish-3 #1 re-audit: fails_when=the first save's reload lands before the queued one's write and
+  // wipes its tag from the list the next tag is built on
+  it("reloads the month only after the last queued tags save", async () => {
+    const { queryClient, wrapper } = setup();
+    const invalidate = vi.spyOn(queryClient, "invalidateQueries");
+    let open = () => {};
+    updateGate = new Promise<void>((r) => (open = r));
+    const { result } = renderHook(
+      () => useTransactionFieldMutation(queryClient, MONTH, "tags", { errorMessage: "fail" }),
+      { wrapper },
+    );
+    const tx = { account_uid: "a1", entry_reference: "r1" };
+    act(() => result.current.mutate({ tx, value: ["a"] }));
+    act(() => result.current.mutate({ tx, value: ["a", "b"] }));
+    open();
+    await waitFor(() => expect(calls).toHaveLength(2));
+    await waitFor(() => expect(queryClient.isMutating()).toBe(0));
+    const monthReloads = invalidate.mock.calls.filter(([f]) => f?.queryKey?.[0] === "transactions");
+    expect(monthReloads).toHaveLength(1);
+  });
+
+  it("rolls back a failed tags save and reloads the month", async () => {
+    const { queryClient, wrapper, cached } = setup();
+    const invalidate = vi.spyOn(queryClient, "invalidateQueries");
+    updateError = new Error("denied");
+    const { result } = renderHook(
+      () => useTransactionFieldMutation(queryClient, MONTH, "tags", { errorMessage: "fail" }),
+      { wrapper },
+    );
+    await act(async () => {
+      await result.current
+        .mutateAsync({ tx: { account_uid: "a1", entry_reference: "r1" }, value: ["trip"] })
+        .catch(() => {});
+    });
+    expect(calls[0]?.update).toEqual({ tags: ["trip"] });
+    expect(cached().map((r) => r.tags)).toEqual([[], []]);
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ["transactions", MONTH] });
+    // polish-3 #4: the hook alone refreshes the suggestions, once per save
+    expect(
+      invalidate.mock.calls.filter(([f]) => f?.queryKey?.[0] === "transaction-tags"),
+    ).toHaveLength(1);
+  });
+});
+
+// polish-5 #4: fails_when=a refused save shows Postgres' own text ("new row for relation ... violates
+// check constraint ...") in the toast
+describe("save error toasts", () => {
+  it("says what happened in plain words and logs the database's own message", async () => {
+    const { toast } = await import("sonner");
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { queryClient, wrapper } = setup();
+    updateError = Object.assign(
+      new Error('new row for relation "transactions" violates check constraint "x"'),
+      {
+        code: "23514",
+      },
+    );
+    const { result } = renderHook(
+      () =>
+        useTransactionFieldMutation(queryClient, MONTH, "note", {
+          errorMessage: "Couldn't save note",
+        }),
+      { wrapper },
+    );
+    await act(async () => {
+      await result.current
+        .mutateAsync({ tx: { account_uid: "a1", entry_reference: "r1" }, value: "x" })
+        .catch(() => {});
+    });
+    expect(toast.error).toHaveBeenLastCalledWith("Couldn't save note", {
+      description: "The database didn't accept this change.",
+    });
+    expect(log).toHaveBeenCalledWith("Couldn't save note", updateError);
+    log.mockRestore();
+  });
+
+  it("asks to check the connection when the request never got an answer", () => {
+    expect(saveErrorText(new TypeError("Failed to fetch"))).toBe(
+      "Check your connection and try again.",
+    );
+    expect(saveErrorText({ message: "TypeError: Failed to fetch", code: "" })).toBe(
+      "Check your connection and try again.",
+    );
+    // Safari and Firefox word it differently; a plain bug is not a connection problem.
+    expect(saveErrorText({ message: "TypeError: Load failed", code: "" })).toBe(
+      "Check your connection and try again.",
+    );
+    expect(saveErrorText(new TypeError("NetworkError when attempting to fetch resource."))).toBe(
+      "Check your connection and try again.",
+    );
+    expect(saveErrorText(new TypeError("x is undefined"))).toBe("x is undefined");
+  });
+
+  // fails_when=messages written for people (our SQL raises, our own Errors) are hidden too
+  it("keeps messages that were written for people", () => {
+    expect(saveErrorText({ message: "Amounts of bank rows can't change", code: "P0001" })).toBe(
+      "Amounts of bank rows can't change",
+    );
+    expect(
+      saveErrorText({
+        message: "Enter your authenticator code first",
+        code: "42501",
+        hint: "mfa_required",
+      }),
+    ).toBe("Enter your authenticator code first");
+    expect(saveErrorText(new Error("You are signed out. Sign in again."))).toBe(
+      "You are signed out. Sign in again.",
+    );
   });
 });
 

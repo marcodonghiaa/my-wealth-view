@@ -47,6 +47,8 @@ const tx = (over: Partial<TransactionRow> = {}): TransactionRow => ({
   owed_by: null,
   flow_type: "spend",
   refund_of: null,
+  note: null,
+  tags: [],
   ...over,
 });
 
@@ -407,6 +409,11 @@ describe("activeFilterCount", () => {
     expect(activeFilterCount({ category: "all", bank: "all", day: "" })).toBe(0);
     expect(activeFilterCount({ category: "Groceries", bank: "all", day: "" })).toBe(1);
     expect(activeFilterCount({ category: "Groceries", bank: "Fineco", day: "2026-11-01" })).toBe(3);
+  });
+
+  it("counts a tag too", () => {
+    expect(activeFilterCount({ category: "all", bank: "all", day: "", tag: "" })).toBe(0);
+    expect(activeFilterCount({ category: "all", bank: "all", day: "", tag: "trip" })).toBe(1);
   });
 });
 
