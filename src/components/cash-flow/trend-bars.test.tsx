@@ -1,6 +1,16 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import { cloneElement, type ReactElement } from "react";
+
+vi.mock("recharts", async (orig) => ({
+  ...(await orig<typeof import("recharts")>()),
+  ResponsiveContainer: ({ children }: { children: ReactElement }) =>
+    cloneElement(children as ReactElement<{ width: number; height: number }>, {
+      width: 640,
+      height: 160,
+    }),
+}));
 import { render } from "@testing-library/react";
-import { TrendTooltip } from "./trend-bars";
+import { TrendBars, TrendTooltip } from "./trend-bars";
 import type { TrendBar } from "@/lib/cash-flow";
 
 const bar = (over: Partial<TrendBar>): TrendBar & { tick: string } => ({
@@ -30,4 +40,18 @@ describe("TrendTooltip", () => {
     expect(container).toHaveTextContent("No activity");
     expect(container).not.toHaveTextContent("€0.00");
   });
+});
+
+// Polish 4 #7: like the app's other charts, the bars don't animate (reduced motion included).
+it("draws the bars at once, without animation", () => {
+  const { container } = render(
+    <TrendBars
+      bars={[bar({}), bar({ key: "2026-10-01", net: 300 })]}
+      selected="2026-11-01"
+      label="Saved per month"
+      tickLabel={(b) => (b.key === "2026-10-01" ? "Oct" : "Nov")}
+      onSelect={() => {}}
+    />,
+  );
+  expect(container.querySelectorAll(".recharts-bar-rectangle path").length).toBe(2);
 });

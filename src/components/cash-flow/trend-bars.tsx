@@ -85,6 +85,7 @@ export function TrendBars({
             />
             <ReferenceLine y={0} stroke="var(--color-border)" />
             <Tooltip
+              isAnimationActive={false}
               cursor={{ fill: "var(--color-muted)" }}
               content={({ active, payload }) => {
                 const bar = active
@@ -93,7 +94,8 @@ export function TrendBars({
                 return bar ? <TrendTooltip bar={bar} /> : null;
               }}
             />
-            <Bar dataKey="net" radius={[2, 2, 2, 2]} maxBarSize={28}>
+            {/* No animation, like the app's other charts (so reduced motion is respected too). */}
+            <Bar dataKey="net" radius={[2, 2, 2, 2]} maxBarSize={28} isAnimationActive={false}>
               {data.map((b) => (
                 <Cell
                   key={b.key}
