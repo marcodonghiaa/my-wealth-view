@@ -24,6 +24,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   REGULAR_RULE,
   classifyIncome,
+  kindLabel,
   txKey,
   type IncomeKind,
   type IncomeTx,
@@ -123,7 +124,7 @@ function IncomeList({ rows, mark }: { rows: Array<IncomeRow>; mark?: MarkProps }
                     onClick={() => mark.onMark(bankRow, mark.to)}
                     className="-my-3 inline-flex min-h-11 items-center rounded-sm px-1 font-medium text-primary hover:underline focus-visible:outline-2 focus-visible:outline-ring disabled:opacity-50"
                   >
-                    {mark.to === "regular" ? "Mark regular" : "Mark one-off"}
+                    Mark {kindLabel(mark.to)}
                   </button>
                 )}
               </div>

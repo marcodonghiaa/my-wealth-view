@@ -6,6 +6,7 @@ import { readPages } from "@/lib/read-pages";
 import { RULE_COLUMNS, rulesQuery, type RuleRow } from "@/lib/rules-query";
 import {
   incomeWindow,
+  kindLabel,
   ruleFor,
   type IncomeKind,
   type IncomeRule,
@@ -114,8 +115,6 @@ export async function undoMark(done: Done): Promise<void> {
   const { error } = await supabase.from("category_rules").delete().eq("id", done.id);
   if (error) throw error;
 }
-
-export const kindLabel = (kind: IncomeKind) => (kind === "regular" ? "regular" : "one-off");
 
 export function useMarkIncomeKind() {
   const queryClient = useQueryClient();

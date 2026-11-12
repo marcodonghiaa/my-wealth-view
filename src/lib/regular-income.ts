@@ -14,6 +14,9 @@ export const REGULAR_RULE = `paid you in at least ${REGULAR_MONTHS} of the last 
 
 export type IncomeKind = "regular" | "one_off";
 
+/** The kind in words, lower case: "regular", "one-off". */
+export const kindLabel = (kind: string) => (kind === "regular" ? "regular" : "one-off");
+
 /** A credit counted as income, as read from `transactions` (the original bank name, not a rename). */
 export type IncomeTx = Pick<
   Tables<"transactions">,

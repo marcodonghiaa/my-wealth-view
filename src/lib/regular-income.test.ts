@@ -3,6 +3,7 @@ import {
   REGULAR_RULE,
   classifyIncome,
   incomeWindow,
+  kindLabel,
   regularSenders,
   regularSources,
   ruleFor,
@@ -36,6 +37,13 @@ const rule = (text: string, kind: string | null, over: Partial<IncomeRule> = {})
 describe("REGULAR_RULE", () => {
   it("says the rule with its numbers", () => {
     expect(REGULAR_RULE).toBe("paid you in at least 3 of the last 6 months");
+  });
+});
+
+describe("kindLabel", () => {
+  it("says the kind in words", () => {
+    expect(kindLabel("regular")).toBe("regular");
+    expect(kindLabel("one_off")).toBe("one-off");
   });
 });
 
