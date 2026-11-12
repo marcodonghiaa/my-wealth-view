@@ -283,6 +283,16 @@ describe("notes and tags", () => {
     expect(screen.getByText("Paid for two")).toBeInTheDocument();
   });
 
+  // polish-4 #8: fails_when=a note cut short on a phone card can't be read in full by hovering
+  it("card puts the whole note in its title, like the table row", () => {
+    render(
+      <ul>
+        <TransactionCardView {...bankRow()} />
+      </ul>,
+    );
+    expect(screen.getByText("Paid for two")).toHaveAttribute("title", "Paid for two");
+  });
+
   // polish-3 #9: fails_when=the visible Note / Tags headings aren't the fields' labels
   it("labels the note and tag fields with their headings", async () => {
     render(
