@@ -11,6 +11,7 @@ const db = vi.hoisted(() => ({
   windowError: null as { message: string } | null,
   inserts: [] as Array<Record<string, unknown>>,
   updates: [] as Array<Record<string, unknown>>,
+  hold: false,
 }));
 const now = new Date();
 const ym = (back: number) => {
@@ -60,7 +61,10 @@ vi.mock("@/integrations/supabase/client", () => ({
         db.updates.push(row);
         return q;
       };
-      q["single"] = () => Promise.resolve({ data: { id: "new-rule" }, error: null });
+      q["single"] = () =>
+        db.hold
+          ? new Promise(() => undefined) // a save that never answers
+          : Promise.resolve({ data: { id: "new-rule" }, error: null });
       q["then"] = (resolve: (v: unknown) => void) =>
         resolve(
           table === "v_transactions_eur"
@@ -103,6 +107,7 @@ beforeEach(() => {
   db.windowError = null;
   db.inserts = [];
   db.updates = [];
+  db.hold = false;
 });
 
 describe("Income: Regular and One-off", () => {
@@ -171,6 +176,32 @@ describe("Income: Regular and One-off", () => {
         expect.objectContaining({ description: "Changed your rule for “acme”." }),
       ),
     );
+  });
+
+  // Polish 3 #3: no name, no rule to make; and a save in flight can't be sent twice.
+  it("offers no Mark when the bank sent no name", async () => {
+    db.window = db.window.map((r) =>
+      r["entry_reference"] === "e2" ? { ...r, creditor_name: null } : r,
+    );
+    renderPage();
+    const oneOff = await screen.findByRole("region", { name: "One-off" });
+    expect(within(oneOff).getByText("Aunt May")).toBeTruthy();
+    expect(within(oneOff).queryByRole("button", { name: /Mark/ })).toBeNull();
+    expect(screen.getByRole("button", { name: "Mark one-off" })).toBeTruthy();
+  });
+
+  it("disables Mark while a save is in flight, so a double click saves once", async () => {
+    db.hold = true;
+    renderPage();
+    const oneOff = await screen.findByRole("region", { name: "One-off" });
+    const button = within(oneOff).getByRole("button", { name: "Mark regular" });
+    fireEvent.click(button);
+    await vi.waitFor(() => expect((button as HTMLButtonElement).disabled).toBe(true));
+    expect(
+      (screen.getByRole("button", { name: "Mark one-off" }) as HTMLButtonElement).disabled,
+    ).toBe(true);
+    fireEvent.click(button);
+    expect(db.inserts).toHaveLength(1);
   });
 
   it("keeps one list when the six months can't be read", async () => {
