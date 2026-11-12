@@ -29,11 +29,14 @@ export function saveErrorText(error: unknown): string {
     error instanceof Error || (error && typeof error === "object" && "message" in error)
       ? String((error as { message: unknown }).message)
       : "";
-  // Our own SQL raises (P0001) and our own Errors are written for people: show them as they are.
-  if (code === "P0001" && message) return message;
+  // Our own SQL raises (P0001, and the MFA check's 42501 with hint mfa_required) and our own Errors
+  // are written for people: show them as they are.
+  const hint = error && typeof error === "object" && "hint" in error ? error.hint : null;
+  if ((code === "P0001" || hint === "mfa_required") && message) return message;
   if (code) return "The database didn't accept this change.";
-  // A request that never got an answer (supabase-js reports it as "TypeError: Failed to fetch").
-  if (error instanceof TypeError || /failed to fetch|network/i.test(message))
+  // A request that never got an answer: Chrome says "Failed to fetch", Safari "Load failed",
+  // Firefox "NetworkError ...".
+  if (/failed to fetch|load failed|networkerror/i.test(message))
     return "Check your connection and try again.";
   return message || "Please try again.";
 }

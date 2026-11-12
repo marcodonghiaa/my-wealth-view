@@ -324,6 +324,14 @@ describe("save error toasts", () => {
     expect(saveErrorText({ message: "TypeError: Failed to fetch", code: "" })).toBe(
       "Check your connection and try again.",
     );
+    // Safari and Firefox word it differently; a plain bug is not a connection problem.
+    expect(saveErrorText({ message: "TypeError: Load failed", code: "" })).toBe(
+      "Check your connection and try again.",
+    );
+    expect(saveErrorText(new TypeError("NetworkError when attempting to fetch resource."))).toBe(
+      "Check your connection and try again.",
+    );
+    expect(saveErrorText(new TypeError("x is undefined"))).toBe("x is undefined");
   });
 
   // fails_when=messages written for people (our SQL raises, our own Errors) are hidden too
@@ -331,6 +339,13 @@ describe("save error toasts", () => {
     expect(saveErrorText({ message: "Amounts of bank rows can't change", code: "P0001" })).toBe(
       "Amounts of bank rows can't change",
     );
+    expect(
+      saveErrorText({
+        message: "Enter your authenticator code first",
+        code: "42501",
+        hint: "mfa_required",
+      }),
+    ).toBe("Enter your authenticator code first");
     expect(saveErrorText(new Error("You are signed out. Sign in again."))).toBe(
       "You are signed out. Sign in again.",
     );
