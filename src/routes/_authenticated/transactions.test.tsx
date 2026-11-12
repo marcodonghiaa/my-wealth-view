@@ -441,4 +441,39 @@ describe("Transactions page tag filter", () => {
     expect((await screen.findAllByText("Cafe Beta")).length).toBeGreaterThan(0);
     expect(screen.getByLabelText("Filter by tag")).toHaveValue("");
   });
+
+  // polish-4 #2: fails_when=an edit that makes the row stop matching the filter closes its sheet
+  it("keeps an open row's sheet while an edit takes it out of the filter", async () => {
+    const today = new Date().toISOString().slice(0, 10);
+    const base = {
+      account_uid: "a",
+      booking_date: today,
+      category: "Travel",
+      currency: "EUR",
+      amount: 10,
+      signed_amount_eur: -10,
+      credit_debit_indicator: "DBIT",
+      flow_type: "spend",
+    };
+    rows["v_transactions_eur"] = [
+      { ...base, entry_reference: "1", creditor_name: "Hotel Alpha", tags: ["trip"] },
+      { ...base, entry_reference: "2", creditor_name: "Cafe Beta", tags: ["trip"] },
+    ];
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    renderPage(client);
+    fireEvent.change(await screen.findByLabelText("Filter by tag"), { target: { value: "trip" } });
+    const [edit] = await screen.findAllByRole("button", { name: "Edit Hotel Alpha" });
+    await userEvent.click(edit!);
+    expect(await screen.findByRole("dialog")).toBeInTheDocument();
+    rows["v_transactions_eur"] = [
+      { ...base, entry_reference: "1", creditor_name: "Hotel Alpha", tags: [] },
+      { ...base, entry_reference: "2", creditor_name: "Cafe Beta", tags: ["trip"] },
+    ];
+    await act(() => client.invalidateQueries({ queryKey: ["transactions"] }));
+    // The sheet's exit runs after the list re-renders, so give it a moment before checking.
+    await act(() => new Promise((r) => setTimeout(r, 100)));
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryAllByText("Hotel Alpha")).toHaveLength(0));
+  });
 });

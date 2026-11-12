@@ -56,6 +56,8 @@ export interface TransactionViewProps {
   savingTags?: boolean;
   /** Tags used before, offered while typing one. */
   tagSuggestions?: Array<string>;
+  /** The row's sheet opened or closed. */
+  onOpenChange?: (open: boolean) => void;
 }
 
 /** "#trip #work", or "" without tags. */
@@ -253,6 +255,10 @@ function TransactionEditSheet({
 export function TransactionRowView(props: TransactionViewProps) {
   const { tx, accountLabel, selected, onToggleSelect, highlighted, showAccount = true } = props;
   const [open, setOpen] = useState(false);
+  const show = (o: boolean) => {
+    setOpen(o);
+    props.onOpenChange?.(o);
+  };
   // A Splitwise share lives in its own table: nothing here can edit, select or delete it.
   const share = isSplitwiseShare(tx);
   const notes = [
@@ -327,12 +333,12 @@ export function TransactionRowView(props: TransactionViewProps) {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => setOpen(true)}
+              onClick={() => show(true)}
               aria-label={`Edit ${tx.creditor_name ?? "transaction"}`}
             >
               <ChevronRight className="size-4" />
             </Button>
-            <TransactionEditSheet {...props} open={open} onOpenChange={setOpen} />
+            <TransactionEditSheet {...props} open={open} onOpenChange={show} />
           </>
         )}
       </td>
@@ -344,6 +350,10 @@ export function TransactionRowView(props: TransactionViewProps) {
 export function TransactionCardView(props: TransactionViewProps) {
   const { tx, selected, highlighted } = props;
   const [open, setOpen] = useState(false);
+  const show = (o: boolean) => {
+    setOpen(o);
+    props.onOpenChange?.(o);
+  };
   const share = isSplitwiseShare(tx);
 
   const summary = (
@@ -385,12 +395,12 @@ export function TransactionCardView(props: TransactionViewProps) {
     <li data-entry-ref={tx.entry_reference} className={rowClass}>
       <button
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={() => show(true)}
         className="flex min-h-16 w-full items-center gap-3 px-4 py-3 text-left active:bg-accent"
       >
         {summary}
       </button>
-      <TransactionEditSheet {...props} open={open} onOpenChange={setOpen} />
+      <TransactionEditSheet {...props} open={open} onOpenChange={show} />
     </li>
   );
 }

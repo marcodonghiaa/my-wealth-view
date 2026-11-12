@@ -198,6 +198,8 @@ function TransactionsPage({ category: initialCategory, month: initialMonth }: Tr
   const [bank, setBank] = useState<string>("all");
   const [tag, setTag] = useState<string>(""); // "" = all tags (a tag may be named "all")
   const [day, setDay] = useState("");
+  // The row whose sheet is open stays listed until it closes, even if an edit stops it matching.
+  const [editing, setEditing] = useState<string | null>(null);
   const [month, setMonth] = useState(() => monthFromParam(initialMonth));
   const monthKey = useMemo(() => formatISODate(month), [month]);
   const queryClient = useQueryClient();
@@ -359,10 +361,12 @@ function TransactionsPage({ category: initialCategory, month: initialMonth }: Tr
     [transactions, bankFor],
   );
 
-  const filtered = useMemo(
-    () => filterTransactions(transactions, search, category, { bank, bankFor, day, tag }),
-    [transactions, search, category, bank, bankFor, day, tag],
-  );
+  const filtered = useMemo(() => {
+    const shown = filterTransactions(transactions, search, category, { bank, bankFor, day, tag });
+    if (!editing || shown.some((tx) => txId(tx) === editing)) return shown;
+    const keep = new Set(shown);
+    return transactions.filter((tx) => keep.has(tx) || txId(tx) === editing);
+  }, [transactions, search, category, bank, bankFor, day, tag, editing]);
 
   // Shares cannot be bulk edited or deleted: they are not rows of the transactions table.
   const filteredIds = useMemo(
@@ -470,6 +474,7 @@ function TransactionsPage({ category: initialCategory, month: initialMonth }: Tr
     onSaveTags: (next) => updateTags.mutate({ tx, value: next }),
     savingTags: updateTags.isPending && isSameTx(updateTags.variables?.tx, tx),
     tagSuggestions: tagsQuery.data ?? [],
+    onOpenChange: (open) => setEditing((now) => (open ? txId(tx) : now === txId(tx) ? null : now)),
     ...(tx.account_uid && accounts[tx.account_uid]?.manual
       ? {
           onSaveAmount: (amount: number) => changeAmount.mutate({ tx, amount }),
