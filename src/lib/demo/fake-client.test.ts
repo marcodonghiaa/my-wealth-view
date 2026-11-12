@@ -803,6 +803,27 @@ describe("demo tag suggestions", () => {
 
 // protects=the demo shows notes and tags on some rows; fails_when=no demo row has a tag
 describe("demo notes and tags", () => {
+  // polish-5 #6: fails_when=the demo view drops note or tags, so the demo shows no notes and no
+  // tag filter while the suite stays green
+  it("shows notes and tags in the transactions view, and a saved note reaches it", async () => {
+    const client = fresh();
+    const { data } = await client.from("v_transactions_eur").select("*");
+    const rows = data as Array<{
+      entry_reference: string;
+      note: string | null;
+      tags: Array<string>;
+    }>;
+    expect(rows.some((r) => r.tags?.length > 0)).toBe(true);
+    expect(rows.some((r) => r.note)).toBe(true);
+    const ref = rows[0]!.entry_reference;
+    await client
+      .from("transactions")
+      .update({ note: "qa note", tags: ["qa"] })
+      .eq("entry_reference", ref);
+    const after = await client.from("v_transactions_eur").select("*").eq("entry_reference", ref);
+    expect(after.data).toEqual([expect.objectContaining({ note: "qa note", tags: ["qa"] })]);
+  });
+
   it("has tagged rows the rpc lists", async () => {
     const client = fresh();
     const { data } = await client.rpc("my_transaction_tags");
