@@ -442,6 +442,27 @@ describe("Transactions page tag filter", () => {
     expect(screen.getByLabelText("Filter by tag")).toHaveValue("");
   });
 
+  // polish-4 #6: fails_when=a long tag stretches the desktop tag select and squeezes Search
+  it("caps the desktop tag select's width", async () => {
+    rows["v_transactions_eur"] = [
+      {
+        account_uid: "a",
+        booking_date: new Date().toISOString().slice(0, 10),
+        category: "Travel",
+        currency: "EUR",
+        amount: 10,
+        signed_amount_eur: -10,
+        credit_debit_indicator: "DBIT",
+        flow_type: "spend",
+        entry_reference: "1",
+        creditor_name: "Hotel Alpha",
+        tags: ["w".repeat(40)],
+      },
+    ];
+    renderPage();
+    expect(await screen.findByLabelText("Filter by tag")).toHaveClass("max-w-48", "truncate");
+  });
+
   // polish-4 #2: fails_when=an edit that makes the row stop matching the filter closes its sheet
   it("keeps an open row's sheet while an edit takes it out of the filter", async () => {
     const today = new Date().toISOString().slice(0, 10);

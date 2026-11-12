@@ -658,7 +658,7 @@ function TransactionsPage({ category: initialCategory, month: initialMonth }: Tr
               value={tag}
               onChange={(e) => setTag(e.target.value)}
               aria-label="Filter by tag"
-              className="w-auto px-4"
+              className="w-auto max-w-48 truncate px-4"
             >
               <option value="">All tags</option>
               {tags.map((t) => (
