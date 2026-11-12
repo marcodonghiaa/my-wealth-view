@@ -57,6 +57,7 @@ vi.mock("@/integrations/supabase/client", () => ({
       q["maybeSingle"] = () => Promise.resolve({ data: null, error: null });
       q["insert"] = (row: Record<string, unknown>) => {
         db.inserts.push(row);
+        if (!db.hold) db.rules = [...db.rules, { id: "new-rule", ...row }]; // the refetch sees it
         return q;
       };
       q["update"] = (row: Record<string, unknown>) => {
@@ -66,7 +67,7 @@ vi.mock("@/integrations/supabase/client", () => ({
       q["single"] = () =>
         db.hold
           ? new Promise(() => undefined) // a save that never answers
-          : Promise.resolve({ data: { id: "new-rule" }, error: null });
+          : Promise.resolve({ data: { id: "new-rule", ...db.inserts.at(-1) }, error: null });
       q["then"] = (resolve: (v: unknown) => void) =>
         resolve(
           table === "v_transactions_eur"
@@ -211,6 +212,24 @@ describe("Income: Regular and One-off", () => {
     ).toBe(true);
     fireEvent.click(button);
     expect(db.inserts).toHaveLength(1);
+  });
+
+  // Polish 4 #1: the button a keyboard user pressed moves with its row; focus follows it there
+  // instead of dropping to the top of the page, and the Undo toast stays long enough to reach.
+  it("keeps focus on the moved row's button, and gives Undo ten seconds", async () => {
+    renderPage();
+    const markOf = (region: HTMLElement) =>
+      within(within(region).getByText("Aunt May").closest("li")!).getByRole("button", {
+        name: /^Mark/,
+      });
+    fireEvent.click(markOf(await screen.findByRole("region", { name: "One-off" })));
+    await vi.waitFor(() =>
+      expect(document.activeElement).toBe(markOf(screen.getByRole("region", { name: "Regular" }))),
+    );
+    expect(toast.success).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({ duration: 10_000 }),
+    );
   });
 
   it("keeps one list when the six months can't be read", async () => {

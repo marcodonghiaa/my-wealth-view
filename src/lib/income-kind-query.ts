@@ -137,6 +137,8 @@ export function useMarkIncomeKind() {
       toast.success(
         `${tx.creditor_name ?? "This payment"} now counts as ${kindLabel(kind)} income`,
         {
+          // Long enough to reach Undo from the keyboard (sonner pauses it on hover and focus).
+          duration: 10_000,
           // An existing rule may cover other names too: say which one changed.
           description:
             done.kind === "inserted"

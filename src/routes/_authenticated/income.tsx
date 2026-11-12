@@ -84,6 +84,9 @@ interface MarkProps {
   bank: Map<string, IncomeTx>;
   saving: boolean;
   onMark: (tx: IncomeTx, to: IncomeKind) => void;
+  /** The row whose button was just pressed: it moved section, so its new button takes focus. */
+  focusKey: string | null;
+  onFocused: () => void;
 }
 
 function IncomeList({ rows, mark }: { rows: Array<IncomeRow>; mark?: MarkProps }) {
@@ -121,6 +124,12 @@ function IncomeList({ rows, mark }: { rows: Array<IncomeRow>; mark?: MarkProps }
                   <button
                     type="button"
                     disabled={mark.saving}
+                    ref={(el) => {
+                      if (el && mark.focusKey === txKey(r)) {
+                        el.focus();
+                        mark.onFocused();
+                      }
+                    }}
                     onClick={() => mark.onMark(bankRow, mark.to)}
                     className="-my-3 inline-flex min-h-11 items-center rounded-sm px-1 font-medium text-primary hover:underline focus-visible:outline-2 focus-visible:outline-ring disabled:opacity-50"
                   >
@@ -153,6 +162,7 @@ function IncomePage() {
   const windowQuery = useIncomeWindow(month);
   const rulesQuery = useIncomeRules();
   const markKind = useMarkIncomeKind();
+  const [focusKey, setFocusKey] = useState<string | null>(null);
   const net = netAfterSpending(flowQuery.data);
   const rows = useMemo(() => incomeQuery.data ?? [], [incomeQuery.data]);
   const total = rows.reduce((sum, r) => sum + Math.abs(r.signed_amount_eur ?? 0), 0);
@@ -271,7 +281,12 @@ function IncomePage() {
                       bank: split.bank,
                       saving: markKind.isPending,
                       onMark: (tx, to) =>
-                        markKind.mutate({ tx, kind: to, rules: rulesQuery.data ?? [] }),
+                        markKind.mutate(
+                          { tx, kind: to, rules: rulesQuery.data ?? [] },
+                          { onSuccess: () => setFocusKey(txKey(tx)) },
+                        ),
+                      focusKey,
+                      onFocused: () => setFocusKey(null),
                     }}
                   />
                 </GroupedList>
