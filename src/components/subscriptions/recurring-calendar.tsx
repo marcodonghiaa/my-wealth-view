@@ -221,15 +221,20 @@ export function RecurringCalendar({
                         <li
                           key={e.id}
                           title={`${e.name} ${money(e)} (${statusLabel(e)})`}
-                          className="flex items-center gap-1 text-[0.6875rem] leading-4"
+                          className="flex items-start gap-1 text-[0.6875rem] leading-4"
                         >
-                          <StatusIcon entry={e} />
-                          <span
-                            className={`min-w-0 flex-1 truncate ${e.status === "done" ? "text-muted-foreground" : "text-foreground"}`}
-                          >
-                            {e.name}
+                          <span className="mt-0.5 flex">
+                            <StatusIcon entry={e} />
                           </span>
-                          <Amount entry={e} iconClass="size-2.5" />
+                          {/* Name over amount: side by side, the amount left ~4 letters of name. */}
+                          <div className="min-w-0 flex-1">
+                            <span
+                              className={`block truncate ${e.status === "done" ? "text-muted-foreground" : "text-foreground"}`}
+                            >
+                              {e.name}
+                            </span>
+                            <Amount entry={e} iconClass="size-2.5" />
+                          </div>
                         </li>
                       ))}
                       {list.length > CHIPS_PER_DAY && (

@@ -212,6 +212,17 @@ describe("RecurringCalendar", () => {
     expect(cell27.querySelector(".md\\:hidden > span")!.className).toMatch(/border/);
   });
 
+  // Polish 4 #5: in a desktop cell the amount took the name's room ("Acme…"): it gets its own line.
+  it("puts a chip's amount on its own line under the name", async () => {
+    renderCal([stream({})]);
+    const cell = await screen.findByRole("gridcell", { name: /^5 November: Streamflix/ });
+    const chip = cell.querySelector("ul li")!;
+    const name = within(chip as HTMLElement).getByText("Streamflix");
+    const amount = within(chip as HTMLElement).getByText("€10.00");
+    expect(name.parentElement).toBe(amount.parentElement); // stacked in one column
+    expect(name.className).toMatch(/\bblock\b/);
+  });
+
   it("calls a past unpaid date not seen yet", async () => {
     renderCal([stream({ next_expected: "2026-11-03" })]);
     expect(
