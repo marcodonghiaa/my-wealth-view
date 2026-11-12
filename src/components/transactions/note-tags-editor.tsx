@@ -168,7 +168,7 @@ export function TagEditor({
   return (
     <div className="space-y-2">
       {current.length > 0 && (
-        <ul className="flex flex-wrap gap-x-1.5 gap-y-2" aria-label="Tags">
+        <ul className="flex flex-wrap gap-x-2.5 gap-y-2" aria-label="Tags">
           {current.map((t) => (
             <li
               key={t}
