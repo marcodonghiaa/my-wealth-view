@@ -38,6 +38,18 @@ describe("NoteEditor saved hint", () => {
   });
 });
 
+// polish-5 #3: the note's 2000 limit counts characters too, so emoji aren't cut at half.
+describe("NoteEditor length", () => {
+  it("counts an emoji as one character toward the 2000 limit", () => {
+    render(<NoteEditor note={null} onSave={vi.fn()} saving={false} />);
+    const field = screen.getByRole("textbox");
+    fireEvent.change(field, { target: { value: "🎉".repeat(1500) } });
+    expect(Array.from((field as HTMLTextAreaElement).value)).toHaveLength(1500);
+    fireEvent.change(field, { target: { value: "x".repeat(2001) } });
+    expect(field).toHaveValue("x".repeat(2000));
+  });
+});
+
 describe("NoteEditor draft", () => {
   // protects=a failed save never wipes what the user typed; fails_when=the rollback resets the field
   it("keeps the typed note when a save fails and the old note comes back", () => {
@@ -224,6 +236,19 @@ describe("TagEditor", () => {
     expect(input).toHaveAccessibleDescription("Up to 20 tags. Remove one to add another.");
     await userEvent.type(input, "more{Enter}");
     expect(onSave).toHaveBeenCalledTimes(1);
+  });
+
+  // polish-5 #3: fails_when=the field counts UTF-16 units, so 25 emoji stop at 20 though a tag
+  // holds 40 characters
+  it("takes up to 40 characters, counting an emoji as one", async () => {
+    const onSave = vi.fn();
+    render(<TagEditor tags={[]} onSave={onSave} saving={false} />);
+    const input = screen.getByRole("combobox");
+    await userEvent.type(input, "🎉".repeat(25));
+    expect(Array.from((input as HTMLInputElement).value)).toHaveLength(25);
+    await userEvent.clear(input);
+    await userEvent.type(input, "x".repeat(41));
+    expect(input).toHaveValue("x".repeat(40));
   });
 
   // polish-4 #11: fails_when=a screen reader isn't told that a tag was added or removed

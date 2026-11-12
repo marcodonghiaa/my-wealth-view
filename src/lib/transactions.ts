@@ -374,7 +374,7 @@ export const MAX_TAG_LENGTH = 40;
 export const MAX_NOTE_LENGTH = 2000;
 
 /** The first `max` characters (code points, like Postgres char_length): never half an emoji. */
-const cutChars = (s: string, max: number): string => Array.from(s).slice(0, max).join("");
+export const cutChars = (s: string, max: number): string => Array.from(s).slice(0, max).join("");
 
 /** One tag as typed: composed (NFC), invisible format characters dropped, trimmed, inner spaces collapsed, cut to the length limit. */
 const cleanTag = (raw: string): string =>

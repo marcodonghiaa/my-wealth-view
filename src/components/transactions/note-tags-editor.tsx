@@ -6,6 +6,7 @@ import {
   MAX_NOTE_LENGTH,
   MAX_TAG_LENGTH,
   MAX_TAGS,
+  cutChars,
   normalizeNote,
   normalizeTags,
   sameTag,
@@ -68,14 +69,14 @@ export function NoteEditor({
       <textarea
         id={id}
         value={input}
-        maxLength={MAX_NOTE_LENGTH}
         rows={2}
         disabled={saving}
         placeholder="Add a note"
         onChange={(e) => {
           setEdited(true);
           setSaved(false);
-          setInput(e.target.value);
+          // Cut by characters, not maxLength's UTF-16 units: an emoji counts once, as in the DB.
+          setInput(cutChars(e.target.value, MAX_NOTE_LENGTH));
         }}
         onBlur={() => {
           const next = normalizeNote(input);
@@ -200,7 +201,6 @@ export function TagEditor({
         id={id}
         list={listId}
         value={input}
-        maxLength={MAX_TAG_LENGTH}
         // Full: read-only, not disabled, so focus stays here instead of falling out of the sheet.
         readOnly={full}
         aria-disabled={full || undefined}
@@ -209,7 +209,13 @@ export function TagEditor({
         onChange={(e) => {
           // A comma ends a tag, like Enter. Some phone keyboards send it with no key event.
           if (e.target.value.endsWith(",")) add(e.target.value);
-          else setInput(e.target.value);
+          // One tag is cut at 40 characters (an emoji counts once); pasted lists split at commas.
+          else
+            setInput(
+              e.target.value.includes(",")
+                ? e.target.value
+                : cutChars(e.target.value, MAX_TAG_LENGTH),
+            );
         }}
         onKeyDown={(e) => {
           if (e.key === "Enter" || e.key === ",") {
