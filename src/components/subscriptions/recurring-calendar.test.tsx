@@ -187,6 +187,27 @@ describe("RecurringCalendar", () => {
     ).toBeTruthy();
   });
 
+  // Polish 4 #3: green means a gain in this app; a paid bill is money out. And on phones income
+  // is told apart by shape (a ring), not by green.
+  it("ticks paid bills in ink, and marks income dots by shape", async () => {
+    db.charges = [
+      {
+        account_uid: "acc",
+        entry_reference: "c1",
+        booking_date: "2026-11-05",
+        merchant_key: "streamflix",
+        amount: 10,
+        currency: "EUR",
+        transaction_type: null,
+      },
+    ];
+    const { container } = renderCal([stream({})]);
+    await screen.findByRole("gridcell", { name: /^5 November: Streamflix €10\.00 paid$/ });
+    expect(container.querySelector(".text-positive, .bg-positive")).toBeNull();
+    const cell27 = screen.getByRole("gridcell", { name: /^27 November: Acme Payroll/ });
+    expect(cell27.querySelector(".md\\:hidden > span")!.className).toMatch(/border/);
+  });
+
   it("calls a past unpaid date not seen yet", async () => {
     renderCal([stream({ next_expected: "2026-11-03" })]);
     expect(

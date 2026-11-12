@@ -29,6 +29,16 @@ type Stream = Tables<"recurring_streams">;
 const MONTHS_AHEAD = 12;
 const CHIPS_PER_DAY = 3;
 
+// Phone dots: the shape says the kind (bill filled, income a ring), the colour the status.
+const DOT = {
+  bill: { done: "bg-foreground", upcoming: "bg-muted-foreground/50", late: "bg-warning" },
+  income: {
+    done: "border border-foreground",
+    upcoming: "border border-muted-foreground/50",
+    late: "border border-warning",
+  },
+} as const;
+
 /** This month's spend from `transactions`, for billEntries to match to the streams by name and
  * account. Not filtered by name in the query: postgrest-js doesn't escape a quote in in(). */
 async function fetchCharges(month: Date, keys: Array<string>): Promise<Array<ChargeTx>> {
@@ -63,7 +73,8 @@ const statusLabel = (e: CalendarEntry) =>
 
 function StatusIcon({ entry }: { entry: CalendarEntry }) {
   if (entry.status === "done")
-    return <Check aria-hidden className="size-3 shrink-0 text-positive" />;
+    // Ink, not green: green means a gain, and a paid bill is money going out.
+    return <Check aria-hidden className="size-3 shrink-0 text-foreground" />;
   if (entry.status === "late")
     return <Clock aria-hidden className="size-3 shrink-0 text-warning" />;
   // Expected, bill or income alike: the amount's arrow already says which.
@@ -201,15 +212,7 @@ export function RecurringCalendar({
                       {list.slice(0, 4).map((e) => (
                         <span
                           key={e.id}
-                          className={`size-1.5 rounded-full ${
-                            e.kind === "income"
-                              ? "bg-positive"
-                              : e.status === "late"
-                                ? "bg-warning"
-                                : e.status === "done"
-                                  ? "bg-foreground"
-                                  : "bg-muted-foreground/50"
-                          }`}
+                          className={`size-1.5 rounded-full ${DOT[e.kind][e.status]}`}
                         />
                       ))}
                     </div>
