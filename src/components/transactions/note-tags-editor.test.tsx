@@ -176,6 +176,13 @@ describe("TagEditor", () => {
     render(<TagEditor tags={tags} onSave={vi.fn()} saving={false} />);
     expect(screen.getByLabelText("Add a tag")).toBeDisabled();
   });
+
+  // polish-4 #3: fails_when=removing a chip leaves keyboard focus on nothing
+  it("moves focus to the tag field after removing a tag", async () => {
+    render(<TagEditor tags={["trip", "work"]} onSave={vi.fn()} saving={false} />);
+    await userEvent.click(screen.getByRole("button", { name: "Remove tag trip" }));
+    expect(screen.getByLabelText("Add a tag")).toHaveFocus();
+  });
 });
 
 // polish-1 #11: a comma always ends a tag, also when it arrives without a key event (Android

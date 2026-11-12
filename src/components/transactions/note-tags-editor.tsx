@@ -94,6 +94,7 @@ export function TagEditor({
   suggestions?: Array<string> | undefined;
 }) {
   const listId = useId();
+  const field = useRef<HTMLInputElement>(null);
   // The list last sent, until the tags come back from the save (or roll back after a failure).
   const sent = useRef<Array<string> | null>(null);
   useEffect(() => {
@@ -142,7 +143,11 @@ export function TagEditor({
                 type="button"
                 disabled={saving}
                 aria-label={`Remove tag ${t}`}
-                onClick={() => save(current.filter((x) => x !== t))}
+                onClick={() => {
+                  save(current.filter((x) => x !== t));
+                  // The chip and its button go away: keep keyboard focus in the editor.
+                  field.current?.focus();
+                }}
                 className="inline-flex size-6 shrink-0 items-center justify-center rounded-sm text-muted-foreground hover:bg-background hover:text-foreground"
               >
                 <X className="size-3" />
@@ -152,6 +157,7 @@ export function TagEditor({
         </ul>
       )}
       <input
+        ref={field}
         id={id}
         aria-label="Add a tag"
         list={listId}
