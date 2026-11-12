@@ -274,6 +274,11 @@ function CashFlowPage() {
             <p className="px-2 py-8 text-center text-sm text-muted-foreground">
               The totals didn't load.
             </p>
+          ) : bars.length < 2 ? (
+            // One bar compares nothing.
+            <p className="px-2 py-8 text-center text-sm text-muted-foreground">
+              Not enough history for a trend yet.
+            </p>
           ) : (
             <TrendBars
               bars={bars}

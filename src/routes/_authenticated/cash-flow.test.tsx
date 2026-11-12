@@ -361,4 +361,15 @@ describe("Cash flow page", () => {
     expect(row).toContainElement(prev);
     expect(prev.compareDocumentPosition(group) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
+
+  // Polish 4 #12: one bar is no trend; say so instead of drawing a lone bar.
+  it("says when there isn't enough history for a trend", async () => {
+    tables["v_income_vs_expenses_monthly"] = [
+      { month: monthISO(0), income_eur: 3000, expenses_eur: 2250 },
+    ];
+    renderPage();
+    await waitFor(() => expect(row("Income")).toHaveTextContent("€3,000.00"));
+    expect(screen.queryByRole("img", { name: /^Saved per month/ })).toBeNull();
+    expect(screen.getByText("Not enough history for a trend yet.")).toBeInTheDocument();
+  });
 });
