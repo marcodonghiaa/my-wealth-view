@@ -38,6 +38,20 @@ export function NoteEditor({
   useEffect(() => {
     if (!saving) sent.current = null;
   }, [saving]);
+  // "Saved" for a moment after a save lands: on a phone the sheet hides the row it changed.
+  const [saved, setSaved] = useState(false);
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+  useEffect(() => {
+    if (!saved) return;
+    const timer = setTimeout(() => setSaved(false), 2000);
+    return () => clearTimeout(timer);
+  }, [saved]);
   const latest = useRef({ input, edited, note, onSave });
   latest.current = { input, edited, note, onSave };
   useEffect(
@@ -50,28 +64,35 @@ export function NoteEditor({
   );
 
   return (
-    <textarea
-      id={id}
-      value={input}
-      maxLength={MAX_NOTE_LENGTH}
-      rows={2}
-      disabled={saving}
-      placeholder="Add a note"
-      onChange={(e) => {
-        setEdited(true);
-        setInput(e.target.value);
-      }}
-      onBlur={() => {
-        const next = normalizeNote(input);
-        if (edited && next !== (note ?? null)) {
-          sent.current = next;
-          void Promise.resolve(onSave(next)).then((ok) => {
-            if (ok === false && sent.current === next) sent.current = null;
-          });
-        }
-      }}
-      className={cn(fieldClass(), "h-auto min-h-11 resize-y py-2.5")}
-    />
+    <div className="space-y-1">
+      <textarea
+        id={id}
+        value={input}
+        maxLength={MAX_NOTE_LENGTH}
+        rows={2}
+        disabled={saving}
+        placeholder="Add a note"
+        onChange={(e) => {
+          setEdited(true);
+          setSaved(false);
+          setInput(e.target.value);
+        }}
+        onBlur={() => {
+          const next = normalizeNote(input);
+          if (edited && next !== (note ?? null)) {
+            sent.current = next;
+            void Promise.resolve(onSave(next)).then((ok) => {
+              if (ok === false && sent.current === next) sent.current = null;
+              if (ok === true && mounted.current) setSaved(true);
+            });
+          }
+        }}
+        className={cn(fieldClass(), "h-auto min-h-11 resize-y py-2.5")}
+      />
+      <p aria-live="polite" className="min-h-4 text-xs text-muted-foreground">
+        {saved && "Saved"}
+      </p>
+    </div>
   );
 }
 

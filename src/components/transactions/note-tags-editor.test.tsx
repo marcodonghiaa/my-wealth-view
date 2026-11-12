@@ -21,6 +21,23 @@ describe("NoteEditor", () => {
   });
 });
 
+// polish-4 #14: on a phone the sheet covers the row, so nothing showed that a note saved.
+// fails_when=a saved note gives no sign, or a failed one says "Saved"
+describe("NoteEditor saved hint", () => {
+  it("says Saved after a save succeeds, and not after one fails", async () => {
+    const onSave = vi.fn((n: string | null) => Promise.resolve(n !== "bad"));
+    render(<NoteEditor note="old" onSave={onSave} saving={false} />);
+    const field = screen.getByRole("textbox");
+    fireEvent.change(field, { target: { value: "bad" } });
+    fireEvent.blur(field);
+    await act(() => Promise.resolve());
+    expect(screen.queryByText("Saved")).toBeNull();
+    fireEvent.change(field, { target: { value: "good" } });
+    fireEvent.blur(field);
+    expect(await screen.findByText("Saved")).toBeInTheDocument();
+  });
+});
+
 describe("NoteEditor draft", () => {
   // protects=a failed save never wipes what the user typed; fails_when=the rollback resets the field
   it("keeps the typed note when a save fails and the old note comes back", () => {
