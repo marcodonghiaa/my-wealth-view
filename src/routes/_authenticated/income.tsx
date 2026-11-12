@@ -252,9 +252,17 @@ function IncomePage() {
           </div>
         </GroupedList>
       ) : !split ? (
-        <GroupedList>
-          <IncomeList rows={rows} />
-        </GroupedList>
+        <>
+          {(windowQuery.error ?? rulesQuery.error) && (
+            <p className="mb-3 px-1 text-xs text-muted-foreground">
+              Couldn't sort regular and one-off income:{" "}
+              {(windowQuery.error ?? rulesQuery.error)?.message}
+            </p>
+          )}
+          <GroupedList>
+            <IncomeList rows={rows} />
+          </GroupedList>
+        </>
       ) : (
         (
           [

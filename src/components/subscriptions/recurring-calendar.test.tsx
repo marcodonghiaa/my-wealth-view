@@ -306,6 +306,20 @@ describe("RecurringCalendar", () => {
     expect(db.chargeReads).toBe(reads);
     for (let i = 0; i < 11; i++) fireEvent.click(next);
     expect(next).toBeDisabled();
+    // Polish 4 #14: and says why.
+    expect(screen.getByText("The calendar shows up to 12 months ahead.")).toBeTruthy();
+  });
+
+  it("offers Retry when the month can't be read", async () => {
+    db.error = { message: "offline" };
+    renderCal([stream({})]);
+    const alert = await screen.findByRole("alert");
+    db.error = null;
+    fireEvent.click(within(alert).getByRole("button", { name: "Retry" }));
+    expect(
+      await screen.findByText(summary("Bills 0 of 1 paid · Income 0 of 1 received")),
+    ).toBeTruthy();
+    expect(screen.queryByRole("alert")).toBeNull();
   });
 
   it("says when a past month had nothing", async () => {

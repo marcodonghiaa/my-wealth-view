@@ -168,7 +168,26 @@ export function RecurringCalendar({
         canGoNext={month < lastMonth}
       />
 
-      {failed && <Alert className="mb-4">Couldn't load the calendar: {failed.message}</Alert>}
+      {failed && (
+        <Alert className="mb-4 flex items-center justify-between gap-3">
+          <span>Couldn't load the calendar: {failed.message}</span>
+          <button
+            type="button"
+            onClick={() => {
+              for (const q of [chargesQuery, windowQuery, rulesQuery])
+                if (q.isError) void q.refetch();
+            }}
+            className="-my-2 inline-flex min-h-11 shrink-0 items-center rounded-sm px-2 font-medium underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-ring"
+          >
+            Retry
+          </button>
+        </Alert>
+      )}
+      {month >= lastMonth && (
+        <p className="-mt-1 mb-3 text-xs text-muted-foreground">
+          The calendar shows up to {MONTHS_AHEAD} months ahead.
+        </p>
+      )}
 
       <div className="mb-4 min-h-5 text-[0.8125rem] text-muted-foreground">
         {failed ? null : pending ? (

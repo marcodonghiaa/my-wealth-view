@@ -248,5 +248,7 @@ describe("Income: Regular and One-off", () => {
     expect(await screen.findByText("Aunt May")).toBeTruthy();
     expect(screen.queryByRole("region", { name: "Regular" })).toBeNull();
     expect(screen.queryByRole("button", { name: /Mark/ })).toBeNull();
+    // Polish 4 #14: not silently: say why there is one list.
+    expect(screen.getByText("Couldn't sort regular and one-off income: boom")).toBeTruthy();
   });
 });
