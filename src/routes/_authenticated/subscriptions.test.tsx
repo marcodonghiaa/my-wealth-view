@@ -11,6 +11,12 @@ const { db, rpc, toast } = vi.hoisted(() => ({
 }));
 
 vi.mock("sonner", () => ({ toast }));
+vi.mock("@tanstack/react-router", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@tanstack/react-router")>()),
+  Link: ({ to, children }: { to: string; children: React.ReactNode }) => (
+    <a href={to}>{children}</a>
+  ),
+}));
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
     rpc,

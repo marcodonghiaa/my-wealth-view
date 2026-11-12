@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { ArrowDownLeft, Check, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -278,7 +279,10 @@ export function RecurringCalendar({
       <div className="mt-6">
         {failed && entries.length === 0 ? null : !pending && entries.length === 0 ? (
           <p className="px-4 py-8 text-center text-sm text-muted-foreground">
-            Nothing recurring {isPast ? "happened" : "expected"} in {label}.
+            {/* Bills come from today's subscriptions only: a cancelled one isn't in past months. */}
+            {isPast
+              ? `No recurring charges or income found in ${label}.`
+              : `Nothing recurring expected in ${label}.`}
           </p>
         ) : (
           <GroupedList>
@@ -306,7 +310,11 @@ export function RecurringCalendar({
       </div>
       <p className="mt-3 px-4 text-xs text-muted-foreground">
         Bills come from your active subscriptions. Income is any sender that {REGULAR_RULE}; change
-        that on the Income page.
+        that on the{" "}
+        <Link to="/income" className="underline underline-offset-2 hover:text-foreground">
+          Income page
+        </Link>
+        .
       </p>
     </section>
   );

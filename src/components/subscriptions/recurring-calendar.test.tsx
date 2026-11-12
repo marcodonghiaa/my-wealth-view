@@ -59,6 +59,14 @@ vi.mock("@/integrations/supabase/client", () => ({
   },
 }));
 
+vi.mock("@tanstack/react-router", () => ({
+  Link: ({ to, children, ...rest }: { to: string; children: React.ReactNode }) => (
+    <a href={to} {...rest}>
+      {children}
+    </a>
+  ),
+}));
+
 import { RecurringCalendar } from "./recurring-calendar";
 
 type Stream = Tables<"recurring_streams">;
@@ -293,7 +301,12 @@ describe("RecurringCalendar", () => {
     renderCal([stream({})]);
     await screen.findByText(/Bills/);
     fireEvent.click(screen.getByRole("button", { name: "Previous month" }));
-    expect(await screen.findByText("Nothing recurring happened in October 2026.")).toBeTruthy();
+    // Polish 4 #12: bills come from today's subscriptions only, so say "found", not "happened";
+    // and the footnote's Income page is a link.
+    expect(
+      await screen.findByText("No recurring charges or income found in October 2026."),
+    ).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Income page" }).getAttribute("href")).toBe("/income");
   });
 
   it("shows an error when the month can't be read", async () => {
@@ -302,14 +315,14 @@ describe("RecurringCalendar", () => {
     expect(await screen.findByText("Couldn't load the calendar: offline")).toBeTruthy();
     // Polish 3 #4: no counts or "nothing recurring" made up from the missing data.
     expect(screen.queryByText(/ of \d+ paid/)).toBeNull();
-    expect(screen.queryByText(/Nothing recurring/)).toBeNull();
+    expect(screen.queryByText(/Nothing recurring|No recurring/)).toBeNull();
   });
 
   it("doesn't call a month empty when it couldn't be read", async () => {
     db.error = { message: "offline" };
     renderCal([]);
     expect(await screen.findByText("Couldn't load the calendar: offline")).toBeTruthy();
-    expect(screen.queryByText(/Nothing recurring/)).toBeNull();
+    expect(screen.queryByText(/Nothing recurring|No recurring/)).toBeNull();
   });
 
   // Polish #13: before the rules load, the income count isn't known yet: no "Income 0 of 0".
