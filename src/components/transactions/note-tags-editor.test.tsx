@@ -48,6 +48,21 @@ describe("NoteEditor length", () => {
     fireEvent.change(field, { target: { value: "x".repeat(2001) } });
     expect(field).toHaveValue("x".repeat(2000));
   });
+
+  // fails_when=a key typed in the middle of a full note drops the note's last character
+  it("ignores a key typed into a full note instead of dropping its end", () => {
+    render(<NoteEditor note={"a".repeat(1999) + "Z"} onSave={vi.fn()} saving={false} />);
+    const field = screen.getByRole("textbox");
+    fireEvent.change(field, { target: { value: "a".repeat(10) + "!" + "a".repeat(1989) + "Z" } });
+    expect(field).toHaveValue("a".repeat(1999) + "Z");
+  });
+
+  it("cuts a long paste into an empty note to the limit", () => {
+    render(<NoteEditor note={null} onSave={vi.fn()} saving={false} />);
+    const field = screen.getByRole("textbox");
+    fireEvent.change(field, { target: { value: "y".repeat(2500) } });
+    expect(field).toHaveValue("y".repeat(2000));
+  });
 });
 
 // polish-5 #5: fails_when=typed text is lost when the page goes away (reload, tab closed, app

@@ -99,7 +99,12 @@ export function NoteEditor({
           setEdited(true);
           setSaved(false);
           // Cut by characters, not maxLength's UTF-16 units: an emoji counts once, as in the DB.
-          setInput(cutChars(e.target.value, MAX_NOTE_LENGTH));
+          // A key typed into an already full note is ignored, like maxLength did (cutting would drop
+          // the end); a longer paste is cut to the limit.
+          const next = e.target.value;
+          const wasFull = Array.from(input).length >= MAX_NOTE_LENGTH;
+          if (!wasFull || Array.from(next).length <= MAX_NOTE_LENGTH)
+            setInput(cutChars(next, MAX_NOTE_LENGTH));
         }}
         onBlur={() => {
           const next = normalizeNote(input);
