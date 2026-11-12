@@ -301,4 +301,15 @@ describe("Cash flow page", () => {
       ]),
     );
   });
+
+  // Polish 3 #6 (re-audit): an empty old month on screen keeps its place in the trend.
+  it("keeps an empty old month in the trend", async () => {
+    tables["v_income_vs_expenses_monthly"] = [
+      { month: monthISO(-13), income_eur: 500, expenses_eur: 100 },
+    ];
+    search = { month: monthISO(-14).slice(0, 7) };
+    renderPage();
+    const trend = await screen.findByRole("img", { name: /^Saved per month/ });
+    expect(trend).toHaveAccessibleName("Saved per month, last 12");
+  });
 });

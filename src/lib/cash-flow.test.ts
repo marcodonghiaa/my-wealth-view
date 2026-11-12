@@ -497,3 +497,19 @@ describe("formatRate below −999%", () => {
     expect(formatRate(-50)).toMatch(/^< −999\s%$/);
   });
 });
+
+// Polish 3 #6 (re-audit): an empty period on screen is never trimmed off the trend.
+it("trimLeadingEmpty keeps the selected bar even when it is empty", () => {
+  const bars = trend(
+    [{ month: "2026-03-01", income_eur: 100, expenses_eur: 50 }],
+    "month",
+    new Date(2026, 3, 1),
+    4,
+  );
+  expect(trimLeadingEmpty(bars).map((b) => b.key)).toEqual(["2026-03-01", "2026-04-01"]);
+  expect(trimLeadingEmpty(bars, "2026-02-01").map((b) => b.key)).toEqual([
+    "2026-02-01",
+    "2026-03-01",
+    "2026-04-01",
+  ]);
+});

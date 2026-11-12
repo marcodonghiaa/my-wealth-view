@@ -151,6 +151,7 @@ function CashFlowPage() {
   const count = TREND_COUNT[period];
   const bars = trimLeadingEmpty(
     trend(monthly, period, trendEnd(start, current, period, count), count),
+    from,
   );
 
   const label = periodLabel(start, period, locale);

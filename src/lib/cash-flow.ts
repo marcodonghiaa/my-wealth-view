@@ -152,9 +152,12 @@ export function trendEnd(start: Date, current: Date, period: Period, count: numb
     : current;
 }
 
-/** Drops the empty periods before the first one with data, so a new install isn't a row of gaps. */
-export function trimLeadingEmpty(bars: Array<TrendBar>): Array<TrendBar> {
-  const first = bars.findIndex((b) => b.months > 0);
+/**
+ * Drops the empty periods before the first one with data, so a new install isn't a row of gaps.
+ * Bars from `keep` (the period on screen) on are never dropped, even when empty.
+ */
+export function trimLeadingEmpty(bars: Array<TrendBar>, keep?: string): Array<TrendBar> {
+  const first = bars.findIndex((b) => b.months > 0 || (keep != null && b.key >= keep));
   return first <= 0 ? bars : bars.slice(first);
 }
 
