@@ -31,6 +31,23 @@ vi.mock("@/integrations/supabase/client", () => ({
     },
   },
 }));
+// No router in these tests: a Link is a plain anchor.
+vi.mock("@tanstack/react-router", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@tanstack/react-router")>()),
+  Link: ({
+    children,
+    to,
+    className,
+  }: {
+    children: React.ReactNode;
+    to: string;
+    className?: string;
+  }) => (
+    <a href={to} className={className}>
+      {children}
+    </a>
+  ),
+}));
 // jsdom has no layout: give the charts a fixed size so the Sankey draws its labels.
 vi.mock("recharts", async (importOriginal) => ({
   ...(await importOriginal<typeof import("recharts")>()),
@@ -388,5 +405,14 @@ describe("Cash flow page", () => {
     await waitFor(() => expect(row("Income")).toHaveTextContent("€1,000.00"));
     expect(screen.getByText("Spent more than came in")).toBeInTheDocument();
     expect(screen.queryByText(/so far/)).toBeNull();
+  });
+
+  // Polish 4 #15: Income and Spending open their pages, like Reports' rows.
+  it("links the income and spending rows to their pages", async () => {
+    renderPage();
+    await waitFor(() => expect(row("Income")).toHaveTextContent("€3,000.00"));
+    expect(within(row("Income")).getByRole("link")).toHaveAttribute("href", "/income");
+    expect(within(row("Spending")).getByRole("link")).toHaveAttribute("href", "/spending");
+    expect(within(row("Savings rate")).queryByRole("link")).toBeNull();
   });
 });

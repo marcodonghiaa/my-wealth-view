@@ -1,4 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { ChevronRight } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -215,8 +216,13 @@ function CashFlowPage() {
 
       <GroupedList>
         <ul className="divide-y divide-hairline">
-          <SummaryRow label="Income" pending={pending} value={money(summary.income)} />
-          <SummaryRow label="Spending" pending={pending} value={money(summary.spending)} />
+          <SummaryRow label="Income" to="/income" pending={pending} value={money(summary.income)} />
+          <SummaryRow
+            label="Spending"
+            to="/spending"
+            pending={pending}
+            value={money(summary.spending)}
+          />
           <SummaryRow
             label="Savings rate"
             hint={
@@ -296,21 +302,27 @@ function CashFlowPage() {
   );
 }
 
+// A row that opens the page behind its figure, as on Reports.
+const ROW_LINK =
+  "flex min-h-11 items-center gap-3 px-4 py-3 text-sm transition-colors hover:bg-accent/40 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring sm:px-5";
+
 function SummaryRow({
   label,
   hint,
   value,
   pending,
+  to,
   toneClass = "text-foreground",
 }: {
   label: string;
   hint?: string;
   value: string;
   pending: boolean;
+  to?: "/income" | "/spending";
   toneClass?: string;
 }) {
-  return (
-    <li className="flex min-h-11 items-center gap-3 px-4 py-3 text-sm sm:px-5">
+  const body = (
+    <>
       <div className="min-w-0 flex-1">
         <p className="text-foreground">{label}</p>
         {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
@@ -319,6 +331,18 @@ function SummaryRow({
         <Skeleton className="h-5 w-20" />
       ) : (
         <span className={`font-figure ${toneClass}`}>{value}</span>
+      )}
+      {to && <ChevronRight aria-hidden className="size-4 shrink-0 text-muted-foreground" />}
+    </>
+  );
+  return (
+    <li>
+      {to ? (
+        <Link to={to} className={ROW_LINK}>
+          {body}
+        </Link>
+      ) : (
+        <div className="flex min-h-11 items-center gap-3 px-4 py-3 text-sm sm:px-5">{body}</div>
       )}
     </li>
   );

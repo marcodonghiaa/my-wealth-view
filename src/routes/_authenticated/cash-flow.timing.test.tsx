@@ -25,6 +25,13 @@ vi.mock("@/integrations/supabase/client", () => ({
     },
   },
 }));
+// No router in these tests: a Link is a plain anchor.
+vi.mock("@tanstack/react-router", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@tanstack/react-router")>()),
+  Link: ({ children, to }: { children: React.ReactNode; to: string }) => (
+    <a href={to}>{children}</a>
+  ),
+}));
 vi.mock("recharts", async (orig) => ({
   ...(await orig<typeof import("recharts")>()),
   ResponsiveContainer: ({ children }: { children: ReactElement }) =>
