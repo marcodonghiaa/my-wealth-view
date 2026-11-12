@@ -33,8 +33,11 @@ export function MonthSwitcher({
       document.activeElement === el || document.activeElement === document.body;
     if (pressed.current === "next" && !canGoNext && lost(nextRef.current)) prevRef.current?.focus();
     if (pressed.current === "prev" && !canGoPrev && lost(prevRef.current)) nextRef.current?.focus();
-    pressed.current = null;
   }, [canGoNext, canGoPrev]);
+  // A press only counts for the render it caused; later changes come from other controls.
+  useEffect(() => {
+    pressed.current = null;
+  });
   const step =
     "flex size-11 items-center justify-center rounded-sm bg-card text-foreground transition-colors hover:bg-accent disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
   return (
