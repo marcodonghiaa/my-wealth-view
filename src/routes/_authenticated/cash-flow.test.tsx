@@ -310,6 +310,15 @@ describe("Cash flow page", () => {
     search = { month: monthISO(-14).slice(0, 7) };
     renderPage();
     const trend = await screen.findByRole("img", { name: /^Saved per month/ });
-    expect(trend).toHaveAccessibleName("Saved per month, last 12");
+    expect(trend).toHaveAccessibleName(/^Saved per month, last 12:/);
   });
+
+  // Polish 4 #2: the trend's values are in its name, not only in a hover tooltip.
+  it("names every bar's saving in the trend", async () => {
+    renderPage();
+    const trend = await screen.findByRole("img", { name: /^Saved per month/ });
+    expect(trend).toHaveAccessibleName(/€500\.00.*€750\.00/);
+    expect(trend).toHaveAccessibleName(/25% of income/);
+  });
+
 });
