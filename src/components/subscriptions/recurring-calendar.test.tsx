@@ -188,6 +188,9 @@ describe("RecurringCalendar", () => {
     db.error = { message: "offline" };
     renderCal([stream({})]);
     expect(await screen.findByText("Couldn't load the calendar: offline")).toBeTruthy();
+    // Polish 3 #4: no counts or "nothing recurring" made up from the missing data.
+    expect(screen.queryByText(/ of \d+ paid/)).toBeNull();
+    expect(screen.queryByText(/Nothing recurring/)).toBeNull();
   });
 
   // Polish #13: before the rules load, the income count isn't known yet: no "Income 0 of 0".

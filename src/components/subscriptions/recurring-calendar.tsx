@@ -137,7 +137,7 @@ export function RecurringCalendar({
       {failed && <Alert className="mb-4">Couldn't load the calendar: {failed.message}</Alert>}
 
       <div className="mb-4 min-h-5 text-[0.8125rem] text-muted-foreground">
-        {pending ? (
+        {failed ? null : pending ? (
           <Skeleton className="h-4 w-64" />
         ) : (
           <>
@@ -241,7 +241,7 @@ export function RecurringCalendar({
 
       {/* The month as a list: the details on phones, and every entry beyond a day's three. */}
       <div className="mt-6">
-        {!pending && entries.length === 0 ? (
+        {failed && entries.length === 0 ? null : !pending && entries.length === 0 ? (
           <p className="px-4 py-8 text-center text-sm text-muted-foreground">
             Nothing recurring {isPast ? "happened" : "expected"} in {label}.
           </p>
