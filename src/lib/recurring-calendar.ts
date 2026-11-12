@@ -21,17 +21,18 @@ export interface CalendarEntry {
   status: EntryStatus;
 }
 
-/** A debit counted as spend, as read from `transactions`. */
-export interface ChargeTx {
-  account_uid: string;
-  entry_reference: string;
-  booking_date: string | null;
-  merchant_key: string | null;
-  amount: number | null;
-  currency: string | null;
-  /** 'Subscription' when the AI tagged it; the stream detector builds tagged streams from these. */
-  transaction_type?: string | null;
-}
+/** A debit counted as spend, as read from `transactions`. `transaction_type` is 'Subscription'
+ * when the AI tagged it; the stream detector builds tagged streams from these. */
+export type ChargeTx = Pick<
+  Tables<"transactions">,
+  | "account_uid"
+  | "entry_reference"
+  | "booking_date"
+  | "merchant_key"
+  | "amount"
+  | "currency"
+  | "transaction_type"
+>;
 
 // A charge belongs to a stream when it is tagged Subscription or costs within 10% of the usual
 // amount (the detector's own band), so a one-off purchase at the same shop never counts as paid.
@@ -39,7 +40,7 @@ const AMOUNT_BAND = 0.1;
 const belongs = (c: ChargeTx, s: Stream) => {
   if (c.transaction_type === "Subscription") return true;
   const usual = Math.abs(s.typical_amount ?? 0);
-  return Math.abs(Math.abs(c.amount ?? 0) - usual) <= usual * AMOUNT_BAND;
+  return Math.abs(Math.abs(c.amount) - usual) <= usual * AMOUNT_BAND;
 };
 
 const DAY_MS = 86_400_000;
@@ -114,7 +115,7 @@ export function billEntries(
 
   for (const c of charges) {
     if (!c.booking_date || c.booking_date < start || c.booking_date >= end) continue;
-    const amount = Math.abs(c.amount ?? 0);
+    const amount = Math.abs(c.amount);
     const owner = streams
       .filter(
         (s) =>
@@ -133,7 +134,7 @@ export function billEntries(
       kind: "bill",
       name: owner.display_name ?? owner.merchant_key,
       amount,
-      currency: c.currency ?? owner.currency,
+      currency: c.currency,
       category: owner.category,
       status: "done",
     });
@@ -193,8 +194,8 @@ export function incomeEntries(
         date: t.booking_date!,
         kind: "income",
         name: src.name,
-        amount: Math.abs(t.amount ?? 0),
-        currency: t.currency ?? src.currency,
+        amount: Math.abs(t.amount),
+        currency: t.currency,
         category: null,
         status: "done",
       });

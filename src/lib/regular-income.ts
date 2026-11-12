@@ -1,3 +1,4 @@
+import type { Tables } from "@/integrations/supabase/types";
 import { formatISODate } from "@/lib/date";
 import { foldText, textMatches } from "@/lib/rules";
 
@@ -14,16 +15,17 @@ export const REGULAR_RULE = `paid you in at least ${REGULAR_MONTHS} of the last 
 export type IncomeKind = "regular" | "one_off";
 
 /** A credit counted as income, as read from `transactions` (the original bank name, not a rename). */
-export interface IncomeTx {
-  account_uid: string;
-  entry_reference: string;
-  booking_date: string | null;
-  merchant_key: string | null;
-  creditor_name: string | null;
-  remittance_info: string | null;
-  amount: number | null;
-  currency: string | null;
-}
+export type IncomeTx = Pick<
+  Tables<"transactions">,
+  | "account_uid"
+  | "entry_reference"
+  | "booking_date"
+  | "merchant_key"
+  | "creditor_name"
+  | "remittance_info"
+  | "amount"
+  | "currency"
+>;
 
 export interface IncomeRule {
   id: string;
@@ -144,13 +146,13 @@ export function regularSources(
     const newest = list[0]!;
     if (kinds.get(txKey(newest)) !== "regular") continue;
     // The usual amount in the newest payment's currency; other currencies don't mix into it.
-    const currency = newest.currency ?? "EUR";
-    const same = list.filter((t) => (t.currency ?? "EUR") === currency);
+    const currency = newest.currency;
+    const same = list.filter((t) => t.currency === currency);
     out.push({
       key,
       name: newest.creditor_name ?? key,
       day: Math.round(median(list.map((t) => Number(t.booking_date!.slice(8, 10))))),
-      amount: median(same.map((t) => Math.abs(t.amount ?? 0))),
+      amount: median(same.map((t) => Math.abs(t.amount))),
       currency,
       rows: list,
     });

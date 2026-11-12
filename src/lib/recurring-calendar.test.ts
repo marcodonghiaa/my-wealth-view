@@ -47,6 +47,7 @@ const charge = (date: string, over: Partial<ChargeTx> = {}): ChargeTx => ({
   merchant_key: "netflix",
   amount: 12.99,
   currency: "EUR",
+  transaction_type: null,
   ...over,
 });
 const NOV = new Date(2026, 10, 1);
@@ -224,7 +225,7 @@ describe("billEntries", () => {
   it("names the stream by its key when it has no name, and uses its currency", () => {
     const s = stream({ display_name: null, currency: "USD", next_expected: "2026-11-20" });
     expect(billEntries([s], [], NOV, TODAY)[0]).toMatchObject({ name: "netflix", currency: "USD" });
-    const paid = billEntries([s], [charge("2026-11-20", { currency: null })], NOV, TODAY)[0];
+    const paid = billEntries([s], [charge("2026-11-20", { currency: "USD" })], NOV, TODAY)[0];
     expect(paid).toMatchObject({ name: "netflix", currency: "USD", status: "done" });
   });
 });
@@ -270,9 +271,9 @@ describe("incomeEntries", () => {
       incomeEntries([src({ rows: [row("2026-11-03")] })], new Date(2026, 9, 1), TODAY),
     ).toEqual([]);
   });
-  it("falls back to the source's currency", () => {
-    const r = { ...row("2026-11-03"), currency: null };
-    expect(incomeEntries([src({ currency: "CHF", rows: [r] })], NOV, TODAY)[0]?.currency).toBe(
+  it("shows what arrived in the currency it arrived in", () => {
+    const r = { ...row("2026-11-03"), currency: "CHF" };
+    expect(incomeEntries([src({ currency: "EUR", rows: [r] })], NOV, TODAY)[0]?.currency).toBe(
       "CHF",
     );
   });
