@@ -130,11 +130,13 @@
   --sidebar-accent-foreground: oklch(0.17 0.012 240);
   --sidebar-border: var(--hairline);
   --sidebar-ring: var(--ember);
+  --sankey-band-opacity: 0.28;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
     color-scheme: dark;
+    --sankey-band-opacity: 0.45;
     --background: oklch(0.15 0.008 240);
     --foreground: oklch(0.95 0.006 230);
     --card: oklch(0.19 0.008 240);

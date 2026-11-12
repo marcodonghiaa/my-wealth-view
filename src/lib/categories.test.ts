@@ -83,3 +83,10 @@ describe("categoryCode", () => {
     expect(categoryCode("x")).toBe("X-");
   });
 });
+
+// Polish 2 #2: a category named like an Object key still gets a colour string.
+describe("categoryColor with prototype names", () => {
+  it.each(["constructor", "toString", "hasOwnProperty", "__proto__"])("%s hashes", (name) => {
+    expect(categoryColor(name)).toMatch(/^#[0-9a-f]{6}$/);
+  });
+});

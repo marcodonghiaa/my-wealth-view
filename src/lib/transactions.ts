@@ -39,8 +39,14 @@ export const txId = (tx: TxKey): string => `${tx.account_uid ?? ""}|${tx.entry_r
 export const isSameTx = (a: TxKey | undefined, b: TxKey): boolean => !!a && txId(a) === txId(b);
 
 // Income rows have no merchant name when the bank sends none; never show a bare dash.
-export const incomeTitle = (tx: Pick<TransactionRow, "creditor_name" | "category">): string =>
-  tx.creditor_name?.trim() || tx.category?.trim() || "Unlabelled income";
+/**
+ * What an incoming payment is called: who paid (payer_name, the bank's debtor name or the name
+ * you gave the row), else the creditor, else the category. On a credit the creditor is often you.
+ */
+export const incomeTitle = (
+  tx: Pick<TransactionRow, "creditor_name" | "category"> & { payer_name?: string | null },
+): string =>
+  tx.payer_name?.trim() || tx.creditor_name?.trim() || tx.category?.trim() || "Unlabelled income";
 
 // A card refund arrives without a merchant; name it after the charge it reverses so the
 // pair reads as two linked entries.
@@ -150,7 +156,8 @@ export interface TransactionsSearch {
   month?: string;
 }
 
-const MONTH_PARAM = /^(\d{4})-(0[1-9]|1[0-2])$/;
+// From 1970: `new Date` would read a year 0-99 as 1900-1999.
+const MONTH_PARAM = /^(19[7-9]\d|[2-9]\d{3})-(0[1-9]|1[0-2])$/;
 
 /** Keeps only well-formed params, so a hand-edited URL never breaks the page. */
 export function parseTransactionsSearch(raw: Record<string, unknown>): TransactionsSearch {
@@ -317,6 +324,7 @@ export const ADDED_TRANSACTION_QUERIES = [
   "spend-by-category",
   "category-transactions",
   "accounts",
+  "cash-flow",
 ] as const;
 /** Rows in their given order, cut into runs that share a booking date (the phone list's day groups). */
 export function groupByDay(

@@ -19,6 +19,19 @@ describe("demo v_transactions_eur", () => {
     expect(mine?.length).toBe(all?.length);
   });
 
+  // Polish 1 #2: like the real view's payer_name (custom name, else the bank's debtor name).
+  it("names the payer of incoming payments", async () => {
+    const client = createFakeClient(NOW);
+    const { data } = await client
+      .from("v_transactions_eur")
+      .select("payer_name")
+      .eq("flow_type", "income");
+    const payers = new Set(
+      (data ?? []).map((r) => (r as { payer_name: string | null }).payer_name),
+    );
+    expect(payers).toContain("Acme Demo Srl");
+  });
+
   it("splits only what is split", async () => {
     const client = createFakeClient(NOW);
     const { data } = await client

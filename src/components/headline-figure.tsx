@@ -31,7 +31,10 @@ export function HeadlineFigure({
     <div>
       <p className="figure-display">
         {parts.map((p, i) =>
-          p.type === "currency" ? (
+          // A real minus, like the signed figures elsewhere (Intl gives a hyphen).
+          p.type === "minusSign" ? (
+            "−"
+          ) : p.type === "currency" ? (
             <span key={i} className="text-muted-foreground">
               {p.value}
             </span>
