@@ -208,8 +208,11 @@ function TransactionsPage({ category: initialCategory, month: initialMonth }: Tr
   const navigate = useNavigate();
   // "Make a rule" (toast and sheet); not offered when a saved rule already sorts the name.
   const rules = useQuery(rulesQuery).data;
-  const ruleAction = (name: string | null | undefined, category: string | null) =>
-    makeRuleAction(name, category, navigate, rules);
+  const ruleAction = (
+    name: string | null | undefined,
+    category: string | null,
+    opts?: { replace?: boolean },
+  ) => makeRuleAction(name, category, navigate, rules, opts);
   const updateCategory = useTransactionFieldMutation(queryClient, monthKey, "category", {
     errorMessage: "Couldn't save category",
     successMessage: (value) => `Saved — ${value}`,
@@ -472,7 +475,9 @@ function TransactionsPage({ category: initialCategory, month: initialMonth }: Tr
         : renameTx.mutate({ tx, name }),
     highlighted: tx.entry_reference === highlightRef,
     // In the sheet too: on a phone the open sheet covers the toast's button.
-    makeRule: isSplitwiseShare(tx) ? undefined : ruleAction(tx.creditor_name, tx.category),
+    makeRule: isSplitwiseShare(tx)
+      ? undefined
+      : ruleAction(tx.creditor_name, tx.category, { replace: true }),
     showAccount: multiAccount,
     // false when the save failed (the hook already showed why), so the editor can retry or roll back.
     onSaveNote: (note) =>

@@ -59,6 +59,18 @@ describe("Make a rule shortcut", () => {
     });
   });
 
+  // polish-1 #1 (#164): from the edit sheet, a push left the sheet's history entry under /rules,
+  // so the first Back did nothing. fails_when=the sheet's shortcut pushes instead of replacing
+  it("replaces the sheet's history entry when asked to", () => {
+    const navigate = vi.fn();
+    makeRuleAction("Bar Roma", "Dine Out", navigate, [], { replace: true })?.onClick();
+    expect(navigate).toHaveBeenCalledWith({
+      to: "/rules",
+      search: { text: "Bar Roma", category: "Dine Out" },
+      replace: true,
+    });
+  });
+
   // Polish pass 4 #14: it was offered even when a rule already sorts this name.
   it("offers nothing when a rule already sorts this name", () => {
     const rules = [

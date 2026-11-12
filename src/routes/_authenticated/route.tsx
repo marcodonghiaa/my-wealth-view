@@ -352,6 +352,8 @@ function AuthenticatedLayout() {
                     <Link
                       key={item.label}
                       to={item.to}
+                      // Replace the sheet's own history entry, so one Back returns to the page.
+                      replace
                       activeOptions={{ exact: true }}
                       onClick={() => setMenuOpen(false)}
                       className={SHEET_ROW}
@@ -375,6 +377,7 @@ function AuthenticatedLayout() {
               <GroupedList>
                 <Link
                   to="/settings"
+                  replace
                   onClick={() => setMenuOpen(false)}
                   className={SHEET_ROW}
                   activeProps={{ className: SHEET_ROW_ACTIVE }}
