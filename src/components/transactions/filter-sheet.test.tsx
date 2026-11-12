@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { useState } from "react";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { FilterSheet, type FilterSheetProps } from "./filter-sheet";
@@ -83,5 +84,21 @@ describe("FilterSheet tag", () => {
     await userEvent.click(screen.getByRole("button", { name: "Filter" }));
     await userEvent.selectOptions(screen.getByLabelText("Tag"), "work");
     expect(onTag).toHaveBeenCalledWith("work");
+  });
+});
+
+// protects=issue #164: Clear disables itself once nothing is set; focus must not fall to <body>;
+// fails_when=after Clear the focused element is the page body
+describe("FilterSheet Clear focus", () => {
+  it("moves focus to the Show button after clearing", async () => {
+    function Harness() {
+      const [count, setCount] = useState(2);
+      return <FilterSheet {...props({ count, onClear: () => setCount(0) })} />;
+    }
+    render(<Harness />);
+    await userEvent.click(screen.getByRole("button", { name: /Filter/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Clear" }));
+    expect(screen.getByRole("button", { name: "Clear" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Show 12 transactions" })).toHaveFocus();
   });
 });

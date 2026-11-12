@@ -7,7 +7,39 @@ import { X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
-const Sheet = SheetPrimitive.Root;
+// Browser or phone Back closes an open sheet instead of leaving the page (#164). Opening adds a
+// history entry on the same address (the router's state kept, so it sees no new page); Back pops
+// it. Closing another way (X, Esc, overlay) takes the entry out again, unless the app has already
+// moved to another entry (a link in the sheet), so that page is never undone.
+function useCloseOnBack(open: boolean, close: () => void) {
+  const closeRef = React.useRef(close);
+  closeRef.current = close;
+  React.useEffect(() => {
+    if (!open) return;
+    const marker = Math.random().toString(36).slice(2);
+    window.history.pushState({ ...window.history.state, __sheet: marker }, "");
+    let popped = false;
+    const onPop = () => {
+      if (window.history.state?.__sheet === marker) return;
+      popped = true;
+      closeRef.current();
+    };
+    window.addEventListener("popstate", onPop);
+    return () => {
+      window.removeEventListener("popstate", onPop);
+      if (popped) return;
+      // After the router's queued navigation (a microtask) has landed.
+      setTimeout(() => {
+        if (window.history.state?.__sheet === marker) window.history.back();
+      });
+    };
+  }, [open]);
+}
+
+function Sheet({ open, onOpenChange, ...props }: React.ComponentProps<typeof SheetPrimitive.Root>) {
+  useCloseOnBack(!!open, () => onOpenChange?.(false));
+  return <SheetPrimitive.Root open={open} onOpenChange={onOpenChange} {...props} />;
+}
 
 const SheetTrigger = SheetPrimitive.Trigger;
 

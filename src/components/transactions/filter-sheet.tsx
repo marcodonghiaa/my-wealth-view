@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { ListFilter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input, Select } from "@/components/ui/field";
@@ -54,6 +54,8 @@ function Labeled({
 // bank and tag, so the list starts in the first viewport. Desktop keeps the inline fields.
 export function FilterSheet(p: FilterSheetProps) {
   const [open, setOpen] = useState(false);
+  // Clear disables itself once nothing is set; keep keyboard focus in the sheet (#164).
+  const showRef = useRef<HTMLButtonElement>(null);
   return (
     <>
       <Button
@@ -152,13 +154,16 @@ export function FilterSheet(p: FilterSheetProps) {
             <div className="flex gap-3 pt-2">
               <Button
                 variant="quiet"
-                onClick={p.onClear}
+                onClick={() => {
+                  p.onClear();
+                  showRef.current?.focus();
+                }}
                 disabled={p.count === 0}
                 className="flex-1"
               >
                 Clear
               </Button>
-              <Button onClick={() => setOpen(false)} className="flex-1">
+              <Button ref={showRef} onClick={() => setOpen(false)} className="flex-1">
                 Show {p.resultCount} transaction{p.resultCount === 1 ? "" : "s"}
               </Button>
             </div>
