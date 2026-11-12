@@ -102,6 +102,8 @@ export function TagEditor({
   }, [tags]);
   const current = sent.current ?? tags ?? [];
   const [input, setInput] = useState("");
+  // Read out by screen readers: the chips change silently otherwise.
+  const [announce, setAnnounce] = useState("");
   const full = current.length >= MAX_TAGS;
 
   function add(text = input) {
@@ -110,7 +112,10 @@ export function TagEditor({
       i < current.length ? t : (suggestions.find((s) => sameTag(s, t)) ?? t),
     );
     setInput("");
-    if (next.length !== current.length) save(next);
+    if (next.length !== current.length) {
+      save(next);
+      setAnnounce(`Added tag ${next.slice(current.length).join(", ")}`);
+    }
   }
 
   function save(next: Array<string>) {
@@ -145,6 +150,7 @@ export function TagEditor({
                 aria-label={`Remove tag ${t}`}
                 onClick={() => {
                   save(current.filter((x) => x !== t));
+                  setAnnounce(`Removed tag ${t}`);
                   // The chip and its button go away: keep keyboard focus in the editor.
                   field.current?.focus();
                 }}
@@ -187,6 +193,9 @@ export function TagEditor({
           Up to {MAX_TAGS} tags. Remove one to add another.
         </p>
       )}
+      <p role="status" className="sr-only">
+        {announce}
+      </p>
       <datalist id={listId}>
         {offered.map((s) => (
           <option key={s} value={s} />

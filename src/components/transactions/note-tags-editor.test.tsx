@@ -188,6 +188,15 @@ describe("TagEditor", () => {
     expect(onSave).toHaveBeenCalledTimes(1);
   });
 
+  // polish-4 #11: fails_when=a screen reader isn't told that a tag was added or removed
+  it("announces added and removed tags", async () => {
+    render(<TagEditor tags={["trip"]} onSave={vi.fn()} saving={false} />);
+    await userEvent.type(screen.getByRole("combobox"), "work{Enter}");
+    expect(screen.getByRole("status")).toHaveTextContent("Added tag work");
+    await userEvent.click(screen.getByRole("button", { name: "Remove tag trip" }));
+    expect(screen.getByRole("status")).toHaveTextContent("Removed tag trip");
+  });
+
   // polish-4 #9: fails_when=Chrome's datalist ▼ makes the tag field look like a select
   it("hides the browser's suggestion arrow on the tag field", () => {
     render(<TagEditor tags={[]} onSave={vi.fn()} saving={false} />);
