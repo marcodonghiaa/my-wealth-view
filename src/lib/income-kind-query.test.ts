@@ -237,6 +237,35 @@ describe("Undo, then Mark again", () => {
     expect(done.kind).toBe("inserted");
   });
 
+  it("puts the previous kind back in the cache when a change is undone", async () => {
+    const first = await markIncomeKind({
+      tx: { creditor_name: "Flip Back Co", remittance_info: null },
+      kind: "regular",
+      rules: [],
+    });
+    if (first.kind !== "inserted") throw new Error(first.kind);
+    const queryClient = new QueryClient();
+    queryClient.setQueryData(rulesQuery.queryKey, [first.rule]);
+    const wrapper = ({ children }: { children: ReactNode }) =>
+      createElement(QueryClientProvider, { client: queryClient }, children);
+    const { result } = renderHook(() => useMarkIncomeKind(), { wrapper });
+    await act(() =>
+      result.current.mutateAsync({
+        tx: { creditor_name: "Flip Back Co", remittance_info: null },
+        kind: "one_off",
+        rules: [first.rule],
+      }),
+    );
+    const kinds = () =>
+      queryClient.getQueryData<Array<RuleRow>>(rulesQuery.queryKey)!.map((r) => r.set_income_kind);
+    expect(kinds()).toEqual(["one_off"]);
+    const undo = vi.mocked(toast.success).mock.calls[0]![1]!.action as unknown as {
+      onClick: () => void;
+    };
+    undo.onClick();
+    await vi.waitFor(() => expect(kinds()).toEqual(["regular"]));
+  });
+
   it("refuses to change a rule that was deleted meanwhile", async () => {
     const first = await markIncomeKind({
       tx: { creditor_name: "Gone Co", remittance_info: null },
