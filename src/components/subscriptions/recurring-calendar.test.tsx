@@ -268,6 +268,18 @@ describe("RecurringCalendar", () => {
     expect(screen.getByRole("cell", { name: /^Thursday,? 5 November: Streamflix/ })).toBeTruthy();
   });
 
+  // Polish 4 #13: the phone dots need a key; desktop has the chips' icons and words instead.
+  it("explains the phone dots in a legend", async () => {
+    renderCal([stream({})]);
+    const legend = await screen.findByRole("list", { name: "What the dots mean" });
+    expect(legend.className).toMatch(/md:hidden/);
+    expect(
+      within(legend)
+        .getAllByRole("listitem")
+        .map((li) => li.textContent),
+    ).toEqual(["Bill paid", "Bill expected", "Income received", "Income expected", "Not seen yet"]);
+  });
+
   it("calls a past unpaid date not seen yet", async () => {
     renderCal([stream({ next_expected: "2026-11-03" })]);
     expect(

@@ -275,6 +275,27 @@ export function RecurringCalendar({
         </div>
       </GroupedList>
 
+      {/* Phones show dots, not chips: say what they mean. */}
+      <ul
+        aria-label="What the dots mean"
+        className="mt-2 flex flex-wrap gap-x-3 gap-y-1 px-1 text-[0.6875rem] text-muted-foreground md:hidden"
+      >
+        {(
+          [
+            ["Bill paid", DOT.bill.done],
+            ["Bill expected", DOT.bill.upcoming],
+            ["Income received", DOT.income.done],
+            ["Income expected", DOT.income.upcoming],
+            ["Not seen yet", DOT.bill.late],
+          ] as const
+        ).map(([text, dot]) => (
+          <li key={text} className="inline-flex items-center gap-1">
+            <span aria-hidden className={`size-1.5 rounded-full ${dot}`} />
+            {text}
+          </li>
+        ))}
+      </ul>
+
       {/* The month as a list: the details on phones, and every entry beyond a day's three. */}
       <div className="mt-6">
         {failed && entries.length === 0 ? null : !pending && entries.length === 0 ? (
