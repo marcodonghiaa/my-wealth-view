@@ -152,7 +152,7 @@ describe("Income: Regular and One-off", () => {
   it("saves an exact-name rule when you mark a row", async () => {
     renderPage();
     const oneOff = await screen.findByRole("region", { name: "One-off" });
-    fireEvent.click(within(oneOff).getByRole("button", { name: "Mark regular" }));
+    fireEvent.click(within(oneOff).getByRole("button", { name: "Mark Aunt May as regular" }));
     await vi.waitFor(() => expect(db.inserts).toHaveLength(1));
     expect(db.inserts[0]).toMatchObject({
       user_id: "u1",
@@ -176,7 +176,7 @@ describe("Income: Regular and One-off", () => {
     ];
     renderPage();
     const regular = await screen.findByRole("region", { name: "Regular" });
-    fireEvent.click(within(regular).getByRole("button", { name: "Mark one-off" }));
+    fireEvent.click(within(regular).getByRole("button", { name: "Mark ACME Ltd as one-off" }));
     await vi.waitFor(() => expect(db.updates).toEqual([{ set_income_kind: "one_off" }]));
     expect(db.inserts).toEqual([]);
     // Polish #7: the rule may cover other names too, so the toast says which rule changed.
@@ -197,18 +197,19 @@ describe("Income: Regular and One-off", () => {
     const oneOff = await screen.findByRole("region", { name: "One-off" });
     expect(within(oneOff).getByText("Aunt May")).toBeTruthy();
     expect(within(oneOff).queryByRole("button", { name: /Mark/ })).toBeNull();
-    expect(screen.getByRole("button", { name: "Mark one-off" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Mark ACME Ltd as one-off" })).toBeTruthy();
   });
 
   it("disables Mark while a save is in flight, so a double click saves once", async () => {
     db.hold = true;
     renderPage();
     const oneOff = await screen.findByRole("region", { name: "One-off" });
-    const button = within(oneOff).getByRole("button", { name: "Mark regular" });
+    const button = within(oneOff).getByRole("button", { name: "Mark Aunt May as regular" });
     fireEvent.click(button);
     await vi.waitFor(() => expect((button as HTMLButtonElement).disabled).toBe(true));
     expect(
-      (screen.getByRole("button", { name: "Mark one-off" }) as HTMLButtonElement).disabled,
+      (screen.getByRole("button", { name: "Mark ACME Ltd as one-off" }) as HTMLButtonElement)
+        .disabled,
     ).toBe(true);
     fireEvent.click(button);
     expect(db.inserts).toHaveLength(1);
@@ -230,6 +231,15 @@ describe("Income: Regular and One-off", () => {
       expect.any(String),
       expect.objectContaining({ duration: 10_000 }),
     );
+  });
+
+  // Polish 4 #8: the button names the payer for screen readers and looks like a link at rest.
+  it("names the payer on Mark and underlines it", async () => {
+    renderPage();
+    const oneOff = await screen.findByRole("region", { name: "One-off" });
+    const button = within(oneOff).getByRole("button", { name: "Mark Aunt May as regular" });
+    expect(button.textContent).toBe("Mark as regular");
+    expect(button.className).toMatch(/(^|\s)underline(\s|$)/);
   });
 
   it("keeps one list when the six months can't be read", async () => {

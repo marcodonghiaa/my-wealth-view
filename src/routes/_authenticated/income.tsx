@@ -131,9 +131,10 @@ function IncomeList({ rows, mark }: { rows: Array<IncomeRow>; mark?: MarkProps }
                       }
                     }}
                     onClick={() => mark.onMark(bankRow, mark.to)}
-                    className="-my-3 inline-flex min-h-11 items-center rounded-sm px-1 font-medium text-primary hover:underline focus-visible:outline-2 focus-visible:outline-ring disabled:opacity-50"
+                    aria-label={`Mark ${incomeTitle(r)} as ${kindLabel(mark.to)}`}
+                    className="-my-3 inline-flex min-h-11 items-center rounded-sm px-1 font-medium text-primary underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-ring disabled:opacity-50"
                   >
-                    Mark {kindLabel(mark.to)}
+                    Mark as {kindLabel(mark.to)}
                   </button>
                 )}
               </div>
