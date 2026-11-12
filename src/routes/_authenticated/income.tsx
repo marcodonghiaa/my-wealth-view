@@ -10,6 +10,8 @@ import {
   formatMoney,
   formatSignedEur,
   incomeTitle,
+  monthFromParam,
+  parseTransactionsSearch,
   startOfMonth,
 } from "@/lib/transactions";
 import { fetchIncomeExpenses, incomeExpensesKey, netAfterSpending } from "@/lib/income-expenses";
@@ -48,6 +50,11 @@ export const Route = createFileRoute("/_authenticated/income")({
       { name: "twitter:card", content: "summary" },
     ],
   }),
+  // ?month=YYYY-MM: the month to open on (Cash flow's rows link here with the month they show).
+  validateSearch: (s: Record<string, unknown>): { month?: string } => {
+    const { month } = parseTransactionsSearch(s);
+    return month ? { month } : {};
+  },
   component: IncomePage,
 });
 
@@ -57,6 +64,7 @@ interface IncomeRow {
   booking_date: string | null;
   category: string | null;
   creditor_name: string | null;
+  payer_name: string | null;
   currency: string | null;
   amount: number | null;
   signed_amount_eur: number | null;
@@ -68,7 +76,7 @@ async function fetchIncomeForMonth(month: Date): Promise<Array<IncomeRow>> {
   const { data, error } = await supabase
     .from("v_transactions_eur")
     .select(
-      "entry_reference,account_uid,booking_date,category,creditor_name,currency,amount,signed_amount_eur",
+      "entry_reference,account_uid,booking_date,category,creditor_name,payer_name,currency,amount,signed_amount_eur",
     )
     .eq("flow_type", "income")
     .gte("booking_date", start)
@@ -153,7 +161,8 @@ function IncomeList({ rows, mark }: { rows: Array<IncomeRow>; mark?: MarkProps }
 }
 
 function IncomePage() {
-  const [month, setMonth] = useState<Date>(() => startOfMonth(new Date()));
+  const search = Route.useSearch();
+  const [month, setMonth] = useState<Date>(() => monthFromParam(search.month));
   const incomeQuery = useQuery({
     queryKey: ["income", formatISODate(month)],
     queryFn: () => fetchIncomeForMonth(month),

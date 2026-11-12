@@ -11,6 +11,19 @@ describe("incomeTitle", () => {
     expect(incomeTitle({ creditor_name: "  ", category: "Income" })).toBe("Income");
   });
 
+  // Polish 1 #2: on a credit the creditor is often you; the payer is the bank's debtor name.
+  it("names the payer first, then the creditor, then the category", () => {
+    expect(
+      incomeTitle({ payer_name: "Acme Srl", creditor_name: "Me Myself", category: "Income" }),
+    ).toBe("Acme Srl");
+    expect(incomeTitle({ payer_name: "  ", creditor_name: "ACME Ltd", category: "Income" })).toBe(
+      "ACME Ltd",
+    );
+    expect(incomeTitle({ payer_name: null, creditor_name: null, category: "Interest" })).toBe(
+      "Interest",
+    );
+  });
+
   it("never returns a bare dash or empty string", () => {
     expect(incomeTitle({ creditor_name: null, category: null })).toBe("Unlabelled income");
   });

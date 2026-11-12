@@ -60,7 +60,7 @@ export function refreshKeys(kind: ImportSource): Array<Array<string>> {
   if (kind === "net_worth") {
     return [["net-worth-history"], ["reports-net-worth-boundary"], ["welcome-facts"]];
   }
-  const spend = [["spend-by-category"], ["reports-spend"], ["welcome-facts"]];
+  const spend = [["spend-by-category"], ["reports-spend"], ["welcome-facts"], ["cash-flow"]];
   if (kind === "spend") return spend;
   return [
     ...spend,

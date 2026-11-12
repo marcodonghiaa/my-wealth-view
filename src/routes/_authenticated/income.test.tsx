@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 const flow = vi.hoisted(() => ({
@@ -8,11 +8,13 @@ const flow = vi.hoisted(() => ({
 const today = new Date();
 const day = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-01`;
 
+const from: string[] = [];
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
     from: (table: string) => {
       const q: Record<string, unknown> = {};
-      for (const m of ["select", "order", "eq", "gte", "lt", "in"]) q[m] = () => q;
+      for (const m of ["select", "order", "eq", "lt", "in"]) q[m] = () => q;
+      q["gte"] = (_col: string, v: unknown) => (from.push(String(v)), q);
       q["maybeSingle"] = () => Promise.resolve({ data: flow.current, error: null });
       q["then"] = (resolve: (v: unknown) => void) =>
         resolve({
@@ -51,6 +53,8 @@ vi.mock("@/integrations/supabase/client", () => ({
 import { Route } from "./income";
 
 const Page = Route.options.component as () => React.JSX.Element;
+let search: { month?: string } = {};
+vi.spyOn(Route, "useSearch").mockImplementation((() => search) as never);
 const renderPage = () =>
   render(
     <QueryClientProvider client={new QueryClient()}>
@@ -85,5 +89,17 @@ describe("Income rows", () => {
     // The row named "Income" keeps its title but loses the matching chip.
     expect(screen.getAllByText("Income", { ignore: "h1" })).toHaveLength(1);
     expect(screen.getByText("Salary")).toBeTruthy();
+  });
+});
+
+// Polish 5 #1: Cash flow's Income row opens this page on its month (?month=YYYY-MM).
+describe("Income month from the link", () => {
+  it("opens on the month in the link", async () => {
+    search = { month: "2026-08" };
+    from.length = 0;
+    renderPage();
+    await waitFor(() => expect(from).toContain("2026-08-01"));
+    expect(from.every((d) => d.startsWith("2026-08") || d.startsWith("2026-07"))).toBe(true);
+    search = {};
   });
 });

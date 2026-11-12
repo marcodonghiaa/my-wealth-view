@@ -9,7 +9,13 @@ import { categoryColor } from "@/lib/categories";
 import { shareSummary } from "@/lib/chart-summary";
 import { categorySpend, sharePercent, spendChange, type MonthlySpendRow } from "@/lib/spending";
 import { TONE_TEXT, type Tone } from "@/lib/tone";
-import { formatEur, personalAmountEur, startOfMonth } from "@/lib/transactions";
+import {
+  formatEur,
+  monthFromParam,
+  parseTransactionsSearch,
+  personalAmountEur,
+  startOfMonth,
+} from "@/lib/transactions";
 import { MonthSwitcher } from "@/components/month-switcher";
 import { HeadlineFigure } from "@/components/headline-figure";
 import { Stripes } from "@/components/share-bar";
@@ -36,6 +42,11 @@ export const Route = createFileRoute("/_authenticated/spending")({
       { name: "twitter:card", content: "summary" },
     ],
   }),
+  // ?month=YYYY-MM: the month to open on (Cash flow's rows link here with the month they show).
+  validateSearch: (s: Record<string, unknown>): { month?: string } => {
+    const { month } = parseTransactionsSearch(s);
+    return month ? { month } : {};
+  },
   component: SpendingPage,
 });
 
@@ -88,7 +99,8 @@ async function fetchRegretSpend(month: Date): Promise<Array<RegretGroup>> {
 }
 
 function SpendingPage() {
-  const [month, setMonth] = useState<Date>(() => startOfMonth(new Date()));
+  const search = Route.useSearch();
+  const [month, setMonth] = useState<Date>(() => monthFromParam(search.month));
 
   const spendQuery = useQuery({
     queryKey: ["spend-by-category", formatISODate(month)],

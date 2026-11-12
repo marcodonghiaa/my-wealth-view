@@ -45,6 +45,8 @@ export function deriveViews(db: DemoDb): Derived {
     // Unsplit: the whole charge is mine.
     personal_signed_amount_eur: t.personal_amount == null ? signedEur(t) : -t.personal_amount,
     refund_of: t.refund_of,
+    // Like the real view: who paid, or the name the user gave the row.
+    payer_name: t.custom_name ?? t.debtor_name,
     settled_at: t.settled_at,
     signed_amount_eur: signedEur(t),
     transaction_type: t.transaction_type,

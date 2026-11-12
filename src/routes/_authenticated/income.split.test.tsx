@@ -88,6 +88,8 @@ vi.mock("@/integrations/supabase/client", () => ({
 
 import { toast } from "sonner";
 import { Route } from "./income";
+// ?month= (from main): no month in the URL, so the page opens on this month.
+vi.spyOn(Route, "useSearch").mockImplementation((() => ({})) as never);
 
 const Page = Route.options.component as () => React.JSX.Element;
 const renderPage = () =>

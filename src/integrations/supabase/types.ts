@@ -1138,6 +1138,7 @@ export type Database = {
           flow_type: string | null;
           owed_by: string | null;
           owed_settled: boolean | null;
+          payer_name: string | null;
           personal_amount: number | null;
           personal_signed_amount_eur: number | null;
           refund_of: string | null;

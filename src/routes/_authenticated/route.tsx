@@ -20,6 +20,7 @@ import {
   Download,
   MoreHorizontal,
   FileText,
+  Waves,
   ArrowDownLeft,
   Users,
   Settings,
@@ -90,6 +91,7 @@ const NAV_GROUPS: Array<NavGroup> = [
     items: [
       { label: "Net Worth", icon: TrendingUp, to: "/" },
       { label: "Reports", icon: FileText, to: "/reports" },
+      { label: "Cash flow", icon: Waves, to: "/cash-flow" },
     ],
   },
   {

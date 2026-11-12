@@ -62,6 +62,7 @@ const FLOW_KEYS = [
   "spend-by-category",
   "category-transactions",
   "transfer-review",
+  "cash-flow",
 ];
 function refetchFlows(queryClient: QueryClient) {
   for (const k of FLOW_KEYS) void queryClient.invalidateQueries({ queryKey: [k] });
