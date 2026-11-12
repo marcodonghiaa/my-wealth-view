@@ -8,7 +8,7 @@ const inserted: Array<Record<string, unknown>> = [];
 const onlyFlowRules = { current: false };
 // How the mocked database answers: the rules list, a delete, an insert.
 const db = {
-  rules: "ok" as "ok" | "error" | "empty" | "pending" | "legacy",
+  rules: "ok" as "ok" | "error" | "empty" | "pending" | "legacy" | "income",
   rulesReads: 0,
   table: "",
   deleted: [] as string[],
@@ -56,6 +56,22 @@ vi.mock("@/integrations/supabase/client", () => {
     if (db.rules === "error") return resolve({ data: null, error: new Error("down") });
     if (db.rules === "empty") return resolve({ data: [], error: null });
     // A rule from before the 200-character cap: the database refuses to insert it again.
+    if (db.rules === "income")
+      return resolve({
+        data: ["regular", "one_off"].map((kind, i) => ({
+          id: `inc${i}`,
+          match_field: "creditor_name",
+          match_text: `Payer ${i}`,
+          match_mode: "exact",
+          set_category: null,
+          set_transaction_type: null,
+          set_flow_type: null,
+          set_income_kind: kind,
+          priority: 100,
+          created_at: "2026-11-01T00:00:00Z",
+        })),
+        error: null,
+      });
     if (db.rules === "legacy")
       return resolve({
         data: [
@@ -344,6 +360,21 @@ describe("flow rules", () => {
     renderPage();
     expect(await screen.findByText("Count as transfer")).toBeTruthy();
     expect(screen.getByText("Not a transfer")).toBeTruthy();
+  });
+});
+
+describe("income rules", () => {
+  // An income mark from the Income page has no category, type or flow: it must still say what it does.
+  it("shows an income-only rule's effect", async () => {
+    db.rules = "income";
+    try {
+      renderPage();
+      expect(await screen.findByText("Regular income")).toBeTruthy();
+      expect(screen.getByText("One-off income")).toBeTruthy();
+      expect(screen.queryByRole("button", { name: "Apply to past transactions" })).toBeNull();
+    } finally {
+      db.rules = "ok"; // a failed assertion must not leak income rules into later tests
+    }
   });
 });
 

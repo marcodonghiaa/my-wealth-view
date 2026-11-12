@@ -41,6 +41,33 @@ describe("fake client: reading", () => {
     expect(answered!.every((r) => r.worth_it === "no")).toBe(true);
   });
 
+  it("supports or() with eq and is.null", async () => {
+    const { data } = await fresh()
+      .from("transactions")
+      .select("flow_type,custom_name")
+      .or("flow_type.eq.transfer,custom_name.is.null");
+    expect(data!.length).toBeGreaterThan(0);
+    for (const r of data!) expect(r.flow_type === "transfer" || r.custom_name == null).toBe(true);
+    const { data: none } = await fresh()
+      .from("transactions")
+      .select("flow_type")
+      .or("flow_type.eq.nope");
+    expect(none).toEqual([]);
+    // A dot inside the value survives the split (Polish 3 #12).
+    const c = fresh();
+    await c.from("category_rules").insert({
+      user_id: "u",
+      match_field: "creditor_name",
+      match_text: "acme.co",
+      set_category: "Income",
+    });
+    const { data: dotted } = await c
+      .from("category_rules")
+      .select("match_text")
+      .or("match_text.eq.acme.co");
+    expect(dotted!.map((r) => r.match_text)).toEqual(["acme.co"]);
+  });
+
   it("supports head+count and maybeSingle", async () => {
     const c = fresh();
     const counted = await c.from("accounts").select("uid", { count: "exact", head: true });

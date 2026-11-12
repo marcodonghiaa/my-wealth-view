@@ -1,7 +1,7 @@
 import { dateLocale } from "@/lib/locale";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { ArrowDownLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatISODate } from "@/lib/date";
@@ -21,8 +21,17 @@ import { HeadlineFigure } from "@/components/headline-figure";
 import { CategoryPicker } from "@/components/transactions/pickers";
 import { useIncomeCategoryMutation } from "@/components/transactions/mutations";
 import { Alert } from "@/components/ui/alert";
-import { GroupedList } from "@/components/ui/grouped-list";
+import { GroupedList, SectionTitle } from "@/components/ui/grouped-list";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  REGULAR_RULE,
+  classifyIncome,
+  kindLabel,
+  txKey,
+  type IncomeKind,
+  type IncomeTx,
+} from "@/lib/regular-income";
+import { useIncomeRules, useIncomeWindow, useMarkIncomeKind } from "@/lib/income-kind-query";
 
 export const Route = createFileRoute("/_authenticated/income")({
   head: () => ({
@@ -77,11 +86,83 @@ async function fetchIncomeForMonth(month: Date): Promise<Array<IncomeRow>> {
   return (data ?? []) as Array<IncomeRow>;
 }
 
+const MARK_COOLDOWN_MS = 500;
+
+interface MarkProps {
+  /** The kind a row moves to. */
+  to: IncomeKind;
+  bank: Map<string, IncomeTx>;
+  saving: boolean;
+  onMark: (tx: IncomeTx, to: IncomeKind) => void;
+  /** The row whose button was just pressed: it moved section, so its new button takes focus. */
+  focusKey: string | null;
+  onFocused: () => void;
+}
+
+function IncomeList({ rows, mark }: { rows: Array<IncomeRow>; mark?: MarkProps }) {
+  const updateCategory = useIncomeCategoryMutation(useQueryClient());
+  return (
+    <ul className="divide-y divide-hairline">
+      {rows.map((r) => {
+        const bankRow = mark?.bank.get(txKey(r));
+        return (
+          <li
+            key={`${r.account_uid}:${r.entry_reference}`}
+            className="flex items-center justify-between gap-3 px-4 py-3 text-sm sm:px-5"
+          >
+            <div className="min-w-0">
+              <div className="truncate font-medium text-foreground">{incomeTitle(r)}</div>
+              <div className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
+                {r.booking_date
+                  ? new Date(`${r.booking_date}T00:00:00`).toLocaleDateString(dateLocale(), {
+                      day: "numeric",
+                      month: "short",
+                    })
+                  : "—"}
+                {!categoryRepeatsTitle(r) && (
+                  <CategoryPicker
+                    tx={r}
+                    saving={
+                      updateCategory.isPending &&
+                      updateCategory.variables?.tx.entry_reference === r.entry_reference &&
+                      updateCategory.variables.tx.account_uid === r.account_uid
+                    }
+                    onSelect={(category) => updateCategory.mutate({ tx: r, category })}
+                  />
+                )}
+                {mark && bankRow?.creditor_name && (
+                  <button
+                    type="button"
+                    disabled={mark.saving}
+                    ref={(el) => {
+                      if (el && mark.focusKey === txKey(r)) {
+                        el.focus();
+                        mark.onFocused();
+                      }
+                    }}
+                    onClick={() => mark.onMark(bankRow, mark.to)}
+                    aria-label={`Mark ${incomeTitle(r)} as ${kindLabel(mark.to)}`}
+                    className="-my-3 inline-flex min-h-11 items-center rounded-sm px-1 font-medium text-primary underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-ring disabled:opacity-50"
+                  >
+                    Mark as {kindLabel(mark.to)}
+                  </button>
+                )}
+              </div>
+            </div>
+            <span className="inline-flex shrink-0 items-center gap-1 font-figure text-foreground">
+              <ArrowDownLeft className="size-3.5" />
+              {formatMoney(Math.abs(r.amount ?? 0), r.currency ?? "EUR")}
+            </span>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
 function IncomePage() {
   const search = Route.useSearch();
   const [month, setMonth] = useState<Date>(() => monthFromParam(search.month));
-  const updateCategory = useIncomeCategoryMutation(useQueryClient());
-
   const incomeQuery = useQuery({
     queryKey: ["income", formatISODate(month)],
     queryFn: () => fetchIncomeForMonth(month),
@@ -90,9 +171,29 @@ function IncomePage() {
     queryKey: incomeExpensesKey(formatISODate(month)),
     queryFn: () => fetchIncomeExpenses(formatISODate(month)),
   });
+  const windowQuery = useIncomeWindow(month);
+  const rulesQuery = useIncomeRules();
+  const markKind = useMarkIncomeKind();
+  const [focusKey, setFocusKey] = useState<string | null>(null);
+  // isPending only disables Mark after a re-render; a second click in the same frame gets through.
+  const marking = useRef(false);
   const net = netAfterSpending(flowQuery.data);
-  const rows = incomeQuery.data ?? [];
+  const rows = useMemo(() => incomeQuery.data ?? [], [incomeQuery.data]);
   const total = rows.reduce((sum, r) => sum + Math.abs(r.signed_amount_eur ?? 0), 0);
+
+  // Each row's kind and its bank row (original name, for a rule), once the six months are in.
+  // Until then (or if that read fails) the list stays one list, as before.
+  const split = useMemo(() => {
+    if (!windowQuery.data || !rulesQuery.data) return null;
+    const kinds = classifyIncome(windowQuery.data, rulesQuery.data);
+    const bank = new Map(windowQuery.data.map((t) => [txKey(t), t]));
+    const kindOf = (r: IncomeRow): IncomeKind => kinds.get(txKey(r)) ?? "one_off";
+    const sum = (list: Array<IncomeRow>) =>
+      list.reduce((acc, r) => acc + Math.abs(r.signed_amount_eur ?? 0), 0);
+    const regular = rows.filter((r) => kindOf(r) === "regular");
+    const oneOff = rows.filter((r) => kindOf(r) === "one_off");
+    return { regular, oneOff, regularTotal: sum(regular), oneOffTotal: sum(oneOff), bank };
+  }, [windowQuery.data, rulesQuery.data, rows]);
 
   const monthLabel = month.toLocaleDateString(dateLocale(), { month: "long", year: "numeric" });
   const canGoNext =
@@ -131,58 +232,100 @@ function IncomePage() {
             <span className={`font-figure ${TONE_TEXT[toneOf(net)]}`}>{formatSignedEur(net)}</span>
           </p>
         )}
-        <p className="mt-1 text-xs text-muted-foreground">Excludes transfers.</p>
+        {split && rows.length > 0 && (
+          <p className="mt-1.5 text-sm text-muted-foreground">
+            Regular{" "}
+            <span className="font-figure text-foreground">
+              {formatMoney(split.regularTotal, "EUR")}
+            </span>
+            {" · "}
+            One-off{" "}
+            <span className="font-figure text-foreground">
+              {formatMoney(split.oneOffTotal, "EUR")}
+            </span>
+          </p>
+        )}
+        <p className="mt-1 text-xs text-muted-foreground">
+          Excludes transfers. Regular: {REGULAR_RULE}.
+        </p>
       </section>
 
-      <GroupedList>
-        {incomeQuery.isPending ? (
+      {incomeQuery.isPending ? (
+        <GroupedList>
           <div className="space-y-3 p-4">
             {Array.from({ length: 4 }).map((_, i) => (
               <Skeleton key={i} className="h-14" />
             ))}
           </div>
-        ) : incomeQuery.isError ? null : rows.length === 0 ? (
+        </GroupedList>
+      ) : incomeQuery.isError ? null : rows.length === 0 ? (
+        <GroupedList>
           <div className="px-4 py-12 text-center text-sm text-muted-foreground">
             No income recorded for {monthLabel}.
           </div>
-        ) : (
-          <ul className="divide-y divide-hairline">
-            {rows.map((r) => (
-              <li
-                key={`${r.account_uid}:${r.entry_reference}`}
-                className="flex items-center justify-between gap-3 px-4 py-3 text-sm sm:px-5"
-              >
-                <div className="min-w-0">
-                  <div className="truncate font-medium text-foreground">{incomeTitle(r)}</div>
-                  <div className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground">
-                    {r.booking_date
-                      ? new Date(`${r.booking_date}T00:00:00`).toLocaleDateString(dateLocale(), {
-                          day: "numeric",
-                          month: "short",
-                        })
-                      : "—"}
-                    {!categoryRepeatsTitle(r) && (
-                      <CategoryPicker
-                        tx={r}
-                        saving={
-                          updateCategory.isPending &&
-                          updateCategory.variables?.tx.entry_reference === r.entry_reference &&
-                          updateCategory.variables.tx.account_uid === r.account_uid
-                        }
-                        onSelect={(category) => updateCategory.mutate({ tx: r, category })}
-                      />
-                    )}
-                  </div>
-                </div>
-                <span className="inline-flex shrink-0 items-center gap-1 font-figure text-foreground">
-                  <ArrowDownLeft className="size-3.5" />
-                  {formatMoney(Math.abs(r.amount ?? 0), r.currency ?? "EUR")}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </GroupedList>
+        </GroupedList>
+      ) : !split ? (
+        <>
+          {(windowQuery.error ?? rulesQuery.error) && (
+            <p className="mb-3 px-1 text-xs text-muted-foreground">
+              Couldn't sort regular and one-off income:{" "}
+              {(windowQuery.error ?? rulesQuery.error)?.message}
+            </p>
+          )}
+          <GroupedList>
+            <IncomeList rows={rows} />
+          </GroupedList>
+        </>
+      ) : (
+        (
+          [
+            ["regular", "Regular", split.regular, split.regularTotal],
+            ["one_off", "One-off", split.oneOff, split.oneOffTotal],
+          ] as const
+        ).map(
+          ([kind, title, list, sum]) =>
+            list.length > 0 && (
+              <section key={kind} aria-label={title} className="mb-8">
+                <SectionTitle
+                  action={
+                    <span className="font-figure text-sm text-muted-foreground">
+                      {formatMoney(sum, "EUR")}
+                    </span>
+                  }
+                >
+                  {title}
+                </SectionTitle>
+                <GroupedList>
+                  <IncomeList
+                    rows={list}
+                    mark={{
+                      to: kind === "regular" ? "one_off" : "regular",
+                      bank: split.bank,
+                      saving: markKind.isPending,
+                      onMark: (tx, to) => {
+                        if (marking.current) return;
+                        marking.current = true;
+                        markKind.mutate(
+                          { tx, kind: to, rules: rulesQuery.data ?? [] },
+                          {
+                            onSuccess: () => setFocusKey(txKey(tx)),
+                            // The row just moved and the list shifted under the finger: a
+                            // quick second tap would hit another row's Mark, so wait a moment.
+                            onSettled: () => {
+                              setTimeout(() => (marking.current = false), MARK_COOLDOWN_MS);
+                            },
+                          },
+                        );
+                      },
+                      focusKey,
+                      onFocused: () => setFocusKey(null),
+                    }}
+                  />
+                </GroupedList>
+              </section>
+            ),
+        )
+      )}
     </div>
   );
 }

@@ -66,6 +66,7 @@ export type Database = {
           priority: number;
           set_category: string | null;
           set_flow_type: string | null;
+          set_income_kind: string | null;
           set_transaction_type: string | null;
           user_id: string;
         };
@@ -78,6 +79,7 @@ export type Database = {
           priority?: number;
           set_category?: string | null;
           set_flow_type?: string | null;
+          set_income_kind?: string | null;
           set_transaction_type?: string | null;
           user_id: string;
         };
@@ -90,6 +92,7 @@ export type Database = {
           priority?: number;
           set_category?: string | null;
           set_flow_type?: string | null;
+          set_income_kind?: string | null;
           set_transaction_type?: string | null;
           user_id?: string;
         };

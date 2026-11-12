@@ -1,0 +1,372 @@
+import { useQuery } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
+import { useMemo, useState } from "react";
+import { ArrowDownLeft, Check, Clock } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import type { Tables } from "@/integrations/supabase/types";
+import { formatISODate } from "@/lib/date";
+import { dateLocale } from "@/lib/locale";
+import { readPages } from "@/lib/read-pages";
+import { formatBookingDateShort, formatMoney, startOfMonth } from "@/lib/transactions";
+import { REGULAR_RULE, regularSources } from "@/lib/regular-income";
+import { useIncomeRules, useIncomeWindow } from "@/lib/income-kind-query";
+import {
+  billEntries,
+  byDay,
+  incomeEntries,
+  monthBounds,
+  monthGrid,
+  type CalendarEntry,
+  type ChargeTx,
+} from "@/lib/recurring-calendar";
+import { MonthSwitcher } from "@/components/month-switcher";
+import { Alert } from "@/components/ui/alert";
+import { GroupedList } from "@/components/ui/grouped-list";
+import { Skeleton } from "@/components/ui/skeleton";
+
+type Stream = Tables<"recurring_streams">;
+
+// How far ahead the calendar goes: a yearly charge shows up within it.
+const MONTHS_AHEAD = 12;
+const CHIPS_PER_DAY = 3;
+
+// Phone dots: the shape says the kind (bill filled, income a ring), the colour the status.
+const DOT = {
+  bill: { done: "bg-foreground", upcoming: "bg-muted-foreground", late: "bg-warning" },
+  income: {
+    done: "border border-foreground",
+    upcoming: "border border-muted-foreground",
+    late: "border border-warning",
+  },
+} as const;
+
+/** This month's spend from `transactions`, for billEntries to match to the streams by name and
+ * account. Not filtered by name in the query: postgrest-js doesn't escape a quote in in(). */
+async function fetchCharges(month: Date, keys: Array<string>): Promise<Array<ChargeTx>> {
+  if (keys.length === 0) return [];
+  const { start, end } = monthBounds(month);
+  return readPages<ChargeTx>((from, to) =>
+    supabase
+      .from("transactions")
+      .select(
+        "account_uid,entry_reference,booking_date,merchant_key,amount,currency,transaction_type",
+      )
+      .eq("credit_debit_indicator", "DBIT")
+      .eq("flow_type", "spend")
+      .is("deleted_at", null)
+      .gte("booking_date", start)
+      .lt("booking_date", end)
+      .order("booking_date", { ascending: true })
+      .order("account_uid", { ascending: true })
+      .order("entry_reference", { ascending: true })
+      .range(from, to),
+  );
+}
+
+const statusLabel = (e: CalendarEntry) =>
+  e.status === "done"
+    ? e.kind === "income"
+      ? "received"
+      : "paid"
+    : e.status === "late"
+      ? "not seen yet"
+      : "expected";
+
+function StatusIcon({ entry }: { entry: CalendarEntry }) {
+  if (entry.status === "done")
+    // Ink, not green: green means a gain, and a paid bill is money going out.
+    return <Check aria-hidden className="size-3 shrink-0 text-foreground" />;
+  if (entry.status === "late")
+    return <Clock aria-hidden className="size-3 shrink-0 text-warning" />;
+  // Expected, bill or income alike: the amount's arrow already says which.
+  return (
+    <span aria-hidden className="size-3 shrink-0 rounded-full border border-muted-foreground" />
+  );
+}
+
+// Screen readers hear the direction; on screen income shows the Income page's incoming arrow.
+const money = (e: CalendarEntry) =>
+  `${e.kind === "income" ? "+" : ""}${formatMoney(e.amount, e.currency)}`;
+
+/** The amount as the Income page shows it: ink, with the incoming arrow for income. */
+function Amount({ entry, iconClass }: { entry: CalendarEntry; iconClass: string }) {
+  return (
+    <span className="inline-flex shrink-0 items-center gap-0.5 font-figure text-foreground">
+      {entry.kind === "income" && <ArrowDownLeft aria-hidden className={iconClass} />}
+      {formatMoney(entry.amount, entry.currency)}
+    </span>
+  );
+}
+
+// Counts are figures: mono, like every number (DESIGN.md Mono Figure Rule).
+const Figure = ({ n }: { n: number }) => <span className="font-figure">{n}</span>;
+
+export function RecurringCalendar({
+  streams,
+  today,
+  initialMonth,
+  onMonthChange,
+}: {
+  /** The active streams (Subscriptions' main list). */
+  streams: ReadonlyArray<Stream>;
+  today: Date;
+  /** The month to open on (the page keeps it in the URL); later than a year ahead opens there. */
+  initialMonth?: Date | undefined;
+  onMonthChange?: (month: Date) => void;
+}) {
+  const thisMonth = startOfMonth(today);
+  const lastMonth = new Date(thisMonth.getFullYear(), thisMonth.getMonth() + MONTHS_AHEAD, 1);
+  const [month, setMonthState] = useState<Date>(() =>
+    initialMonth ? (initialMonth > lastMonth ? lastMonth : startOfMonth(initialMonth)) : thisMonth,
+  );
+  const setMonth = (next: Date) => {
+    setMonthState(next);
+    onMonthChange?.(next);
+  };
+  const isPast = month < thisMonth;
+  // Regular income is judged on the six months up to now: a future month has no income yet.
+  const windowMonth = isPast ? month : thisMonth;
+
+  const keys = useMemo(() => [...new Set(streams.map((s) => s.merchant_key))].sort(), [streams]);
+  const { start } = monthBounds(month);
+  const isFuture = month > thisMonth;
+  const chargesQuery = useQuery({
+    queryKey: ["calendar-charges", start, keys],
+    queryFn: () => fetchCharges(month, keys),
+    enabled: !isFuture,
+  });
+  const windowQuery = useIncomeWindow(windowMonth);
+  const rulesQuery = useIncomeRules();
+
+  const failed = chargesQuery.error ?? windowQuery.error ?? rulesQuery.error;
+  // A part of the month is no month: without the charges a paid bill would read "not seen yet".
+  const entries = useMemo(() => {
+    if (failed) return [];
+    const bills = billEntries(streams, isFuture ? [] : (chargesQuery.data ?? []), month, today);
+    const sources =
+      windowQuery.data && rulesQuery.data ? regularSources(windowQuery.data, rulesQuery.data) : [];
+    return [...bills, ...incomeEntries(sources, month, today)];
+  }, [
+    failed,
+    streams,
+    chargesQuery.data,
+    windowQuery.data,
+    rulesQuery.data,
+    month,
+    today,
+    isFuture,
+  ]);
+  const days = useMemo(() => byDay(entries), [entries]);
+
+  const pending =
+    (!isFuture && chargesQuery.isPending) || windowQuery.isPending || rulesQuery.isPending;
+  const bills = entries.filter((e) => e.kind === "bill");
+  const income = entries.filter((e) => e.kind === "income");
+  const todayIso = formatISODate(today);
+  const label = month.toLocaleDateString(dateLocale(), { month: "long", year: "numeric" });
+  const weekdays = Array.from({ length: 7 }, (_, i) =>
+    // 2 Nov 2026 is a Monday.
+    new Date(2026, 10, 2 + i).toLocaleDateString(dateLocale(), { weekday: "short" }),
+  );
+
+  return (
+    <section aria-label="Recurring calendar">
+      <MonthSwitcher
+        className="mb-3"
+        label={label}
+        onPrev={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))}
+        onNext={() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))}
+        canGoNext={month < lastMonth}
+      />
+
+      {failed && (
+        <Alert className="mb-4 flex items-center justify-between gap-3">
+          <span>Couldn't load the calendar: {failed.message}</span>
+          <button
+            type="button"
+            onClick={() => {
+              for (const q of [chargesQuery, windowQuery, rulesQuery])
+                if (q.isError) void q.refetch();
+            }}
+            className="-my-2 inline-flex min-h-11 shrink-0 items-center rounded-sm px-2 font-medium underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-ring"
+          >
+            Retry
+          </button>
+        </Alert>
+      )}
+      {month >= lastMonth && (
+        <p className="-mt-1 mb-3 text-xs text-muted-foreground">
+          The calendar shows up to {MONTHS_AHEAD} months ahead.
+        </p>
+      )}
+
+      <div className="mb-4 min-h-5 text-[0.8125rem] text-muted-foreground">
+        {failed ? null : pending ? (
+          <Skeleton className="h-4 w-64" />
+        ) : bills.length + income.length === 0 ? null : isFuture ? (
+          // Nothing can have happened yet: count what's expected.
+          <p>
+            <Figure n={bills.length} /> {bills.length === 1 ? "bill" : "bills"}
+            {" · "}
+            <Figure n={income.length} /> income expected
+          </p>
+        ) : (
+          <p>
+            Bills <Figure n={bills.filter((e) => e.status === "done").length} /> of{" "}
+            <Figure n={bills.length} /> paid
+            {" · "}
+            Income <Figure n={income.filter((e) => e.status === "done").length} /> of{" "}
+            <Figure n={income.length} /> received
+          </p>
+        )}
+      </div>
+
+      <GroupedList>
+        <div role="table" aria-label={label} className="p-2 sm:p-3">
+          <div role="row" className="grid grid-cols-7 gap-1 pb-1">
+            {weekdays.map((d) => (
+              <div
+                key={d}
+                role="columnheader"
+                className="text-center text-[0.6875rem] font-medium text-muted-foreground"
+              >
+                {d}
+              </div>
+            ))}
+          </div>
+          {monthGrid(month).map((week, w) => (
+            <div key={w} role="row" className="grid grid-cols-7 gap-1">
+              {week.map((day, i) => {
+                if (!day) return <div key={i} role="cell" aria-hidden className="min-h-12" />;
+                const iso = formatISODate(day);
+                const list = days.get(iso) ?? [];
+                const isToday = iso === todayIso;
+                return (
+                  <div
+                    key={i}
+                    role="cell"
+                    aria-label={`${day.toLocaleDateString(dateLocale(), { weekday: "long", day: "numeric", month: "long" })}${isToday ? ", today" : ""}${
+                      list.length
+                        ? `: ${list.map((e) => `${e.name} ${money(e)} ${statusLabel(e)}`).join(", ")}`
+                        : ""
+                    }`}
+                    className={`min-h-12 rounded-sm p-1 md:min-h-24 ${list.length ? "bg-muted/60" : ""}`}
+                  >
+                    <div
+                      className={`font-figure text-[0.6875rem] leading-5 ${
+                        isToday
+                          ? "inline-flex size-5 items-center justify-center rounded-full bg-foreground text-background"
+                          : "text-muted-foreground"
+                      }`}
+                    >
+                      {day.getDate()}
+                    </div>
+                    {/* Phones: one dot per entry; the list below has the details. */}
+                    <div aria-hidden className="mt-0.5 flex flex-wrap gap-0.5 md:hidden">
+                      {list.slice(0, 4).map((e) => (
+                        <span
+                          key={e.id}
+                          className={`size-1.5 rounded-full ${DOT[e.kind][e.status]}`}
+                        />
+                      ))}
+                    </div>
+                    <ul aria-hidden className="mt-0.5 hidden space-y-0.5 md:block">
+                      {list.slice(0, CHIPS_PER_DAY).map((e) => (
+                        <li
+                          key={e.id}
+                          title={`${e.name} ${money(e)} (${statusLabel(e)})`}
+                          className="flex items-start gap-1 text-[0.6875rem] leading-4"
+                        >
+                          <span className="mt-0.5 flex">
+                            <StatusIcon entry={e} />
+                          </span>
+                          {/* Name over amount: side by side, the amount left ~4 letters of name. */}
+                          <div className="min-w-0 flex-1">
+                            <span
+                              className={`block truncate ${e.status === "done" ? "text-muted-foreground" : "text-foreground"}`}
+                            >
+                              {e.name}
+                            </span>
+                            <Amount entry={e} iconClass="size-2.5" />
+                          </div>
+                        </li>
+                      ))}
+                      {list.length > CHIPS_PER_DAY && (
+                        <li className="text-[0.6875rem] text-muted-foreground">
+                          +{list.length - CHIPS_PER_DAY} more
+                        </li>
+                      )}
+                    </ul>
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+      </GroupedList>
+
+      {/* Phones show dots, not chips: say what they mean. */}
+      <ul
+        aria-label="What the dots mean"
+        className="mt-2 flex flex-wrap gap-x-3 gap-y-1 px-1 text-[0.6875rem] text-muted-foreground md:hidden"
+      >
+        {(
+          [
+            ["Bill paid", DOT.bill.done],
+            ["Bill expected", DOT.bill.upcoming],
+            ["Income received", DOT.income.done],
+            ["Income expected", DOT.income.upcoming],
+            ["Not seen yet", DOT.bill.late],
+          ] as const
+        ).map(([text, dot]) => (
+          <li key={text} className="inline-flex items-center gap-1">
+            <span aria-hidden className={`size-1.5 rounded-full ${dot}`} />
+            {text}
+          </li>
+        ))}
+      </ul>
+
+      {/* The month as a list: the details on phones, and every entry beyond a day's three. */}
+      <div className="mt-6">
+        {failed && entries.length === 0 ? null : !pending && entries.length === 0 ? (
+          <p className="px-4 py-8 text-center text-sm text-muted-foreground">
+            {/* Bills come from today's subscriptions only: a cancelled one isn't in past months. */}
+            {isPast
+              ? `No recurring charges or income found in ${label}.`
+              : `Nothing recurring expected in ${label}.`}
+          </p>
+        ) : (
+          <GroupedList>
+            <ul className="divide-y divide-hairline">
+              {[...days].map(([iso, list]) =>
+                list.map((e, i) => (
+                  <li key={e.id} className="flex items-center gap-3 px-4 py-2.5 text-sm">
+                    <span className="w-12 shrink-0 font-figure text-xs whitespace-nowrap text-muted-foreground">
+                      {i === 0 ? formatBookingDateShort(iso, month) : ""}
+                    </span>
+                    <StatusIcon entry={e} />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate font-medium text-foreground">{e.name}</span>
+                      <span className="block text-xs text-muted-foreground">
+                        {e.kind === "income" ? "Income" : "Bill"} · {statusLabel(e)}
+                      </span>
+                    </span>
+                    <Amount entry={e} iconClass="size-3.5" />
+                  </li>
+                )),
+              )}
+            </ul>
+          </GroupedList>
+        )}
+      </div>
+      <p className="mt-3 px-4 text-xs text-muted-foreground">
+        Bills come from your active subscriptions. Income is any sender that {REGULAR_RULE}; change
+        that on the{" "}
+        <Link to="/income" className="underline underline-offset-2 hover:text-foreground">
+          Income page
+        </Link>
+        .
+      </p>
+    </section>
+  );
+}

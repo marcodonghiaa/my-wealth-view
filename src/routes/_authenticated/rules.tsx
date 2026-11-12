@@ -17,6 +17,7 @@ import { Alert } from "@/components/ui/alert";
 import { TRANSACTION_TYPES } from "@/lib/categories";
 import { useCategories } from "@/lib/use-categories";
 import { plural } from "@/lib/plural";
+import { kindLabel } from "@/lib/regular-income";
 import {
   MATCH_FIELDS,
   MATCH_MODES,
@@ -59,6 +60,11 @@ export const Route = createFileRoute("/_authenticated/rules")({
 // direction".
 const flowLabel = (setFlowType: string) =>
   setFlowType === "transfer" ? "Count as transfer" : "Not a transfer";
+
+const incomeKindLabel = (kind: string) => {
+  const word = kindLabel(kind);
+  return `${word.charAt(0).toUpperCase()}${word.slice(1)} income`;
+};
 
 const LABEL = "mb-1.5 block text-xs font-medium text-muted-foreground";
 const CHIP = "rounded-sm bg-muted px-2 py-0.5 text-xs font-medium";
@@ -559,6 +565,11 @@ function RuleList({ rules }: { rules: RuleRow[] }) {
                 {rule.set_flow_type && (
                   <span className={`${CHIP} text-muted-foreground`}>
                     {flowLabel(rule.set_flow_type)}
+                  </span>
+                )}
+                {rule.set_income_kind && (
+                  <span className={`${CHIP} text-muted-foreground`}>
+                    {incomeKindLabel(rule.set_income_kind)}
                   </span>
                 )}
               </div>

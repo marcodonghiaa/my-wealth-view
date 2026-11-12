@@ -610,6 +610,17 @@ class Query implements PromiseLike<Result> {
     this.filters.push((r) => !f(r));
     return this;
   }
+  // PostgREST's `or`, for the plain "col.op.value,col.op.value" lists the dashboard sends. Demo
+  // only: it splits on `,` and knows no quoting, so a value with a comma or quotes is misread.
+  or(expr: string) {
+    const parts = expr.split(",").map((p) => {
+      const [col = "", op = "", ...rest] = p.split(".");
+      const raw = rest.join(".");
+      return makeFilter(op, col, op === "is" && raw === "null" ? null : raw);
+    });
+    this.filters.push((r) => parts.some((f) => f(r)));
+    return this;
+  }
   order(col: string, opts?: { ascending?: boolean }) {
     this.sorts.push({ col, asc: opts?.ascending ?? true });
     return this;

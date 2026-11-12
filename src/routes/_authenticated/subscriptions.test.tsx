@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useSyncExternalStore } from "react";
 
 type Row = Record<string, unknown>;
 const { db, rpc, toast } = vi.hoisted(() => ({
@@ -10,6 +11,12 @@ const { db, rpc, toast } = vi.hoisted(() => ({
 }));
 
 vi.mock("sonner", () => ({ toast }));
+vi.mock("@tanstack/react-router", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@tanstack/react-router")>()),
+  Link: ({ to, children }: { to: string; children: React.ReactNode }) => (
+    <a href={to}>{children}</a>
+  ),
+}));
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
     rpc,
@@ -18,6 +25,23 @@ vi.mock("@/integrations/supabase/client", () => ({
 }));
 
 import { Route } from "./subscriptions";
+
+// The URL's search params, as a tiny store: navigate() changes them and the page re-renders.
+type Search = { view?: "calendar"; month?: string };
+const url = vi.hoisted(() => ({
+  search: {} as Record<string, unknown>,
+  subs: new Set<() => void>(),
+}));
+const navigate = vi.fn((opts: { search: (s: Search) => Search; replace?: boolean }) => {
+  url.search = opts.search(url.search as Search);
+  url.subs.forEach((f) => f());
+});
+vi.spyOn(Route, "useSearch").mockImplementation((() =>
+  useSyncExternalStore(
+    (f) => (url.subs.add(f), () => url.subs.delete(f)),
+    () => url.search,
+  )) as never);
+vi.spyOn(Route, "useNavigate").mockImplementation((() => navigate) as never);
 
 const Page = Route.options.component as () => React.JSX.Element;
 
@@ -61,6 +85,7 @@ const renderPage = () =>
 
 beforeEach(() => {
   vi.clearAllMocks();
+  url.search = {};
   localStorage.setItem("mf.subscriptionsReveal.seen", "1"); // keep the one-time reveal out of these tests
   db.error = null;
   db.rows = [
@@ -356,5 +381,88 @@ describe("Subscriptions page", () => {
     const total = screen.getByLabelText("Estimated monthly cost");
     expect(total).toHaveTextContent("€10.00");
     expect(total).toHaveTextContent("+ 1 without a frequency");
+  });
+});
+
+// protects=the calendar is one tap from the list; fails_when=the view switch is gone or the list stays
+describe("List / Calendar", () => {
+  beforeEach(() => {
+    db.rows = [stream({})];
+    db.error = null;
+  });
+
+  it("switches to the calendar and back", async () => {
+    renderPage();
+    await screen.findByText("Streamflix");
+    fireEvent.click(screen.getByRole("radio", { name: "Calendar" }));
+    expect(await screen.findByRole("region", { name: "Recurring calendar" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Remove Streamflix" })).toBeNull();
+    fireEvent.click(screen.getByRole("radio", { name: "List" }));
+    expect(await screen.findByRole("button", { name: "Remove Streamflix" })).toBeTruthy();
+  });
+
+  // Polish 4 #10: the view and month live in the URL, so Back returns to the list, a reload or a
+  // shared link opens the same month, and switching away and back keeps the month.
+  it("keeps the view and month in the URL", async () => {
+    url.search = { view: "calendar", month: "2026-12" };
+    renderPage();
+    expect(await screen.findByRole("table", { name: "December 2026" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Next month" }));
+    expect(navigate).toHaveBeenLastCalledWith(expect.objectContaining({ replace: true }));
+    expect(url.search).toEqual({ view: "calendar", month: "2027-01" });
+    fireEvent.click(screen.getByRole("radio", { name: "List" }));
+    expect(navigate.mock.lastCall![0].replace).toBeFalsy(); // a new history entry: Back undoes it
+    expect(url.search).toEqual({ month: "2027-01" });
+    fireEvent.click(screen.getByRole("radio", { name: "Calendar" }));
+    expect(await screen.findByRole("table", { name: "January 2027" })).toBeTruthy();
+  });
+
+  it("ignores a view or month it doesn't know", () => {
+    const validate = Route.options.validateSearch as (s: Record<string, unknown>) => unknown;
+    expect(validate({ view: "calendar", month: "2026-12" })).toEqual({
+      view: "calendar",
+      month: "2026-12",
+    });
+    expect(validate({ view: "grid", month: "2026-13" })).toEqual({});
+    expect(validate({ month: "1969-12" })).toEqual({});
+  });
+
+  // Polish 5 A: the router hands the page the raw URL search, so a month validateSearch dropped
+  // still arrives here; the page must fall back to this month, not "Invalid Date" or month 13.
+  it("opens this month when the URL's month is invalid", async () => {
+    url.search = { view: "calendar" };
+    const { unmount } = renderPage();
+    const thisMonth = (await screen.findByRole("table")).getAttribute("aria-label");
+    unmount();
+    for (const month of ["abc", "2026-13", "1969-12", "2026-1"]) {
+      url.search = { view: "calendar", month };
+      const { unmount: done } = renderPage();
+      expect((await screen.findByRole("table")).getAttribute("aria-label")).toBe(thisMonth);
+      expect(screen.queryByText(/Invalid Date/)).toBeNull();
+      done();
+    }
+  });
+
+  // Polish 3 #12: only active subscriptions are bills; to-review and dismissed ones are not.
+  it("puts only active subscriptions on the calendar", async () => {
+    const now = new Date();
+    const due = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-15`;
+    db.rows = [
+      stream({ next_expected: due }),
+      stream({
+        id: "s2",
+        display_name: "Cloudbox",
+        detected_status: "suggested",
+        next_expected: due,
+      }),
+      stream({ id: "s3", display_name: "Gonebox", user_status: "dismissed", next_expected: due }),
+    ];
+    renderPage();
+    await screen.findByText("Streamflix");
+    fireEvent.click(screen.getByRole("radio", { name: "Calendar" }));
+    const cell = await screen.findByRole("cell", { name: /Streamflix/ });
+    expect(cell.getAttribute("aria-label")).not.toMatch(/Cloudbox|Gonebox/);
+    const grid = screen.getByRole("table");
+    expect(grid.innerHTML).not.toMatch(/Cloudbox|Gonebox/);
   });
 });

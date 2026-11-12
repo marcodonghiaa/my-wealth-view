@@ -75,7 +75,6 @@ function tx(
     category: null,
     created_at: stamp(p.booking_date),
     credit_debit_indicator: "DBIT",
-    creditor_name: null,
     custom_name: null,
     currency: "EUR",
     debtor_name: null,
@@ -99,7 +98,13 @@ function tx(
     worth_it: null,
     worth_it_prompted_at: null,
     ...p,
-    merchant_key: p.creditor_name?.toLowerCase().trim() ?? null,
+    // As the sync stores money coming in: creditor_name is the payer.
+    creditor_name:
+      p.creditor_name ?? (p.credit_debit_indicator === "CRDT" ? (p.debtor_name ?? null) : null),
+    merchant_key:
+      (p.creditor_name ?? (p.credit_debit_indicator === "CRDT" ? p.debtor_name : null))
+        ?.toLowerCase()
+        .trim() ?? null,
   };
 }
 

@@ -313,3 +313,24 @@ describe("generateDemoData: the dashboard tells one story", () => {
       expect(c.value_usd).toBeCloseTo(c.amount! * c.price_usd!, 0);
   });
 });
+
+// Polish 3 #12: the calendar ticks a demo subscription only when its key matches the payments,
+// and regular income needs the payer's name on the credit.
+describe("demo data for the calendar and regular income", () => {
+  const db = generateDemoData(NOON);
+  it("gives every active stream payments under its key", () => {
+    const keys = new Set(db.transactions.map((t) => t.merchant_key));
+    for (const s of groupStreams(db.recurring_streams, NOON).active)
+      expect(keys.has(s.merchant_key), s.merchant_key).toBe(true);
+  });
+  it("names the payer on credits", () => {
+    const credits = db.transactions.filter(
+      (t) => t.credit_debit_indicator === "CRDT" && t.debtor_name,
+    );
+    expect(credits.length).toBeGreaterThan(0);
+    for (const t of credits) {
+      expect(t.creditor_name).toBe(t.debtor_name);
+      expect(t.merchant_key).toBeTruthy();
+    }
+  });
+});
