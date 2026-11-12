@@ -284,4 +284,21 @@ describe("Cash flow page", () => {
     );
     expect(solid().length).toBe(1);
   });
+
+  // Polish 3 #5 (re-audit): the page's own queries answer to the "cash-flow" key that edits refresh.
+  it("refetches everything when the cash-flow key is invalidated", async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    renderPage(client);
+    await screen.findByRole("img", { name: /^Cash flow for/ });
+    calls.length = 0;
+    await client.invalidateQueries({ queryKey: ["cash-flow"] });
+    const tablesHit = new Set(calls.filter((c) => c[1] === "select").map((c) => c[0]));
+    expect(tablesHit).toEqual(
+      new Set([
+        "v_income_vs_expenses_monthly",
+        "v_spend_by_category_monthly",
+        "v_transactions_eur",
+      ]),
+    );
+  });
 });
