@@ -188,6 +188,14 @@ describe("TagEditor", () => {
     expect(onSave).toHaveBeenCalledTimes(1);
   });
 
+  // polish-4 #9: fails_when=Chrome's datalist ▼ makes the tag field look like a select
+  it("hides the browser's suggestion arrow on the tag field", () => {
+    render(<TagEditor tags={[]} onSave={vi.fn()} saving={false} />);
+    expect(screen.getByLabelText("Add a tag")).toHaveClass(
+      "[&::-webkit-calendar-picker-indicator]:hidden",
+    );
+  });
+
   // polish-4 #5: fails_when=the chip × is only its 24px icon to tap (rule: 44px targets)
   it("gives the remove button a 44px tap area around its small icon", () => {
     render(<TagEditor tags={["trip"]} onSave={vi.fn()} saving={false} />);
