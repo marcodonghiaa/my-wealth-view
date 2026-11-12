@@ -258,8 +258,8 @@ export function RecurringCalendar({
               {[...days].map(([iso, list]) =>
                 list.map((e, i) => (
                   <li key={e.id} className="flex items-center gap-3 px-4 py-2.5 text-sm">
-                    <span className="w-16 shrink-0 font-figure text-xs text-muted-foreground">
-                      {i === 0 ? formatBookingDateShort(iso, today) : ""}
+                    <span className="w-12 shrink-0 font-figure text-xs whitespace-nowrap text-muted-foreground">
+                      {i === 0 ? formatBookingDateShort(iso, month) : ""}
                     </span>
                     <StatusIcon entry={e} />
                     <span className="min-w-0 flex-1">

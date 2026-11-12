@@ -164,13 +164,17 @@ describe("RecurringCalendar", () => {
   });
 
   // Polish 3 #10: a year ahead, the list says which year.
-  it("adds the year to the list's dates in another year", async () => {
+  // Polish 3 #10 / Polish 4 #4: the heading already names the year, so the list's dates never
+  // carry one (it wrapped them onto two lines), in this year or the next.
+  it("dates the list by the viewed month, without a year", async () => {
     renderCal([stream({})]);
     await screen.findByText(/Bills/);
     fireEvent.click(screen.getByRole("button", { name: "Next month" }));
     fireEvent.click(screen.getByRole("button", { name: "Next month" }));
+    expect(await screen.findByText("January 2027")).toBeTruthy();
     const row = (await screen.findAllByText("Bill · expected"))[0]!.closest("li")!;
-    expect(row.textContent).toMatch(/Jan.*2027/);
+    expect(row.textContent).toMatch(/^5 Jan/);
+    expect(row.textContent).not.toMatch(/2027/);
   });
 
   // Polish 4 #2: income looks as it does on the Income page: ink with the incoming arrow, not a
