@@ -414,5 +414,7 @@ export function listTags(transactions: Array<{ tags?: Array<string> | null }>): 
   const byKey = new Map<string, string>();
   for (const tx of transactions)
     for (const t of tx.tags ?? []) if (!byKey.has(t.toLowerCase())) byKey.set(t.toLowerCase(), t);
-  return [...byKey.values()].sort((a, b) => a.localeCompare(b));
+  return [...byKey.values()].sort((a, b) =>
+    a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" }),
+  );
 }

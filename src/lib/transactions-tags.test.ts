@@ -51,6 +51,16 @@ describe("normalizeNote", () => {
 });
 
 describe("listTags", () => {
+  // polish-4 #7: fails_when=tag10 sorts before tag2, or "Work" lands after "trip"
+  it("sorts numbers in tags by value and ignores case", () => {
+    expect(listTags([{ tags: ["tag10", "trip", "tag2", "Work"] }])).toEqual([
+      "tag2",
+      "tag10",
+      "trip",
+      "Work",
+    ]);
+  });
+
   it("lists each tag once, sorted, ignoring rows without tags", () => {
     expect(listTags([{ tags: ["work", "trip"] }, { tags: ["trip"] }, { tags: null }, {}])).toEqual([
       "trip",
