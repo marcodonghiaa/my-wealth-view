@@ -179,7 +179,7 @@ describe("Cash flow page", () => {
     const trend = screen.getByRole("img", { name: /^Saved per month/ });
     const bars = trend.querySelectorAll(".recharts-bar-rectangle");
     expect(bars.length).toBe(2);
-    fireEvent.click(bars[0]!);
+    fireEvent.click(bars[0]!, { clientX: 100, clientY: 200 });
     await waitFor(() => expect(row("Income")).toHaveTextContent("€1,000.00"));
   });
 
@@ -329,5 +329,16 @@ describe("Cash flow page", () => {
       /In: Employer €3,000\.00\. Out: Housing €1,500\.00, Groceries €750\.00/,
     );
     expect(chart.querySelector("svg")?.closest("[aria-hidden=true]")).not.toBeNull();
+  });
+
+  // Polish 4 #5: the whole column picks its period, not only the bar (a break-even bar is ~0px).
+  it("opens the period of a tapped column, above its bar", async () => {
+    renderPage();
+    await waitFor(() => expect(row("Income")).toHaveTextContent("€3,000.00"));
+    const trend = screen.getByRole("img", { name: /^Saved per month/ });
+    const surface = trend.querySelector(".recharts-wrapper") as HTMLElement;
+    fireEvent.mouseMove(surface, { clientX: 100, clientY: 20 });
+    fireEvent.click(surface, { clientX: 100, clientY: 20 });
+    await waitFor(() => expect(row("Income")).toHaveTextContent("€1,000.00"));
   });
 });

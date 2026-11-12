@@ -50,7 +50,16 @@ export function TrendBars({
     <div role="img" aria-label={named} className="h-40">
       <div aria-hidden="true" className="size-full">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data} margin={{ top: 8, right: 0, bottom: 0, left: 0 }}>
+          <BarChart
+            data={data}
+            margin={{ top: 8, right: 0, bottom: 0, left: 0 }}
+            // The whole column picks its period: a break-even bar is too short to tap.
+            onClick={(state: { activeTooltipIndex?: number } | null) => {
+              const bar = data[state?.activeTooltipIndex ?? -1];
+              if (bar) onSelect(bar);
+            }}
+            className="cursor-pointer"
+          >
             <XAxis dataKey="tick" tick={TICK} tickLine={false} axisLine={false} interval={0} />
             <ReferenceLine y={0} stroke="var(--color-border)" />
             <Tooltip
@@ -62,13 +71,7 @@ export function TrendBars({
                 return bar ? <TrendTooltip bar={bar} /> : null;
               }}
             />
-            <Bar
-              dataKey="net"
-              radius={[2, 2, 2, 2]}
-              maxBarSize={28}
-              onClick={(entry: { payload?: TrendBar }) => entry.payload && onSelect(entry.payload)}
-              className="cursor-pointer"
-            >
+            <Bar dataKey="net" radius={[2, 2, 2, 2]} maxBarSize={28}>
               {data.map((b) => (
                 <Cell
                   key={b.key}
