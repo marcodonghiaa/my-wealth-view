@@ -224,11 +224,13 @@ function CashFlowPage() {
           <SummaryRow
             label="Savings rate"
             hint={
-              noTotals
-                ? "Didn't load"
-                : summary.savingsRate == null
-                  ? "No income this period"
-                  : "Share of income kept"
+              pending
+                ? undefined
+                : noTotals
+                  ? "Didn't load"
+                  : summary.savingsRate == null
+                    ? "No income this period"
+                    : "Share of income kept"
             }
             pending={pending}
             value={formatRate(summary.savingsRate)}
@@ -313,7 +315,7 @@ function SummaryRow({
   toneClass = "text-foreground",
 }: {
   label: string;
-  hint?: string;
+  hint?: string | undefined;
   value: string;
   pending: boolean;
   to?: "/income" | "/spending";

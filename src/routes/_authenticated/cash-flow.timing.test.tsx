@@ -78,6 +78,8 @@ describe("Cash flow while loading", () => {
     ).toBeGreaterThan(0);
     expect(screen.queryByText(/€/)).toBeNull();
     expect(screen.getByRole("button", { name: "Previous month" })).toBeDisabled();
+    // Polish 4 #17: no "No income" claim before anything has loaded.
+    expect(screen.queryByText("No income this period")).toBeNull();
   });
 
   it("shows only the latest month when an older answer arrives late", async () => {
