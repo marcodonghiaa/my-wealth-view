@@ -142,13 +142,11 @@ describe("RecurringCalendar", () => {
     expect(
       await screen.findByText(summary("Bills 1 of 2 paid · Income 0 of 1 received")),
     ).toBeTruthy();
-    const cell5 = screen.getByRole("gridcell", { name: /^5 November: Streamflix €10\.00 paid$/ });
+    const cell5 = screen.getByRole("cell", { name: /\b5 November: Streamflix €10\.00 paid$/ });
     expect(cell5).toBeTruthy();
+    expect(screen.getByRole("cell", { name: /\b20 November: Gym €30\.00 expected$/ })).toBeTruthy();
     expect(
-      screen.getByRole("gridcell", { name: /^20 November: Gym €30\.00 expected$/ }),
-    ).toBeTruthy();
-    expect(
-      screen.getByRole("gridcell", { name: /^27 November: Acme Payroll \+€2,000\.00 expected$/ }),
+      screen.getByRole("cell", { name: /\b27 November: Acme Payroll \+€2,000\.00 expected$/ }),
     ).toBeTruthy();
   });
 
@@ -167,7 +165,7 @@ describe("RecurringCalendar", () => {
     ];
     renderCal([stream({ merchant_key: key, display_name: "Bar da Mario" })]);
     expect(
-      await screen.findByRole("gridcell", { name: /^5 November: Bar da Mario €10\.00 paid$/ }),
+      await screen.findByRole("cell", { name: /\b5 November: Bar da Mario €10\.00 paid$/ }),
     ).toBeTruthy();
     expect(screen.queryByText(/Couldn't load the calendar/)).toBeNull();
   });
@@ -196,7 +194,7 @@ describe("RecurringCalendar", () => {
     expect(amount.querySelector("svg")).toBeTruthy();
     // Screen readers still hear the direction.
     expect(
-      screen.getByRole("gridcell", { name: /^27 November: Acme Payroll \+€2,000\.00 expected$/ }),
+      screen.getByRole("cell", { name: /\b27 November: Acme Payroll \+€2,000\.00 expected$/ }),
     ).toBeTruthy();
   });
 
@@ -215,16 +213,16 @@ describe("RecurringCalendar", () => {
       },
     ];
     const { container } = renderCal([stream({})]);
-    await screen.findByRole("gridcell", { name: /^5 November: Streamflix €10\.00 paid$/ });
+    await screen.findByRole("cell", { name: /\b5 November: Streamflix €10\.00 paid$/ });
     expect(container.querySelector(".text-positive, .bg-positive")).toBeNull();
-    const cell27 = screen.getByRole("gridcell", { name: /^27 November: Acme Payroll/ });
+    const cell27 = screen.getByRole("cell", { name: /\b27 November: Acme Payroll/ });
     expect(cell27.querySelector(".md\\:hidden > span")!.className).toMatch(/border/);
   });
 
   // Polish 4 #5: in a desktop cell the amount took the name's room ("Acme…"): it gets its own line.
   it("puts a chip's amount on its own line under the name", async () => {
     renderCal([stream({})]);
-    const cell = await screen.findByRole("gridcell", { name: /^5 November: Streamflix/ });
+    const cell = await screen.findByRole("cell", { name: /\b5 November: Streamflix/ });
     const chip = cell.querySelector("ul li")!;
     const name = within(chip as HTMLElement).getByText("Streamflix");
     const amount = within(chip as HTMLElement).getByText("€10.00");
@@ -245,17 +243,27 @@ describe("RecurringCalendar", () => {
   // Polish 4 #7: faded marks (60%/50% muted) fell under 3:1 on white; marks use the full token.
   it("draws status marks at full contrast", async () => {
     const { container } = renderCal([stream({ next_expected: "2026-11-20" })]);
-    await screen.findByRole("gridcell", { name: /^27 November: Acme Payroll/ }); // income too
+    await screen.findByRole("cell", { name: /\b27 November: Acme Payroll/ }); // income too
     expect(
-      screen.getByRole("gridcell", { name: /^20 November: Streamflix .* expected$/ }),
+      screen.getByRole("cell", { name: /\b20 November: Streamflix .* expected$/ }),
     ).toBeTruthy();
     expect(container.querySelector('[class*="muted-foreground/"]')).toBeNull();
+  });
+
+  // Polish 4 #9: a plain table (a grid role promised arrow keys that did nothing), and each day
+  // says its weekday and whether it is today.
+  it("reads as a table whose days name the weekday and today", async () => {
+    renderCal([stream({})]);
+    expect(await screen.findByRole("table", { name: "November 2026" })).toBeTruthy();
+    expect(screen.queryByRole("grid")).toBeNull();
+    expect(screen.getByRole("cell", { name: /^Wednesday,? 11 November, today/ })).toBeTruthy();
+    expect(screen.getByRole("cell", { name: /^Thursday,? 5 November: Streamflix/ })).toBeTruthy();
   });
 
   it("calls a past unpaid date not seen yet", async () => {
     renderCal([stream({ next_expected: "2026-11-03" })]);
     expect(
-      await screen.findByRole("gridcell", { name: /3 November: Streamflix €10\.00 not seen yet/ }),
+      await screen.findByRole("cell", { name: /3 November: Streamflix €10\.00 not seen yet/ }),
     ).toBeTruthy();
   });
 
@@ -273,7 +281,7 @@ describe("RecurringCalendar", () => {
     const next = screen.getByRole("button", { name: "Next month" });
     fireEvent.click(next);
     expect(
-      await screen.findByRole("gridcell", { name: /^5 December: Streamflix €10\.00 expected$/ }),
+      await screen.findByRole("cell", { name: /\b5 December: Streamflix €10\.00 expected$/ }),
     ).toBeTruthy();
     expect(db.chargeReads).toBe(reads);
     for (let i = 0; i < 11; i++) fireEvent.click(next);
@@ -308,7 +316,7 @@ describe("RecurringCalendar", () => {
   it("waits for the rules before counting income", async () => {
     db.rules = "pending";
     const { container } = renderCal([stream({})]);
-    expect(await screen.findByRole("gridcell", { name: /^5 November/ })).toBeTruthy();
+    expect(await screen.findByRole("cell", { name: /\b5 November/ })).toBeTruthy();
     expect(container.querySelector(".animate-pulse")).toBeTruthy(); // still loading
     expect(screen.queryByText(/Income 0 of/)).toBeNull();
   });
@@ -333,8 +341,8 @@ describe("RecurringCalendar", () => {
     db.income = [...db.income, credit("i4", "2026-11-03")];
     renderCal([]);
     expect(
-      await screen.findByRole("gridcell", {
-        name: /^3 November: Acme Payroll \+€2,000\.00 received$/,
+      await screen.findByRole("cell", {
+        name: /\b3 November: Acme Payroll \+€2,000\.00 received$/,
       }),
     ).toBeTruthy();
   });
@@ -358,7 +366,7 @@ describe("RecurringCalendar", () => {
     expect(await screen.findByText(/^Nothing recurring/)).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Previous month" }));
     expect(
-      await screen.findByRole("gridcell", { name: /^27 October: Acme Payroll .* received$/ }),
+      await screen.findByRole("cell", { name: /\b27 October: Acme Payroll .* received$/ }),
     ).toBeTruthy();
   });
 
@@ -367,7 +375,7 @@ describe("RecurringCalendar", () => {
     await screen.findByText(/Bills/);
     fireEvent.click(screen.getByRole("button", { name: "Next month" }));
     expect(
-      await screen.findByRole("gridcell", { name: /^27 December: Acme Payroll .* expected$/ }),
+      await screen.findByRole("cell", { name: /\b27 December: Acme Payroll .* expected$/ }),
     ).toBeTruthy();
   });
 

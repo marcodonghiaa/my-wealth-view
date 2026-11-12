@@ -393,9 +393,9 @@ describe("List / Calendar", () => {
     renderPage();
     await screen.findByText("Streamflix");
     fireEvent.click(screen.getByRole("radio", { name: "Calendar" }));
-    const cell = await screen.findByRole("gridcell", { name: /Streamflix/ });
+    const cell = await screen.findByRole("cell", { name: /Streamflix/ });
     expect(cell.getAttribute("aria-label")).not.toMatch(/Cloudbox|Gonebox/);
-    const grid = screen.getByRole("grid");
+    const grid = screen.getByRole("table");
     expect(grid.innerHTML).not.toMatch(/Cloudbox|Gonebox/);
   });
 });

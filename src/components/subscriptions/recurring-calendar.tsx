@@ -180,7 +180,7 @@ export function RecurringCalendar({
       </div>
 
       <GroupedList>
-        <div role="grid" aria-label={label} className="p-2 sm:p-3">
+        <div role="table" aria-label={label} className="p-2 sm:p-3">
           <div role="row" className="grid grid-cols-7 gap-1 pb-1">
             {weekdays.map((d) => (
               <div
@@ -195,15 +195,15 @@ export function RecurringCalendar({
           {monthGrid(month).map((week, w) => (
             <div key={w} role="row" className="grid grid-cols-7 gap-1">
               {week.map((day, i) => {
-                if (!day) return <div key={i} role="gridcell" aria-hidden className="min-h-12" />;
+                if (!day) return <div key={i} role="cell" aria-hidden className="min-h-12" />;
                 const iso = formatISODate(day);
                 const list = days.get(iso) ?? [];
                 const isToday = iso === todayIso;
                 return (
                   <div
                     key={i}
-                    role="gridcell"
-                    aria-label={`${day.toLocaleDateString(dateLocale(), { day: "numeric", month: "long" })}${
+                    role="cell"
+                    aria-label={`${day.toLocaleDateString(dateLocale(), { weekday: "long", day: "numeric", month: "long" })}${isToday ? ", today" : ""}${
                       list.length
                         ? `: ${list.map((e) => `${e.name} ${money(e)} ${statusLabel(e)}`).join(", ")}`
                         : ""
