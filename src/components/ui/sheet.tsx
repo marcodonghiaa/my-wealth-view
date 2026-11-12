@@ -13,6 +13,24 @@ import { cn } from "@/lib/utils";
 // moved to another entry (a link in the sheet), so that page is never undone.
 // shortcut: Forward after Back re-enters the closed sheet's entry with no sheet open, so the next
 // Back looks like it does nothing. Re-opening the sheet on Forward is not worth the code.
+// How many sheets are open, so the toaster can move out of a bottom sheet's way.
+let openSheets = 0;
+const sheetListeners = new Set<() => void>();
+const setOpenSheets = (n: number) => {
+  openSheets = n;
+  sheetListeners.forEach((l) => l());
+};
+export function useAnySheetOpen() {
+  return React.useSyncExternalStore(
+    (l) => {
+      sheetListeners.add(l);
+      return () => sheetListeners.delete(l);
+    },
+    () => openSheets > 0,
+    () => false,
+  );
+}
+
 function useCloseOnBack(open: boolean, close: () => void) {
   const closeRef = React.useRef(close);
   closeRef.current = close;
@@ -20,6 +38,7 @@ function useCloseOnBack(open: boolean, close: () => void) {
     if (!open) return;
     const marker = Math.random().toString(36).slice(2);
     window.history.pushState({ ...window.history.state, __sheet: marker }, "");
+    setOpenSheets(openSheets + 1);
     const onPop = () => {
       if (window.history.state?.__sheet === marker) return;
       closeRef.current();
@@ -27,6 +46,7 @@ function useCloseOnBack(open: boolean, close: () => void) {
     window.addEventListener("popstate", onPop);
     return () => {
       window.removeEventListener("popstate", onPop);
+      setOpenSheets(openSheets - 1);
       // After the router's queued navigation (a microtask) has landed. After Back the entry is
       // already gone, so this does nothing.
       setTimeout(() => {

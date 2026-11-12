@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { act, render, screen } from "@testing-library/react";
 import { toast } from "sonner";
 import { Toaster } from "./sonner";
+import { Sheet, SheetContent, SheetTitle } from "./sheet";
 
 describe("Toaster", () => {
   // Polish pass 4 #3: the toast's button ("Make a rule") was 24px tall, too small to tap.
@@ -37,5 +38,28 @@ describe("Toaster", () => {
     expect(list).toHaveAttribute("data-y-position", "bottom");
     expect(list).toHaveAttribute("data-x-position", "center");
     expect(list.style.getPropertyValue("--mobile-offset-bottom")).toContain("3.25rem");
+  });
+
+  // polish-1 #3: on a phone the edit sheet fills the bottom of the screen; a bottom toast covered
+  // its fields. fails_when=a toast shown while a sheet is open sits at the bottom
+  it("moves toasts to the top while a sheet is open", async () => {
+    const { rerender } = render(
+      <>
+        <Toaster />
+        <Sheet open onOpenChange={vi.fn()}>
+          <SheetContent aria-describedby={undefined}>
+            <SheetTitle>Edit</SheetTitle>
+          </SheetContent>
+        </Sheet>
+      </>,
+    );
+    act(() => void toast("Saved — Dine Out"));
+    await screen.findByText("Saved — Dine Out");
+    const list = () => document.querySelector("[data-sonner-toaster]") as HTMLElement;
+    expect(list()).toHaveAttribute("data-y-position", "top");
+    rerender(<Toaster />);
+    act(() => void toast("Marked"));
+    await screen.findByText("Marked");
+    expect(list()).toHaveAttribute("data-y-position", "bottom");
   });
 });
