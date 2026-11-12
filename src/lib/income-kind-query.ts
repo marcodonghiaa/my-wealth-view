@@ -69,11 +69,7 @@ export async function markIncomeKind({ tx, kind, rules }: MarkVars): Promise<Don
   const existing = ruleFor(tx, rules);
   if (existing) {
     if (existing.set_income_kind === kind) return { kind: "none" };
-    const { error } = await supabase
-      .from("category_rules")
-      .update({ set_income_kind: kind })
-      .eq("id", existing.id);
-    if (error) throw error;
+    await updateKind(existing.id, kind);
     return {
       kind: "updated",
       id: existing.id,
@@ -102,15 +98,21 @@ export async function markIncomeKind({ tx, kind, rules }: MarkVars): Promise<Don
   return { kind: "inserted", id: data.id, rule: data };
 }
 
+// An update that matches no row is no error to PostgREST: say so instead of claiming a save.
+async function updateKind(id: string, kind: string | null) {
+  const { data, error } = await supabase
+    .from("category_rules")
+    .update({ set_income_kind: kind })
+    .eq("id", id)
+    .select("id");
+  if (error) throw error;
+  if (!data?.length) throw new Error("That rule was deleted meanwhile. Reload and try again.");
+}
+
 export async function undoMark(done: Done): Promise<void> {
   if (done.kind === "none") return;
-  const { error } =
-    done.kind === "inserted"
-      ? await supabase.from("category_rules").delete().eq("id", done.id)
-      : await supabase
-          .from("category_rules")
-          .update({ set_income_kind: done.previous })
-          .eq("id", done.id);
+  if (done.kind === "updated") return updateKind(done.id, done.previous);
+  const { error } = await supabase.from("category_rules").delete().eq("id", done.id);
   if (error) throw error;
 }
 
@@ -119,13 +121,15 @@ export const kindLabel = (kind: IncomeKind) => (kind === "regular" ? "regular" :
 export function useMarkIncomeKind() {
   const queryClient = useQueryClient();
   const refresh = () => queryClient.invalidateQueries({ queryKey: rulesQuery.queryKey });
+  const patchRules = (change: (old: Array<RuleRow>) => Array<RuleRow>) =>
+    queryClient.setQueryData<Array<RuleRow>>(rulesQuery.queryKey, (old = []) => change(old));
   return useMutation<Done, Error, MarkVars>({
     mutationFn: markIncomeKind,
     onError: (error) => toast.error("Couldn't save", { description: error.message }),
     onSuccess: (done, { tx, kind }) => {
       // The rule is in the cache at once: a second Mark before the refetch lands sees it.
       if (done.kind !== "none")
-        queryClient.setQueryData<Array<RuleRow>>(rulesQuery.queryKey, (old = []) =>
+        patchRules((old) =>
           done.kind === "inserted"
             ? [...old, done.rule]
             : old.map((r) => (r.id === done.id ? { ...r, set_income_kind: kind } : r)),
@@ -143,8 +147,19 @@ export function useMarkIncomeKind() {
           action: {
             label: "Undo",
             onClick: () =>
-              void undoMark(done).then(refresh, (e: Error) =>
-                toast.error("Couldn't undo", { description: e.message }),
+              void undoMark(done).then(
+                () => {
+                  // Same as Mark: the cache shows the undo before the refetch lands.
+                  patchRules((old) =>
+                    done.kind === "inserted"
+                      ? old.filter((r) => r.id !== done.id)
+                      : old.map((r) =>
+                          r.id === done.id ? { ...r, set_income_kind: done.previous } : r,
+                        ),
+                  );
+                  void refresh();
+                },
+                (e: Error) => toast.error("Couldn't undo", { description: e.message }),
               ),
           },
         },

@@ -22,7 +22,8 @@ import {
   undoMark,
   useMarkIncomeKind,
 } from "./income-kind-query";
-import { rulesQuery } from "./rules-query";
+import { rulesQuery, type RuleRow } from "./rules-query";
+import { toast } from "sonner";
 
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
@@ -155,6 +156,50 @@ describe("useMarkIncomeKind", () => {
     );
     const cached = queryClient.getQueryData<Array<Record<string, unknown>>>(rulesQuery.queryKey);
     expect(cached?.map((r) => r["set_income_kind"])).toEqual(["one_off"]);
+  });
+});
+
+// Polish 3 #1: Undo left the deleted rule in the cache, so a Mark before the refetch updated a
+// rule that no longer exists (0 rows, no error) and said it had saved.
+describe("Undo, then Mark again", () => {
+  it("drops the undone rule from the cache, so the next Mark saves a new one", async () => {
+    const queryClient = new QueryClient();
+    queryClient.setQueryData(rulesQuery.queryKey, []);
+    const wrapper = ({ children }: { children: ReactNode }) =>
+      createElement(QueryClientProvider, { client: queryClient }, children);
+    const { result } = renderHook(() => useMarkIncomeKind(), { wrapper });
+    const tx = { creditor_name: "Undo Again Srl", remittance_info: null };
+    vi.mocked(toast.success).mockClear();
+    await act(() => result.current.mutateAsync({ tx, kind: "regular", rules: [] }));
+    const undo = vi.mocked(toast.success).mock.calls[0]![1]!.action as unknown as {
+      onClick: () => void;
+    };
+    await act(async () => {
+      undo.onClick();
+      await vi.waitFor(() =>
+        expect(queryClient.getQueryData<Array<unknown>>(rulesQuery.queryKey)).toEqual([]),
+      );
+    });
+    const rules = queryClient.getQueryData<Array<RuleRow>>(rulesQuery.queryKey)!;
+    const done = await act(() => result.current.mutateAsync({ tx, kind: "one_off", rules }));
+    expect(done.kind).toBe("inserted");
+  });
+
+  it("refuses to change a rule that was deleted meanwhile", async () => {
+    const first = await markIncomeKind({
+      tx: { creditor_name: "Gone Co", remittance_info: null },
+      kind: "regular",
+      rules: [],
+    });
+    if (first.kind !== "inserted") throw new Error(first.kind);
+    await undoMark(first);
+    await expect(
+      markIncomeKind({
+        tx: { creditor_name: "Gone Co", remittance_info: null },
+        kind: "one_off",
+        rules: [first.rule],
+      }),
+    ).rejects.toThrow("deleted");
   });
 });
 
