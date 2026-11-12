@@ -55,9 +55,11 @@ vi.mock("sonner", () => ({
 }));
 
 let searchParams: Record<string, string> = {};
+const navigate = vi.fn();
 vi.mock("@tanstack/react-router", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@tanstack/react-router")>()),
   useSearch: () => searchParams,
+  useNavigate: () => navigate,
 }));
 
 import { Route } from "./transactions";
@@ -102,6 +104,18 @@ describe("Make a rule in the transaction sheet", () => {
     renderPage();
     const sheet = await openSheet(/Poste Italiane/);
     expect(within(sheet).getByRole("button", { name: "Make a rule" })).toBeTruthy();
+  });
+
+  // polish-1 #1 (#164): the sheet has its own history entry; pushing /rules on top of it left a
+  // Back press that did nothing. fails_when=the sheet's Make a rule pushes instead of replacing
+  it("opens Rules in place of the sheet's history entry", async () => {
+    rows["v_transactions_eur"] = [bankRow];
+    renderPage();
+    const sheet = await openSheet(/Poste Italiane/);
+    await userEvent.click(within(sheet).getByRole("button", { name: "Make a rule" }));
+    expect(navigate).toHaveBeenLastCalledWith(
+      expect.objectContaining({ to: "/rules", replace: true }),
+    );
   });
 
   // pass5 #1: the rules come from the database, not only from a cache the Rules page filled
