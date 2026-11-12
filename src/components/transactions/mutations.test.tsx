@@ -90,6 +90,7 @@ import {
   useShareMutation,
   useSettleSplitMutation,
   useSplitMutation,
+  saveErrorText,
   useTransactionFieldMutation,
 } from "./mutations";
 
@@ -281,6 +282,58 @@ describe("note and tags saves", () => {
     expect(
       invalidate.mock.calls.filter(([f]) => f?.queryKey?.[0] === "transaction-tags"),
     ).toHaveLength(1);
+  });
+});
+
+// polish-5 #4: fails_when=a refused save shows Postgres' own text ("new row for relation ... violates
+// check constraint ...") in the toast
+describe("save error toasts", () => {
+  it("says what happened in plain words and logs the database's own message", async () => {
+    const { toast } = await import("sonner");
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { queryClient, wrapper } = setup();
+    updateError = Object.assign(
+      new Error('new row for relation "transactions" violates check constraint "x"'),
+      {
+        code: "23514",
+      },
+    );
+    const { result } = renderHook(
+      () =>
+        useTransactionFieldMutation(queryClient, MONTH, "note", {
+          errorMessage: "Couldn't save note",
+        }),
+      { wrapper },
+    );
+    await act(async () => {
+      await result.current
+        .mutateAsync({ tx: { account_uid: "a1", entry_reference: "r1" }, value: "x" })
+        .catch(() => {});
+    });
+    expect(toast.error).toHaveBeenLastCalledWith("Couldn't save note", {
+      description: "The database didn't accept this change.",
+    });
+    expect(log).toHaveBeenCalledWith("Couldn't save note", updateError);
+    log.mockRestore();
+  });
+
+  it("asks to check the connection when the request never got an answer", () => {
+    expect(saveErrorText(new TypeError("Failed to fetch"))).toBe(
+      "Check your connection and try again.",
+    );
+    expect(saveErrorText({ message: "TypeError: Failed to fetch", code: "" })).toBe(
+      "Check your connection and try again.",
+    );
+  });
+
+  // fails_when=messages written for people (our SQL raises, our own Errors) are hidden too
+  it("keeps messages that were written for people", () => {
+    expect(saveErrorText({ message: "Amounts of bank rows can't change", code: "P0001" })).toBe(
+      "Amounts of bank rows can't change",
+    );
+    expect(saveErrorText(new Error("You are signed out. Sign in again."))).toBe(
+      "You are signed out. Sign in again.",
+    );
   });
 });
 

@@ -17,6 +17,33 @@ import {
 // Picking the Transfer category also moves the row out of spending and income (flow_type),
 // the same way the bank sync marks a transfer: it then shows in the Transfers list. A flow the
 // user picked is marked as theirs (flow_source "user"), so the next sync leaves it alone.
+
+/**
+ * A save error in plain words for the toast. The database's own text ("new row for relation ...
+ * violates check constraint ...") means nothing to a user, so it goes to the console instead.
+ */
+export function saveErrorText(error: unknown): string {
+  const code =
+    error && typeof error === "object" && "code" in error ? String(error.code ?? "") : "";
+  const message =
+    error instanceof Error || (error && typeof error === "object" && "message" in error)
+      ? String((error as { message: unknown }).message)
+      : "";
+  // Our own SQL raises (P0001) and our own Errors are written for people: show them as they are.
+  if (code === "P0001" && message) return message;
+  if (code) return "The database didn't accept this change.";
+  // A request that never got an answer (supabase-js reports it as "TypeError: Failed to fetch").
+  if (error instanceof TypeError || /failed to fetch|network/i.test(message))
+    return "Check your connection and try again.";
+  return message || "Please try again.";
+}
+
+/** The error toast for a failed save: plain words on screen, the full error in the console. */
+const saveFailed = (title: string, error: unknown) => {
+  console.error(title, error);
+  toast.error(title, { description: saveErrorText(error) });
+};
+
 export const TRANSFER_CATEGORY = "Transfer";
 export function categoryPatch(category: string | null): TablesUpdate<"transactions"> {
   return category === TRANSFER_CATEGORY
@@ -112,7 +139,7 @@ export function useTransactionFieldMutation<
           );
       } else if (context?.previous)
         queryClient.setQueryData(["transactions", monthKey], context.previous);
-      toast.error(opts.errorMessage, { description: error.message });
+      saveFailed(opts.errorMessage, error);
     },
     onSuccess: (_data, vars) => {
       if (opts.successMessage) {
@@ -151,7 +178,7 @@ export function useManualAmountMutation(queryClient: QueryClient) {
       const { error } = await forTx(supabase.from("transactions").update(patch), tx);
       if (error) throw error;
     },
-    onError: (error) => toast.error("Couldn't change amount", { description: error.message }),
+    onError: (error) => saveFailed("Couldn't change amount", error),
     onSuccess: () => toast.success("Amount changed"),
     onSettled: () => refetchFlows(queryClient),
   });
@@ -167,7 +194,7 @@ export function useIncomeCategoryMutation(queryClient: QueryClient) {
       );
       if (error) throw error;
     },
-    onError: (error) => toast.error("Couldn't save category", { description: error.message }),
+    onError: (error) => saveFailed("Couldn't save category", error),
     onSuccess: (_data, { category }) => {
       if (category === TRANSFER_CATEGORY) toast.success("Moved to transfers");
     },
@@ -206,7 +233,7 @@ export function useSplitMutation(queryClient: QueryClient, monthKey: string) {
     },
     onError: (error, _vars, context) => {
       if (context?.previous) queryClient.setQueryData(["transactions", monthKey], context.previous);
-      toast.error("Couldn't save split", { description: error.message });
+      saveFailed("Couldn't save split", error);
     },
     onSuccess: () => toast.success("Split saved"),
     // A new name becomes a saved contact; the Splitwise page's owed totals change too.
@@ -261,9 +288,7 @@ export function useBulkCategoryMutation(
       onDone();
     },
     onError: (error) => {
-      toast.error("Couldn't update categories", {
-        description: (error as Error).message,
-      });
+      saveFailed("Couldn't update categories", error);
     },
   });
 }
@@ -286,7 +311,7 @@ export function useDeleteMutation(queryClient: QueryClient, onDone: () => void) 
       });
     },
     onError: (error) => {
-      toast.error("Couldn't update transactions", { description: error.message });
+      saveFailed("Couldn't update transactions", error);
     },
   });
   return mutation;
@@ -310,7 +335,7 @@ export function useRenameMerchantMutation(queryClient: QueryClient) {
       if (error) throw error;
       return data ?? 0;
     },
-    onError: (error) => toast.error("Couldn't rename", { description: error.message }),
+    onError: (error) => saveFailed("Couldn't rename", error),
     onSuccess: (count) => toast.success(count > 1 ? `Renamed on ${count} transactions` : "Renamed"),
     onSettled: () => void queryClient.invalidateQueries({ queryKey: ["transactions"] }),
   });
@@ -338,7 +363,7 @@ export function useShareMutation(queryClient: QueryClient, monthKey: string) {
     },
     onError: (error, _vars, context) => {
       if (context?.previous) queryClient.setQueryData(key, context.previous);
-      toast.error("Couldn't save change", { description: error.message });
+      saveFailed("Couldn't save change", error);
     },
     onSettled: () => {
       for (const k of ["splitwise-shares", "spend-by-category", "category-transactions"]) {
@@ -381,7 +406,7 @@ export function useFlowMutation(queryClient: QueryClient, monthKey: string) {
     },
     onError: (error, _vars, context) => {
       if (context?.previous) queryClient.setQueryData(key, context.previous);
-      toast.error("Couldn't move transaction", { description: error.message });
+      saveFailed("Couldn't move transaction", error);
     },
     onSuccess: (_data, { tx }) => {
       toast.success(`Counted as ${restoredFlow(tx)}`);
@@ -416,7 +441,7 @@ export function useSettleSplitMutation(queryClient: QueryClient) {
     },
     onError: (error, _vars, context) => {
       if (context?.previous) queryClient.setQueryData(["splits"], context.previous);
-      toast.error("Couldn't save", { description: error.message });
+      saveFailed("Couldn't save", error);
     },
     onSettled: () => queryClient.invalidateQueries({ queryKey: ["splits"] }),
   });
@@ -434,8 +459,7 @@ export function useResolvePairMutation(queryClient: QueryClient) {
     },
     // The sync may have changed a side since the list loaded (then Keep is refused): the
     // refetch below shows what is true now.
-    onError: (error) =>
-      toast.error("Couldn't save. List refreshed.", { description: error.message }),
+    onError: (error) => saveFailed("Couldn't save. List refreshed.", error),
     onSuccess: (_data, { keep }) => toast.success(keep ? "Kept as transfer" : "Counted again"),
     onSettled: () => {
       refetchFlows(queryClient);
@@ -499,7 +523,7 @@ export function useReviewGroupMutation(queryClient: QueryClient) {
     },
     onError: (error, _vars, context) => {
       if (context?.previous) queryClient.setQueryData(["transfer-review"], context.previous);
-      toast.error("Couldn't save", { description: error.message });
+      saveFailed("Couldn't save", error);
     },
     onSuccess: (_data, { group }) =>
       toast.success(
