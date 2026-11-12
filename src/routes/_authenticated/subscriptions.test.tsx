@@ -375,4 +375,27 @@ describe("List / Calendar", () => {
     fireEvent.click(screen.getByRole("radio", { name: "List" }));
     expect(await screen.findByRole("button", { name: "Remove Streamflix" })).toBeTruthy();
   });
+
+  // Polish 3 #12: only active subscriptions are bills; to-review and dismissed ones are not.
+  it("puts only active subscriptions on the calendar", async () => {
+    const now = new Date();
+    const due = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-15`;
+    db.rows = [
+      stream({ next_expected: due }),
+      stream({
+        id: "s2",
+        display_name: "Cloudbox",
+        detected_status: "suggested",
+        next_expected: due,
+      }),
+      stream({ id: "s3", display_name: "Gonebox", user_status: "dismissed", next_expected: due }),
+    ];
+    renderPage();
+    await screen.findByText("Streamflix");
+    fireEvent.click(screen.getByRole("radio", { name: "Calendar" }));
+    const cell = await screen.findByRole("gridcell", { name: /Streamflix/ });
+    expect(cell.getAttribute("aria-label")).not.toMatch(/Cloudbox|Gonebox/);
+    const grid = screen.getByRole("grid");
+    expect(grid.innerHTML).not.toMatch(/Cloudbox|Gonebox/);
+  });
 });

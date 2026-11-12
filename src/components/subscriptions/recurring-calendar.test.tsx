@@ -9,6 +9,8 @@ const db = vi.hoisted(() => ({
   income: [] as Array<Row>,
   rules: [] as Array<Row> | "pending",
   error: null as { message: string } | null,
+  rulesError: null as { message: string } | null,
+  windowError: null as { message: string } | null,
   chargeReads: 0,
 }));
 
@@ -19,7 +21,11 @@ vi.mock("@/integrations/supabase/client", () => ({
       const q: Record<string, unknown> = {};
       let from = 0;
       let broken = false;
-      for (const m of ["select", "order", "gte", "lt", "is", "or"]) q[m] = () => q;
+      let gte = "";
+      let lt = "\uffff";
+      for (const m of ["select", "order", "is", "or"]) q[m] = () => q;
+      q["gte"] = (_col: string, v: string) => ((gte = v), q);
+      q["lt"] = (_col: string, v: string) => ((lt = v), q);
       // postgrest-js never escapes `"` in an in() value, so PostgREST rejects the request.
       q["in"] = (_col: string, values: Array<string>) => {
         broken = values.some((v) => v.includes('"'));
@@ -34,12 +40,19 @@ vi.mock("@/integrations/supabase/client", () => ({
         return q;
       };
       q["then"] = (resolve: (v: unknown) => void) => {
-        if (table === "category_rules")
+        if (table === "category_rules") {
+          if (db.rulesError) return resolve({ data: null, error: db.rulesError });
           return db.rules === "pending" ? undefined : resolve({ data: db.rules, error: null });
+        }
+        if (side === "CRDT" && db.windowError)
+          return resolve({ data: null, error: db.windowError });
         if (side === "DBIT") db.chargeReads++;
         if (db.error) return resolve({ data: null, error: db.error });
         if (broken) return resolve({ data: null, error: { message: "failed to parse filter" } });
-        resolve({ data: (side === "DBIT" ? db.charges : db.income).slice(from), error: null });
+        const rows = (side === "DBIT" ? db.charges : db.income).filter(
+          (r) => String(r["booking_date"]) >= gte && String(r["booking_date"]) < lt,
+        );
+        resolve({ data: rows.slice(from), error: null });
       };
       return q;
     },
@@ -92,6 +105,8 @@ beforeEach(() => {
   db.income = [credit("i1", "2026-09-27"), credit("i2", "2026-10-27"), credit("i3", "2026-08-27")];
   db.rules = [];
   db.error = null;
+  db.rulesError = null;
+  db.windowError = null;
   db.chargeReads = 0;
 });
 
@@ -206,9 +221,9 @@ describe("RecurringCalendar", () => {
   // Polish #13: before the rules load, the income count isn't known yet: no "Income 0 of 0".
   it("waits for the rules before counting income", async () => {
     db.rules = "pending";
-    renderCal([stream({})]);
+    const { container } = renderCal([stream({})]);
     expect(await screen.findByRole("gridcell", { name: /^5 November/ })).toBeTruthy();
-    await new Promise((r) => setTimeout(r, 50));
+    expect(container.querySelector(".animate-pulse")).toBeTruthy(); // still loading
     expect(screen.queryByText(/Income 0 of/)).toBeNull();
   });
 
@@ -225,5 +240,64 @@ describe("RecurringCalendar", () => {
     ];
     renderCal([]);
     expect(await screen.findByText("Bills 0 of 0 paid · Income 0 of 0 in")).toBeTruthy();
+  });
+  // Polish 3 #12: the remaining branches.
+  it("ticks income that arrived as received", async () => {
+    db.income = [...db.income, credit("i4", "2026-11-03")];
+    renderCal([]);
+    expect(
+      await screen.findByRole("gridcell", {
+        name: /^3 November: Acme Payroll \+€2,000\.00 received$/,
+      }),
+    ).toBeTruthy();
+  });
+
+  it("shows three entries a day and counts the rest", async () => {
+    const day = (id: string, name: string) =>
+      stream({
+        id,
+        merchant_key: name.toLowerCase(),
+        display_name: name,
+        next_expected: "2026-11-20",
+      });
+    renderCal([day("a", "A1"), day("b", "B2"), day("c", "C3"), day("d", "D4")]);
+    expect(await screen.findByText("+1 more")).toBeTruthy();
+  });
+
+  it("judges a past month's income on the six months up to it", async () => {
+    // Paid May, June, October: regular by October (May-Oct), not by November (Jun-Nov).
+    db.income = [credit("m", "2026-05-27"), credit("j", "2026-06-27"), credit("o", "2026-10-27")];
+    renderCal([]);
+    expect(await screen.findByText("Bills 0 of 0 paid · Income 0 of 0 in")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Previous month" }));
+    expect(
+      await screen.findByRole("gridcell", { name: /^27 October: Acme Payroll .* received$/ }),
+    ).toBeTruthy();
+  });
+
+  it("expects regular income in a future month", async () => {
+    renderCal([]);
+    await screen.findByText(/Bills/);
+    fireEvent.click(screen.getByRole("button", { name: "Next month" }));
+    expect(
+      await screen.findByRole("gridcell", { name: /^27 December: Acme Payroll .* expected$/ }),
+    ).toBeTruthy();
+  });
+
+  it("shows the error when only the rules or only the income can't be read", async () => {
+    db.rulesError = { message: "rules down" };
+    const { unmount } = renderCal([stream({})]);
+    expect(await screen.findByText("Couldn't load the calendar: rules down")).toBeTruthy();
+    unmount();
+    db.rulesError = null;
+    db.windowError = { message: "income down" };
+    renderCal([stream({})]);
+    expect(await screen.findByText("Couldn't load the calendar: income down")).toBeTruthy();
+  });
+
+  it("reads no charges when there are no subscriptions", async () => {
+    renderCal([]);
+    await screen.findByText(/Bills 0 of 0/);
+    expect(db.chargeReads).toBe(0);
   });
 });

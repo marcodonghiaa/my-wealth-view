@@ -72,6 +72,7 @@ describe("cadenceStep", () => {
     expect(custom(1, "years")).toEqual({ months: 12 });
     expect(custom(2, "fortnights")).toBeNull();
     expect(custom(null, "days")).toBeNull();
+    expect(custom(0, "days")).toBeNull(); // Polish 3 #12
   });
   it("is null without a cadence", () => {
     expect(cadenceStep(stream({ cadence: null }))).toBeNull();

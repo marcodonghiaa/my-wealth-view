@@ -29,12 +29,12 @@ type Stream = Tables<"recurring_streams">;
 const MONTHS_AHEAD = 12;
 const CHIPS_PER_DAY = 3;
 
-/** This month's charges from the streams' names, from `transactions` (spend only). The names are
- * matched here, not in the query: postgrest-js doesn't escape a quote inside an in() value. */
+/** This month's spend from `transactions`, for billEntries to match to the streams by name and
+ * account. Not filtered by name in the query: postgrest-js doesn't escape a quote in in(). */
 async function fetchCharges(month: Date, keys: Array<string>): Promise<Array<ChargeTx>> {
   if (keys.length === 0) return [];
   const { start, end } = monthBounds(month);
-  const rows = await readPages<ChargeTx>((from, to) =>
+  return readPages<ChargeTx>((from, to) =>
     supabase
       .from("transactions")
       .select(
@@ -50,8 +50,6 @@ async function fetchCharges(month: Date, keys: Array<string>): Promise<Array<Cha
       .order("entry_reference", { ascending: true })
       .range(from, to),
   );
-  const wanted = new Set(keys);
-  return rows.filter((c) => c.merchant_key !== null && wanted.has(c.merchant_key));
 }
 
 const statusLabel = (e: CalendarEntry) =>

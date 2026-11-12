@@ -29,6 +29,9 @@ describe("readPages", () => {
     const rows = await readPages(server(7, 3).page);
     expect(rows).toEqual([0, 1, 2, 3, 4, 5, 6]);
   });
+  it("stops at a page with no data and no error", async () => {
+    expect(await readPages(async () => ({ data: null, error: null }))).toEqual([]);
+  });
   it("throws the error of a failed page", async () => {
     const boom = { message: "boom" };
     await expect(readPages(async () => ({ data: null, error: boom }))).rejects.toBe(boom);
