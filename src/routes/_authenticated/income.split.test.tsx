@@ -215,6 +215,18 @@ describe("Income: Regular and One-off", () => {
     expect(db.inserts).toHaveLength(1);
   });
 
+  // Polish 5 B: two clicks in one frame both landed before isPending disabled the button, saving
+  // two identical rules; Undo then removed only one, so it looked broken.
+  it("saves one rule for a double click in one frame", async () => {
+    renderPage();
+    const oneOff = await screen.findByRole("region", { name: "One-off" });
+    const button = within(oneOff).getByRole("button", { name: "Mark Aunt May as regular" });
+    fireEvent.click(button);
+    fireEvent.click(button);
+    await screen.findByRole("button", { name: "Mark Aunt May as one-off" });
+    expect(db.inserts).toHaveLength(1);
+  });
+
   // Polish 4 #1: the button a keyboard user pressed moves with its row; focus follows it there
   // instead of dropping to the top of the page, and the Undo toast stays long enough to reach.
   it("keeps focus on the moved row's button, and gives Undo ten seconds", async () => {

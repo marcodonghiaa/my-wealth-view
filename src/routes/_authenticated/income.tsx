@@ -1,7 +1,7 @@
 import { dateLocale } from "@/lib/locale";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { ArrowDownLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { formatISODate } from "@/lib/date";
@@ -164,6 +164,8 @@ function IncomePage() {
   const rulesQuery = useIncomeRules();
   const markKind = useMarkIncomeKind();
   const [focusKey, setFocusKey] = useState<string | null>(null);
+  // isPending only disables Mark after a re-render; a second click in the same frame gets through.
+  const marking = useRef(false);
   const net = netAfterSpending(flowQuery.data);
   const rows = useMemo(() => incomeQuery.data ?? [], [incomeQuery.data]);
   const total = rows.reduce((sum, r) => sum + Math.abs(r.signed_amount_eur ?? 0), 0);
@@ -289,11 +291,19 @@ function IncomePage() {
                       to: kind === "regular" ? "one_off" : "regular",
                       bank: split.bank,
                       saving: markKind.isPending,
-                      onMark: (tx, to) =>
+                      onMark: (tx, to) => {
+                        if (marking.current) return;
+                        marking.current = true;
                         markKind.mutate(
                           { tx, kind: to, rules: rulesQuery.data ?? [] },
-                          { onSuccess: () => setFocusKey(txKey(tx)) },
-                        ),
+                          {
+                            onSuccess: () => setFocusKey(txKey(tx)),
+                            onSettled: () => {
+                              marking.current = false;
+                            },
+                          },
+                        );
+                      },
                       focusKey,
                       onFocused: () => setFocusKey(null),
                     }}
