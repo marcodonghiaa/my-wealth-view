@@ -91,6 +91,13 @@ const credit = (ref: string, date: string) => ({
 });
 
 const TODAY = new Date(2026, 10, 11);
+// The summary line, read whole (its figures are separate spans).
+const summary = (text: string) => (_: string, el: Element | null) =>
+  el?.tagName === "P" && el.textContent === text;
+const summaryLine = () =>
+  screen.queryByText(
+    (_, el) => el?.tagName === "P" && /^(Bills \d|\d+ bill)/.test(el.textContent ?? ""),
+  );
 const renderCal = (streams: Array<Stream>) =>
   render(
     <QueryClientProvider
@@ -132,7 +139,9 @@ describe("RecurringCalendar", () => {
         typical_amount: 30,
       }),
     ]);
-    expect(await screen.findByText("Bills 1 of 2 paid · Income 0 of 1 in")).toBeTruthy();
+    expect(
+      await screen.findByText(summary("Bills 1 of 2 paid · Income 0 of 1 received")),
+    ).toBeTruthy();
     const cell5 = screen.getByRole("gridcell", { name: /^5 November: Streamflix €10\.00 paid$/ });
     expect(cell5).toBeTruthy();
     expect(
@@ -223,6 +232,16 @@ describe("RecurringCalendar", () => {
     expect(name.className).toMatch(/\bblock\b/);
   });
 
+  // Polish 4 #6: no "0 of 0" lines, a future month counts what's expected, income is "received"
+  // like its rows, and the counts are figures (mono).
+  it("sums the month in words that fit it", async () => {
+    renderCal([stream({})]);
+    const line = await screen.findByText(summary("Bills 0 of 1 paid · Income 0 of 1 received"));
+    expect(line.querySelectorAll(".font-figure").length).toBe(4);
+    fireEvent.click(screen.getByRole("button", { name: "Next month" }));
+    expect(await screen.findByText(summary("1 bill · 1 income expected"))).toBeTruthy();
+  });
+
   it("calls a past unpaid date not seen yet", async () => {
     renderCal([stream({ next_expected: "2026-11-03" })]);
     expect(
@@ -296,7 +315,8 @@ describe("RecurringCalendar", () => {
       },
     ];
     renderCal([]);
-    expect(await screen.findByText("Bills 0 of 0 paid · Income 0 of 0 in")).toBeTruthy();
+    expect(await screen.findByText(/^Nothing recurring/)).toBeTruthy();
+    expect(summaryLine()).toBeNull();
   });
   // Polish 3 #12: the remaining branches.
   it("ticks income that arrived as received", async () => {
@@ -325,7 +345,7 @@ describe("RecurringCalendar", () => {
     // Paid May, June, October: regular by October (May-Oct), not by November (Jun-Nov).
     db.income = [credit("m", "2026-05-27"), credit("j", "2026-06-27"), credit("o", "2026-10-27")];
     renderCal([]);
-    expect(await screen.findByText("Bills 0 of 0 paid · Income 0 of 0 in")).toBeTruthy();
+    expect(await screen.findByText(/^Nothing recurring/)).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Previous month" }));
     expect(
       await screen.findByRole("gridcell", { name: /^27 October: Acme Payroll .* received$/ }),
@@ -353,8 +373,9 @@ describe("RecurringCalendar", () => {
   });
 
   it("reads no charges when there are no subscriptions", async () => {
+    db.income = [];
     renderCal([]);
-    await screen.findByText(/Bills 0 of 0/);
+    await screen.findByText(/^Nothing recurring/);
     expect(db.chargeReads).toBe(0);
   });
 });

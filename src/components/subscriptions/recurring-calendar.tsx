@@ -97,6 +97,9 @@ function Amount({ entry, iconClass }: { entry: CalendarEntry; iconClass: string 
   );
 }
 
+// Counts are figures: mono, like every number (DESIGN.md Mono Figure Rule).
+const Figure = ({ n }: { n: number }) => <span className="font-figure">{n}</span>;
+
 export function RecurringCalendar({
   streams,
   today,
@@ -158,12 +161,21 @@ export function RecurringCalendar({
       <div className="mb-4 min-h-5 text-[0.8125rem] text-muted-foreground">
         {failed ? null : pending ? (
           <Skeleton className="h-4 w-64" />
-        ) : (
-          <>
-            Bills {bills.filter((e) => e.status === "done").length} of {bills.length} paid
+        ) : bills.length + income.length === 0 ? null : isFuture ? (
+          // Nothing can have happened yet: count what's expected.
+          <p>
+            <Figure n={bills.length} /> {bills.length === 1 ? "bill" : "bills"}
             {" · "}
-            Income {income.filter((e) => e.status === "done").length} of {income.length} in
-          </>
+            <Figure n={income.length} /> income expected
+          </p>
+        ) : (
+          <p>
+            Bills <Figure n={bills.filter((e) => e.status === "done").length} /> of{" "}
+            <Figure n={bills.length} /> paid
+            {" · "}
+            Income <Figure n={income.filter((e) => e.status === "done").length} /> of{" "}
+            <Figure n={income.length} /> received
+          </p>
         )}
       </div>
 
