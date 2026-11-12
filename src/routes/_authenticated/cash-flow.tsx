@@ -30,7 +30,9 @@ import { formatEur, monthFromParam, parseTransactionsSearch } from "@/lib/transa
 import { TONE_TEXT, toneOf } from "@/lib/tone";
 import { FlowSankey } from "@/components/cash-flow/flow-sankey";
 import { TrendBars } from "@/components/cash-flow/trend-bars";
+import { EmptyState } from "@/components/empty-state";
 import { HeadlineFigure } from "@/components/headline-figure";
+import { Button } from "@/components/ui/button";
 import { MonthSwitcher } from "@/components/month-switcher";
 import { SegmentedControl } from "@/components/segmented-control";
 import { Alert } from "@/components/ui/alert";
@@ -157,7 +159,8 @@ function CashFlowPage() {
   // refresh keeps what already loaded (the alert still says it failed).
   const failed = (q: { isError: boolean; data?: unknown }) => q.isError && q.data === undefined;
   const noTotals = failed(monthlyQuery);
-  const money = (value: number) => (noTotals ? "—" : formatEur(value));
+  // Nothing recorded is not €0 either: dashes, as in the headline.
+  const money = (value: number) => (noTotals || summary.months === 0 ? "—" : formatEur(value));
   const flowPending = pending || spendQuery.isPending || incomeQuery.isPending;
 
   function changePeriod(next: Period) {
@@ -261,9 +264,21 @@ function CashFlowPage() {
               The breakdown didn't load.
             </p>
           ) : graph.nodes.length === 0 ? (
-            <p className="px-2 py-8 text-center text-sm text-muted-foreground">
-              Nothing came in or went out in {label}.
-            </p>
+            // The app's empty state, with a way back to a period that has data.
+            <EmptyState
+              title={`Nothing came in or went out in ${label}.`}
+              action={
+                canGoPrev ? (
+                  <Button
+                    variant="quiet"
+                    onClick={() => setStart(shiftPeriod(start, period, -1))}
+                    className="bg-muted"
+                  >
+                    Previous {period}
+                  </Button>
+                ) : undefined
+              }
+            />
           ) : (
             <FlowSankey
               graph={graph}

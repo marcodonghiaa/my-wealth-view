@@ -425,4 +425,17 @@ describe("Cash flow page", () => {
     const headline = await screen.findByRole("region", { name: /^Saved in/ });
     expect(headline).toHaveTextContent(/Excludes transfers\.$/);
   });
+
+  // Polish 4 #18: an empty period gets the app's empty state with a way back, and its rows dashes.
+  it("offers the previous month from an empty one", async () => {
+    tables["v_income_vs_expenses_monthly"] = [
+      { month: monthISO(-1), income_eur: 1000, expenses_eur: 1500 },
+    ];
+    renderPage();
+    expect(await screen.findByTestId("empty-fox")).toBeInTheDocument();
+    expect(row("Income")).toHaveTextContent("—");
+    expect(row("Spending")).toHaveTextContent("—");
+    fireEvent.click(screen.getByText("Previous month"));
+    await waitFor(() => expect(row("Income")).toHaveTextContent("€1,000.00"));
+  });
 });
