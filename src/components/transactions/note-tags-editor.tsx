@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useReducer, useRef, useState } from "react";
 import { X } from "lucide-react";
 import { fieldClass } from "@/components/ui/field";
 import { cn } from "@/lib/utils";
@@ -25,7 +25,8 @@ export function NoteEditor({
 }: {
   id?: string;
   note: string | null | undefined;
-  onSave: (note: string | null) => void;
+  /** May resolve to false when the save failed, so a failure seen at once still gets retried. */
+  onSave: (note: string | null) => void | Promise<boolean>;
   saving: boolean;
 }) {
   const [input, setInput] = useState(note ?? "");
@@ -64,7 +65,9 @@ export function NoteEditor({
         const next = normalizeNote(input);
         if (edited && next !== (note ?? null)) {
           sent.current = next;
-          onSave(next);
+          void Promise.resolve(onSave(next)).then((ok) => {
+            if (ok === false && sent.current === next) sent.current = null;
+          });
         }
       }}
       className={cn(fieldClass(), "h-auto min-h-11 resize-y py-2.5")}
@@ -88,7 +91,8 @@ export function TagEditor({
   /** For the field that adds a tag, so a heading can label it. */
   id?: string;
   tags: Array<string> | null | undefined;
-  onSave: (tags: Array<string>) => void;
+  /** May resolve to false when the save failed: the chips then go back to the saved tags. */
+  onSave: (tags: Array<string>) => void | Promise<boolean>;
   saving: boolean;
   suggestions?: Array<string> | undefined;
 }) {
@@ -100,6 +104,7 @@ export function TagEditor({
   useEffect(() => {
     sent.current = null;
   }, [tags]);
+  const [, rerender] = useReducer((n: number) => n + 1, 0);
   const current = sent.current ?? tags ?? [];
   const [input, setInput] = useState("");
   // Read out by screen readers: the chips change silently otherwise.
@@ -120,7 +125,14 @@ export function TagEditor({
 
   function save(next: Array<string>) {
     sent.current = next;
-    onSave(next);
+    // A failure can roll back before this field ever shows the save as pending, leaving `tags`
+    // unchanged: forget the list sent, or its chips would stay.
+    void Promise.resolve(onSave(next)).then((ok) => {
+      if (ok === false && sent.current === next) {
+        sent.current = null;
+        rerender();
+      }
+    });
   }
 
   // Closing the sheet can remove the field with no blur: keep a half-typed tag then too.

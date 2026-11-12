@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { NoteEditor, TagEditor } from "./note-tags-editor";
@@ -92,6 +92,27 @@ describe("closing the sheet", () => {
     fireEvent.blur(field);
     unmount();
     expect(onSave).toHaveBeenCalledTimes(1);
+  });
+
+  // polish-4 #12: a save can fail before the editor ever renders it as pending (an error returned
+  // at once). fails_when=the failed tag stays as a chip, or closing doesn't retry the note
+  it("drops a tag whose save failed at once", async () => {
+    const tags = ["trip"];
+    render(<TagEditor tags={tags} onSave={() => Promise.resolve(false)} saving={false} />);
+    await userEvent.type(screen.getByRole("combobox"), "ghost{Enter}");
+    expect(screen.queryByText("ghost")).toBeNull();
+    expect(screen.getByText("trip")).toBeInTheDocument();
+  });
+
+  it("retries a note whose save failed at once when the editor goes away", async () => {
+    const onSave = vi.fn(() => Promise.resolve(false));
+    const { unmount } = render(<NoteEditor note="old" onSave={onSave} saving={false} />);
+    const field = screen.getByRole("textbox");
+    fireEvent.change(field, { target: { value: "new" } });
+    fireEvent.blur(field);
+    await act(() => Promise.resolve());
+    unmount();
+    expect(onSave.mock.calls).toEqual([["new"], ["new"]]);
   });
 
   it("adds a half-typed tag when the editor goes away", () => {

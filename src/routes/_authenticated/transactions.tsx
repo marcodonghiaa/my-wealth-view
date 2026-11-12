@@ -469,9 +469,18 @@ function TransactionsPage({ category: initialCategory, month: initialMonth }: Tr
     // In the sheet too: on a phone the open sheet covers the toast's button.
     makeRule: isSplitwiseShare(tx) ? undefined : ruleAction(tx.creditor_name, tx.category),
     showAccount: multiAccount,
-    onSaveNote: (note) => updateNote.mutate({ tx, value: note }),
+    // false when the save failed (the hook already showed why), so the editor can retry or roll back.
+    onSaveNote: (note) =>
+      updateNote.mutateAsync({ tx, value: note }).then(
+        () => true,
+        () => false,
+      ),
     savingNote: updateNote.isPending && isSameTx(updateNote.variables?.tx, tx),
-    onSaveTags: (next) => updateTags.mutate({ tx, value: next }),
+    onSaveTags: (next) =>
+      updateTags.mutateAsync({ tx, value: next }).then(
+        () => true,
+        () => false,
+      ),
     savingTags: updateTags.isPending && isSameTx(updateTags.variables?.tx, tx),
     tagSuggestions: tagsQuery.data ?? [],
     onOpenChange: (open) => setEditing((now) => (open ? txId(tx) : now === txId(tx) ? null : now)),

@@ -50,9 +50,9 @@ export interface TransactionViewProps {
   /** Table rows: show which account a row came from; pointless with a single account. */
   showAccount?: boolean;
   /** Note and tags: only bank and manual rows (a Splitwise share has neither). */
-  onSaveNote?: (note: string | null) => void;
+  onSaveNote?: (note: string | null) => void | Promise<boolean>;
   savingNote?: boolean;
-  onSaveTags?: (tags: Array<string>) => void;
+  onSaveTags?: (tags: Array<string>) => void | Promise<boolean>;
   savingTags?: boolean;
   /** Tags used before, offered while typing one. */
   tagSuggestions?: Array<string>;
