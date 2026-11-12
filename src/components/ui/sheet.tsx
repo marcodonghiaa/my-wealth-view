@@ -11,6 +11,8 @@ import { cn } from "@/lib/utils";
 // history entry on the same address (the router's state kept, so it sees no new page); Back pops
 // it. Closing another way (X, Esc, overlay) takes the entry out again, unless the app has already
 // moved to another entry (a link in the sheet), so that page is never undone.
+// shortcut: Forward after Back re-enters the closed sheet's entry with no sheet open, so the next
+// Back looks like it does nothing. Re-opening the sheet on Forward is not worth the code.
 function useCloseOnBack(open: boolean, close: () => void) {
   const closeRef = React.useRef(close);
   closeRef.current = close;
