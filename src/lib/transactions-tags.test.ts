@@ -51,6 +51,14 @@ describe("normalizeNote", () => {
 });
 
 describe("listTags", () => {
+  // polish-5 #2: fails_when=the filter takes the first spelling it meets while suggestions take the
+  // most used one, so the label flips between #Trip and #trip as rows change
+  it("spells each tag the way suggestions do, else as most used this month", () => {
+    const rows = [{ tags: ["Trip"] }, { tags: ["trip"] }, { tags: ["trip", "Work"] }];
+    expect(listTags(rows)).toEqual(["trip", "Work"]);
+    expect(listTags(rows, ["TRIP", "food"])).toEqual(["TRIP", "Work"]);
+  });
+
   // polish-4 #7: fails_when=tag10 sorts before tag2, or "Work" lands after "trip"
   it("sorts numbers in tags by value and ignores case", () => {
     expect(listTags([{ tags: ["tag10", "trip", "tag2", "Work"] }])).toEqual([

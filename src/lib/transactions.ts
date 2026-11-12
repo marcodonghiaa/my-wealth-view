@@ -409,12 +409,27 @@ export function normalizeNote(raw: string): string | null {
 /** Tags that differ only in case ("Trip", "trip") are one tag. */
 export const sameTag = (a: string, b: string): boolean => a.toLowerCase() === b.toLowerCase();
 
-/** Tags used by these rows, once each ignoring case (first spelling seen), sorted, for the tag filter. */
-export function listTags(transactions: Array<{ tags?: Array<string> | null }>): Array<string> {
-  const byKey = new Map<string, string>();
+/**
+ * Tags used by these rows, once each ignoring case, sorted, for the tag filter. Each is spelled as
+ * in `preferred` (the suggestions, so filter and suggestions agree), else as most used here.
+ */
+export function listTags(
+  transactions: Array<{ tags?: Array<string> | null }>,
+  preferred: Array<string> = [],
+): Array<string> {
+  const byKey = new Map<string, Map<string, number>>();
   for (const tx of transactions)
-    for (const t of tx.tags ?? []) if (!byKey.has(t.toLowerCase())) byKey.set(t.toLowerCase(), t);
-  return [...byKey.values()].sort((a, b) =>
+    for (const t of tx.tags ?? []) {
+      const spellings = byKey.get(t.toLowerCase()) ?? new Map<string, number>();
+      spellings.set(t, (spellings.get(t) ?? 0) + 1);
+      byKey.set(t.toLowerCase(), spellings);
+    }
+  const spelled = [...byKey].map(
+    ([key, spellings]) =>
+      preferred.find((p) => p.toLowerCase() === key) ??
+      [...spellings].sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1))[0]![0],
+  );
+  return spelled.sort((a, b) =>
     a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" }),
   );
 }

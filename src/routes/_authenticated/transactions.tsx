@@ -340,7 +340,10 @@ function TransactionsPage({ category: initialCategory, month: initialMonth }: Tr
 
   const categories = useMemo(() => listCategories(transactions), [transactions]);
   // Only tags on this month's rows, so every option matches something.
-  const tags = useMemo(() => listTags(transactions), [transactions]);
+  const tags = useMemo(
+    () => listTags(transactions, tagsQuery.data),
+    [transactions, tagsQuery.data],
+  );
   // Removing the last use of the selected tag turns the filter off, so the list isn't left empty.
   if (tag && !txQuery.isPending && !tags.some((t) => sameTag(t, tag))) setTag("");
 
