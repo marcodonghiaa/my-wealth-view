@@ -18,17 +18,15 @@ function useCloseOnBack(open: boolean, close: () => void) {
     if (!open) return;
     const marker = Math.random().toString(36).slice(2);
     window.history.pushState({ ...window.history.state, __sheet: marker }, "");
-    let popped = false;
     const onPop = () => {
       if (window.history.state?.__sheet === marker) return;
-      popped = true;
       closeRef.current();
     };
     window.addEventListener("popstate", onPop);
     return () => {
       window.removeEventListener("popstate", onPop);
-      if (popped) return;
-      // After the router's queued navigation (a microtask) has landed.
+      // After the router's queued navigation (a microtask) has landed. After Back the entry is
+      // already gone, so this does nothing.
       setTimeout(() => {
         if (window.history.state?.__sheet === marker) window.history.back();
       });
