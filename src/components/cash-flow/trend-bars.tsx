@@ -60,7 +60,29 @@ export function TrendBars({
             }}
             className="cursor-pointer"
           >
-            <XAxis dataKey="tick" tick={TICK} tickLine={false} axisLine={false} interval={0} />
+            <XAxis
+              dataKey="tick"
+              // The period on screen is marked here too: its own bar can be empty.
+              tick={({ x, y, index }: { x: number; y: number; index: number }) => {
+                const on = data[index]?.key === selected;
+                return (
+                  <text
+                    x={x}
+                    y={y}
+                    dy={12}
+                    textAnchor="middle"
+                    {...TICK}
+                    fill={on ? "var(--color-foreground)" : TICK.fill}
+                    fontWeight={on ? 600 : 400}
+                  >
+                    {data[index]?.tick}
+                  </text>
+                );
+              }}
+              tickLine={false}
+              axisLine={false}
+              interval={0}
+            />
             <ReferenceLine y={0} stroke="var(--color-border)" />
             <Tooltip
               cursor={{ fill: "var(--color-muted)" }}

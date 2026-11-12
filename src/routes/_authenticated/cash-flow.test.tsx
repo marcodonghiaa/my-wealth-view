@@ -341,4 +341,14 @@ describe("Cash flow page", () => {
     fireEvent.click(surface, { clientX: 100, clientY: 20 });
     await waitFor(() => expect(row("Income")).toHaveTextContent("€1,000.00"));
   });
+
+  // Polish 4 #19: the period on screen is marked under the trend, even when its bar is empty.
+  it("marks the selected period's label in the trend", async () => {
+    renderPage();
+    const trend = await screen.findByRole("img", { name: /^Saved per month/ });
+    const ticks = [...trend.querySelectorAll(".recharts-xAxis text")];
+    expect(ticks.length).toBe(2);
+    expect(ticks.filter((t) => t.getAttribute("font-weight") === "600").length).toBe(1);
+    expect(ticks.at(-1)).toHaveAttribute("font-weight", "600");
+  });
 });
