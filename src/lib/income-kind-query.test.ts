@@ -203,6 +203,81 @@ describe("Undo, then Mark again", () => {
   });
 });
 
+// Polish 3 #2: every database error path, and both toasts.
+describe("errors", () => {
+  const boom = { message: "database is down" };
+  // Any query on category_rules answers with `boom`; other tables work as usual.
+  const failRules = () => {
+    const real = client.current.from.bind(client.current);
+    return vi.spyOn(client.current, "from").mockImplementation(((table: string) => {
+      if (table !== "category_rules") return real(table as never);
+      const q: Record<string, unknown> = {};
+      for (const m of ["select", "insert", "update", "delete", "eq", "single"]) q[m] = () => q;
+      q["then"] = (ok: (v: unknown) => unknown) =>
+        Promise.resolve({ data: null, error: boom }).then(ok);
+      return q;
+    }) as never);
+  };
+  const rule = {
+    id: "r1",
+    match_field: "creditor_name",
+    match_text: "Err Co",
+    match_mode: "exact",
+    set_income_kind: "regular",
+  };
+  const tx = { creditor_name: "Err Co", remittance_info: null };
+
+  it("throws the database error of an update, an insert and an undo", async () => {
+    const spy = failRules();
+    await expect(markIncomeKind({ tx, kind: "one_off", rules: [rule] })).rejects.toBe(boom);
+    await expect(markIncomeKind({ tx, kind: "one_off", rules: [] })).rejects.toBe(boom);
+    await expect(undoMark({ kind: "inserted", id: "r1", rule: rule as never })).rejects.toBe(boom);
+    await expect(
+      undoMark({ kind: "updated", id: "r1", previous: "regular", text: "Err Co" }),
+    ).rejects.toBe(boom);
+    spy.mockRestore();
+  });
+
+  it("says Couldn't save, and Couldn't undo", async () => {
+    const queryClient = new QueryClient();
+    queryClient.setQueryData(rulesQuery.queryKey, []);
+    const wrapper = ({ children }: { children: ReactNode }) =>
+      createElement(QueryClientProvider, { client: queryClient }, children);
+    const { result } = renderHook(() => useMarkIncomeKind(), { wrapper });
+    vi.mocked(toast.error).mockClear();
+    vi.mocked(toast.success).mockClear();
+    await act(async () => {
+      await result.current
+        .mutateAsync({
+          tx: { creditor_name: null, remittance_info: null },
+          kind: "regular",
+          rules: [],
+        })
+        .catch(() => undefined);
+    });
+    expect(toast.error).toHaveBeenCalledWith("Couldn't save", {
+      description: expect.stringMatching(/no name/),
+    });
+
+    await act(() =>
+      result.current.mutateAsync({
+        tx: { creditor_name: "Undo Fails Co", remittance_info: null },
+        kind: "regular",
+        rules: [],
+      }),
+    );
+    const undo = vi.mocked(toast.success).mock.calls[0]![1]!.action as unknown as {
+      onClick: () => void;
+    };
+    const spy = failRules();
+    undo.onClick();
+    await vi.waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith("Couldn't undo", { description: boom.message }),
+    );
+    spy.mockRestore();
+  });
+});
+
 describe("markIncomeKind and undoMark", () => {
   const tx = (name: string | null) => ({ creditor_name: name, remittance_info: null });
   const readRule = async (id: string) =>
