@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
@@ -13,7 +13,9 @@ const db = vi.hoisted(() => ({
   updates: [] as Array<Record<string, unknown>>,
   hold: false,
 }));
-const now = new Date();
+// A fixed clock: the page reads the date again, and a run across midnight at month end must
+// not see two different months (Polish 3 #13).
+const now = new Date(2026, 10, 15, 12);
 const ym = (back: number) => {
   const d = new Date(now.getFullYear(), now.getMonth() - back, 1);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
@@ -97,6 +99,9 @@ const renderPage = () =>
   );
 
 beforeEach(() => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(now);
+  vi.clearAllMocks();
   db.window = [
     bank("e1", `${ym(0)}-01`, "ACME Ltd"),
     bank("p1", `${ym(1)}-01`, "ACME Ltd"),
@@ -108,6 +113,10 @@ beforeEach(() => {
   db.inserts = [];
   db.updates = [];
   db.hold = false;
+});
+
+afterEach(() => {
+  vi.useRealTimers();
 });
 
 describe("Income: Regular and One-off", () => {

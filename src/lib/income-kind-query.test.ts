@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { act, renderHook } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createElement, type ReactNode } from "react";
@@ -24,6 +24,14 @@ import {
 } from "./income-kind-query";
 import { rulesQuery, type RuleRow } from "./rules-query";
 import { toast } from "sonner";
+import { createFakeClient } from "@/lib/demo/fake-client";
+
+// Polish 3 #13: every test starts from fresh demo data and clean mocks, so none depends on what
+// an earlier one changed (a flow set to null, rules inserted).
+beforeEach(() => {
+  client.current = createFakeClient(NOW) as unknown as SupabaseClient;
+  vi.clearAllMocks();
+});
 
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 

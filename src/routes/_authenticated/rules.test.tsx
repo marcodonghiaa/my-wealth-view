@@ -367,11 +367,14 @@ describe("income rules", () => {
   // An income mark from the Income page has no category, type or flow: it must still say what it does.
   it("shows an income-only rule's effect", async () => {
     db.rules = "income";
-    renderPage();
-    expect(await screen.findByText("Regular income")).toBeTruthy();
-    expect(screen.getByText("One-off income")).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "Apply to past transactions" })).toBeNull();
-    db.rules = "ok";
+    try {
+      renderPage();
+      expect(await screen.findByText("Regular income")).toBeTruthy();
+      expect(screen.getByText("One-off income")).toBeTruthy();
+      expect(screen.queryByRole("button", { name: "Apply to past transactions" })).toBeNull();
+    } finally {
+      db.rules = "ok"; // a failed assertion must not leak income rules into later tests
+    }
   });
 });
 
