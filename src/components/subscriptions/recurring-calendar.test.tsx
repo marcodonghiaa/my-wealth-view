@@ -148,6 +148,16 @@ describe("RecurringCalendar", () => {
     expect(screen.queryByText(/Couldn't load the calendar/)).toBeNull();
   });
 
+  // Polish 3 #10: a year ahead, the list says which year.
+  it("adds the year to the list's dates in another year", async () => {
+    renderCal([stream({})]);
+    await screen.findByText(/Bills/);
+    fireEvent.click(screen.getByRole("button", { name: "Next month" }));
+    fireEvent.click(screen.getByRole("button", { name: "Next month" }));
+    const row = (await screen.findAllByText("Bill · expected"))[0]!.closest("li")!;
+    expect(row.textContent).toMatch(/Jan.*2027/);
+  });
+
   it("calls a past unpaid date not seen yet", async () => {
     renderCal([stream({ next_expected: "2026-11-03" })]);
     expect(

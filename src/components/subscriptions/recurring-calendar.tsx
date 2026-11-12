@@ -6,7 +6,7 @@ import type { Tables } from "@/integrations/supabase/types";
 import { formatISODate } from "@/lib/date";
 import { dateLocale } from "@/lib/locale";
 import { readPages } from "@/lib/read-pages";
-import { formatMoney, startOfMonth } from "@/lib/transactions";
+import { formatBookingDateShort, formatMoney, startOfMonth } from "@/lib/transactions";
 import { REGULAR_RULE, regularSources } from "@/lib/regular-income";
 import { useIncomeRules, useIncomeWindow } from "@/lib/income-kind-query";
 import {
@@ -251,13 +251,8 @@ export function RecurringCalendar({
               {[...days].map(([iso, list]) =>
                 list.map((e, i) => (
                   <li key={e.id} className="flex items-center gap-3 px-4 py-2.5 text-sm">
-                    <span className="w-12 shrink-0 font-figure text-xs text-muted-foreground">
-                      {i === 0
-                        ? new Date(`${iso}T00:00:00`).toLocaleDateString(dateLocale(), {
-                            day: "numeric",
-                            month: "short",
-                          })
-                        : ""}
+                    <span className="w-16 shrink-0 font-figure text-xs text-muted-foreground">
+                      {i === 0 ? formatBookingDateShort(iso, today) : ""}
                     </span>
                     <StatusIcon entry={e} />
                     <span className="min-w-0 flex-1">
