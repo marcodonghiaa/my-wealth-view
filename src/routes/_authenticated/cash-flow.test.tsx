@@ -378,4 +378,15 @@ describe("Cash flow page", () => {
     renderPage();
     expect(await screen.findByRole("heading", { name: "Money in and out" })).toBeInTheDocument();
   });
+
+  // Polish 4 #14: the period still running is marked as partial; a finished one isn't.
+  it("says 'so far' for the period still running only", async () => {
+    renderPage();
+    const headline = await screen.findByRole("region", { name: /^Saved in/ });
+    await waitFor(() => expect(headline).toHaveTextContent(/^Saved so far/));
+    fireEvent.click(screen.getByRole("button", { name: "Previous month" }));
+    await waitFor(() => expect(row("Income")).toHaveTextContent("€1,000.00"));
+    expect(screen.getByText("Spent more than came in")).toBeInTheDocument();
+    expect(screen.queryByText(/so far/)).toBeNull();
+  });
 });

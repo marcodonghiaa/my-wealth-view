@@ -195,6 +195,8 @@ function CashFlowPage() {
       <section aria-label={`Saved in ${label}`} className="mb-8">
         <p className="text-[0.9375rem] font-medium text-muted-foreground">
           {summary.net < 0 ? "Spent more than came in" : "Saved"}
+          {/* The period still running isn't a full month, quarter or year yet. */}
+          {!canGoNext && " so far"}
         </p>
         <div className="mt-1">
           {pending ? (
