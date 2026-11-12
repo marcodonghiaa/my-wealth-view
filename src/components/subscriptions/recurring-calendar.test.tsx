@@ -342,6 +342,9 @@ describe("RecurringCalendar", () => {
     // Polish 3 #4: no counts or "nothing recurring" made up from the missing data.
     expect(screen.queryByText(/ of \d+ paid/)).toBeNull();
     expect(screen.queryByText(/Nothing recurring|No recurring/)).toBeNull();
+    // Polish 5 D: nor a partial month: without the charges a paid bill would read "not seen yet".
+    expect(screen.queryAllByText("Streamflix")).toEqual([]);
+    expect(screen.queryAllByRole("cell", { name: /Streamflix/ })).toEqual([]);
   });
 
   it("doesn't call a month empty when it couldn't be read", async () => {

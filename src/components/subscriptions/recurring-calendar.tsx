@@ -138,17 +138,28 @@ export function RecurringCalendar({
   const windowQuery = useIncomeWindow(windowMonth);
   const rulesQuery = useIncomeRules();
 
+  const failed = chargesQuery.error ?? windowQuery.error ?? rulesQuery.error;
+  // A part of the month is no month: without the charges a paid bill would read "not seen yet".
   const entries = useMemo(() => {
+    if (failed) return [];
     const bills = billEntries(streams, isFuture ? [] : (chargesQuery.data ?? []), month, today);
     const sources =
       windowQuery.data && rulesQuery.data ? regularSources(windowQuery.data, rulesQuery.data) : [];
     return [...bills, ...incomeEntries(sources, month, today)];
-  }, [streams, chargesQuery.data, windowQuery.data, rulesQuery.data, month, today, isFuture]);
+  }, [
+    failed,
+    streams,
+    chargesQuery.data,
+    windowQuery.data,
+    rulesQuery.data,
+    month,
+    today,
+    isFuture,
+  ]);
   const days = useMemo(() => byDay(entries), [entries]);
 
   const pending =
     (!isFuture && chargesQuery.isPending) || windowQuery.isPending || rulesQuery.isPending;
-  const failed = chargesQuery.error ?? windowQuery.error ?? rulesQuery.error;
   const bills = entries.filter((e) => e.kind === "bill");
   const income = entries.filter((e) => e.kind === "income");
   const todayIso = formatISODate(today);
