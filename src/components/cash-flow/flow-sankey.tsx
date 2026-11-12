@@ -27,6 +27,7 @@ function FlowNodeShape({ x, y, width, height, payload, narrow }: NodeProps & { n
   // their own band instead, which is pale enough to read on.
   const layout = SANKEY_LAYOUT[narrow ? "phone" : "desktop"];
   const outside = isLeft && layout.outsideLeft;
+  const onBand = isLeft && !outside;
   const labelX = outside ? x - SANKEY_LAYOUT_GAP : x + width + SANKEY_LAYOUT_GAP;
   const mid = y + height / 2;
   return (
@@ -46,7 +47,8 @@ function FlowNodeShape({ x, y, width, height, payload, narrow }: NodeProps & { n
           <tspan
             x={labelX}
             dy="1.25em"
-            className="fill-muted-foreground"
+            // On a band, grey is too faint to read (4.35:1): use ink there.
+            className={onBand ? "fill-foreground" : "fill-muted-foreground"}
             style={{ fontFamily: "var(--font-figure)", fontSize: 11 }}
           >
             {formatEur(payload.value)}

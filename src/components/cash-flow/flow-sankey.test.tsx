@@ -55,3 +55,10 @@ it("draws each band as a filled outline, not a thick stroke", () => {
     expect(l.getAttribute("d")).toMatch(/Z$/);
   }
 });
+
+// Polish 4 #3: grey on the green band is too faint (4.35:1); an amount on a band is in ink.
+it("draws a payer's amount in ink when it sits on its band", () => {
+  mobile = true;
+  render(<FlowSankey graph={graph} label="Cash flow" />);
+  expect(payerLabel().lastElementChild).toHaveClass("fill-foreground");
+});
