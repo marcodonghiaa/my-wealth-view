@@ -351,4 +351,14 @@ describe("Cash flow page", () => {
     expect(ticks.filter((t) => t.getAttribute("font-weight") === "600").length).toBe(1);
     expect(ticks.at(-1)).toHaveAttribute("font-weight", "600");
   });
+
+  // Polish 4 #9: the page opens on its title; the period control sits beside it, not above it.
+  it("puts the period control in the title row, after the title", async () => {
+    renderPage();
+    const group = await screen.findByRole("radiogroup", { name: "Period" });
+    const prev = screen.getByRole("button", { name: "Previous month" });
+    const row = group.parentElement!.parentElement!;
+    expect(row).toContainElement(prev);
+    expect(prev.compareDocumentPosition(group) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
 });

@@ -174,19 +174,27 @@ function CashFlowPage() {
 
       {loadError && <Alert className="mb-6">Some figures didn't load: {loadError.message}</Alert>}
 
-      <div className="mb-4">
-        <SegmentedControl label="Period" options={PERIODS} value={period} onChange={changePeriod} />
+      {/* The title leads, as on every list screen; the period control sits beside it on desktop
+          and under it on a phone, sized to its options. */}
+      <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-center md:gap-4">
+        <MonthSwitcher
+          className="md:flex-1"
+          label={label}
+          unit={period}
+          onPrev={() => setStart(shiftPeriod(start, period, -1))}
+          onNext={() => setStart(shiftPeriod(start, period, 1))}
+          canGoPrev={canGoPrev}
+          canGoNext={canGoNext}
+        />
+        <div className="md:w-64 md:shrink-0">
+          <SegmentedControl
+            label="Period"
+            options={PERIODS}
+            value={period}
+            onChange={changePeriod}
+          />
+        </div>
       </div>
-
-      <MonthSwitcher
-        className="mb-6"
-        label={label}
-        unit={period}
-        onPrev={() => setStart(shiftPeriod(start, period, -1))}
-        onNext={() => setStart(shiftPeriod(start, period, 1))}
-        canGoPrev={canGoPrev}
-        canGoNext={canGoNext}
-      />
 
       <section aria-label={`Saved in ${label}`} className="mb-8">
         <p className="text-[0.9375rem] font-medium text-muted-foreground">
