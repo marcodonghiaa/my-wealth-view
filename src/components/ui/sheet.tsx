@@ -36,9 +36,9 @@ function useCloseOnBack(open: boolean, close: () => void) {
   }, [open]);
 }
 
-function Sheet({ open, onOpenChange, ...props }: React.ComponentProps<typeof SheetPrimitive.Root>) {
-  useCloseOnBack(!!open, () => onOpenChange?.(false));
-  return <SheetPrimitive.Root open={open} onOpenChange={onOpenChange} {...props} />;
+function Sheet(props: React.ComponentProps<typeof SheetPrimitive.Root>) {
+  useCloseOnBack(!!props.open, () => props.onOpenChange?.(false));
+  return <SheetPrimitive.Root {...props} />;
 }
 
 const SheetTrigger = SheetPrimitive.Trigger;
