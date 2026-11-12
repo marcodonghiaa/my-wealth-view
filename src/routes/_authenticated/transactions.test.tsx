@@ -442,6 +442,42 @@ describe("Transactions page tag filter", () => {
     expect(screen.getByLabelText("Filter by tag")).toHaveValue("");
   });
 
+  // polish-5 #1: fails_when=the selected tag's spelling changes under it (Trip/trip) and the select
+  // shows "All tags" while the list stays filtered
+  it("keeps the tag filter showing its tag when the tag's spelling changes", async () => {
+    const today = new Date().toISOString().slice(0, 10);
+    const base = {
+      account_uid: "a",
+      booking_date: today,
+      category: "Travel",
+      currency: "EUR",
+      amount: 10,
+      signed_amount_eur: -10,
+      credit_debit_indicator: "DBIT",
+      flow_type: "spend",
+    };
+    rows["v_transactions_eur"] = [
+      { ...base, entry_reference: "1", creditor_name: "Hotel Alpha", tags: ["Trip"] },
+      { ...base, entry_reference: "2", creditor_name: "Cafe Beta", tags: ["trip"] },
+      { ...base, entry_reference: "3", creditor_name: "Bar Gamma", tags: ["trip"] },
+      { ...base, entry_reference: "4", creditor_name: "Shop Delta", tags: [] },
+    ];
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    renderPage(client);
+    const select = await screen.findByLabelText("Filter by tag");
+    fireEvent.change(select, { target: { value: "trip" } });
+    rows["v_transactions_eur"] = [
+      { ...base, entry_reference: "1", creditor_name: "Hotel Alpha", tags: ["Trip"] },
+      { ...base, entry_reference: "2", creditor_name: "Cafe Beta", tags: [] },
+      { ...base, entry_reference: "3", creditor_name: "Bar Gamma", tags: [] },
+      { ...base, entry_reference: "4", creditor_name: "Shop Delta", tags: [] },
+    ];
+    await act(() => client.invalidateQueries({ queryKey: ["transactions"] }));
+    await waitFor(() => expect(screen.queryAllByText("Cafe Beta")).toHaveLength(0));
+    expect(screen.getByLabelText("Filter by tag")).toHaveValue("Trip");
+    expect(screen.queryAllByText("Shop Delta")).toHaveLength(0);
+  });
+
   // polish-4 #6: fails_when=a long tag stretches the desktop tag select and squeezes Search
   it("caps the desktop tag select's width", async () => {
     rows["v_transactions_eur"] = [

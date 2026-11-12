@@ -344,8 +344,10 @@ function TransactionsPage({ category: initialCategory, month: initialMonth }: Tr
     () => listTags(transactions, tagsQuery.data),
     [transactions, tagsQuery.data],
   );
-  // Removing the last use of the selected tag turns the filter off, so the list isn't left empty.
-  if (tag && !txQuery.isPending && !tags.some((t) => sameTag(t, tag))) setTag("");
+  // Removing the last use of the selected tag turns the filter off, so the list isn't left empty;
+  // if it's still used in another spelling (Trip/trip), the filter follows that spelling.
+  const tagNow = tags.find((t) => sameTag(t, tag));
+  if (tag && !txQuery.isPending && tagNow !== tag) setTag(tagNow ?? "");
 
   const accounts = useMemo(() => accountsQuery.data ?? {}, [accountsQuery.data]);
   const bankFor = useCallback(
