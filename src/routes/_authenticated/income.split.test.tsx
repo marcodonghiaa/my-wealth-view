@@ -227,6 +227,24 @@ describe("Income: Regular and One-off", () => {
     expect(db.inserts).toHaveLength(1);
   });
 
+  // Polish 5 C: on a phone the list shifts up when a row moves, so a quick second tap lands on
+  // another row's Mark and changes it. Taps right after a save are ignored for a moment.
+  it("ignores a Mark tapped right after a row moved, then works again", async () => {
+    renderPage();
+    const oneOff = await screen.findByRole("region", { name: "One-off" });
+    fireEvent.click(within(oneOff).getByRole("button", { name: "Mark Aunt May as regular" }));
+    await screen.findByRole("button", { name: "Mark Aunt May as one-off" });
+    const changes = () => db.inserts.length + db.updates.length;
+    const before = changes();
+    const acme = () => screen.getByRole("button", { name: "Mark ACME Ltd as one-off" });
+    fireEvent.click(acme());
+    await new Promise((r) => setTimeout(r, 50));
+    expect(changes()).toBe(before);
+    await new Promise((r) => setTimeout(r, 600));
+    fireEvent.click(acme());
+    await vi.waitFor(() => expect(changes()).toBe(before + 1));
+  });
+
   // Polish 4 #1: the button a keyboard user pressed moves with its row; focus follows it there
   // instead of dropping to the top of the page, and the Undo toast stays long enough to reach.
   it("keeps focus on the moved row's button, and gives Undo ten seconds", async () => {

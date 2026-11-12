@@ -78,6 +78,8 @@ async function fetchIncomeForMonth(month: Date): Promise<Array<IncomeRow>> {
   return (data ?? []) as Array<IncomeRow>;
 }
 
+const MARK_COOLDOWN_MS = 500;
+
 interface MarkProps {
   /** The kind a row moves to. */
   to: IncomeKind;
@@ -298,8 +300,10 @@ function IncomePage() {
                           { tx, kind: to, rules: rulesQuery.data ?? [] },
                           {
                             onSuccess: () => setFocusKey(txKey(tx)),
+                            // The row just moved and the list shifted under the finger: a
+                            // quick second tap would hit another row's Mark, so wait a moment.
                             onSettled: () => {
-                              marking.current = false;
+                              setTimeout(() => (marking.current = false), MARK_COOLDOWN_MS);
                             },
                           },
                         );
