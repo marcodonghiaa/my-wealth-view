@@ -269,7 +269,7 @@ describe("notes and tags", () => {
     expect(screen.getByText(/#trip/)).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: /Hotel/ }));
     expect(await screen.findByLabelText("Note")).toHaveValue("Paid for two");
-    await userEvent.type(screen.getByLabelText("Add a tag"), "work{Enter}");
+    await userEvent.type(screen.getByRole("combobox", { name: "Tags" }), "work{Enter}");
     expect(p.onSaveTags).toHaveBeenCalledWith(["trip", "work"]);
   });
 
@@ -305,8 +305,12 @@ describe("notes and tags", () => {
     expect(screen.getByText("Note", { selector: "label" })).toHaveAttribute("for", note.id);
     expect(screen.getByText("Tags", { selector: "label" })).toHaveAttribute(
       "for",
-      screen.getByLabelText("Add a tag").id,
+      screen.getByRole("combobox", { name: "Tags" }).id,
     );
+    // polish-4 #10: fails_when=an aria-label hides the visible heading, so "click Tags" by voice
+    // finds nothing
+    expect(screen.getByRole("combobox", { name: "Tags" })).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "Note" })).toBe(note);
   });
 
   it("table row shows the note under the name", () => {
@@ -330,6 +334,6 @@ describe("notes and tags", () => {
     await userEvent.click(screen.getByRole("button", { name: /Dinner/ }));
     await screen.findByRole("dialog");
     expect(screen.queryByLabelText("Note")).toBeNull();
-    expect(screen.queryByLabelText("Add a tag")).toBeNull();
+    expect(screen.queryByRole("combobox")).toBeNull();
   });
 });

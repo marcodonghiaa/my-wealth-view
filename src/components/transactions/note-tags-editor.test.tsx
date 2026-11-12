@@ -9,7 +9,7 @@ describe("NoteEditor", () => {
   it("saves on blur only when the note changed, empty as null", () => {
     const onSave = vi.fn();
     render(<NoteEditor note="old" onSave={onSave} saving={false} />);
-    const field = screen.getByLabelText("Note");
+    const field = screen.getByRole("textbox");
     fireEvent.blur(field);
     expect(onSave).not.toHaveBeenCalled();
     fireEvent.change(field, { target: { value: "  new note " } });
@@ -26,7 +26,7 @@ describe("NoteEditor draft", () => {
   it("keeps the typed note when a save fails and the old note comes back", () => {
     const onSave = vi.fn();
     const { rerender } = render(<NoteEditor note="old" onSave={onSave} saving={false} />);
-    const field = screen.getByLabelText("Note");
+    const field = screen.getByRole("textbox");
     fireEvent.change(field, { target: { value: "new" } });
     fireEvent.blur(field);
     rerender(<NoteEditor note="new" onSave={onSave} saving={true} />);
@@ -42,7 +42,7 @@ describe("closing the sheet", () => {
   it("saves a changed note once when the editor goes away without a blur", () => {
     const onSave = vi.fn();
     const { unmount } = render(<NoteEditor note="old" onSave={onSave} saving={false} />);
-    fireEvent.change(screen.getByLabelText("Note"), { target: { value: "new" } });
+    fireEvent.change(screen.getByRole("textbox"), { target: { value: "new" } });
     unmount();
     expect(onSave).toHaveBeenCalledWith("new");
   });
@@ -52,7 +52,7 @@ describe("closing the sheet", () => {
     const onSave = vi.fn();
     const { rerender, unmount } = render(<NoteEditor note="old" onSave={onSave} saving={false} />);
     rerender(<NoteEditor note="newer" onSave={onSave} saving={false} />);
-    expect(screen.getByLabelText("Note")).toHaveValue("newer");
+    expect(screen.getByRole("textbox")).toHaveValue("newer");
     unmount();
     expect(onSave).not.toHaveBeenCalled();
   });
@@ -60,14 +60,14 @@ describe("closing the sheet", () => {
   // polish-3 #8: fails_when=the note can be edited while its save runs
   it("locks the note while it saves", () => {
     render(<NoteEditor note="old" onSave={vi.fn()} saving={true} />);
-    expect(screen.getByLabelText("Note")).toBeDisabled();
+    expect(screen.getByRole("textbox")).toBeDisabled();
   });
 
   // polish-3 #3: fails_when=passing through the field rewrites a note stored in another form
   it("doesn't save on blur when nothing was typed", () => {
     const onSave = vi.fn();
     render(<NoteEditor note={"cafe\u0301 x\u00a0"} onSave={onSave} saving={false} />);
-    fireEvent.blur(screen.getByLabelText("Note"));
+    fireEvent.blur(screen.getByRole("textbox"));
     expect(onSave).not.toHaveBeenCalled();
   });
 
@@ -75,7 +75,7 @@ describe("closing the sheet", () => {
   it("retries a failed note when the editor goes away", () => {
     const onSave = vi.fn();
     const { rerender, unmount } = render(<NoteEditor note="old" onSave={onSave} saving={false} />);
-    const field = screen.getByLabelText("Note");
+    const field = screen.getByRole("textbox");
     fireEvent.change(field, { target: { value: "oldx" } });
     fireEvent.blur(field);
     rerender(<NoteEditor note="oldx" onSave={onSave} saving={true} />);
@@ -87,7 +87,7 @@ describe("closing the sheet", () => {
   it("does not save twice when blur already saved", () => {
     const onSave = vi.fn();
     const { unmount } = render(<NoteEditor note="old" onSave={onSave} saving={false} />);
-    const field = screen.getByLabelText("Note");
+    const field = screen.getByRole("textbox");
     fireEvent.change(field, { target: { value: "new" } });
     fireEvent.blur(field);
     unmount();
@@ -97,7 +97,7 @@ describe("closing the sheet", () => {
   it("adds a half-typed tag when the editor goes away", () => {
     const onSave = vi.fn();
     const { unmount } = render(<TagEditor tags={["trip"]} onSave={onSave} saving={false} />);
-    fireEvent.change(screen.getByLabelText("Add a tag"), { target: { value: "food" } });
+    fireEvent.change(screen.getByRole("combobox"), { target: { value: "food" } });
     unmount();
     expect(onSave).toHaveBeenCalledWith(["trip", "food"]);
   });
@@ -107,7 +107,7 @@ describe("TagEditor", () => {
   it("adds a tag on Enter and on comma, skipping repeats", () => {
     const onSave = vi.fn();
     render(<TagEditor tags={["trip"]} onSave={onSave} saving={false} />);
-    const input = screen.getByLabelText("Add a tag");
+    const input = screen.getByRole("combobox");
     fireEvent.change(input, { target: { value: " work " } });
     fireEvent.keyDown(input, { key: "Enter" });
     expect(onSave).toHaveBeenLastCalledWith(["trip", "work"]);
@@ -123,7 +123,7 @@ describe("TagEditor", () => {
     const onSave = vi.fn();
     const tags = ["trip"]; // the same list until the save's update reaches the cache
     const { rerender } = render(<TagEditor tags={tags} onSave={onSave} saving={false} />);
-    const input = screen.getByLabelText("Add a tag");
+    const input = screen.getByRole("combobox");
     await userEvent.type(input, "a,");
     rerender(<TagEditor tags={tags} onSave={onSave} saving={true} />);
     expect(input).toBeEnabled();
@@ -135,7 +135,7 @@ describe("TagEditor", () => {
   it("disables removing while a save runs", () => {
     render(<TagEditor tags={["trip"]} onSave={vi.fn()} saving={true} />);
     expect(screen.getByRole("button", { name: "Remove tag trip" })).toBeDisabled();
-    expect(screen.getByLabelText("Add a tag")).toBeEnabled();
+    expect(screen.getByRole("combobox")).toBeEnabled();
   });
 
   it("removes a tag", () => {
@@ -154,7 +154,7 @@ describe("TagEditor", () => {
       o.getAttribute("value"),
     );
     expect(options).toEqual(["food"]);
-    const input = screen.getByLabelText("Add a tag");
+    const input = screen.getByRole("combobox");
     fireEvent.change(input, { target: { value: "food" } });
     fireEvent.blur(input);
     expect(onSave).toHaveBeenCalledWith(["trip", "food"]);
@@ -177,7 +177,7 @@ describe("TagEditor", () => {
     const tags = Array.from({ length: 19 }, (_, i) => `t${i}`);
     const onSave = vi.fn();
     render(<TagEditor tags={tags} onSave={onSave} saving={false} />);
-    const input = screen.getByLabelText("Add a tag");
+    const input = screen.getByRole("combobox");
     await userEvent.type(input, "last{Enter}");
     expect(onSave).toHaveBeenCalledTimes(1);
     expect(input).toHaveFocus();
@@ -191,7 +191,7 @@ describe("TagEditor", () => {
   // polish-4 #9: fails_when=Chrome's datalist ▼ makes the tag field look like a select
   it("hides the browser's suggestion arrow on the tag field", () => {
     render(<TagEditor tags={[]} onSave={vi.fn()} saving={false} />);
-    expect(screen.getByLabelText("Add a tag")).toHaveClass(
+    expect(screen.getByRole("combobox")).toHaveClass(
       "[&::-webkit-calendar-picker-indicator]:hidden",
     );
   });
@@ -211,7 +211,7 @@ describe("TagEditor", () => {
   it("moves focus to the tag field after removing a tag", async () => {
     render(<TagEditor tags={["trip", "work"]} onSave={vi.fn()} saving={false} />);
     await userEvent.click(screen.getByRole("button", { name: "Remove tag trip" }));
-    expect(screen.getByLabelText("Add a tag")).toHaveFocus();
+    expect(screen.getByRole("combobox")).toHaveFocus();
   });
 });
 
@@ -221,7 +221,7 @@ describe("TagEditor commas", () => {
   it("adds the tag when a comma arrives through typing alone", () => {
     const onSave = vi.fn();
     render(<TagEditor tags={[]} onSave={onSave} saving={false} />);
-    const input = screen.getByLabelText("Add a tag");
+    const input = screen.getByRole("combobox");
     fireEvent.change(input, { target: { value: "work," } });
     expect(onSave).toHaveBeenLastCalledWith(["work"]);
     expect(input).toHaveValue("");
@@ -230,7 +230,7 @@ describe("TagEditor commas", () => {
   it("splits pasted text at commas", () => {
     const onSave = vi.fn();
     render(<TagEditor tags={["trip"]} onSave={onSave} saving={false} />);
-    const input = screen.getByLabelText("Add a tag");
+    const input = screen.getByRole("combobox");
     fireEvent.change(input, { target: { value: "work, food" } });
     fireEvent.keyDown(input, { key: "Enter" });
     expect(onSave).toHaveBeenLastCalledWith(["trip", "work", "food"]);
@@ -242,7 +242,7 @@ describe("TagEditor reuses an existing spelling", () => {
   it("takes the suggestion's spelling when only case differs", () => {
     const onSave = vi.fn();
     render(<TagEditor tags={[]} onSave={onSave} saving={false} suggestions={["Trip"]} />);
-    const input = screen.getByLabelText("Add a tag");
+    const input = screen.getByRole("combobox");
     fireEvent.change(input, { target: { value: "trip" } });
     fireEvent.keyDown(input, { key: "Enter" });
     expect(onSave).toHaveBeenLastCalledWith(["Trip"]);

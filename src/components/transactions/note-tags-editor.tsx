@@ -51,7 +51,6 @@ export function NoteEditor({
   return (
     <textarea
       id={id}
-      aria-label="Note"
       value={input}
       maxLength={MAX_NOTE_LENGTH}
       rows={2}
@@ -160,7 +159,6 @@ export function TagEditor({
       <input
         ref={field}
         id={id}
-        aria-label="Add a tag"
         list={listId}
         value={input}
         maxLength={MAX_TAG_LENGTH}
