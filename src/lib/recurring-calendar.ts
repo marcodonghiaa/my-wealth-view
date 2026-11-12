@@ -7,7 +7,7 @@ import type { RegularSource } from "@/lib/regular-income";
 
 type Stream = Tables<"recurring_streams">;
 
-export type EntryStatus = "done" | "late" | "upcoming";
+type EntryStatus = "done" | "late" | "upcoming";
 
 export interface CalendarEntry {
   id: string;
@@ -17,7 +17,6 @@ export interface CalendarEntry {
   /** Always positive; `kind` says the direction. */
   amount: number;
   currency: string;
-  category: string | null;
   status: EntryStatus;
 }
 
@@ -135,7 +134,6 @@ export function billEntries(
       name: owner.display_name ?? owner.merchant_key,
       amount,
       currency: c.currency,
-      category: owner.category,
       status: "done",
     });
   }
@@ -166,7 +164,6 @@ export function billEntries(
         name: s.display_name ?? s.merchant_key,
         amount: Math.abs(s.typical_amount ?? 0),
         currency: s.currency,
-        category: s.category,
         status: date < todayIso ? "late" : "upcoming",
       });
     }
@@ -196,7 +193,6 @@ export function incomeEntries(
         name: src.name,
         amount: Math.abs(t.amount),
         currency: t.currency,
-        category: null,
         status: "done",
       });
     if (received.length > 0 || monthKey(month) < monthKey(today)) continue;
@@ -208,7 +204,6 @@ export function incomeEntries(
       name: src.name,
       amount: src.amount,
       currency: src.currency,
-      category: null,
       status: date < todayIso ? "late" : "upcoming",
     });
   }

@@ -35,7 +35,7 @@ export function fetchIncomeWindow(month: Date): Promise<Array<IncomeTx>> {
 }
 
 // Starts with "income" so a category or flow change (which refetches "income") refreshes it.
-export const incomeWindowKey = (month: Date) => ["income", "window", incomeWindow(month).start];
+const incomeWindowKey = (month: Date) => ["income", "window", incomeWindow(month).start];
 
 export const useIncomeWindow = (month: Date) =>
   useQuery({ queryKey: incomeWindowKey(month), queryFn: () => fetchIncomeWindow(month) });

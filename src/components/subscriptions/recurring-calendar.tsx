@@ -26,7 +26,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 type Stream = Tables<"recurring_streams">;
 
 // How far ahead the calendar goes: a yearly charge shows up within it.
-export const MONTHS_AHEAD = 12;
+const MONTHS_AHEAD = 12;
 const CHIPS_PER_DAY = 3;
 
 /** This month's charges from the streams' names, from `transactions` (spend only). The names are

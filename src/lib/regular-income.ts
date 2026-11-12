@@ -6,8 +6,8 @@ import { foldText, textMatches } from "@/lib/rules";
 // WINDOW_MONTHS months, whatever the amount (a salary with a 13th month, a steady client). A
 // rule (category_rules.set_income_kind) overrides the guess for the names it matches.
 
-export const WINDOW_MONTHS = 6;
-export const REGULAR_MONTHS = 3;
+const WINDOW_MONTHS = 6;
+const REGULAR_MONTHS = 3;
 
 /** The rule in words, for the screens that explain it. */
 export const REGULAR_RULE = `paid you in at least ${REGULAR_MONTHS} of the last ${WINDOW_MONTHS} months`;

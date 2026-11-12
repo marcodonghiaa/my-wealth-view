@@ -302,7 +302,6 @@ describe("byDay", () => {
       name,
       amount: 1,
       currency: "EUR",
-      category: null,
       status: "done" as const,
     });
     const map = byDay([
