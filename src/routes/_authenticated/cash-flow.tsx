@@ -237,7 +237,7 @@ function CashFlowPage() {
       </GroupedList>
 
       <section className="mt-8">
-        <SectionTitle>Where it went</SectionTitle>
+        <SectionTitle>Money in and out</SectionTitle>
         <GroupedList className="px-2 py-4 sm:px-4">
           {flowPending ? (
             <Skeleton className="h-60 w-full" />

@@ -372,4 +372,10 @@ describe("Cash flow page", () => {
     expect(screen.queryByRole("img", { name: /^Saved per month/ })).toBeNull();
     expect(screen.getByText("Not enough history for a trend yet.")).toBeInTheDocument();
   });
+
+  // Polish 4 #13: the diagram shows both sides, so its title names both.
+  it("titles the diagram for money in and out", async () => {
+    renderPage();
+    expect(await screen.findByRole("heading", { name: "Money in and out" })).toBeInTheDocument();
+  });
 });
