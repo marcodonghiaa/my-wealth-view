@@ -348,8 +348,8 @@ describe("buildFlow", () => {
     expect(into).toBe(3000);
     expect(out).toBe(3000);
     expect(g.links.find((l) => g.nodes[l.target]!.name === SAVED)?.value).toBe(1000);
-    // Money in and money kept share the gain colour.
-    expect(g.nodes[0]!.color).toBe("var(--color-positive)");
+    // Polish 4 #11: green is only for what was kept; payers are a neutral ink tone.
+    expect(g.nodes[0]!.color).toBe("var(--color-chart-3)");
     expect(g.nodes.find((n) => n.name === SAVED)?.color).toBe("var(--color-positive)");
   });
 

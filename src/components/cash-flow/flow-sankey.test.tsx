@@ -72,3 +72,11 @@ it("gives each node its full name and amount as a title", () => {
   );
   expect(titles).toContain("ACME CONSULTING GMBH AND PARTNERS €3,000.00");
 });
+
+// Polish 4 #11: bands are a touch stronger in dark mode, where 0.28 turned muddy.
+it("takes the band opacity from the theme", () => {
+  mobile = false;
+  const { container } = render(<FlowSankey graph={graph} label="Cash flow" />);
+  const band = container.querySelector(".recharts-sankey-links path") as SVGPathElement;
+  expect(band.style.fillOpacity).toBe("var(--sankey-band-opacity)");
+});

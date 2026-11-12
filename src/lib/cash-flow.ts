@@ -272,8 +272,10 @@ export const SAVED = "Saved";
 export const FROM_SAVINGS = "From savings";
 const HUB = "Income";
 
-// Money in and money kept share the gain colour; money taken from savings is the loss colour.
+// Green only for what was kept (gains); payers are a neutral ink tone, so "Saved" stands out.
+// Money taken from savings is the loss colour.
 const GAIN_COLOR = "var(--color-positive)";
+const INCOME_COLOR = "var(--color-chart-3)";
 const DRAWN_COLOR = "var(--color-negative)";
 const OTHER_COLOR = categoryColor(null);
 
@@ -308,7 +310,7 @@ export function buildFlow({
     nodes.push({ name, kind, color });
     links.push({ source: nodes.length - 1, target: -1, value });
   };
-  for (const p of lefts) left(p.name, "income", GAIN_COLOR, p.value);
+  for (const p of lefts) left(p.name, "income", INCOME_COLOR, p.value);
   if (net < -CENT) left(FROM_SAVINGS, "drawn", DRAWN_COLOR, -net);
 
   nodes.push({ name: HUB, kind: "hub", color: "var(--color-foreground)" });

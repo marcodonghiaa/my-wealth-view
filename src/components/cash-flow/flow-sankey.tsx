@@ -95,7 +95,8 @@ function FlowLinkShape({
     <path
       d={`M${edge(-h)} L${targetX},${targetY + h} ${back} Z`}
       fill={end.color}
-      fillOpacity={0.28}
+      // From the theme: 0.28 in light, stronger in dark where 0.28 turns muddy.
+      style={{ fillOpacity: "var(--sankey-band-opacity)" }}
     />
   );
 }
