@@ -4,7 +4,11 @@ import { cloneElement, type ReactElement } from "react";
 import { buildFlow } from "@/lib/cash-flow";
 
 let mobile = false;
-vi.mock("@/lib/use-is-mobile", () => ({ useIsMobile: () => mobile }));
+const queries: string[] = [];
+vi.mock("@/lib/use-is-mobile", () => ({
+  useIsMobile: () => mobile,
+  useMediaQuery: (q: string) => (queries.push(q), mobile),
+}));
 vi.mock("recharts", async (orig) => ({
   ...(await orig<typeof import("recharts")>()),
   ResponsiveContainer: ({ children }: { children: ReactElement }) =>
@@ -79,4 +83,11 @@ it("takes the band opacity from the theme", () => {
   const { container } = render(<FlowSankey graph={graph} label="Cash flow" />);
   const band = container.querySelector(".recharts-sankey-links path") as SVGPathElement;
   expect(band.style.fillOpacity).toBe("var(--sankey-band-opacity)");
+});
+
+// Polish 4 re-audit #8: the desktop label margins (416px) leave no plot on a tablet, so the
+// diagram keeps the phone layout until the wide one has room.
+it("uses the wide layout only from SANKEY_WIDE_FROM", () => {
+  render(<FlowSankey graph={graph} label="Cash flow." />);
+  expect(queries).toContain("(max-width: 1023px)");
 });

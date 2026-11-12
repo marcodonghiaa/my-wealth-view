@@ -3,11 +3,12 @@ import {
   fitLabel,
   SANKEY_LAYOUT,
   SANKEY_LAYOUT_GAP,
+  SANKEY_WIDE_FROM,
   type FlowGraph,
   type FlowNode,
 } from "@/lib/cash-flow";
 import { formatEur } from "@/lib/transactions";
-import { useIsMobile } from "@/lib/use-is-mobile";
+import { useMediaQuery } from "@/lib/use-is-mobile";
 
 /** Room for a two-line label and the gap under it, per node on the busier side. */
 const ROW = 56;
@@ -106,7 +107,7 @@ function FlowLinkShape({
  * was saved on the right. Labels sit outside the bands, so the side margins hold them.
  */
 export function FlowSankey({ graph, label }: { graph: FlowGraph; label: string }) {
-  const narrow = useIsMobile();
+  const narrow = useMediaQuery(`(max-width: ${SANKEY_WIDE_FROM - 1}px)`);
   const { left, right } = SANKEY_LAYOUT[narrow ? "phone" : "desktop"];
   const lefts = graph.links.filter((l) => graph.nodes[l.target]?.kind === "hub").length;
   const rights = graph.links.length - lefts;

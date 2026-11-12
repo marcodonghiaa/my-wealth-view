@@ -22,6 +22,7 @@ import {
   summarize,
   SANKEY_LAYOUT,
   SANKEY_LAYOUT_GAP,
+  SANKEY_WIDE_FROM,
   topParts,
   trend,
   trimLeadingEmpty,
@@ -469,6 +470,13 @@ it("the longest Sankey label fits in its margin on desktop and phone", () => {
     const room = Math.min(l.outsideLeft ? l.left : Infinity, l.right) - SANKEY_LAYOUT_GAP;
     expect(l.chars * CAPITAL_PX).toBeLessThanOrEqual(room);
   }
+});
+
+// Polish 4 re-audit #8: at the narrowest width that gets the desktop labels, the diagram itself
+// still has room. Page chrome: sidebar 256 + page padding 64 + card padding 32.
+it("the desktop Sankey layout leaves room for the diagram where it starts", () => {
+  const { left, right } = SANKEY_LAYOUT.desktop;
+  expect(SANKEY_WIDE_FROM - 352 - left - right).toBeGreaterThanOrEqual(200);
 });
 
 // Polish 3 #6: the trend always holds the period on screen.
