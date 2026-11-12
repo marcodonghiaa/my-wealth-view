@@ -32,6 +32,8 @@ function FlowNodeShape({ x, y, width, height, payload, narrow }: NodeProps & { n
   const mid = y + height / 2;
   return (
     <g>
+      {/* The full name, for a label cut to fit (hover, or long-press on a phone). */}
+      <title>{`${payload.name} ${formatEur(payload.value)}`}</title>
       <rect x={x} y={y} width={width} height={Math.max(height, 1)} fill={payload.color} rx={1} />
       {!isHub && (
         <text

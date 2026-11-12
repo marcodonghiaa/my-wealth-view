@@ -32,7 +32,7 @@ describe("FlowSankey labels", () => {
     mobile = false;
     render(<FlowSankey graph={graph} label="Cash flow" />);
     expect(payerLabel()).toHaveAttribute("text-anchor", "end");
-    expect(payerLabel().firstElementChild).toHaveTextContent(/^ACME CONSULTING GMB…$/);
+    expect(payerLabel().firstElementChild).toHaveTextContent(/^ACME CONSULTING GMBH AND…$/);
   });
 
   it("puts payers' labels on their band on a phone, cut shorter", () => {
@@ -61,4 +61,14 @@ it("draws a payer's amount in ink when it sits on its band", () => {
   mobile = true;
   render(<FlowSankey graph={graph} label="Cash flow" />);
   expect(payerLabel().lastElementChild).toHaveClass("fill-foreground");
+});
+
+// Polish 4 #8: a cut name can still be read in full, on hover or long-press.
+it("gives each node its full name and amount as a title", () => {
+  mobile = true;
+  const { container } = render(<FlowSankey graph={graph} label="Cash flow" />);
+  const titles = [...container.querySelectorAll(".recharts-sankey-nodes title")].map(
+    (t) => t.textContent,
+  );
+  expect(titles).toContain("ACME CONSULTING GMBH AND PARTNERS €3,000.00");
 });

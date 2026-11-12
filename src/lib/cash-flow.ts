@@ -350,6 +350,6 @@ export const SANKEY_LAYOUT_GAP = 8;
  * (`chars` capitals). On a phone the payers' labels sit on their band instead of outside it.
  */
 export const SANKEY_LAYOUT = {
-  desktop: { chars: 20, left: 160, right: 168, outsideLeft: true },
+  desktop: { chars: 26, left: 204, right: 212, outsideLeft: true },
   phone: { chars: 12, left: 4, right: 104, outsideLeft: false },
 };
