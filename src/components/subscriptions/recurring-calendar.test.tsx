@@ -218,6 +218,13 @@ describe("RecurringCalendar", () => {
     expect(screen.queryByText(/Nothing recurring/)).toBeNull();
   });
 
+  it("doesn't call a month empty when it couldn't be read", async () => {
+    db.error = { message: "offline" };
+    renderCal([]);
+    expect(await screen.findByText("Couldn't load the calendar: offline")).toBeTruthy();
+    expect(screen.queryByText(/Nothing recurring/)).toBeNull();
+  });
+
   // Polish #13: before the rules load, the income count isn't known yet: no "Income 0 of 0".
   it("waits for the rules before counting income", async () => {
     db.rules = "pending";
