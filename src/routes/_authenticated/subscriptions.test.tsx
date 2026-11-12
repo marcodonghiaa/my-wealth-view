@@ -427,6 +427,22 @@ describe("List / Calendar", () => {
     expect(validate({ month: "1969-12" })).toEqual({});
   });
 
+  // Polish 5 A: the router hands the page the raw URL search, so a month validateSearch dropped
+  // still arrives here; the page must fall back to this month, not "Invalid Date" or month 13.
+  it("opens this month when the URL's month is invalid", async () => {
+    url.search = { view: "calendar" };
+    const { unmount } = renderPage();
+    const thisMonth = (await screen.findByRole("table")).getAttribute("aria-label");
+    unmount();
+    for (const month of ["abc", "2026-13", "1969-12", "2026-1"]) {
+      url.search = { view: "calendar", month };
+      const { unmount: done } = renderPage();
+      expect((await screen.findByRole("table")).getAttribute("aria-label")).toBe(thisMonth);
+      expect(screen.queryByText(/Invalid Date/)).toBeNull();
+      done();
+    }
+  });
+
   // Polish 3 #12: only active subscriptions are bills; to-review and dismissed ones are not.
   it("puts only active subscriptions on the calendar", async () => {
     const now = new Date();

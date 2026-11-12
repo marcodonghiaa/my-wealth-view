@@ -108,8 +108,11 @@ function SubscriptionsPage() {
         return next === "calendar" ? { ...rest, view: "calendar" } : rest;
       },
     });
-  const calendarMonth = search.month
-    ? new Date(Number(search.month.slice(0, 4)), Number(search.month.slice(5, 7)) - 1, 1)
+  // useSearch also carries the parent's raw search, so a month validateSearch dropped still
+  // arrives here: check it again.
+  const month = search.month && MONTH_PARAM.test(search.month) ? search.month : undefined;
+  const calendarMonth = month
+    ? new Date(Number(month.slice(0, 4)), Number(month.slice(5, 7)) - 1, 1)
     : undefined;
   // One "today" per visit: a new Date each render would recompute the calendar every time.
   const [today] = useState(romeToday);
