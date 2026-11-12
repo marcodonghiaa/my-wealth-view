@@ -89,7 +89,6 @@ export async function markIncomeKind({ tx, kind, rules }: MarkVars): Promise<Don
       match_field: "creditor_name",
       match_text: name,
       match_mode: "exact",
-      set_category: null,
       set_income_kind: kind,
     })
     .select(RULE_COLUMNS)
@@ -128,15 +127,14 @@ export function useMarkIncomeKind() {
     mutationFn: markIncomeKind,
     onError: (error) => toast.error("Couldn't save", { description: error.message }),
     onSuccess: (done, { tx, kind }) => {
-      // The rule is in the cache at once: a second Mark before the refetch lands sees it.
-      if (done.kind !== "none")
-        patchRules((old) =>
-          done.kind === "inserted"
-            ? [...old, done.rule]
-            : old.map((r) => (r.id === done.id ? { ...r, set_income_kind: kind } : r)),
-        );
-      void refresh();
       if (done.kind === "none") return;
+      // The rule is in the cache at once: a second Mark before the refetch lands sees it.
+      patchRules((old) =>
+        done.kind === "inserted"
+          ? [...old, done.rule]
+          : old.map((r) => (r.id === done.id ? { ...r, set_income_kind: kind } : r)),
+      );
+      void refresh();
       toast.success(
         `${tx.creditor_name ?? "This payment"} now counts as ${kindLabel(kind)} income`,
         {

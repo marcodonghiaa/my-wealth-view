@@ -149,9 +149,9 @@ describe("Income: Regular and One-off", () => {
       match_field: "creditor_name",
       match_text: "Aunt May",
       match_mode: "exact",
-      set_category: null,
       set_income_kind: "regular",
     });
+    expect(db.inserts[0]).not.toHaveProperty("set_category"); // Polish 3 #8: null by default
   });
 
   it("changes the rule that already decides the row instead of adding one", async () => {

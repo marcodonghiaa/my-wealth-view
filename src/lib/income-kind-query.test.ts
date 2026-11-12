@@ -145,6 +145,34 @@ describe("useMarkIncomeKind", () => {
     expect(queryClient.getQueryData(rulesQuery.queryKey)).toBeUndefined();
   });
 
+  // Polish 3 #8: nothing changed, so nothing to refetch and nothing to say.
+  it("neither refetches nor toasts when the rule already says so", async () => {
+    const queryClient = new QueryClient();
+    const rule = {
+      id: "same",
+      match_field: "creditor_name",
+      match_text: "Same Kind Co",
+      match_mode: "exact",
+      set_income_kind: "regular",
+    };
+    queryClient.setQueryData(rulesQuery.queryKey, [rule]);
+    const invalidate = vi.spyOn(queryClient, "invalidateQueries");
+    vi.mocked(toast.success).mockClear();
+    const wrapper = ({ children }: { children: ReactNode }) =>
+      createElement(QueryClientProvider, { client: queryClient }, children);
+    const { result } = renderHook(() => useMarkIncomeKind(), { wrapper });
+    const done = await act(() =>
+      result.current.mutateAsync({
+        tx: { creditor_name: "Same Kind Co", remittance_info: null },
+        kind: "regular",
+        rules: [rule],
+      }),
+    );
+    expect(done).toEqual({ kind: "none" });
+    expect(invalidate).not.toHaveBeenCalled();
+    expect(toast.success).not.toHaveBeenCalled();
+  });
+
   it("changes the cached rule it updated", async () => {
     const queryClient = new QueryClient();
     const { data } = await client.current
