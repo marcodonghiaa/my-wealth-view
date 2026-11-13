@@ -1,10 +1,35 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, render, screen } from "@testing-library/react";
 import { toast } from "sonner";
 import { Toaster } from "./sonner";
 import { Sheet, SheetContent, SheetTitle } from "./sheet";
 
 describe("Toaster", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  // polish-4 #A: sonner's phone offset stops at 600px, but the tab bar shows up to 767px.
+  // fails_when=at 601-767px the bottom toast sits over the tab bar
+  it("keeps toasts above the tab bar up to the md breakpoint", async () => {
+    vi.stubGlobal("matchMedia", (q: string) => ({
+      matches: q === "(max-width: 767px)",
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    }));
+    render(<Toaster />);
+    act(() => void toast("Marked as regular"));
+    await screen.findByText("Marked as regular");
+    const list = document.querySelector("[data-sonner-toaster]") as HTMLElement;
+    expect(list.style.getPropertyValue("--offset-bottom")).toContain("3.25rem");
+  });
+
+  it("uses the default bottom offset on desktop", async () => {
+    render(<Toaster />);
+    act(() => void toast("Saved"));
+    await screen.findByText("Saved");
+    const list = document.querySelector("[data-sonner-toaster]") as HTMLElement;
+    expect(list.style.getPropertyValue("--offset-bottom")).not.toContain("3.25rem");
+  });
+
   // Polish pass 4 #3: the toast's button ("Make a rule") was 24px tall, too small to tap.
   it("gives a toast's button a 44px tap target", async () => {
     render(<Toaster />);

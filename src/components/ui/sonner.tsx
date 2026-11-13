@@ -1,10 +1,16 @@
 import { Toaster as Sonner } from "sonner";
 import { useAnySheetOpen } from "./sheet";
+import { useIsMobile } from "@/lib/use-is-mobile";
 
 type ToasterProps = React.ComponentProps<typeof Sonner>;
 
+// The phone tab bar (52px + safe area) and a gap.
+const aboveTabBar = { bottom: "calc(3.25rem + env(safe-area-inset-bottom) + 0.5rem)" };
+
 const Toaster = ({ ...props }: ToasterProps) => {
   const sheetOpen = useAnySheetOpen();
+  // sonner's mobileOffset stops at 600px, but the tab bar shows below md (768px).
+  const isMobile = useIsMobile();
   return (
     <Sonner
       // An open sheet or dialog turns pointer events off on the page; a toast over it still takes
@@ -14,7 +20,8 @@ const Toaster = ({ ...props }: ToasterProps) => {
       // bottom tab bar (52px + safe area) and the home indicator. While a sheet is open, top
       // centre, so a toast never covers a bottom sheet's fields.
       position={sheetOpen ? "top-center" : "bottom-center"}
-      mobileOffset={{ bottom: "calc(3.25rem + env(safe-area-inset-bottom) + 0.5rem)" }}
+      mobileOffset={aboveTabBar}
+      {...(isMobile && { offset: aboveTabBar })}
       toastOptions={{
         classNames: {
           toast:
