@@ -20,12 +20,6 @@ interface Result {
 }
 
 const DISABLED = { message: "Disabled in the demo." };
-// A real function error carries its reason in a JSON body (see function-error.ts), so callers
-// that read it show "Disabled in the demo." instead of their generic fallback (#148).
-const functionDisabled = () => ({
-  ...DISABLED,
-  context: new Response(JSON.stringify({ error: DISABLED.message }), { status: 403 }),
-});
 // Tables a write can change a view of.
 const FEEDS_VIEWS = new Set([
   "transactions",
@@ -888,7 +882,8 @@ export function createFakeClient(now: Date = new Date()): SupabaseClient<Databas
               ? { data: { rows: demoStatementRows(now) }, error: null }
               : name === "reapply-rules"
                 ? { data: { changes: 0, sample: [] }, error: null } // demo rows already follow its rules
-                : { data: null, error: functionDisabled() },
+                : // With a body, callers show "Disabled in the demo.", not their fallback (#148).
+                  functionError(403, DISABLED.message),
     },
     auth: {
       getSession: async () => ({ data: { session }, error: null }),
