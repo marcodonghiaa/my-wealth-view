@@ -153,12 +153,23 @@ describe("Toaster in dark mode", () => {
     expect(list.style.getPropertyValue("--normal-border")).toBe("var(--border)");
   });
 
-  // polish-1 W4: one colour source. fails_when=the toast still carries background/text classes
-  // that compete with the palette
+  // polish-1 W4, polish-3 F5: sonner's unlayered CSS beats Tailwind's layered utilities, so colour
+  // classes here do nothing and only hide where the colours come from. jsdom can't compute the real
+  // colours: this guards against such classes coming back. fails_when=a toast part carries a
+  // bg-/text-/border- colour class
   it("leaves the toast's colours to the palette", async () => {
     render(<Toaster />);
-    act(() => void toast("Saved again"));
-    const item = (await screen.findByText("Saved again")).closest("[data-sonner-toast]");
-    expect(item?.className).not.toMatch(/bg-background|text-foreground|border-border/);
+    act(
+      () =>
+        void toast("Saved again", {
+          description: "Details",
+          action: { label: "Undo", onClick: vi.fn() },
+          cancel: { label: "Keep", onClick: vi.fn() },
+        }),
+    );
+    const item = (await screen.findByText("Saved again")).closest("[data-sonner-toast]")!;
+    const parts = [item, ...item.querySelectorAll("[data-description], [data-button]")];
+    expect(parts.length).toBe(4);
+    for (const el of parts) expect(el.className).not.toMatch(/\b(bg|text|border)-[a-z]/);
   });
 });

@@ -42,12 +42,12 @@ const Toaster = ({ ...props }: ToasterProps) => {
       {...(isMobile && { offset: aboveTabBar })}
       toastOptions={{
         classNames: {
-          // Colours come from `palette` alone: sonner's own CSS beats these utility classes.
+          // Colours come from `palette` (and sonner's own description and cancel greys): its
+          // unlayered CSS beats Tailwind's colour utilities, so none are set here.
           toast: "group toast",
-          description: "group-[.toast]:text-muted-foreground",
           // 44px tall: the button is often tapped on a phone ("Make a rule").
-          actionButton: "group-[.toast]:bg-primary group-[.toast]:text-primary-foreground min-h-11",
-          cancelButton: "group-[.toast]:bg-muted group-[.toast]:text-foreground min-h-11",
+          actionButton: "min-h-11",
+          cancelButton: "min-h-11",
         },
       }}
       {...props}
