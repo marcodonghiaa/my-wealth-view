@@ -34,6 +34,17 @@ TanStack Start (React), TypeScript, Tailwind, shadcn/ui, Recharts, Supabase, Vit
 
 ## Self-host it
 
+One command installs both apps (Node 20+):
+
+```bash
+npx create-alopex
+```
+
+It creates your Supabase project, tables, Edge Functions and login, turns on the scheduled sync inside Supabase, walks you through Enable Banking and puts this dashboard online on Vercel. About 30 minutes the first time. Run it again in the same folder to update. See [alopex → Getting started](https://github.com/marcodonghiaa/alopex#-getting-started).
+
+<details>
+<summary>Older path: the backend's <code>setup.sh</code> plus a Vercel button</summary>
+
 Start from the backend: [alopex → Getting started](https://github.com/marcodonghiaa/alopex#-getting-started). Its `setup.sh` creates the Supabase project, can run the sync on GitHub Actions, and prints the three values the dashboard needs. About 30 minutes the first time, nothing to install if you use Codespaces.
 
 Then put the dashboard online:
@@ -43,6 +54,8 @@ Then put the dashboard online:
 Vercel copies this repo to your GitHub, asks for `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY` and `VITE_VAPID_PUBLIC_KEY` (paste the values setup printed) and gives you an HTTPS address. Open the address under **Domains** on the Vercel project page (not a per-deployment address) and sign in. On that first sign-in the dashboard tells your database its own address, so bank linking sends you back to it: there is nothing to copy back and no second `./setup.sh` run (the backend's setup waits for it and prints your link). Free on Vercel's Hobby plan; phone and push notifications work because it is HTTPS.
 
 Prefer your own server? `docker compose` in the backend repo runs both apps instead.
+
+</details>
 
 ## Develop
 
@@ -69,6 +82,8 @@ Open **Import data** (a link on the Accounts page, also offered on a new empty d
 Use the Deploy button above, or import the repo in Vercel yourself (framework: Other, defaults for build). Vercel sets `VERCEL=1`, which switches the Nitro preset to `vercel` in `vite.config.ts`. Add `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY` (and `VITE_VAPID_PUBLIC_KEY` for push) as environment variables, then add the Vercel domain under Supabase → Authentication → URL Configuration so login redirects work: set it as Site URL and add `https://<your-domain>/reset-password` to the Redirect URLs, or the "Forgot password?" email links back to the wrong address. Every merge to `main` deploys; every PR gets a preview URL. The Vercel button copies the code into a new repo that is not a fork, so GitHub's "Sync fork" does not exist for it: see [Keeping your dashboard up to date](#keeping-your-dashboard-up-to-date).
 
 ## Keeping your dashboard up to date
+
+Installed with `npx create-alopex`? Run it again in the same folder; the rest of this section is for the older setup.
 
 Your Vercel copy never receives upstream fixes by itself. It ships a workflow, **update-from-upstream**, that does it as a pull request:
 
