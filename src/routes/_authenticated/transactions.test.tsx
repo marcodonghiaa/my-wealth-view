@@ -74,6 +74,7 @@ const renderPage = (client = new QueryClient({ defaultOptions: { queries: { retr
 
 afterEach(() => {
   toastSuccess.mockReset();
+  navigate.mockReset();
   for (const k of Object.keys(rows)) delete rows[k];
 });
 
