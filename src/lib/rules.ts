@@ -1,4 +1,5 @@
 import { plural } from "@/lib/plural";
+import { isSheetOpen } from "@/components/ui/sheet";
 
 // Category rules: how a rule's text matches, and the "Make a rule" shortcut.
 
@@ -103,8 +104,6 @@ export function makeRuleAction(
   }) => unknown,
   // undefined = not loaded yet (or failed): we can't tell if a rule covers the name, so offer nothing
   rules: ReadonlyArray<RuleLike> | undefined,
-  // From an open sheet: replace the sheet's history entry, so one Back returns to the page.
-  opts?: { replace?: boolean },
 ) {
   const text = name?.trim();
   if (!text || !category || !rules) return undefined;
@@ -122,7 +121,9 @@ export function makeRuleAction(
       void navigate({
         to: "/rules",
         search: { text, category },
-        ...(opts?.replace && { replace: true }),
+        // From over an open sheet (its button, or a toast on top of it): replace the sheet's
+        // history entry, so one Back returns to the page.
+        ...(isSheetOpen() && { replace: true }),
       }),
   };
 }

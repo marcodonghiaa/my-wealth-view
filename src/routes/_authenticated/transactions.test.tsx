@@ -173,6 +173,27 @@ describe("Make a rule in the transaction sheet", () => {
     expect(toastSuccess.mock.calls.at(-1)?.[1]).toHaveProperty("action.label", "Make a rule");
   });
 
+  // polish-3 #1 (#164): toasts take clicks over an open sheet; the toast's Make a rule pushed
+  // /rules on top of the sheet's history entry, leaving a Back that did nothing.
+  // fails_when=the toast's action pushes while a sheet is open, or replaces when none is
+  it("the toast's Make a rule replaces only while a sheet is open", async () => {
+    rows["v_transactions_eur"] = [bankRow];
+    renderPage();
+    const [inline] = await screen.findAllByRole("button", { name: /Change category for/ });
+    await userEvent.click(inline!);
+    await userEvent.click(await screen.findByRole("button", { name: "Groceries" }));
+    await waitFor(() => expect(toastSuccess).toHaveBeenCalled());
+    const action = (toastSuccess.mock.calls.at(-1)?.[1] as { action: { onClick: () => void } })
+      .action;
+    action.onClick();
+    expect(navigate).toHaveBeenLastCalledWith(expect.not.objectContaining({ replace: true }));
+    await openSheet(/Poste Italiane/);
+    action.onClick();
+    expect(navigate).toHaveBeenLastCalledWith(
+      expect.objectContaining({ to: "/rules", replace: true }),
+    );
+  });
+
   it("leaves it out for a Splitwise share", async () => {
     rows["v_splitwise_eur"] = [
       {

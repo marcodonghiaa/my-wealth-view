@@ -20,6 +20,7 @@ const setOpenSheets = (n: number) => {
   openSheets = n;
   sheetListeners.forEach((l) => l());
 };
+export const isSheetOpen = () => openSheets > 0;
 export function useAnySheetOpen() {
   return React.useSyncExternalStore(
     (l) => {
