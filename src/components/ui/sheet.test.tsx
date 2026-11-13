@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { Sheet, SheetContent, SheetTitle } from "./sheet";
 
@@ -67,6 +67,14 @@ const popTo = (state: unknown) =>
   });
 
 describe("Sheet and browser Back", () => {
+  // jsdom's history is shared by every test in the file: start each one on a clean entry, and
+  // put back anything a test stubbed even when it fails.
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.useRealTimers();
+    window.history.replaceState(null, "", "/");
+  });
+
   it("opening adds a history entry on the same address", () => {
     window.history.replaceState({ page: 1 }, "");
     const before = window.history.length;
@@ -103,14 +111,9 @@ describe("Sheet and browser Back", () => {
     render(<Page />);
     fireEvent.click(screen.getByText("Open"));
     const sheetState = window.history.state;
-    let wentBack = false;
-    const back = window.history.back;
-    window.history.back = () => {
-      wentBack = true;
-    };
+    const back = vi.spyOn(window.history, "back").mockImplementation(() => {});
     fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
-    await waitFor(() => expect(wentBack).toBe(true));
-    window.history.back = back;
+    await waitFor(() => expect(back).toHaveBeenCalledTimes(1));
     expect(sheetState).not.toEqual({ page: 1 });
   });
 
@@ -118,16 +121,12 @@ describe("Sheet and browser Back", () => {
     window.history.replaceState({ page: 1 }, "");
     render(<Page />);
     fireEvent.click(screen.getByText("Open"));
-    let wentBack = false;
-    const back = window.history.back;
-    window.history.back = () => {
-      wentBack = true;
-    };
+    const back = vi.spyOn(window.history, "back").mockImplementation(() => {});
+    vi.useFakeTimers();
     // A link inside the sheet: the router pushes the new page, then the sheet closes.
     window.history.pushState({ page: 2 }, "", "/other");
     fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
-    await new Promise((r) => setTimeout(r, 10));
-    window.history.back = back;
-    expect(wentBack).toBe(false);
+    act(() => vi.runAllTimers());
+    expect(back).not.toHaveBeenCalled();
   });
 });
