@@ -84,6 +84,7 @@ describe("Sheet and browser Back", () => {
     expect(window.history.length).toBe(before + 1);
     expect(window.location.href).toBe(href);
     expect(window.history.state).toMatchObject({ page: 1 });
+    expect(window.history.state.__sheet).toEqual(expect.any(String));
   });
 
   it("Back closes the sheet and stays on the page", async () => {
@@ -114,7 +115,7 @@ describe("Sheet and browser Back", () => {
     const back = vi.spyOn(window.history, "back").mockImplementation(() => {});
     fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
     await waitFor(() => expect(back).toHaveBeenCalledTimes(1));
-    expect(sheetState).not.toEqual({ page: 1 });
+    expect(sheetState.__sheet).toEqual(expect.any(String));
   });
 
   it("closing because the app navigated away leaves history alone", async () => {
