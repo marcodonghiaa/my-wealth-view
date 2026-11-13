@@ -7,6 +7,7 @@ import { X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { useCloseOnBack } from "./close-on-back";
+import { rememberOpener, returnFocus } from "./return-focus";
 
 // The sides of the sheets on screen, newest last, so the toaster can keep out of their way.
 type Side = NonNullable<VariantProps<typeof sheetVariants>["side"]>;
@@ -80,9 +81,7 @@ interface SheetContentProps
 // Mounted only while the sheet is on screen: SheetContent itself renders even when closed.
 function OnScreen({ side, opener }: { side: Side; opener: React.RefObject<Element | null> }) {
   // Before Radix moves focus in (its effect runs after layout effects).
-  React.useLayoutEffect(() => {
-    opener.current = document.activeElement;
-  }, [opener]);
+  React.useLayoutEffect(() => rememberOpener(opener), [opener]);
   React.useEffect(() => {
     setSides([...sides, side]);
     return () => {
@@ -114,15 +113,7 @@ const SheetContent = React.forwardRef<
               e.preventDefault();
             onPointerDownOutside?.(e);
           }}
-          // Our sheets open from state, not a SheetTrigger, so Radix has nothing to refocus on close
-          // and focus fell to <body>. Hand it back to whatever had it before the sheet opened.
-          onCloseAutoFocus={(e) => {
-            onCloseAutoFocus?.(e);
-            if (e.defaultPrevented) return;
-            e.preventDefault();
-            const el = opener.current;
-            if (el instanceof HTMLElement && el.isConnected) el.focus();
-          }}
+          onCloseAutoFocus={returnFocus(opener, onCloseAutoFocus)}
           {...props}
         >
           <OnScreen side={side ?? "right"} opener={opener} />

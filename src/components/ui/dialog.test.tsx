@@ -107,3 +107,28 @@ describe("Dialog and browser Back", () => {
     }
   });
 });
+
+// polish-4 U1: a dialog opened from state (no DialogTrigger) left focus on <body> after Back or Esc,
+// so a keyboard user started again from the top of the page. fails_when=focus stays on <body>
+describe("Dialog focus", () => {
+  it("gives focus back to the button that opened it after Back", async () => {
+    render(<Controlled />);
+    const open = screen.getByText("Open");
+    open.focus();
+    fireEvent.click(open);
+    await screen.findByRole("dialog");
+    popTo(null);
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    await waitFor(() => expect(open).toHaveFocus());
+  });
+
+  it("gives focus back after Esc too", async () => {
+    render(<Controlled />);
+    const open = screen.getByText("Open");
+    open.focus();
+    fireEvent.click(open);
+    fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    await waitFor(() => expect(open).toHaveFocus());
+  });
+});
