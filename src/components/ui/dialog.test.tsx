@@ -55,7 +55,9 @@ describe("Dialog and browser Back", () => {
     expect(window.location.href).toBe(href);
   });
 
-  it("a dialog that refuses to close (mid-import) stays open on Back", async () => {
+  // polish-1 W2: a refused close (mid-import) must keep catching Back, not just the first one.
+  // fails_when=the second Back leaves the page
+  it("a dialog that refuses to close keeps catching Back", async () => {
     function Busy() {
       return (
         <Dialog open onOpenChange={() => {}}>
@@ -67,8 +69,13 @@ describe("Dialog and browser Back", () => {
     }
     window.history.replaceState({ page: 1 }, "");
     render(<Busy />);
-    await popTo({ page: 1 });
-    await new Promise((r) => setTimeout(r, 0));
-    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    const tick = () => act(() => new Promise((r) => setTimeout(r, 0)));
+    for (let i = 0; i < 2; i++) {
+      await popTo({ page: 1 });
+      await tick();
+      expect(screen.getByRole("dialog")).toBeInTheDocument();
+      // Its entry is back on top, so this Back is caught too.
+      expect(window.history.state.__sheet).toEqual(expect.any(String));
+    }
   });
 });

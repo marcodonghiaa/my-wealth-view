@@ -42,14 +42,22 @@ export function useCloseOnBack(open: boolean, close: () => void) {
   React.useEffect(() => {
     if (!open) return;
     const marker = Math.random().toString(36).slice(2);
-    window.history.pushState({ ...window.history.state, __sheet: marker }, "");
     openSheets++;
+    const push = () => window.history.pushState({ ...window.history.state, __sheet: marker }, "");
+    push();
+    let disposed = false;
     const onPop = () => {
       if (window.history.state?.__sheet === marker) return;
       closeRef.current();
+      // Still open a tick later (it refused, e.g. mid-import): put its entry back, so the next
+      // Back is caught too instead of leaving the page (polish-1 W2).
+      setTimeout(() => {
+        if (!disposed && window.history.state?.__sheet !== marker) push();
+      });
     };
     window.addEventListener("popstate", onPop);
     return () => {
+      disposed = true;
       window.removeEventListener("popstate", onPop);
       openSheets--;
       // After the router's queued navigation (a microtask) has landed. After Back the entry is
