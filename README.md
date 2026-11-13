@@ -41,7 +41,7 @@ One command installs both apps (Node 20+):
 npx create-alopex
 ```
 
-It creates your Supabase project, tables, Edge Functions and login, turns on the scheduled sync inside Supabase, walks you through Enable Banking and puts this dashboard online on Vercel. About 30 minutes the first time. Run it again in the same folder to update. See [alopex → Getting started](https://github.com/marcodonghiaa/alopex#-getting-started).
+It creates your Supabase project, tables, Edge Functions and login, turns on the scheduled sync inside Supabase, walks you through Enable Banking and puts this dashboard online on Vercel. About 30 minutes the first time. To update, run `npx create-alopex@latest` from the same place, or inside the install folder (`@latest` so npx doesn't reuse an older cached installer). See [the installer guide](https://github.com/marcodonghiaa/alopex/blob/main/installer/README.md).
 
 <details>
 <summary>Older path: the backend's <code>setup.sh</code> plus a Vercel button</summary>
@@ -84,7 +84,7 @@ Use the Deploy button under **Older path** in [Self-host it](#self-host-it), or 
 
 ## Keeping your dashboard up to date
 
-Installed with `npx create-alopex`? Run it again in the same folder; the rest of this section is for the older setup.
+Installed with `npx create-alopex`? Run `npx create-alopex@latest` again from the same place, or inside the install folder; the rest of this section is for the older setup.
 
 Your Vercel copy never receives upstream fixes by itself. It ships a workflow, **update-from-upstream**, that does it as a pull request:
 

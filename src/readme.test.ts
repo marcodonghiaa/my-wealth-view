@@ -21,4 +21,14 @@ describe("README", () => {
     expect(readme).not.toMatch(/Deploy button above/);
     expect(readme).toMatch(/Deploy button under \*\*Older path\*\*/);
   });
+
+  // polish-5 I1/I2/I5: "run it again in the same folder" sent people into the install folder (a
+  // second install inside it), npx could reuse an old cached installer, and the npx path linked to
+  // the backend's setup.sh steps. fails_when=the update wording or the npx link comes back
+  it("says how to update and links the installer's own guide", () => {
+    expect(readme).not.toMatch(/in the same folder/);
+    expect(readme).toMatch(/npx create-alopex@latest/);
+    expect(selfHost).toMatch(/alopex\/blob\/main\/installer\/README\.md/);
+  });
 });
+
