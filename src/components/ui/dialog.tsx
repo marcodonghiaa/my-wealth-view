@@ -5,8 +5,25 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { useCloseOnBack } from "./sheet";
 
-const Dialog = DialogPrimitive.Root;
+// Browser or phone Back closes an open dialog instead of leaving the page, like a sheet (#168).
+// Works for dialogs opened by a Trigger too: the open state is kept here when nobody passes it.
+function Dialog({
+  open: openProp,
+  defaultOpen,
+  onOpenChange,
+  ...props
+}: React.ComponentProps<typeof DialogPrimitive.Root>) {
+  const [inner, setInner] = React.useState(defaultOpen ?? false);
+  const open = openProp ?? inner;
+  const change = (next: boolean) => {
+    if (openProp === undefined) setInner(next);
+    onOpenChange?.(next);
+  };
+  useCloseOnBack(open, () => change(false));
+  return <DialogPrimitive.Root open={open} onOpenChange={change} {...props} />;
+}
 
 const DialogTrigger = DialogPrimitive.Trigger;
 

@@ -35,7 +35,8 @@ export function useOpenSheetSide() {
   );
 }
 
-function useCloseOnBack(open: boolean, close: () => void) {
+// Dialogs use it too (#168), so isSheetOpen() also covers an open dialog.
+export function useCloseOnBack(open: boolean, close: () => void) {
   const closeRef = React.useRef(close);
   closeRef.current = close;
   React.useEffect(() => {
