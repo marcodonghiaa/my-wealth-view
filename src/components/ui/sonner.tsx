@@ -43,6 +43,9 @@ const Toaster = ({ ...props }: ToasterProps) => {
       mobileOffset={aboveTabBar}
       {...(isMobile && { offset: aboveTabBar })}
       toastOptions={{
+        // sonner's cancel fill is a fixed translucent white: in dark mode it outshone the main
+        // button (U3). Inline, since its unlayered CSS beats Tailwind classes.
+        cancelButtonStyle: { background: "var(--muted)", color: "var(--foreground)" },
         classNames: {
           // Colours come from `palette` (and sonner's own description and cancel greys): its
           // unlayered CSS beats Tailwind's colour utilities, so none are set here.

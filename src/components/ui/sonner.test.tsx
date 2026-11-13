@@ -172,4 +172,24 @@ describe("Toaster in dark mode", () => {
     expect(parts.length).toBe(4);
     for (const el of parts) expect(el.className).not.toMatch(/\b(bg|text|border)-[a-z]/);
   });
+
+  // polish-4 U2: toasts rendered in sonner's ui-sans-serif, not the app's Geist.
+  // fails_when=the toaster doesn't take the app font
+  it("uses the app font", async () => {
+    render(<Toaster />);
+    act(() => void toast("In Geist"));
+    await screen.findByText("In Geist");
+    const list = document.querySelector("[data-sonner-toaster]") as HTMLElement;
+    expect(list.style.fontFamily).toBe("var(--font-sans)");
+  });
+
+  // polish-4 U3: sonner's cancel button is a fixed translucent white, too bright in dark mode
+  // next to the main button. fails_when=Undo keeps sonner's own fill
+  it("paints the second button in the app's muted colours", async () => {
+    render(<Toaster />);
+    act(() => void toast("Rule deleted", { cancel: { label: "Undo", onClick: vi.fn() } }));
+    const undo = await screen.findByRole("button", { name: "Undo" });
+    expect(undo.style.background).toBe("var(--muted)");
+    expect(undo.style.color).toBe("var(--foreground)");
+  });
 });
