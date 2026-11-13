@@ -151,4 +151,13 @@ describe("Toaster in dark mode", () => {
     expect(list.style.getPropertyValue("--normal-bg")).toBe("var(--popover)");
     expect(list.style.getPropertyValue("--normal-text")).toBe("var(--popover-foreground)");
   });
+
+  // polish-1 W4: one colour source. fails_when=the toast still carries background/text classes
+  // that compete with the palette
+  it("leaves the toast's colours to the palette", async () => {
+    render(<Toaster />);
+    act(() => void toast("Saved again"));
+    const item = (await screen.findByText("Saved again")).closest("[data-sonner-toast]");
+    expect(item?.className).not.toMatch(/bg-background|text-foreground|border-border/);
+  });
 });

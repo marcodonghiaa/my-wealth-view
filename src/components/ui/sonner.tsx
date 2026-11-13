@@ -42,8 +42,8 @@ const Toaster = ({ ...props }: ToasterProps) => {
       {...(isMobile && { offset: aboveTabBar })}
       toastOptions={{
         classNames: {
-          toast:
-            "group toast group-[.toaster]:bg-background group-[.toaster]:text-foreground group-[.toaster]:border-border group-[.toaster]:shadow-lg",
+          // Colours come from `palette` alone: sonner's own CSS beats these utility classes.
+          toast: "group toast",
           description: "group-[.toast]:text-muted-foreground",
           // 44px tall: the button is often tapped on a phone ("Make a rule").
           actionButton: "group-[.toast]:bg-primary group-[.toast]:text-primary-foreground min-h-11",
