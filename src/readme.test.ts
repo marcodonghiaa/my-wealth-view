@@ -31,4 +31,3 @@ describe("README", () => {
     expect(selfHost).toMatch(/alopex\/blob\/main\/installer\/README\.md/);
   });
 });
-
