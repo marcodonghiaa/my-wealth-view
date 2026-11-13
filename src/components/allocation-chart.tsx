@@ -96,9 +96,11 @@ export function AllocationChart({
   format?: (eur: number) => string;
 }) {
   const rows = allocationHistory(history, snapshots, undefined, reconstructed);
-  const row = asOf
-    ? (rows.filter((r) => r.snapshot_date <= asOf).at(-1) ?? rows.at(-1))
-    : rows.at(-1);
+  const shown = asOf ? rows.filter((r) => r.snapshot_date <= asOf).at(-1) : rows.at(-1);
+  // A day before the first row has no mix: say so, and grey out the first row's mix so the card
+  // keeps its height while the chart is scrubbed (#148, polish-4 U5).
+  const before = !shown;
+  const row = shown ?? rows[0];
   if (!row) return null;
   const slices = CLASSES.map((c) => ({ ...c, value: row[c.key] ?? 0 })).filter((s) => s.value > 0);
   const gross = slices.reduce((sum, s) => sum + s.value, 0);
@@ -110,9 +112,16 @@ export function AllocationChart({
       <h2 id="allocation-title" className="text-lg font-semibold text-foreground">
         Breakdown
       </h2>
-      <p className="text-xs text-muted-foreground">As of {formatDay(row.snapshot_date)}</p>
+      <p className="text-xs text-muted-foreground">
+        {before
+          ? `No breakdown before ${formatDay(row.snapshot_date)}.`
+          : `As of ${formatDay(row.snapshot_date)}`}
+      </p>
 
-      <div className="mt-2 flex flex-col items-center sm:mt-4 sm:flex-row sm:gap-10">
+      <div
+        inert={before}
+        className={`mt-2 flex flex-col items-center sm:mt-4 sm:flex-row sm:gap-10 ${before ? "opacity-30" : ""}`}
+      >
         {/* Phones drop the donut: the rows carry each share, and the colours alone say nothing. */}
         <div
           className="hidden size-48 shrink-0 sm:block"

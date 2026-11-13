@@ -196,6 +196,19 @@ describe("SplitwisePanel", () => {
     expect(screen.queryByText("How to get the file")).toBeNull();
   });
 
+  // polish-1 W5 (#148): "1 rows". fails_when=one row is counted with a plural
+  it("says 1 row for a one-expense file", async () => {
+    render(<SplitwisePanel />);
+    const one = [
+      "Date,Description,Category,Cost,Currency,Ann,Bob",
+      "2026-08-16,Dinner,Dining out,30.00,USD,-15.00,15.00",
+    ].join("\n");
+    fireEvent.drop(screen.getByText("Choose CSV file"), {
+      dataTransfer: { files: [new File([one], "one.csv", { type: "text/csv" })] },
+    });
+    expect(await screen.findByText("1 row · USD")).toBeTruthy();
+  });
+
   it("tells apart two members with the same name", async () => {
     render(<SplitwisePanel />);
     upload(CSV.replace("Ann,Bob", "Ann,Ann"));

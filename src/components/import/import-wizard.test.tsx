@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { toast } from "sonner";
 
 const upsert = vi.fn(async (_rows: unknown, _opts?: unknown) => ({ error: null }));
 vi.mock("@/integrations/supabase/client", () => ({
@@ -53,10 +54,24 @@ describe("ImportWizard", () => {
     expect(cells.join(" ")).not.toMatch(/0000/);
   });
 
+  // Issue #148: "Import 1 rows". fails_when=one row is counted with a plural
+  it("says 1 row, not 1 rows", async () => {
+    setup();
+    upload("Month,Total\n2024-02,100\n");
+    expect(await screen.findByText(/^1 row ready, 0 skipped/)).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Import 1 row" })).toBeTruthy();
+    // polish-3 F2: the toast and the Last import line too.
+    const success = vi.spyOn(toast, "success");
+    fireEvent.click(screen.getByRole("button", { name: "Import 1 row" }));
+    expect(await screen.findByText(/^Last import: 1 row\. /)).toBeTruthy();
+    expect(success).toHaveBeenCalledWith("Imported 1 row");
+    success.mockRestore();
+  });
+
   it("removes the import when Undo is pressed", async () => {
     setup();
     upload("Month,Total\n2024-02,100\n");
-    fireEvent.click(await screen.findByRole("button", { name: /Import 1 rows/ }));
+    fireEvent.click(await screen.findByRole("button", { name: /Import 1 row\b/ }));
     fireEvent.click(await screen.findByRole("button", { name: /Undo this import/ }));
     await waitFor(() => expect(screen.queryByText(/Undo this import/)).toBeNull());
   });
@@ -65,7 +80,7 @@ describe("ImportWizard", () => {
   it("offers Undo again after the page is reopened", async () => {
     const first = setup();
     upload("Month,Total\n2024-02,100\n");
-    fireEvent.click(await screen.findByRole("button", { name: /Import 1 rows/ }));
+    fireEvent.click(await screen.findByRole("button", { name: /Import 1 row\b/ }));
     await screen.findByRole("button", { name: /Undo this import/ });
     first.unmount();
     setup();
@@ -98,7 +113,7 @@ describe("ImportWizard", () => {
     const pick = (await screen.findByLabelText("Subscriptions")) as HTMLSelectElement;
     expect(pick.value).toBe("Entertainment");
     fireEvent.change(pick, { target: { value: "Services" } });
-    fireEvent.click(await screen.findByRole("button", { name: /Import 1 rows/ }));
+    fireEvent.click(await screen.findByRole("button", { name: /Import 1 row\b/ }));
     await waitFor(() => expect(upsert).toHaveBeenCalledTimes(1));
     expect(upsert.mock.calls[0]?.[0]).toEqual([
       expect.objectContaining({ category: "Services", spend_eur: 9.99 }),

@@ -1,5 +1,5 @@
 import { plural } from "@/lib/plural";
-import { isSheetOpen } from "@/components/ui/sheet";
+import { isOverlayOpen } from "@/components/ui/close-on-back";
 
 // Category rules: how a rule's text matches, and the "Make a rule" shortcut.
 
@@ -121,9 +121,9 @@ export function makeRuleAction(
       void navigate({
         to: "/rules",
         search: { text, category },
-        // From over an open sheet (its button, or a toast on top of it): replace the sheet's
+        // From over an open sheet or dialog (its button, or a toast on top of it): replace its
         // history entry, so one Back returns to the page.
-        ...(isSheetOpen() && { replace: true }),
+        ...(isOverlayOpen() && { replace: true }),
       }),
   };
 }

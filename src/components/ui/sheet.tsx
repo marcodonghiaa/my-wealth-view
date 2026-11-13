@@ -6,16 +6,10 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { useCloseOnBack } from "./close-on-back";
+import { rememberOpener, returnFocus } from "./return-focus";
 
-// Browser or phone Back closes an open sheet instead of leaving the page (#164). Opening adds a
-// history entry on the same address (the router's state kept, so it sees no new page); Back pops
-// it. Closing another way (X, Esc, overlay) takes the entry out again, unless the app has already
-// moved to another entry (a link in the sheet), so that page is never undone.
-// shortcut: Forward after Back re-enters the closed sheet's entry with no sheet open, so the next
-// Back looks like it does nothing. Re-opening the sheet on Forward is not worth the code.
-// How many sheets are open (Make a rule replaces the sheet's history entry), and the sides of
-// the sheets on screen, newest last, so the toaster can keep out of their way.
-let openSheets = 0;
+// The sides of the sheets on screen, newest last, so the toaster can keep out of their way.
 type Side = NonNullable<VariantProps<typeof sheetVariants>["side"]>;
 let sides: Side[] = [];
 const sideListeners = new Set<() => void>();
@@ -23,7 +17,6 @@ const setSides = (next: Side[]) => {
   sides = next;
   sideListeners.forEach((l) => l());
 };
-export const isSheetOpen = () => openSheets > 0;
 export function useOpenSheetSide() {
   return React.useSyncExternalStore(
     (l) => {
@@ -33,31 +26,6 @@ export function useOpenSheetSide() {
     () => sides.at(-1) ?? null,
     () => null,
   );
-}
-
-function useCloseOnBack(open: boolean, close: () => void) {
-  const closeRef = React.useRef(close);
-  closeRef.current = close;
-  React.useEffect(() => {
-    if (!open) return;
-    const marker = Math.random().toString(36).slice(2);
-    window.history.pushState({ ...window.history.state, __sheet: marker }, "");
-    openSheets++;
-    const onPop = () => {
-      if (window.history.state?.__sheet === marker) return;
-      closeRef.current();
-    };
-    window.addEventListener("popstate", onPop);
-    return () => {
-      window.removeEventListener("popstate", onPop);
-      openSheets--;
-      // After the router's queued navigation (a microtask) has landed. After Back the entry is
-      // already gone, so this does nothing.
-      setTimeout(() => {
-        if (window.history.state?.__sheet === marker) window.history.back();
-      });
-    };
-  }, [open]);
 }
 
 function Sheet(props: React.ComponentProps<typeof SheetPrimitive.Root>) {
@@ -113,9 +81,7 @@ interface SheetContentProps
 // Mounted only while the sheet is on screen: SheetContent itself renders even when closed.
 function OnScreen({ side, opener }: { side: Side; opener: React.RefObject<Element | null> }) {
   // Before Radix moves focus in (its effect runs after layout effects).
-  React.useLayoutEffect(() => {
-    opener.current = document.activeElement;
-  }, [opener]);
+  React.useLayoutEffect(() => rememberOpener(opener), [opener]);
   React.useEffect(() => {
     setSides([...sides, side]);
     return () => {
@@ -147,15 +113,7 @@ const SheetContent = React.forwardRef<
               e.preventDefault();
             onPointerDownOutside?.(e);
           }}
-          // Our sheets open from state, not a SheetTrigger, so Radix has nothing to refocus on close
-          // and focus fell to <body>. Hand it back to whatever had it before the sheet opened.
-          onCloseAutoFocus={(e) => {
-            onCloseAutoFocus?.(e);
-            if (e.defaultPrevented) return;
-            e.preventDefault();
-            const el = opener.current;
-            if (el instanceof HTMLElement && el.isConnected) el.focus();
-          }}
+          onCloseAutoFocus={returnFocus(opener, onCloseAutoFocus)}
           {...props}
         >
           <OnScreen side={side ?? "right"} opener={opener} />

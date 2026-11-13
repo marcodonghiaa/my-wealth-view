@@ -11,6 +11,7 @@ import { groupNames, newGroupProblem, type StoredGroupRow } from "@/lib/import/s
 import { fingerprintRows } from "@/lib/import/splitwise-match";
 import { parseSplitwiseCsv, type SplitwiseFile } from "@/lib/import/splitwise-parse";
 import { hasErrors, validateSplitwise, type Issue } from "@/lib/import/splitwise-validate";
+import { plural } from "@/lib/plural";
 
 const GROUP_MAX = 100;
 
@@ -197,7 +198,8 @@ export function SplitwisePanel({
           <span className="min-w-0 flex-1">
             <span className="block truncate text-[0.9375rem] font-semibold">{loaded.name}</span>
             <span className="block text-[0.8125rem] text-muted-foreground">
-              {loaded.file.rows.length} rows{currency ? ` · ${currency}` : ""}
+              {plural(loaded.file.rows.length, "row")}
+              {currency ? ` · ${currency}` : ""}
             </span>
           </span>
           <label className={`${LINK} cursor-pointer`}>

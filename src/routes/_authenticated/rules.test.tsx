@@ -915,7 +915,7 @@ describe("re-sorting what a deleted rule filed", () => {
         id: "resort-r1",
         duration: 8000,
         description:
-          "3 transactions still in Entertainment because of “Netflix”. Re-sort clears them now; the next sync sorts them again.",
+          "3 transactions still in Entertainment because of “Netflix”. Re-sort clears them now; the next sync sorts what it can.",
         action: { label: "Re-sort", onClick: expect.any(Function) },
         cancel: { label: "Undo", onClick: expect.any(Function) },
       }),

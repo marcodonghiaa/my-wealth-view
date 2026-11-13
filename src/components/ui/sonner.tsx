@@ -4,6 +4,16 @@ import { useIsMobile } from "@/lib/use-is-mobile";
 
 type ToasterProps = React.ComponentProps<typeof Sonner>;
 
+// sonner paints toasts from its own variables, so point them at the app's palette (light and
+// dark both, #169).
+const palette = {
+  "--normal-bg": "var(--popover)",
+  "--normal-text": "var(--popover-foreground)",
+  "--normal-border": "var(--border)",
+  // sonner sets its own ui-sans-serif on the toaster (U2).
+  fontFamily: "var(--font-sans)",
+} as React.CSSProperties;
+
 // The phone tab bar (52px + safe area) and a gap.
 const aboveTabBar = { bottom: "calc(3.25rem + env(safe-area-inset-bottom) + 0.5rem)" };
 
@@ -16,6 +26,9 @@ const Toaster = ({ ...props }: ToasterProps) => {
       // An open sheet or dialog turns pointer events off on the page; a toast over it still takes
       // them (swipe away, hover to pause, its buttons).
       className="toaster group pointer-events-auto"
+      // Follows the system like the rest of the app; sonner's default is always light (#169).
+      theme="system"
+      style={palette}
       // Bottom centre: top-right toasts covered the month arrows (#166). On a phone, clear of the
       // bottom tab bar (52px + safe area) and the home indicator. While a bottom sheet is open, top
       // centre, so a toast never covers a bottom sheet's fields; beside a right-hand panel, bottom
@@ -30,13 +43,16 @@ const Toaster = ({ ...props }: ToasterProps) => {
       mobileOffset={aboveTabBar}
       {...(isMobile && { offset: aboveTabBar })}
       toastOptions={{
+        // sonner's cancel fill is a fixed translucent white: in dark mode it outshone the main
+        // button (U3). Inline, since its unlayered CSS beats Tailwind classes.
+        cancelButtonStyle: { background: "var(--muted)", color: "var(--foreground)" },
         classNames: {
-          toast:
-            "group toast group-[.toaster]:bg-background group-[.toaster]:text-foreground group-[.toaster]:border-border group-[.toaster]:shadow-lg",
-          description: "group-[.toast]:text-muted-foreground",
+          // Colours come from `palette` (and sonner's own description and cancel greys): its
+          // unlayered CSS beats Tailwind's colour utilities, so none are set here.
+          toast: "group toast",
           // 44px tall: the button is often tapped on a phone ("Make a rule").
-          actionButton: "group-[.toast]:bg-primary group-[.toast]:text-primary-foreground min-h-11",
-          cancelButton: "group-[.toast]:bg-muted group-[.toast]:text-foreground min-h-11",
+          actionButton: "min-h-11",
+          cancelButton: "min-h-11",
         },
       }}
       {...props}

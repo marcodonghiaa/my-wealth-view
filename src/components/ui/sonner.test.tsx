@@ -129,3 +129,67 @@ describe("Toaster", () => {
     expect(list).toHaveAttribute("data-x-position", "left");
   });
 });
+
+// Issue #169: toasts were white on a dark page. fails_when=sonner keeps its light theme or its
+// own white background in dark mode
+describe("Toaster in dark mode", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("follows the system theme and the app's palette", async () => {
+    vi.stubGlobal("matchMedia", (q: string) => ({
+      matches: q === "(prefers-color-scheme: dark)",
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      addListener: () => {},
+      removeListener: () => {},
+    }));
+    render(<Toaster />);
+    act(() => void toast("Marked as regular"));
+    await screen.findByText("Marked as regular");
+    const list = document.querySelector("[data-sonner-toaster]") as HTMLElement;
+    expect(list).toHaveAttribute("data-sonner-theme", "dark");
+    expect(list.style.getPropertyValue("--normal-bg")).toBe("var(--popover)");
+    expect(list.style.getPropertyValue("--normal-text")).toBe("var(--popover-foreground)");
+    expect(list.style.getPropertyValue("--normal-border")).toBe("var(--border)");
+  });
+
+  // polish-1 W4, polish-3 F5: sonner's unlayered CSS beats Tailwind's layered utilities, so colour
+  // classes here do nothing and only hide where the colours come from. jsdom can't compute the real
+  // colours: this guards against such classes coming back. fails_when=a toast part carries a
+  // bg-/text-/border- colour class
+  it("leaves the toast's colours to the palette", async () => {
+    render(<Toaster />);
+    act(
+      () =>
+        void toast("Saved again", {
+          description: "Details",
+          action: { label: "Undo", onClick: vi.fn() },
+          cancel: { label: "Keep", onClick: vi.fn() },
+        }),
+    );
+    const item = (await screen.findByText("Saved again")).closest("[data-sonner-toast]")!;
+    const parts = [item, ...item.querySelectorAll("[data-description], [data-button]")];
+    expect(parts.length).toBe(4);
+    for (const el of parts) expect(el.className).not.toMatch(/\b(bg|text|border)-[a-z]/);
+  });
+
+  // polish-4 U2: toasts rendered in sonner's ui-sans-serif, not the app's Geist.
+  // fails_when=the toaster doesn't take the app font
+  it("uses the app font", async () => {
+    render(<Toaster />);
+    act(() => void toast("In Geist"));
+    await screen.findByText("In Geist");
+    const list = document.querySelector("[data-sonner-toaster]") as HTMLElement;
+    expect(list.style.fontFamily).toBe("var(--font-sans)");
+  });
+
+  // polish-4 U3: sonner's cancel button is a fixed translucent white, too bright in dark mode
+  // next to the main button. fails_when=Undo keeps sonner's own fill
+  it("paints the second button in the app's muted colours", async () => {
+    render(<Toaster />);
+    act(() => void toast("Rule deleted", { cancel: { label: "Undo", onClick: vi.fn() } }));
+    const undo = await screen.findByRole("button", { name: "Undo" });
+    expect(undo.style.background).toBe("var(--muted)");
+    expect(undo.style.color).toBe("var(--foreground)");
+  });
+});

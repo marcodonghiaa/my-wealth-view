@@ -79,4 +79,25 @@ describe("AllocationChart", () => {
     expect(screen.getByText("Unallocated")).toBeInTheDocument();
     expect(screen.queryByRole("link")).toBeNull();
   });
+
+  // Issue #148: a scrubbed day before the first row showed today's breakdown. polish-4 U5: showing
+  // the first row instead didn't match the headline either (other date, other total).
+  // fails_when=a day before every row shows any row's mix
+  it("says there is no breakdown for a day before the first row", () => {
+    const first = { ...live(), snapshot_date: "2026-01-05", bank_total_eur: 111 };
+    const today = { ...live(), snapshot_date: "2026-10-19", bank_total_eur: 999 };
+    render(<AllocationChart history={[]} snapshots={[first, today]} asOf="2025-12-01" />);
+    expect(screen.getByText("No breakdown before 5 Jan 2026.")).toBeInTheDocument();
+    // The first row's mix stays only as a greyed, unreachable placeholder (the card keeps its height).
+    expect(screen.getByText("€111.00").closest("[inert]")).not.toBeNull();
+    expect(screen.queryByText("€999.00")).toBeNull();
+  });
+
+  // fails_when=the first row's own day counts as "before" it
+  it("shows the first row on its own day", () => {
+    const first = { ...live(), snapshot_date: "2026-01-05", bank_total_eur: 111 };
+    render(<AllocationChart history={[]} snapshots={[first]} asOf="2026-01-05" />);
+    expect(screen.getByText("€111.00").closest("[inert]")).toBeNull();
+    expect(screen.getByText("As of 5 Jan 2026")).toBeInTheDocument();
+  });
 });
