@@ -66,13 +66,13 @@ describe("Toaster", () => {
   });
 
   // polish-1 #3: on a phone the edit sheet fills the bottom of the screen; a bottom toast covered
-  // its fields. fails_when=a toast shown while a sheet is open sits at the bottom
-  it("moves toasts to the top while a sheet is open", async () => {
+  // its fields. fails_when=a toast shown while a bottom sheet is open sits at the bottom
+  it("moves toasts to the top while a bottom sheet is open", async () => {
     const { rerender } = render(
       <>
         <Toaster />
         <Sheet open onOpenChange={vi.fn()}>
-          <SheetContent aria-describedby={undefined}>
+          <SheetContent side="bottom" aria-describedby={undefined}>
             <SheetTitle>Edit</SheetTitle>
           </SheetContent>
         </Sheet>
@@ -86,5 +86,26 @@ describe("Toaster", () => {
     act(() => void toast("Marked"));
     await screen.findByText("Marked");
     expect(list()).toHaveAttribute("data-y-position", "bottom");
+    expect(list()).toHaveAttribute("data-x-position", "center");
+  });
+
+  // polish-4 #B: on tablet and desktop the edit sheet is a right-hand panel; a top toast covered
+  // its title. fails_when=a toast shown while a right panel is open sits at the top or centre
+  it("moves toasts to the bottom left while a right panel is open", async () => {
+    render(
+      <>
+        <Toaster />
+        <Sheet open onOpenChange={vi.fn()}>
+          <SheetContent side="right" aria-describedby={undefined}>
+            <SheetTitle>Edit</SheetTitle>
+          </SheetContent>
+        </Sheet>
+      </>,
+    );
+    act(() => void toast("Saved — Dine Out"));
+    await screen.findByText("Saved — Dine Out");
+    const list = document.querySelector("[data-sonner-toaster]") as HTMLElement;
+    expect(list).toHaveAttribute("data-y-position", "bottom");
+    expect(list).toHaveAttribute("data-x-position", "left");
   });
 });

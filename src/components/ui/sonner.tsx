@@ -1,5 +1,5 @@
 import { Toaster as Sonner } from "sonner";
-import { useAnySheetOpen } from "./sheet";
+import { useOpenSheetSide } from "./sheet";
 import { useIsMobile } from "@/lib/use-is-mobile";
 
 type ToasterProps = React.ComponentProps<typeof Sonner>;
@@ -8,7 +8,7 @@ type ToasterProps = React.ComponentProps<typeof Sonner>;
 const aboveTabBar = { bottom: "calc(3.25rem + env(safe-area-inset-bottom) + 0.5rem)" };
 
 const Toaster = ({ ...props }: ToasterProps) => {
-  const sheetOpen = useAnySheetOpen();
+  const sheetSide = useOpenSheetSide();
   // sonner's mobileOffset stops at 600px, but the tab bar shows below md (768px).
   const isMobile = useIsMobile();
   return (
@@ -17,9 +17,16 @@ const Toaster = ({ ...props }: ToasterProps) => {
       // them (swipe away, hover to pause, its buttons).
       className="toaster group pointer-events-auto"
       // Bottom centre: top-right toasts covered the month arrows (#166). On a phone, clear of the
-      // bottom tab bar (52px + safe area) and the home indicator. While a sheet is open, top
-      // centre, so a toast never covers a bottom sheet's fields.
-      position={sheetOpen ? "top-center" : "bottom-center"}
+      // bottom tab bar (52px + safe area) and the home indicator. While a bottom sheet is open, top
+      // centre, so a toast never covers a bottom sheet's fields; beside a right-hand panel, bottom
+      // left, so it never covers the panel's title.
+      position={
+        sheetSide === "bottom"
+          ? "top-center"
+          : sheetSide === "right"
+            ? "bottom-left"
+            : "bottom-center"
+      }
       mobileOffset={aboveTabBar}
       {...(isMobile && { offset: aboveTabBar })}
       toastOptions={{

@@ -13,22 +13,25 @@ import { cn } from "@/lib/utils";
 // moved to another entry (a link in the sheet), so that page is never undone.
 // shortcut: Forward after Back re-enters the closed sheet's entry with no sheet open, so the next
 // Back looks like it does nothing. Re-opening the sheet on Forward is not worth the code.
-// How many sheets are open, so the toaster can move out of a bottom sheet's way.
+// How many sheets are open (Make a rule replaces the sheet's history entry), and the sides of
+// the sheets on screen, newest last, so the toaster can keep out of their way.
 let openSheets = 0;
-const sheetListeners = new Set<() => void>();
-const setOpenSheets = (n: number) => {
-  openSheets = n;
-  sheetListeners.forEach((l) => l());
+type Side = NonNullable<VariantProps<typeof sheetVariants>["side"]>;
+let sides: Side[] = [];
+const sideListeners = new Set<() => void>();
+const setSides = (next: Side[]) => {
+  sides = next;
+  sideListeners.forEach((l) => l());
 };
 export const isSheetOpen = () => openSheets > 0;
-export function useAnySheetOpen() {
+export function useOpenSheetSide() {
   return React.useSyncExternalStore(
     (l) => {
-      sheetListeners.add(l);
-      return () => sheetListeners.delete(l);
+      sideListeners.add(l);
+      return () => sideListeners.delete(l);
     },
-    () => openSheets > 0,
-    () => false,
+    () => sides.at(-1) ?? null,
+    () => null,
   );
 }
 
@@ -39,7 +42,7 @@ function useCloseOnBack(open: boolean, close: () => void) {
     if (!open) return;
     const marker = Math.random().toString(36).slice(2);
     window.history.pushState({ ...window.history.state, __sheet: marker }, "");
-    setOpenSheets(openSheets + 1);
+    openSheets++;
     const onPop = () => {
       if (window.history.state?.__sheet === marker) return;
       closeRef.current();
@@ -47,7 +50,7 @@ function useCloseOnBack(open: boolean, close: () => void) {
     window.addEventListener("popstate", onPop);
     return () => {
       window.removeEventListener("popstate", onPop);
-      setOpenSheets(openSheets - 1);
+      openSheets--;
       // After the router's queued navigation (a microtask) has landed. After Back the entry is
       // already gone, so this does nothing.
       setTimeout(() => {
@@ -110,28 +113,38 @@ interface SheetContentProps
 const SheetContent = React.forwardRef<
   React.ElementRef<typeof SheetPrimitive.Content>,
   SheetContentProps
->(({ side = "right", className, children, onPointerDownOutside, ...props }, ref) => (
-  <SheetPortal>
-    <SheetOverlay />
-    <SheetPrimitive.Content
-      ref={ref}
-      className={cn(sheetVariants({ side }), className)}
-      onPointerDownOutside={(e) => {
-        // A toast shown over the sheet isn't a click outside: touching it must not close the sheet.
-        if (e.target instanceof Element && e.target.closest("[data-sonner-toaster]"))
-          e.preventDefault();
-        onPointerDownOutside?.(e);
-      }}
-      {...props}
-    >
-      <SheetPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background cursor-pointer transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-secondary">
-        <X className="h-4 w-4" />
-        <span className="sr-only">Close</span>
-      </SheetPrimitive.Close>
-      {children}
-    </SheetPrimitive.Content>
-  </SheetPortal>
-));
+>(({ side = "right", className, children, onPointerDownOutside, ...props }, ref) => {
+  const at: Side = side ?? "right";
+  React.useEffect(() => {
+    setSides([...sides, at]);
+    return () => {
+      const i = sides.lastIndexOf(at);
+      setSides(sides.filter((_, j) => j !== i));
+    };
+  }, [at]);
+  return (
+    <SheetPortal>
+      <SheetOverlay />
+      <SheetPrimitive.Content
+        ref={ref}
+        className={cn(sheetVariants({ side }), className)}
+        onPointerDownOutside={(e) => {
+          // A toast shown over the sheet isn't a click outside: touching it must not close the sheet.
+          if (e.target instanceof Element && e.target.closest("[data-sonner-toaster]"))
+            e.preventDefault();
+          onPointerDownOutside?.(e);
+        }}
+        {...props}
+      >
+        <SheetPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background cursor-pointer transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-secondary">
+          <X className="h-4 w-4" />
+          <span className="sr-only">Close</span>
+        </SheetPrimitive.Close>
+        {children}
+      </SheetPrimitive.Content>
+    </SheetPortal>
+  );
+});
 SheetContent.displayName = SheetPrimitive.Content.displayName;
 
 const SheetHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
