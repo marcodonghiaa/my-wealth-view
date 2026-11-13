@@ -17,12 +17,16 @@ export function useCloseOnBack(open: boolean, close: () => void) {
   React.useEffect(() => {
     if (!open) return;
     const marker = Math.random().toString(36).slice(2);
-    openOverlays++;
-    const push = () => window.history.pushState({ ...window.history.state, __sheet: marker }, "");
+    // How deep this overlay sits (1 = over the page): Forward onto a deeper overlay's old entry
+    // (a sheet opened over this dialog) is not a Back for this one (polish-5 W1).
+    const depth = ++openOverlays;
+    const push = () =>
+      window.history.pushState({ ...window.history.state, __sheet: marker, __depth: depth }, "");
     push();
     let disposed = false;
     const onPop = () => {
-      if (window.history.state?.__sheet === marker) return;
+      const state = window.history.state;
+      if (state?.__sheet === marker || (state?.__depth ?? 0) > depth) return;
       closeRef.current();
       // Still open a tick later (it refused, e.g. mid-import): put its entry back, so the next
       // Back is caught too instead of leaving the page (polish-1 W2).

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "./dialog";
+import { Sheet, SheetContent, SheetTitle } from "./sheet";
 
 // Issue #168: browser Back with a dialog open left the page (and lost what was typed).
 // fails_when=Back leaves the dialog open
@@ -142,5 +143,47 @@ describe("Dialog focus", () => {
     fireEvent.keyDown(await screen.findByRole("dialog"), { key: "Escape" });
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
     await waitFor(() => expect(open).toHaveFocus());
+  });
+});
+
+// polish-5 W1: Splitwise import → Find in bank (a sheet over the dialog) → Back → Forward closed the
+// import and lost the review: the dialog took the sheet's entry for a Back.
+// fails_when=Forward onto a deeper overlay's entry closes the dialog under it
+function Nested() {
+  const [open, setOpen] = useState(false);
+  const [inner, setInner] = useState(false);
+  return (
+    <>
+      <button onClick={() => setOpen(true)}>Open</button>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent aria-describedby={undefined}>
+          <DialogTitle>Import</DialogTitle>
+          <button onClick={() => setInner(true)}>Find in bank</button>
+        </DialogContent>
+      </Dialog>
+      <Sheet open={inner} onOpenChange={setInner}>
+        <SheetContent aria-describedby={undefined}>
+          <SheetTitle>Bank</SheetTitle>
+        </SheetContent>
+      </Sheet>
+    </>
+  );
+}
+
+describe("Dialog with a sheet over it", () => {
+  afterEach(() => window.history.replaceState(null, "", "/"));
+
+  it("Forward after Back onto the sheet's entry keeps the dialog open", async () => {
+    window.history.replaceState({ page: 1 }, "");
+    render(<Nested />);
+    fireEvent.click(screen.getByText("Open"));
+    const dialogEntry = window.history.state;
+    fireEvent.click(screen.getByText("Find in bank"));
+    const sheetEntry = window.history.state;
+    await popTo(dialogEntry);
+    await waitFor(() => expect(screen.queryByText("Bank")).not.toBeInTheDocument());
+    await popTo(sheetEntry);
+    await act(() => new Promise((r) => setTimeout(r, 0)));
+    expect(screen.getByText("Import")).toBeInTheDocument();
   });
 });
