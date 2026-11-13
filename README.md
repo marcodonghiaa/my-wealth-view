@@ -21,6 +21,7 @@ This is the frontend. The data pipeline (bank sync, FX rates, AI categorization,
 ## Look and feel
 
 Number-first design in the spirit of Trade Republic and Revolut:
+
 - Each screen opens on one exact figure, set in Fragment Mono; words are Geist.
 - Scrub the net-worth chart to read any past day.
 - Snow ground, hairline rows, 4px and 8px corners, no pills.

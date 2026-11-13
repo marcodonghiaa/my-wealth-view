@@ -256,8 +256,8 @@ export function ImportWizard() {
         <div className="rounded-2xl border bg-card p-5 card-ring">
           <h2 className="mb-1 text-sm font-semibold">Check before importing</h2>
           <p className="mb-3 text-sm text-muted-foreground">
-            {plural(plan.rows.length, "row")} ready, {plan.skipped.length} skipped. Importing again overwrites
-            months that already exist.
+            {plural(plan.rows.length, "row")} ready, {plan.skipped.length} skipped. Importing again
+            overwrites months that already exist.
           </p>
           {missing.length > 0 && (
             <p role="alert" className="mb-3 text-sm text-negative">

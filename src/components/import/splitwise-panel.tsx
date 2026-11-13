@@ -198,7 +198,8 @@ export function SplitwisePanel({
           <span className="min-w-0 flex-1">
             <span className="block truncate text-[0.9375rem] font-semibold">{loaded.name}</span>
             <span className="block text-[0.8125rem] text-muted-foreground">
-              {plural(loaded.file.rows.length, "row")}{currency ? ` · ${currency}` : ""}
+              {plural(loaded.file.rows.length, "row")}
+              {currency ? ` · ${currency}` : ""}
             </span>
           </span>
           <label className={`${LINK} cursor-pointer`}>
