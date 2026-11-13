@@ -87,6 +87,17 @@ describe("Sheet and browser Back", () => {
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
   });
 
+  // polish-3 #3: a popstate that lands on the sheet's own entry (Forward, or a sheet stacked on
+  // top popping its entry) must not close it. fails_when=any popstate closes the sheet
+  it("stays open when the history lands back on its own entry", async () => {
+    window.history.replaceState({ page: 1 }, "");
+    render(<Page />);
+    fireEvent.click(screen.getByText("Open"));
+    await popTo({ ...window.history.state });
+    await new Promise((r) => setTimeout(r, 0));
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+  });
+
   it("closing it another way takes its history entry back out", async () => {
     window.history.replaceState({ page: 1 }, "");
     render(<Page />);
