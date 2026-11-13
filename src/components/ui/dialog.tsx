@@ -5,7 +5,7 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import { useCloseOnBack } from "./sheet";
+import { useCloseOnBack } from "./close-on-back";
 
 // Browser or phone Back closes an open dialog instead of leaving the page, like a sheet (#168).
 // Works for dialogs opened by a Trigger too: the open state is kept here when nobody passes it.

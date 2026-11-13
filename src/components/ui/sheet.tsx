@@ -6,16 +6,9 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { useCloseOnBack } from "./close-on-back";
 
-// Browser or phone Back closes an open sheet instead of leaving the page (#164). Opening adds a
-// history entry on the same address (the router's state kept, so it sees no new page); Back pops
-// it. Closing another way (X, Esc, overlay) takes the entry out again, unless the app has already
-// moved to another entry (a link in the sheet), so that page is never undone.
-// shortcut: Forward after Back re-enters the closed sheet's entry with no sheet open, so the next
-// Back looks like it does nothing. Re-opening the sheet on Forward is not worth the code.
-// How many sheets are open (Make a rule replaces the sheet's history entry), and the sides of
-// the sheets on screen, newest last, so the toaster can keep out of their way.
-let openSheets = 0;
+// The sides of the sheets on screen, newest last, so the toaster can keep out of their way.
 type Side = NonNullable<VariantProps<typeof sheetVariants>["side"]>;
 let sides: Side[] = [];
 const sideListeners = new Set<() => void>();
@@ -23,7 +16,6 @@ const setSides = (next: Side[]) => {
   sides = next;
   sideListeners.forEach((l) => l());
 };
-export const isSheetOpen = () => openSheets > 0;
 export function useOpenSheetSide() {
   return React.useSyncExternalStore(
     (l) => {
@@ -33,40 +25,6 @@ export function useOpenSheetSide() {
     () => sides.at(-1) ?? null,
     () => null,
   );
-}
-
-// Dialogs use it too (#168), so isSheetOpen() also covers an open dialog.
-export function useCloseOnBack(open: boolean, close: () => void) {
-  const closeRef = React.useRef(close);
-  closeRef.current = close;
-  React.useEffect(() => {
-    if (!open) return;
-    const marker = Math.random().toString(36).slice(2);
-    openSheets++;
-    const push = () => window.history.pushState({ ...window.history.state, __sheet: marker }, "");
-    push();
-    let disposed = false;
-    const onPop = () => {
-      if (window.history.state?.__sheet === marker) return;
-      closeRef.current();
-      // Still open a tick later (it refused, e.g. mid-import): put its entry back, so the next
-      // Back is caught too instead of leaving the page (polish-1 W2).
-      setTimeout(() => {
-        if (!disposed && window.history.state?.__sheet !== marker) push();
-      });
-    };
-    window.addEventListener("popstate", onPop);
-    return () => {
-      disposed = true;
-      window.removeEventListener("popstate", onPop);
-      openSheets--;
-      // After the router's queued navigation (a microtask) has landed. After Back the entry is
-      // already gone, so this does nothing.
-      setTimeout(() => {
-        if (window.history.state?.__sheet === marker) window.history.back();
-      });
-    };
-  }, [open]);
 }
 
 function Sheet(props: React.ComponentProps<typeof SheetPrimitive.Root>) {
