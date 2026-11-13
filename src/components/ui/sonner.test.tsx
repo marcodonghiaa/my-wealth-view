@@ -129,3 +129,26 @@ describe("Toaster", () => {
     expect(list).toHaveAttribute("data-x-position", "left");
   });
 });
+
+// Issue #169: toasts were white on a dark page. fails_when=sonner keeps its light theme or its
+// own white background in dark mode
+describe("Toaster in dark mode", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("follows the system theme and the app's palette", async () => {
+    vi.stubGlobal("matchMedia", (q: string) => ({
+      matches: q === "(prefers-color-scheme: dark)",
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      addListener: () => {},
+      removeListener: () => {},
+    }));
+    render(<Toaster />);
+    act(() => void toast("Marked as regular"));
+    await screen.findByText("Marked as regular");
+    const list = document.querySelector("[data-sonner-toaster]") as HTMLElement;
+    expect(list).toHaveAttribute("data-sonner-theme", "dark");
+    expect(list.style.getPropertyValue("--normal-bg")).toBe("var(--popover)");
+    expect(list.style.getPropertyValue("--normal-text")).toBe("var(--popover-foreground)");
+  });
+});
