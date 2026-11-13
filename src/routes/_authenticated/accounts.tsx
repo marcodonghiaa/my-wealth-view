@@ -1,4 +1,5 @@
 import { formatPercent } from "@/lib/locale";
+import { isDemoMode } from "@/lib/demo/mode";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -428,6 +429,15 @@ function AccountsPage() {
             </button>
             {showConnectForm && (
               <div className="px-4 pb-5 sm:px-5">
+                {isDemoMode() && (
+                  <p
+                    role="note"
+                    className="mb-4 rounded-md bg-muted px-3 py-2 text-sm text-foreground"
+                  >
+                    Bank connection is off in the demo. Look around the form: Approve won't open a
+                    bank.
+                  </p>
+                )}
                 <ol
                   ref={connectStepsRef}
                   tabIndex={-1}

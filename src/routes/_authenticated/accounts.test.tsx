@@ -13,6 +13,11 @@ const toast = vi.hoisted(() => ({
   dismiss: vi.fn(),
 }));
 vi.mock("sonner", () => ({ toast }));
+const demo = vi.hoisted(() => ({ on: false }));
+vi.mock("@/lib/demo/mode", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/demo/mode")>()),
+  isDemoMode: () => demo.on,
+}));
 vi.mock("@/integrations/supabase/client", () => {
   const query = (table: string) => {
     const q: Record<string, unknown> = {};
@@ -270,6 +275,33 @@ describe("connect a bank", () => {
       "No banks listed for this country yet. Try another country.",
     );
     expect(screen.getByLabelText("Bank")).toBeDisabled();
+  });
+});
+
+// polish-4 U4: the demo said "Disabled in the demo." only after a country, a bank and Approve.
+// fails_when=the form doesn't say up front that bank connection is off in the demo
+describe("connect a bank in the demo", () => {
+  afterEach(() => {
+    demo.on = false;
+  });
+  const open = async () => {
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <Page />
+      </QueryClientProvider>,
+    );
+    fireEvent.click(await screen.findByRole("button", { name: "Connect a bank" }));
+  };
+
+  it("says up front that bank connection is off", async () => {
+    demo.on = true;
+    await open();
+    expect(screen.getByText(/Bank connection is off in the demo/)).toBeInTheDocument();
+  });
+
+  it("says nothing about the demo on a real dashboard", async () => {
+    await open();
+    expect(screen.queryByText(/off in the demo/)).not.toBeInTheDocument();
   });
 });
 
