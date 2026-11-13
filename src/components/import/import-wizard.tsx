@@ -20,6 +20,7 @@ import { planNetWorth, planSpend } from "@/lib/import/plan";
 import type { AppCategory } from "@/lib/import/suggest-category";
 import { STOCKS_LABEL } from "@/lib/net-worth";
 import { formatEur } from "@/lib/transactions";
+import { plural } from "@/lib/plural";
 
 const KINDS: Array<{ value: ImportKind; label: string }> = [
   { value: "net_worth", label: "Net worth by month" },
@@ -134,7 +135,7 @@ export function ImportWizard() {
       saveLastImport(browserStorage(), owner, importedKind, entry);
       setLast(entry);
       void refresh(importedKind);
-      toast.success(`Imported ${count} rows`);
+      toast.success(`Imported ${plural(count, "row")}`);
     },
     onError: (err) => toast.error(fileError(err)),
   });
@@ -255,7 +256,7 @@ export function ImportWizard() {
         <div className="rounded-2xl border bg-card p-5 card-ring">
           <h2 className="mb-1 text-sm font-semibold">Check before importing</h2>
           <p className="mb-3 text-sm text-muted-foreground">
-            {plan.rows.length} rows ready, {plan.skipped.length} skipped. Importing again overwrites
+            {plural(plan.rows.length, "row")} ready, {plan.skipped.length} skipped. Importing again overwrites
             months that already exist.
           </p>
           {missing.length > 0 && (
@@ -311,14 +312,14 @@ export function ImportWizard() {
             onClick={() => importRows.mutate()}
           >
             {importRows.isPending && <Loader2 className="size-4 animate-spin" />}
-            Import {plan.rows.length} rows
+            Import {plural(plan.rows.length, "row")}
           </button>
         </div>
       )}
 
       {last && (
         <div role="status" className="rounded-2xl border bg-card p-5 text-sm card-ring">
-          Last import: {last.count} rows. Undo won't restore overwritten months.
+          Last import: {plural(last.count, "row")}. Undo won't restore overwritten months.
           <div className="mt-3">
             <button
               type="button"
