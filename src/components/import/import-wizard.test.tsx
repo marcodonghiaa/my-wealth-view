@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { toast } from "sonner";
 
 const upsert = vi.fn(async (_rows: unknown, _opts?: unknown) => ({ error: null }));
 vi.mock("@/integrations/supabase/client", () => ({
@@ -59,6 +60,12 @@ describe("ImportWizard", () => {
     upload("Month,Total\n2024-02,100\n");
     expect(await screen.findByText(/^1 row ready, 0 skipped/)).toBeTruthy();
     expect(screen.getByRole("button", { name: "Import 1 row" })).toBeTruthy();
+    // polish-3 F2: the toast and the Last import line too.
+    const success = vi.spyOn(toast, "success");
+    fireEvent.click(screen.getByRole("button", { name: "Import 1 row" }));
+    expect(await screen.findByText(/^Last import: 1 row\. /)).toBeTruthy();
+    expect(success).toHaveBeenCalledWith("Imported 1 row");
+    success.mockRestore();
   });
 
   it("removes the import when Undo is pressed", async () => {
