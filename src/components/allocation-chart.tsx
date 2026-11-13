@@ -96,10 +96,19 @@ export function AllocationChart({
   format?: (eur: number) => string;
 }) {
   const rows = allocationHistory(history, snapshots, undefined, reconstructed);
-  const row = asOf
-    ? // Before the first row: the first row, not today's (#148).
-      (rows.filter((r) => r.snapshot_date <= asOf).at(-1) ?? rows[0])
-    : rows.at(-1);
+  const row = asOf ? rows.filter((r) => r.snapshot_date <= asOf).at(-1) : rows.at(-1);
+  // A day before the first row has no mix: say so, rather than show another day's (#148, U5).
+  if (!row && rows[0])
+    return (
+      <section aria-labelledby="allocation-title" className="rounded-lg bg-card p-5 sm:p-6">
+        <h2 id="allocation-title" className="text-lg font-semibold text-foreground">
+          Breakdown
+        </h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          No breakdown before {formatDay(rows[0].snapshot_date)}.
+        </p>
+      </section>
+    );
   if (!row) return null;
   const slices = CLASSES.map((c) => ({ ...c, value: row[c.key] ?? 0 })).filter((s) => s.value > 0);
   const gross = slices.reduce((sum, s) => sum + s.value, 0);
