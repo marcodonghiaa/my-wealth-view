@@ -10,6 +10,8 @@ const palette = {
   "--normal-bg": "var(--popover)",
   "--normal-text": "var(--popover-foreground)",
   "--normal-border": "var(--border)",
+  // sonner sets its own ui-sans-serif on the toaster (U2).
+  fontFamily: "var(--font-sans)",
 } as React.CSSProperties;
 
 // The phone tab bar (52px + safe area) and a gap.
