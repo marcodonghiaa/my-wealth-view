@@ -89,6 +89,26 @@ describe("Toaster", () => {
     expect(list()).toHaveAttribute("data-x-position", "center");
   });
 
+  // polish-4 #B: the Transactions page always renders its filter and edit sheets, closed.
+  // fails_when=a closed sheet still moves the toast
+  it("ignores sheets that are closed", async () => {
+    render(
+      <>
+        <Toaster />
+        <Sheet open={false} onOpenChange={vi.fn()}>
+          <SheetContent side="bottom" aria-describedby={undefined}>
+            <SheetTitle>Filter</SheetTitle>
+          </SheetContent>
+        </Sheet>
+      </>,
+    );
+    act(() => void toast("Marked"));
+    await screen.findByText("Marked");
+    const list = document.querySelector("[data-sonner-toaster]") as HTMLElement;
+    expect(list).toHaveAttribute("data-y-position", "bottom");
+    expect(list).toHaveAttribute("data-x-position", "center");
+  });
+
   // polish-4 #B: on tablet and desktop the edit sheet is a right-hand panel; a top toast covered
   // its title. fails_when=a toast shown while a right panel is open sits at the top or centre
   it("moves toasts to the bottom left while a right panel is open", async () => {
