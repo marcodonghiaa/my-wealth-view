@@ -466,7 +466,7 @@ function RuleList({ rules }: { rules: RuleRow[] }) {
     toast.success("Rule deleted", {
       id: resortToastId(rule),
       duration: 8000, // two lines and two buttons: 4s is short on a phone
-      description: `${plural(changes)} still in ${rule.set_category} because of ${quoteText(shortText(rule.match_text))}. Re-sort clears them now; the next sync sorts them again.`,
+      description: `${plural(changes)} still in ${rule.set_category} because of ${quoteText(shortText(rule.match_text))}. Re-sort clears them now; the next sync sorts what it can.`,
       action: { label: "Re-sort", onClick: (e) => startResort(e, rule) },
       cancel: undo, // Undo stays, beside Re-sort
     });
