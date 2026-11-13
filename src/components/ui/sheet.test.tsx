@@ -131,3 +131,17 @@ describe("Sheet and browser Back", () => {
     expect(back).not.toHaveBeenCalled();
   });
 });
+
+// polish-4 #F: closing a sheet left focus on <body>, so a keyboard user started again from the top
+// of the page (WCAG 2.4.3). fails_when=focus doesn't return to the button that opened the sheet
+describe("Sheet focus", () => {
+  it("gives focus back to the button that opened it", async () => {
+    render(<Page />);
+    const open = screen.getByText("Open");
+    open.focus();
+    fireEvent.click(open);
+    fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    await waitFor(() => expect(open).toHaveFocus());
+  });
+});
