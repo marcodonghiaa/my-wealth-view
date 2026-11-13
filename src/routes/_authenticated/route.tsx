@@ -188,6 +188,12 @@ function AuthenticatedLayout() {
   const [signingOut, setSigningOut] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const pathname = useRouterState({ select: (st) => st.location.pathname });
+  // A More link to the page you're on only closes the sheet: navigating would replace the
+  // sheet's history entry with the same page and leave a Back that does nothing.
+  const closeMenuTo = (e: React.MouseEvent, to: string) => {
+    if (to === pathname) e.preventDefault();
+    setMenuOpen(false);
+  };
   const streams = useRecurringStreams().data;
   const badges: Record<string, number> = {
     Subscriptions: streams ? groupStreams(streams, romeToday()).toReview.length : 0,
@@ -355,7 +361,7 @@ function AuthenticatedLayout() {
                       // Replace the sheet's own history entry, so one Back returns to the page.
                       replace
                       activeOptions={{ exact: true }}
-                      onClick={() => setMenuOpen(false)}
+                      onClick={(e) => closeMenuTo(e, item.to)}
                       className={SHEET_ROW}
                       activeProps={{ className: SHEET_ROW_ACTIVE }}
                     >
@@ -378,7 +384,7 @@ function AuthenticatedLayout() {
                 <Link
                   to="/settings"
                   replace
-                  onClick={() => setMenuOpen(false)}
+                  onClick={(e) => closeMenuTo(e, "/settings")}
                   className={SHEET_ROW}
                   activeProps={{ className: SHEET_ROW_ACTIVE }}
                 >
