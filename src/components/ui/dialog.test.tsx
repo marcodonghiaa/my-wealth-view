@@ -71,6 +71,18 @@ describe("Dialog and browser Back", () => {
     push.mockRestore();
   });
 
+  // polish-3 F7: closing with X takes the dialog's history entry back out.
+  // fails_when=a closed dialog leaves its entry, so the next Back does nothing
+  it("closing with X takes its history entry back out", async () => {
+    window.history.replaceState({ page: 1 }, "");
+    render(<WithTrigger />);
+    fireEvent.click(screen.getByText("Open"));
+    const back = vi.spyOn(window.history, "back").mockImplementation(() => {});
+    fireEvent.click(screen.getByRole("button", { name: "Close" }));
+    await waitFor(() => expect(back).toHaveBeenCalledTimes(1));
+    back.mockRestore();
+  });
+
   // polish-1 W2: a refused close (mid-import) must keep catching Back, not just the first one.
   // fails_when=the second Back leaves the page
   it("a dialog that refuses to close keeps catching Back", async () => {
