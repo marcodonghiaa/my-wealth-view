@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 const { rows, path } = vi.hoisted(() => ({
@@ -15,13 +15,22 @@ vi.mock("@tanstack/react-router", () => ({
   Link: ({
     children,
     to,
+    replace,
+    onClick,
     "aria-current": current,
   }: {
     children: React.ReactNode;
     to: string;
+    replace?: boolean;
+    onClick?: React.MouseEventHandler;
     "aria-current"?: "page";
   }) => (
-    <a href={to} aria-current={current}>
+    <a
+      href={to}
+      onClick={onClick}
+      aria-current={current}
+      data-replace={replace ? "true" : undefined}
+    >
       {children}
     </a>
   ),
@@ -192,5 +201,56 @@ describe("phone tabs and More", () => {
     const entries = [...sheet.querySelectorAll("a, button")].map((el) => el.textContent);
     expect(entries.slice(-2)).toEqual(["Settings", "Sign out"]);
     expect(sheet).toHaveTextContent("Signed in as a@example.com");
+  });
+
+  // polish-4 #E: fails_when=opening More leaves focus on the tab bar behind the overlay
+  it("moves focus into the More sheet when it opens", async () => {
+    rows.current = [];
+    path.current = "/";
+    renderLayout();
+    fireEvent.click(screen.getByRole("button", { name: "More" }));
+    await waitFor(() =>
+      expect(screen.getByRole("dialog")).toContainElement(document.activeElement as HTMLElement),
+    );
+  });
+});
+
+// polish-1 #1 (#164): the More sheet adds a history entry; a link that pushed on top of it left a
+// Back press that did nothing. fails_when=a More link pushes instead of replacing the sheet's entry
+describe("More sheet links", () => {
+  it("replace the sheet's history entry, so one Back returns to the page", async () => {
+    rows.current = [];
+    renderLayout();
+    fireEvent.click(screen.getByRole("button", { name: /^More/ }));
+    const links = within(await screen.findByRole("dialog")).getAllByRole("link");
+    expect(links.length).toBeGreaterThan(2);
+    links.forEach((a) => expect(a).toHaveAttribute("data-replace", "true"));
+  });
+});
+
+// polish-3 #2 (#164): a More link to the page you're on replaced the sheet's entry with the same
+// address, so closing the sheet couldn't take its entry out and one Back did nothing.
+// fails_when=tapping the current page's link in More still navigates
+describe("More sheet link to the current page", () => {
+  it("only closes the sheet", async () => {
+    rows.current = [];
+    path.current = "/settings";
+    try {
+      renderLayout();
+      fireEvent.click(screen.getByRole("button", { name: /^More/ }));
+      const sheet = await screen.findByRole("dialog");
+      const here = within(sheet).getByRole("link", { name: /Settings/ });
+      const other = within(sheet)
+        .getAllByRole("link")
+        .find((a) => a !== here)!;
+      expect(fireEvent.click(here)).toBe(false); // default prevented: no navigation
+      fireEvent.click(screen.getByRole("button", { name: /^More/ }));
+      const again = await screen.findByRole("dialog");
+      expect(fireEvent.click(within(again).getByRole("link", { name: other.textContent! }))).toBe(
+        true,
+      );
+    } finally {
+      path.current = "/";
+    }
   });
 });

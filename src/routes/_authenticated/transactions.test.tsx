@@ -55,9 +55,11 @@ vi.mock("sonner", () => ({
 }));
 
 let searchParams: Record<string, string> = {};
+const navigate = vi.fn();
 vi.mock("@tanstack/react-router", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@tanstack/react-router")>()),
   useSearch: () => searchParams,
+  useNavigate: () => navigate,
 }));
 
 import { Route } from "./transactions";
@@ -72,6 +74,7 @@ const renderPage = (client = new QueryClient({ defaultOptions: { queries: { retr
 
 afterEach(() => {
   toastSuccess.mockReset();
+  navigate.mockReset();
   for (const k of Object.keys(rows)) delete rows[k];
 });
 
@@ -102,6 +105,18 @@ describe("Make a rule in the transaction sheet", () => {
     renderPage();
     const sheet = await openSheet(/Poste Italiane/);
     expect(within(sheet).getByRole("button", { name: "Make a rule" })).toBeTruthy();
+  });
+
+  // polish-1 #1 (#164): the sheet has its own history entry; pushing /rules on top of it left a
+  // Back press that did nothing. fails_when=the sheet's Make a rule pushes instead of replacing
+  it("opens Rules in place of the sheet's history entry", async () => {
+    rows["v_transactions_eur"] = [bankRow];
+    renderPage();
+    const sheet = await openSheet(/Poste Italiane/);
+    await userEvent.click(within(sheet).getByRole("button", { name: "Make a rule" }));
+    expect(navigate).toHaveBeenLastCalledWith(
+      expect.objectContaining({ to: "/rules", replace: true }),
+    );
   });
 
   // pass5 #1: the rules come from the database, not only from a cache the Rules page filled
@@ -157,6 +172,27 @@ describe("Make a rule in the transaction sheet", () => {
     await userEvent.click(await screen.findByRole("button", { name: "Groceries" }));
     await waitFor(() => expect(toastSuccess).toHaveBeenCalled());
     expect(toastSuccess.mock.calls.at(-1)?.[1]).toHaveProperty("action.label", "Make a rule");
+  });
+
+  // polish-3 #1 (#164): toasts take clicks over an open sheet; the toast's Make a rule pushed
+  // /rules on top of the sheet's history entry, leaving a Back that did nothing.
+  // fails_when=the toast's action pushes while a sheet is open, or replaces when none is
+  it("the toast's Make a rule replaces only while a sheet is open", async () => {
+    rows["v_transactions_eur"] = [bankRow];
+    renderPage();
+    const [inline] = await screen.findAllByRole("button", { name: /Change category for/ });
+    await userEvent.click(inline!);
+    await userEvent.click(await screen.findByRole("button", { name: "Groceries" }));
+    await waitFor(() => expect(toastSuccess).toHaveBeenCalled());
+    const action = (toastSuccess.mock.calls.at(-1)?.[1] as { action: { onClick: () => void } })
+      .action;
+    action.onClick();
+    expect(navigate).toHaveBeenLastCalledWith(expect.not.objectContaining({ replace: true }));
+    await openSheet(/Poste Italiane/);
+    action.onClick();
+    expect(navigate).toHaveBeenLastCalledWith(
+      expect.objectContaining({ to: "/rules", replace: true }),
+    );
   });
 
   it("leaves it out for a Splitwise share", async () => {

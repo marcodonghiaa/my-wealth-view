@@ -79,6 +79,19 @@ describe("Splitwise share rows allow only name and category edits", () => {
     expect(screen.queryByText("Type")).toBeNull();
     expect(screen.queryByText("Split")).toBeNull();
   });
+
+  // polish-4 #E: fails_when=opening the edit sheet leaves focus on the row behind the overlay
+  it("card moves focus into the sheet when it opens", async () => {
+    render(
+      <ul>
+        <TransactionCardView {...props()} />
+      </ul>,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /Dinner/ }));
+    expect(await screen.findByRole("dialog")).toContainElement(
+      document.activeElement as HTMLElement,
+    );
+  });
 });
 
 // protects=a bank row stays a single clean line on a phone and every editor sits behind a tap;

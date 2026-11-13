@@ -1,4 +1,5 @@
 import { plural } from "@/lib/plural";
+import { isSheetOpen } from "@/components/ui/sheet";
 
 // Category rules: how a rule's text matches, and the "Make a rule" shortcut.
 
@@ -96,7 +97,11 @@ export type RuleLike = {
 export function makeRuleAction(
   name: string | null | undefined,
   category: string | null,
-  navigate: (opts: { to: "/rules"; search: { text: string; category: string } }) => unknown,
+  navigate: (opts: {
+    to: "/rules";
+    search: { text: string; category: string };
+    replace?: boolean;
+  }) => unknown,
   // undefined = not loaded yet (or failed): we can't tell if a rule covers the name, so offer nothing
   rules: ReadonlyArray<RuleLike> | undefined,
 ) {
@@ -112,6 +117,13 @@ export function makeRuleAction(
   if (covered) return undefined;
   return {
     label: "Make a rule",
-    onClick: () => void navigate({ to: "/rules", search: { text, category } }),
+    onClick: () =>
+      void navigate({
+        to: "/rules",
+        search: { text, category },
+        // From over an open sheet (its button, or a toast on top of it): replace the sheet's
+        // history entry, so one Back returns to the page.
+        ...(isSheetOpen() && { replace: true }),
+      }),
   };
 }

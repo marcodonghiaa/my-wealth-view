@@ -8,6 +8,9 @@ import {
   ruleCondition,
   textMatches,
 } from "./rules";
+import { createElement } from "react";
+import { render } from "@testing-library/react";
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 
 describe("textMatches (same as the sync's matcher)", () => {
   it("word: the text on its own, never inside another word", () => {
@@ -56,6 +59,31 @@ describe("Make a rule shortcut", () => {
     expect(navigate).toHaveBeenCalledWith({
       to: "/rules",
       search: { text: "BAR ROMA", category: "Dine Out" },
+    });
+  });
+
+  // polish-1 #1 / polish-3 #1 (#164): over an open sheet, a push left the sheet's history entry
+  // under /rules, so the first Back did nothing. fails_when=it pushes while a sheet is open
+  it("replaces the history entry while a sheet is open", () => {
+    const navigate = vi.fn();
+    const action = makeRuleAction("Bar Roma", "Dine Out", navigate, []);
+    const sheet = render(
+      createElement(
+        Sheet,
+        { open: true, onOpenChange: vi.fn() },
+        createElement(
+          SheetContent,
+          { "aria-describedby": undefined },
+          createElement(SheetTitle, null, "Edit"),
+        ),
+      ),
+    );
+    action?.onClick();
+    sheet.unmount();
+    expect(navigate).toHaveBeenCalledWith({
+      to: "/rules",
+      search: { text: "Bar Roma", category: "Dine Out" },
+      replace: true,
     });
   });
 

@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { useState } from "react";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { FilterSheet, type FilterSheetProps } from "./filter-sheet";
@@ -49,6 +50,14 @@ describe("FilterSheet", () => {
     expect(screen.getByRole("button", { name: "Show 12 transactions" })).toBeInTheDocument();
   });
 
+  // polish-4 #E: focus stayed on the page behind, so Tab walked links under the overlay (WCAG
+  // 2.4.3). fails_when=opening the sheet leaves focus outside it
+  it("moves focus into the sheet when it opens", async () => {
+    render(<FilterSheet {...props()} />);
+    await userEvent.click(screen.getByRole("button", { name: "Filter" }));
+    expect(screen.getByRole("dialog")).toContainElement(document.activeElement as HTMLElement);
+  });
+
   it("offers banks and Uncategorized when there are any, and clears", async () => {
     const p = props({
       banks: ["Fineco", "Revolut"],
@@ -83,5 +92,21 @@ describe("FilterSheet tag", () => {
     await userEvent.click(screen.getByRole("button", { name: "Filter" }));
     await userEvent.selectOptions(screen.getByLabelText("Tag"), "work");
     expect(onTag).toHaveBeenCalledWith("work");
+  });
+});
+
+// protects=issue #164: Clear disables itself once nothing is set; focus must not fall to <body>;
+// fails_when=after Clear the focused element is the page body
+describe("FilterSheet Clear focus", () => {
+  it("moves focus to the Show button after clearing", async () => {
+    function Harness() {
+      const [count, setCount] = useState(2);
+      return <FilterSheet {...props({ count, onClear: () => setCount(0) })} />;
+    }
+    render(<Harness />);
+    await userEvent.click(screen.getByRole("button", { name: /Filter/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Clear" }));
+    expect(screen.getByRole("button", { name: "Clear" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Show 12 transactions" })).toHaveFocus();
   });
 });

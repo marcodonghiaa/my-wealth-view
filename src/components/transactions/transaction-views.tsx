@@ -126,7 +126,6 @@ function TransactionEditSheet({
       <SheetContent
         side={isMobile ? "bottom" : "right"}
         aria-describedby={undefined}
-        onOpenAutoFocus={(e) => e.preventDefault()}
         className="max-h-[88dvh] gap-0 overflow-y-auto rounded-t-xl border-0 bg-background p-0 pb-[env(safe-area-inset-bottom)] md:max-h-none md:rounded-none md:border-l [&>button]:size-11"
       >
         <div

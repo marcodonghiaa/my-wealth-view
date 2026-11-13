@@ -188,6 +188,12 @@ function AuthenticatedLayout() {
   const [signingOut, setSigningOut] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const pathname = useRouterState({ select: (st) => st.location.pathname });
+  // A More link to the page you're on only closes the sheet: navigating would replace the
+  // sheet's history entry with the same page and leave a Back that does nothing.
+  const closeMenuTo = (e: React.MouseEvent, to: string) => {
+    if (to === pathname) e.preventDefault();
+    setMenuOpen(false);
+  };
   const streams = useRecurringStreams().data;
   const badges: Record<string, number> = {
     Subscriptions: streams ? groupStreams(streams, romeToday()).toReview.length : 0,
@@ -335,7 +341,6 @@ function AuthenticatedLayout() {
       <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
         <SheetContent
           side="bottom"
-          onOpenAutoFocus={(e) => e.preventDefault()}
           className="max-h-[88dvh] gap-0 overflow-y-auto rounded-t-xl border-0 bg-background p-0 pb-[env(safe-area-inset-bottom)] [&>button]:size-11"
         >
           <div aria-hidden className="mx-auto mt-2 h-1 w-9 rounded-md bg-muted-foreground/40" />
@@ -352,8 +357,10 @@ function AuthenticatedLayout() {
                     <Link
                       key={item.label}
                       to={item.to}
+                      // Replace the sheet's own history entry, so one Back returns to the page.
+                      replace
                       activeOptions={{ exact: true }}
-                      onClick={() => setMenuOpen(false)}
+                      onClick={(e) => closeMenuTo(e, item.to)}
                       className={SHEET_ROW}
                       activeProps={{ className: SHEET_ROW_ACTIVE }}
                     >
@@ -375,7 +382,8 @@ function AuthenticatedLayout() {
               <GroupedList>
                 <Link
                   to="/settings"
-                  onClick={() => setMenuOpen(false)}
+                  replace
+                  onClick={(e) => closeMenuTo(e, "/settings")}
                   className={SHEET_ROW}
                   activeProps={{ className: SHEET_ROW_ACTIVE }}
                 >

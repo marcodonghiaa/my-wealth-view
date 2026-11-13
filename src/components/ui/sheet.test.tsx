@@ -1,5 +1,6 @@
-import { describe, expect, it, vi } from "vitest";
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { useState } from "react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { Sheet, SheetContent, SheetTitle } from "./sheet";
 
 // polish-4 #13: a toast shown over an open sheet sits outside it. fails_when=touching the toast
@@ -41,5 +42,106 @@ describe("Sheet", () => {
     await tick();
     tap(screen.getByText("elsewhere"));
     expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+});
+
+// Issue #164: browser Back with a sheet open closes the sheet instead of leaving the page.
+function Page() {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button onClick={() => setOpen(true)}>Open</button>
+      <Sheet open={open} onOpenChange={setOpen}>
+        <SheetContent aria-describedby={undefined}>
+          <SheetTitle>Edit</SheetTitle>
+        </SheetContent>
+      </Sheet>
+    </>
+  );
+}
+
+const popTo = (state: unknown) =>
+  act(() => {
+    window.history.replaceState(state, "");
+    window.dispatchEvent(new PopStateEvent("popstate", { state }));
+  });
+
+describe("Sheet and browser Back", () => {
+  // jsdom's history is shared by every test in the file: start each one on a clean entry, and
+  // put back anything a test stubbed even when it fails.
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.useRealTimers();
+    window.history.replaceState(null, "", "/");
+  });
+
+  it("opening adds a history entry on the same address", () => {
+    window.history.replaceState({ page: 1 }, "");
+    const before = window.history.length;
+    const href = window.location.href;
+    render(<Page />);
+    fireEvent.click(screen.getByText("Open"));
+    expect(window.history.length).toBe(before + 1);
+    expect(window.location.href).toBe(href);
+    expect(window.history.state).toMatchObject({ page: 1 });
+    expect(window.history.state.__sheet).toEqual(expect.any(String));
+  });
+
+  it("Back closes the sheet and stays on the page", async () => {
+    window.history.replaceState({ page: 1 }, "");
+    render(<Page />);
+    fireEvent.click(screen.getByText("Open"));
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    await popTo({ page: 1 });
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+  });
+
+  // polish-3 #3: a popstate that lands on the sheet's own entry (Forward, or a sheet stacked on
+  // top popping its entry) must not close it. fails_when=any popstate closes the sheet
+  it("stays open when the history lands back on its own entry", async () => {
+    window.history.replaceState({ page: 1 }, "");
+    render(<Page />);
+    fireEvent.click(screen.getByText("Open"));
+    await popTo({ ...window.history.state });
+    await new Promise((r) => setTimeout(r, 0));
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+  });
+
+  it("closing it another way takes its history entry back out", async () => {
+    window.history.replaceState({ page: 1 }, "");
+    render(<Page />);
+    fireEvent.click(screen.getByText("Open"));
+    const sheetState = window.history.state;
+    const back = vi.spyOn(window.history, "back").mockImplementation(() => {});
+    fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
+    await waitFor(() => expect(back).toHaveBeenCalledTimes(1));
+    expect(sheetState.__sheet).toEqual(expect.any(String));
+  });
+
+  it("closing because the app navigated away leaves history alone", async () => {
+    window.history.replaceState({ page: 1 }, "");
+    render(<Page />);
+    fireEvent.click(screen.getByText("Open"));
+    const back = vi.spyOn(window.history, "back").mockImplementation(() => {});
+    vi.useFakeTimers();
+    // A link inside the sheet: the router pushes the new page, then the sheet closes.
+    window.history.pushState({ page: 2 }, "", "/other");
+    fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
+    act(() => vi.runAllTimers());
+    expect(back).not.toHaveBeenCalled();
+  });
+});
+
+// polish-4 #F: closing a sheet left focus on <body>, so a keyboard user started again from the top
+// of the page (WCAG 2.4.3). fails_when=focus doesn't return to the button that opened the sheet
+describe("Sheet focus", () => {
+  it("gives focus back to the button that opened it", async () => {
+    render(<Page />);
+    const open = screen.getByText("Open");
+    open.focus();
+    fireEvent.click(open);
+    fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    await waitFor(() => expect(open).toHaveFocus());
   });
 });
