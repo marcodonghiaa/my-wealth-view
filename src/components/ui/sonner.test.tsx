@@ -150,6 +150,7 @@ describe("Toaster in dark mode", () => {
     expect(list).toHaveAttribute("data-sonner-theme", "dark");
     expect(list.style.getPropertyValue("--normal-bg")).toBe("var(--popover)");
     expect(list.style.getPropertyValue("--normal-text")).toBe("var(--popover-foreground)");
+    expect(list.style.getPropertyValue("--normal-border")).toBe("var(--border)");
   });
 
   // polish-1 W4: one colour source. fails_when=the toast still carries background/text classes
