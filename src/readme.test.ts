@@ -14,4 +14,11 @@ describe("README", () => {
     expect(npx).toBeGreaterThan(-1);
     expect(npx).toBeLessThan(selfHost.indexOf("setup.sh"));
   });
+
+  // polish-3 F9: the Deploy button now sits inside the collapsed Older path.
+  // fails_when=the Deploy section points "above" without saying where
+  it("says where the Deploy button is", () => {
+    expect(readme).not.toMatch(/Deploy button above/);
+    expect(readme).toMatch(/Deploy button under \*\*Older path\*\*/);
+  });
 });
