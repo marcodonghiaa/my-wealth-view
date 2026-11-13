@@ -50,6 +50,14 @@ describe("FilterSheet", () => {
     expect(screen.getByRole("button", { name: "Show 12 transactions" })).toBeInTheDocument();
   });
 
+  // polish-4 #E: focus stayed on the page behind, so Tab walked links under the overlay (WCAG
+  // 2.4.3). fails_when=opening the sheet leaves focus outside it
+  it("moves focus into the sheet when it opens", async () => {
+    render(<FilterSheet {...props()} />);
+    await userEvent.click(screen.getByRole("button", { name: "Filter" }));
+    expect(screen.getByRole("dialog")).toContainElement(document.activeElement as HTMLElement);
+  });
+
   it("offers banks and Uncategorized when there are any, and clears", async () => {
     const p = props({
       banks: ["Fineco", "Revolut"],

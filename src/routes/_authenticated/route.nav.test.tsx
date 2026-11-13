@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 const { rows, path } = vi.hoisted(() => ({
@@ -201,6 +201,17 @@ describe("phone tabs and More", () => {
     const entries = [...sheet.querySelectorAll("a, button")].map((el) => el.textContent);
     expect(entries.slice(-2)).toEqual(["Settings", "Sign out"]);
     expect(sheet).toHaveTextContent("Signed in as a@example.com");
+  });
+
+  // polish-4 #E: fails_when=opening More leaves focus on the tab bar behind the overlay
+  it("moves focus into the More sheet when it opens", async () => {
+    rows.current = [];
+    path.current = "/";
+    renderLayout();
+    fireEvent.click(screen.getByRole("button", { name: "More" }));
+    await waitFor(() =>
+      expect(screen.getByRole("dialog")).toContainElement(document.activeElement as HTMLElement),
+    );
   });
 });
 

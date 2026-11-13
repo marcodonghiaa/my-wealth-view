@@ -341,7 +341,6 @@ function AuthenticatedLayout() {
       <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
         <SheetContent
           side="bottom"
-          onOpenAutoFocus={(e) => e.preventDefault()}
           className="max-h-[88dvh] gap-0 overflow-y-auto rounded-t-xl border-0 bg-background p-0 pb-[env(safe-area-inset-bottom)] [&>button]:size-11"
         >
           <div aria-hidden className="mx-auto mt-2 h-1 w-9 rounded-md bg-muted-foreground/40" />
