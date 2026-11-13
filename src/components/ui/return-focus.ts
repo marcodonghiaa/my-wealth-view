@@ -13,9 +13,12 @@ export function returnFocus(
 ) {
   return (e: Event) => {
     onCloseAutoFocus?.(e);
-    if (e.defaultPrevented) return;
-    e.preventDefault();
     const el = opener.current;
-    if (el instanceof HTMLElement && el.isConnected) el.focus();
+    // Nothing had focus (Safari doesn't focus a clicked button): leave Radix its own return to a
+    // Trigger.
+    if (e.defaultPrevented || !(el instanceof HTMLElement) || !el.isConnected) return;
+    if (el === document.body) return;
+    e.preventDefault();
+    el.focus();
   };
 }

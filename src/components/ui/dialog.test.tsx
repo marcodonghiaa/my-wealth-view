@@ -131,4 +131,16 @@ describe("Dialog focus", () => {
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
     await waitFor(() => expect(open).toHaveFocus());
   });
+
+  // Re-audit of U1: Safari doesn't focus a button on click, so what had focus at open was <body>;
+  // taking over from Radix then lost the Trigger's own focus return.
+  // fails_when=a Trigger dialog opened by a click that didn't focus the Trigger ends on <body>
+  it("still gives focus back to a Trigger that the click didn't focus", async () => {
+    render(<WithTrigger />);
+    const open = screen.getByText("Open");
+    fireEvent.click(open);
+    fireEvent.keyDown(await screen.findByRole("dialog"), { key: "Escape" });
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    await waitFor(() => expect(open).toHaveFocus());
+  });
 });

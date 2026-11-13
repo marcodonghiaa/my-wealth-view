@@ -67,7 +67,7 @@ const DialogContent = React.forwardRef<
           "fixed left-[50%] top-[50%] z-50 grid grid-cols-[minmax(0,1fr)] max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 overflow-y-auto overscroll-contain rounded-3xl bg-background p-6 duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
           className,
         )}
-        // A Trigger already gets focus back from Radix; a dialog opened from state needs this (U1).
+        // A dialog opened from state has no Trigger for Radix to refocus (U1).
         onCloseAutoFocus={returnFocus(opener, onCloseAutoFocus)}
         {...props}
       >
