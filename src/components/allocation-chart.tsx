@@ -97,7 +97,8 @@ export function AllocationChart({
 }) {
   const rows = allocationHistory(history, snapshots, undefined, reconstructed);
   const row = asOf
-    ? (rows.filter((r) => r.snapshot_date <= asOf).at(-1) ?? rows.at(-1))
+    ? // Before the first row: the first row, not today's (#148).
+      (rows.filter((r) => r.snapshot_date <= asOf).at(-1) ?? rows[0])
     : rows.at(-1);
   if (!row) return null;
   const slices = CLASSES.map((c) => ({ ...c, value: row[c.key] ?? 0 })).filter((s) => s.value > 0);

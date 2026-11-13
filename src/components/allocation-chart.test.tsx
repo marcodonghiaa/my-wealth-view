@@ -79,4 +79,14 @@ describe("AllocationChart", () => {
     expect(screen.getByText("Unallocated")).toBeInTheDocument();
     expect(screen.queryByRole("link")).toBeNull();
   });
+
+  // Issue #148: a scrubbed day before the first row showed today's breakdown.
+  // fails_when=asOf earlier than every row falls back to the latest row
+  it("shows the first row for a day before it, not today's", () => {
+    const first = { ...live(), snapshot_date: "2026-01-05", bank_total_eur: 111 };
+    const today = { ...live(), snapshot_date: "2026-10-19", bank_total_eur: 999 };
+    render(<AllocationChart history={[]} snapshots={[first, today]} asOf="2025-12-01" />);
+    expect(screen.getByText("€111.00")).toBeInTheDocument();
+    expect(screen.queryByText("€999.00")).toBeNull();
+  });
 });
