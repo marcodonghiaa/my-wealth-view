@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { createFakeClient, demoTagCounts } from "./fake-client";
 import { DEMO_USER_ID } from "./generate";
+import { functionErrorMessage } from "@/lib/function-error";
 import { groupStreams } from "@/lib/recurring";
 import type { Tables } from "@/integrations/supabase/types";
 
@@ -234,6 +235,11 @@ describe("fake client: auth, functions and rpc", () => {
     expect((banks.data as { banks: Array<unknown> }).banks.length).toBeGreaterThan(0);
     const consent = await c.functions.invoke("start-bank-consent", { body: {} });
     expect(consent.error?.message).toMatch(/demo/i);
+    // Issue #148: Connect a bank's toast said "Couldn't start bank connection" in the demo.
+    // fails_when=the error has no body for functionErrorMessage to read
+    expect(await functionErrorMessage(consent.error, "Couldn't start bank connection")).toBe(
+      "Disabled in the demo.",
+    );
   });
 
   it("renaming a merchant renames every transaction from it, and clearing undoes that", async () => {
