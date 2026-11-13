@@ -88,7 +88,8 @@ describe("AllocationChart", () => {
     const today = { ...live(), snapshot_date: "2026-10-19", bank_total_eur: 999 };
     render(<AllocationChart history={[]} snapshots={[first, today]} asOf="2025-12-01" />);
     expect(screen.getByText("No breakdown before 5 Jan 2026.")).toBeInTheDocument();
-    expect(screen.queryByText("€111.00")).toBeNull();
+    // The first row's mix stays only as a greyed, unreachable placeholder (the card keeps its height).
+    expect(screen.getByText("€111.00").closest("[inert]")).not.toBeNull();
     expect(screen.queryByText("€999.00")).toBeNull();
   });
 
@@ -96,6 +97,7 @@ describe("AllocationChart", () => {
   it("shows the first row on its own day", () => {
     const first = { ...live(), snapshot_date: "2026-01-05", bank_total_eur: 111 };
     render(<AllocationChart history={[]} snapshots={[first]} asOf="2026-01-05" />);
-    expect(screen.getByText("€111.00")).toBeInTheDocument();
+    expect(screen.getByText("€111.00").closest("[inert]")).toBeNull();
+    expect(screen.getByText("As of 5 Jan 2026")).toBeInTheDocument();
   });
 });
